@@ -1418,6 +1418,20 @@ export function createBuffElfReinforcements() {
     effects: [],
   });
 }
+export function createBuffBlizzard() {
+  // Wolf Pack fight debuff: every turn the player + every alive ally
+  // takes one Ice stack. Pseudo-card so the buff appears in the codex.
+  return new Card({
+    id: 'buff_blizzard',
+    name: 'Blizzard',
+    description: 'Start of Turn: You and allies get Ice.',
+    shortDesc: 'Ice/turn',
+    subtype: 'buff',
+    cardType: CardType.ABILITY,
+    costType: CostType.FREE,
+    effects: [],
+  });
+}
 export function createBuffRunning() {
   return new Card({
     id: 'buff_running',

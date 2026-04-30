@@ -130,6 +130,7 @@ export const CARD_ART_MAP = {
   buff_dwarven_brew: 'DwarvenBrew.jpg',
   buff_regrowth: 'RegrowthDruid.jpg',
   buff_elf_reinforcements: 'ElfWarrior.jpg',
+  buff_blizzard: 'BlizzardEnv.jpg',
 
   // === Enemy Cards - Spider ===
   poisoned_bite: 'PoisonedBite.jpg',

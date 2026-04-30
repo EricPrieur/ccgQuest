@@ -28,6 +28,7 @@ import {
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
   createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffElfReinforcements,
+  createBuffBlizzard,
   createBadRations, createSturdyBoots,
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
@@ -1465,6 +1466,9 @@ const MUSIC_FOR_NODE = {
   general_zhost: 'Music/ambience_forest_01',
   // Calm Grove — Raena's grove also sits under forest cover.
   calm_grove:    'Music/ambience_forest_01',
+  // Cave River Landing — gentle running water near the icy river
+  // overrides the cave's drip/flow bed for this node.
+  cave_river_landing: 'Music/ambience_mountain_creek_01',
 };
 
 let _lastMusicNodeId = null;
@@ -2100,12 +2104,18 @@ function drawAbilitySelect() {
 function getMapTransform(area) {
   const mapImg = images[`map_${area}`];
   let scale = 1, offX = 0, offY = 0;
+  // Reserve the bottom strip for the current-node description panel
+  // (drawn at SCREEN_HEIGHT - 120, height 120). Without this, tall
+  // maps with low-Y nodes (cave map: entrance/ledge near y=920) put
+  // their nodes underneath the info bar.
+  const MAP_BOTTOM_RESERVE = 120;
+  const usableH = SCREEN_HEIGHT - MAP_BOTTOM_RESERVE;
   if (mapImg) {
-    scale = Math.min(SCREEN_WIDTH / mapImg.width, SCREEN_HEIGHT / mapImg.height);
+    scale = Math.min(SCREEN_WIDTH / mapImg.width, usableH / mapImg.height);
     const drawW = mapImg.width * scale;
     const drawH = mapImg.height * scale;
     offX = Math.floor((SCREEN_WIDTH - drawW) / 2);
-    offY = Math.floor((SCREEN_HEIGHT - drawH) / 2);
+    offY = Math.floor((usableH - drawH) / 2);
   }
   return {
     scale, offX, offY,
@@ -2542,6 +2552,15 @@ function advanceEncounterPhase() {
       visitedNodes = new Set();
       visitedNodes.add(currentMap.currentNodeId);
       startNodeEncounter('cave_entrance');
+      return;
+    }
+    // Cave Ledge → River Landing. The encounter ends with the party
+    // already at the river bank ("you make it down"), so auto-route
+    // them to that node instead of dropping back to the map.
+    if (nodeId === 'cave_ledge') {
+      const landing = currentMap.getNode('cave_river_landing');
+      if (landing) landing.isLocked = false;
+      startNodeEncounter('cave_river_landing');
       return;
     }
     if (nodeId === 'to_the_plains') {
@@ -3040,7 +3059,7 @@ function setupEnemyForCombat(enemyId) {
       player.addCombatBuff(new CombatBuff({
         id: 'blizzard',
         name: 'Blizzard',
-        description: 'Start of Turn: You and all allies get 1 Ice.',
+        description: 'Start of Turn: You and allies get Ice.',
         imageId: 'buff_blizzard',
         effectType: 'apply_ice',
         effectValue: 1,
@@ -3517,12 +3536,10 @@ function handleEncounterChoiceClick(x, y) {
       }
 
       case 'cave_jump_down': {
-        // Jumping the ledge in the cave — bruising deck damage + a
-        // dull thud cue. PY's risky descent costs the player a card.
-        if (val > 0) {
-          player.takeDamageFromDeck(val);
-          playHeroPainSound(val);
-        }
+        // Jumping the ledge in the cave — bruising deck damage. PY's
+        // risky descent costs the player a card. Toast + pain cue
+        // already fired at click-time; just apply the damage here.
+        if (val > 0) player.takeDamageFromDeck(val);
         break;
       }
 
@@ -3821,6 +3838,20 @@ function handleEncounterChoiceClick(x, y) {
           r.choice.effectType === 'boulder_shelter' ||
           r.choice.effectType === 'boulder_navigate') {
         resolveBoulderBuff(r.choice);
+      }
+      // Cave Ledge descent choices — visual/audio feedback on click;
+      // the encounter then completes and auto-routes the party to the
+      // river landing. Damage (cave_jump_down) lands at result-confirm.
+      if (r.choice.effectType === 'cave_climb_down') {
+        showStyledToast('Climbing carefully...', 'block', 2000);
+        playSound('footstep', 0.6);
+      } else if (r.choice.effectType === 'cave_long_way') {
+        showStyledToast('Taking the long way around...', 'block', 2000);
+        playSound('footstep', 0.6);
+      } else if (r.choice.effectType === 'cave_jump_down') {
+        showDamageToast(`-${r.choice.effectValue} HP! You hit hard.`, 3000);
+        playSound('splash_dive', 0.6);
+        playHeroPainSound(r.choice.effectValue);
       }
       // Calm Stream choices — resolve immediately so the result page shows
       // the heal / berries / faery without waiting for the encounter
@@ -14161,6 +14192,19 @@ function restoreFromSave(data) {
       if (Array.isArray(nodeState.exhaustedChoices)) node.exhaustedChoices = nodeState.exhaustedChoices.slice();
     }
   }
+  // Stuck-state recovery: pre-transition saves (and any save that lands
+  // on a dead-end node after its encounter completed) can leave the
+  // player with no forward moves. The wolf_blizzard node has no
+  // outgoing connections to the cave map — when the encounter is done,
+  // the player belongs on the cave map. Auto-migrate them.
+  if (data.mapId === 'plains' && data.currentNodeId === 'wolf_blizzard') {
+    const wb = currentMap.getNode('wolf_blizzard');
+    if (wb && wb.isDone) {
+      currentMap = createCaveMap();
+      visitedNodes = new Set();
+      visitedNodes.add(currentMap.currentNodeId);
+    }
+  }
 }
 
 // ============================================================
@@ -15750,6 +15794,7 @@ const ALL_EXTRA_CARD_CREATORS = [
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
   createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffElfReinforcements,
+  createBuffBlizzard,
 ];
 
 // Class powers (player-side). Anything in ALL_POWER_CREATORS not in this set
