@@ -85,7 +85,7 @@ import {
 } from './cards.js';
 import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter } from './encounter.js';
-import { getCardArt, POWER_ART_MAP, preloadAllArt } from './card-art.js';
+import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
   createCleave, createAimedShot, createElementalInfusion,
@@ -1240,6 +1240,14 @@ async function loadAssets() {
     loadImage('balanced_perk',        `${BASE}assets/Cards/BalanceDruidPerk.jpg`),
     loadImage('lucky_find_perk',      `${BASE}assets/Cards/LuckyFindPerk.png`),
     loadImage('harvest_perk',         `${BASE}assets/Cards/HarvestDruidSpec.png`),
+  ]);
+  // Block on the 6 class-select portraits so they're guaranteed in the
+  // card-art cache before the menu becomes interactive. Otherwise the
+  // first time the player clicks New Game, the portraits flash in one
+  // by one as they finish lazy-loading from the bulk preloadAllArt call.
+  await preloadCardArt([
+    'paladin_class', 'ranger_class', 'wizard_class',
+    'rogue_class', 'warrior_class', 'druid_class',
   ]);
   // Eagerly preload ALL card + power art so getCardArt never returns null
   // for a known id. Without this, the first draw of each card shows a
@@ -19347,6 +19355,12 @@ function handleLoadClick(x, y) {
     const data = loadFromSlot(loadEntries[loadSelectedIndex].slot);
     if (data) {
       restoreFromSave(data);
+      trackEvent('game_loaded', {
+        slot_type: loadTab,
+        class: selectedClass,
+        level: player && player.level,
+        version: GAME_VERSION,
+      });
       state = GameState.MAP;
       previousState = null;
       saveLoadReturnState = null;

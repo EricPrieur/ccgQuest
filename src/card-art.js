@@ -435,6 +435,28 @@ export function getPowerArt(powerId) {
 }
 
 /**
+ * Preload a specific list of card art ids. Use this for screens that
+ * show known portraits (e.g. class select) so they're guaranteed to be
+ * in the cache before the screen renders. Returns a Promise that
+ * resolves when all listed ids have loaded or failed.
+ */
+export function preloadCardArt(ids) {
+  const promises = [];
+  for (const id of ids) {
+    if (imageCache[id]) continue;
+    const filename = CARD_ART_MAP[id];
+    if (!filename) continue;
+    promises.push(new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => { imageCache[id] = img; resolve(); };
+      img.onerror = () => resolve();
+      img.src = `${BASE}assets/Cards/${filename}`;
+    }));
+  }
+  return Promise.all(promises);
+}
+
+/**
  * Eagerly preload ALL card art + power art into the image cache.
  * Returns a Promise that resolves when every image has either loaded
  * or failed (so the caller can await it during the loading screen).
