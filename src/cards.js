@@ -938,10 +938,10 @@ export function createHolySword() {
 export function createRevivify() {
   return new Card({
     id: 'revivify', name: 'Revivify',
-    description: 'Recharge -> Choose 1 dead ally\nfrom your discard pile\nand summon it to play.',
-    shortDesc: 'R->Revive Ally', subtype: 'ability',
+    description: 'Recharge -> Choose 1 of up to 3\ndead allies in your discard pile\nand summon it.',
+    shortDesc: 'R->Revive 1 of\nup to 3 Allies', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    effects: [new CardEffect('revivify', 1, TargetType.SELF)],
+    effects: [new CardEffect('revivify', 3, TargetType.SELF)],
     characterClass: ['paladin'], tier: 2,
   });
 }

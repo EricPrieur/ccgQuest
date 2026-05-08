@@ -98,6 +98,9 @@ import {
 } from './power.js';
 import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, getSaveInfo, deleteSave, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
+import { initAnalytics, track as trackEvent } from './analytics.js';
+
+initAnalytics();
 
 // === Canvas Setup ===
 const canvas = document.getElementById('game');
@@ -1176,6 +1179,7 @@ async function loadAssets() {
     // UI icons
     loadImage('icon_backpack', `${BASE}assets/Icons/Backpack.png`),
     loadImage('icon_help', `${BASE}assets/Icons/HelpIcon.png`),
+    loadImage('icon_discord', `${BASE}assets/Icons/Discord.svg`),
     // Keyword icons
     loadImage('icon_heroism', `${BASE}assets/Icons/HeroismIcon.png`),
     loadImage('icon_shield', `${BASE}assets/Icons/ShieldIcon.png`),
@@ -1647,6 +1651,9 @@ function handleClick(x, y) {
     case GameState.MODAL_SELECT:
       handleModalSelectClick(x, y);
       break;
+    case GameState.REVIVE_SELECT:
+      handleReviveSelectClick(x, y);
+      break;
     case GameState.SCRY_SELECT:
       handleScrySelectClick(x, y);
       break;
@@ -1840,6 +1847,8 @@ function handleKeyDown(key, event) {
       cancelCardRecharge();
     } else if (state === GameState.MODAL_SELECT) {
       cancelModalSelect();
+    } else if (state === GameState.REVIVE_SELECT) {
+      cancelReviveSelect();
     } else if (state === GameState.TARGETING) {
       if (cardRechargedCards.length > 0) {
         cancelCardRecharge();
@@ -2195,6 +2204,7 @@ function updateMusicForCurrentScene() {
 }
 
 function startNewGame() {
+  trackEvent('game_start', { version: GAME_VERSION });
   player = null;
   currentMap = null;
   currentEncounter = null;
@@ -2273,6 +2283,57 @@ function drawMenu() {
 
   menuButtons.length = 0;
 
+  // Author's note (right-side panel) — friendly heads-up that the game
+  // is still in active development, with a nudge toward Discord for
+  // feedback / bug reports.
+  {
+    const npW = 320;
+    const npH = 420;
+    const npX = SCREEN_WIDTH - npW - 30;
+    const npY = panelY + 30;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(npX, npY, npW, npH);
+    ctx.strokeStyle = 'rgba(232, 213, 154, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(npX + 0.5, npY + 0.5, npW - 1, npH - 1);
+
+    const padX = 22;
+    const innerW = npW - padX * 2;
+    let ty = npY + 36;
+
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 22px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('A note from Éric', npX + npW / 2, ty);
+    ty += 28;
+
+    ctx.fillStyle = 'rgba(232, 213, 154, 0.5)';
+    ctx.fillRect(npX + padX, ty, innerW, 1);
+    ty += 18;
+
+    const body = (
+      'Welcome to ccgQuest! Please keep in mind this game is an ongoing project. ' +
+      "Currently you can play the first 5 chapters, and I'll be adding more over time. " +
+      'Join the Discord for feedback and to report bugs. Have Fun!'
+    );
+    ctx.fillStyle = '#e8d59a';
+    ctx.font = '16px serif';
+    ctx.textAlign = 'left';
+    const lines = wrapTextLong(body, innerW, 16);
+    const lineH = 22;
+    for (const line of lines) {
+      ctx.fillText(line, npX + padX, ty);
+      ty += lineH;
+    }
+
+    ty += 14;
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'italic 18px serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('— Éric', npX + npW - padX, ty);
+    ctx.textAlign = 'left';
+  }
+
   // Styled buttons with sprite art
   const btnW = 400;
   const btnH = 88;
@@ -2300,6 +2361,43 @@ function drawMenu() {
     ctx.globalAlpha = 1;
     // Remove the click handler we just registered
     menuButtons.pop();
+  }
+
+  // Discord button — opens the community invite in a new tab. Sits below
+  // Load Game so the primary New Game / Load Game CTAs stay prominent.
+  // Render the sprite via drawStyledButton (no label) and lay out icon +
+  // label as a single centered group on top, so they never overlap.
+  btnY += 110;
+  const dscW = 360, dscH = 60;
+  const dscX = (SCREEN_WIDTH - dscW) / 2;
+  drawStyledButton(dscX, btnY, dscW, dscH, '', () => {
+    window.open('https://discord.gg/XNNnp3c2GV', '_blank', 'noopener,noreferrer');
+  }, 'banner', 18);
+  {
+    const dscHovered = hitTest(mouseX, mouseY, { x: dscX, y: btnY, w: dscW, h: dscH });
+    const dscLabel = 'Join Discord — Feedback & Bugs';
+    const iconSize = 26;
+    const iconGap = 10;
+    ctx.font = 'bold 18px serif';
+    const labelW = ctx.measureText(dscLabel).width;
+    const hasIcon = images.icon_discord && images.icon_discord.complete;
+    const groupW = (hasIcon ? iconSize + iconGap : 0) + labelW;
+    const groupX = dscX + Math.floor((dscW - groupW) / 2);
+    const cy = btnY + dscH / 2;
+    if (hasIcon) {
+      ctx.drawImage(images.icon_discord, groupX, cy - iconSize / 2, iconSize, iconSize);
+    }
+    ctx.fillStyle = dscHovered ? Colors.GOLD : Colors.WHITE;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(dscLabel, groupX + (hasIcon ? iconSize + iconGap : 0), cy);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.textBaseline = 'alphabetic';
   }
 
   // Options button (bottom-left)
@@ -2439,6 +2537,7 @@ function handleCharSelectClick(x, y) {
 function selectClass(className) {
   playSound('click');
   selectedClass = className;
+  trackEvent('character_selected', { class: className });
   abilityChoices = getAbilityChoices(className, 3);
   state = GameState.ABILITY_SELECT;
 }
@@ -2663,6 +2762,20 @@ function handleAbilitySelectClick(x, y) {
   for (let i = 0; i < rects.length; i++) {
     if (hitTest(x, y, rects[i])) {
       playSound('click');
+      const _pickedAbility = abilityChoices[i];
+      const _pickContext =
+        shrineAbilityMode ? 'shrine' :
+        churchAbilityMode ? 'church' :
+        prayStatueMode ? 'old_god_statue' :
+        levelUpAbilityMode ? 'level_up' :
+        pendingChapter2Transition ? 'chapter_transition' :
+        (player ? 'level_up' : 'character_creation');
+      trackEvent('ability_selected', {
+        ability_id: _pickedAbility && _pickedAbility.id,
+        ability_name: _pickedAbility && _pickedAbility.name,
+        class: selectedClass,
+        context: _pickContext,
+      });
       if (shrineAbilityMode || churchAbilityMode) {
         // Lost Shrine and Qualibaf Chapel share the same accept flow:
         // master-deck add + copy into hand (overflow to top of draw if
@@ -2857,12 +2970,13 @@ function drawAbilitySelect() {
     }
   }
 
-  // If the hovered ability has a previewCard or previewCreature, show a small
+  // If the hovered ability has a previewCard or previewCreature(s), show a small
   // mini-card preview to the right of the hovered card (matches in-combat hover).
   if (hoveredAbilityIdx >= 0) {
     const card = abilityChoices[hoveredAbilityIdx];
     const r = rects[hoveredAbilityIdx];
-    if (card.previewCard || card.previewCreature) {
+    const sideCreatures = getSideCreaturePreviews(card);
+    if (card.previewCard || sideCreatures.length) {
       const sideW = COMBAT_POWER_W;
       const sideH = COMBAT_POWER_H;
       const gap = 10;
@@ -2871,16 +2985,11 @@ function drawAbilitySelect() {
       if (sx + sideW > SCREEN_WIDTH - 10) {
         sx = r.x - sideW - gap;
       }
-      const sy = r.y + Math.floor((r.h - sideH) / 2);
       if (card.previewCard) {
+        const sy = r.y + Math.floor((r.h - sideH) / 2);
         drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
-      } else if (card.previewCreature) {
-        // Stamp source rarity + subtype so the creature mini matches the
-        // card's frame asset AND tint (purple for ability, blue for armor,
-        // brown for ally, etc.).
-        card.previewCreature._sourceRarity = card.rarity || 'common';
-        card.previewCreature._sourceSubtype = card.subtype || '';
-        drawCreatureMiniCard(card.previewCreature, { x: sx, y: sy, w: sideW, h: sideH }, true);
+      } else {
+        drawSideCreatureStack(sideCreatures, card, sx, r.y, r.h, sideW, sideH);
       }
     }
   }
@@ -4084,6 +4193,7 @@ function advanceEncounterPhase() {
     if (nodeId === 'boss_wing_sentinel') revealHidden('boss_wing_entrance');
     if (nodeId === 'boss_wing_entrance') revealHidden('boss_wing_priest');
     if (nodeId === 'to_the_plains') {
+      trackEvent('chapter_completed', { chapter: 2, class: selectedClass });
       showTitleCard('Chapter 3: The Plains of No Hope', '', () => {
         currentMap = createPlainsMap();
         visitedNodes = new Set();
@@ -4108,6 +4218,7 @@ function advanceEncounterPhase() {
       // triggersLevelUp=true and lootTitle="Welcome to Qualibaf!").
       const cityGate = currentMap.getNode('city_south_gate');
       if (cityGate) cityGate.isLocked = false;
+      trackEvent('chapter_completed', { chapter: 3, class: selectedClass });
       showTitleCard(
         'Chapter 4: Qualibaf',
         'A city of merchants and guilds. Resupply, visit the Guild Hall, and prepare for the road north.',
@@ -4189,6 +4300,7 @@ function advanceEncounterPhase() {
     }
     if (completedEncounterId === 'tharnag_exit') {
       tharnagExitSeen = true;
+      trackEvent('chapter_completed', { chapter: 5, class: selectedClass });
       // Chapter 6 title card. Mirrors PY game.py:4520-4524.
       showTitleCard(
         'Chapter 6: Into the Volcano',
@@ -4212,6 +4324,7 @@ function advanceEncounterPhase() {
       visitedNodes.add('grand_hall_side_entry');
       currentMap.currentNodeId = 'grand_hall_side_entry';
       autosaveNow();
+      trackEvent('chapter_completed', { chapter: 4, class: selectedClass });
       showTitleCard(
         'Chapter 5: Tharnag',
         'Seek an audience with the King. Rally the dwarves to your cause.',
@@ -6594,7 +6707,7 @@ function drawEncounterLoot() {
     // Calculate total width including side previews so the row stays centered
     let totalW = 0;
     for (const c of lootedCards) {
-      const has = c.previewCard || c.previewCreature;
+      const has = c.previewCard || getSideCreaturePreviews(c).length > 0;
       totalW += cardW + (has ? sideGap + sideW : 0);
     }
     const groupGap = 24;
@@ -6604,17 +6717,15 @@ function drawEncounterLoot() {
       const card = lootedCards[i];
       drawCard(card, cx, y, cardW, cardH, false, false, 'full');
       cx += cardW;
+      const sideCreatures = getSideCreaturePreviews(card);
       if (card.previewCard) {
         const sx = cx + sideGap;
         const sy = y + Math.floor((cardH - sideH) / 2);
         drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
         cx += sideGap + sideW;
-      } else if (card.previewCreature) {
+      } else if (sideCreatures.length) {
         const sx = cx + sideGap;
-        const sy = y + Math.floor((cardH - sideH) / 2);
-        card.previewCreature._sourceRarity = card.rarity || 'common';
-        card.previewCreature._sourceSubtype = card.subtype || '';
-        drawCreatureMiniCard(card.previewCreature, { x: sx, y: sy, w: sideW, h: sideH }, true);
+        drawSideCreatureStack(sideCreatures, card, sx, y, cardH, sideW, sideH);
         cx += sideGap + sideW;
       }
       cx += groupGap;
@@ -7752,7 +7863,8 @@ function isCombatContext() {
     state === GameState.DEFENDING || state === GameState.DAMAGE_SOURCE ||
     state === GameState.POWER_TARGETING || state === GameState.POWER_CHOICE ||
     state === GameState.ALLY_TARGETING || state === GameState.MULTI_TARGETING ||
-    state === GameState.SCRY_SELECT || state === GameState.MODAL_SELECT;
+    state === GameState.SCRY_SELECT || state === GameState.MODAL_SELECT ||
+    state === GameState.REVIVE_SELECT;
 }
 
 function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size = 'small') {
@@ -8486,11 +8598,12 @@ function drawHoverPreview() {
   const previewH = 336;
   const margin = 12;
 
-  // Side preview (smaller — used when a card has a previewCard or previewCreature
+  // Side preview (smaller — used when a card has a previewCard or previewCreature(s)
   // that shows the summon/produced card next to the main hover preview)
+  const sideHoverCreatures = hoveredCardPreview ? getSideCreaturePreviews(hoveredCardPreview) : [];
   const sidePreview = hoveredCardPreview && (
     hoveredCardPreview.previewCard ||
-    hoveredCardPreview.previewCreature
+    sideHoverCreatures.length > 0
   );
   const sideW = COMBAT_POWER_W;   // small mini-card size matches in-combat layout
   const sideH = COMBAT_POWER_H;
@@ -8527,14 +8640,12 @@ function drawHoverPreview() {
     // the in-combat mini cards, to the right of the main preview.
     if (sidePreview) {
       const sx = x + previewW + sideGap;
-      // Center the side preview vertically against the main preview
-      const sy = y + Math.floor((previewH - sideH) / 2);
       if (hoveredCardPreview.previewCard) {
+        // Center the side preview vertically against the main preview
+        const sy = y + Math.floor((previewH - sideH) / 2);
         drawCard(hoveredCardPreview.previewCard, sx, sy, sideW, sideH, false, false);
-      } else if (hoveredCardPreview.previewCreature) {
-        hoveredCardPreview.previewCreature._sourceRarity = hoveredCardPreview.rarity || 'common';
-        hoveredCardPreview.previewCreature._sourceSubtype = hoveredCardPreview.subtype || '';
-        drawCreatureMiniCard(hoveredCardPreview.previewCreature, { x: sx, y: sy, w: sideW, h: sideH }, true);
+      } else if (sideHoverCreatures.length) {
+        drawSideCreatureStack(sideHoverCreatures, hoveredCardPreview, sx, y, previewH, sideW, sideH);
       }
     }
   } else if (hoveredPowerPreview) {
@@ -8952,7 +9063,7 @@ function drawToast() {
   const boxH = fontSize + padY * 2;
   // Center in the combat left area during combat, full screen otherwise
   const isOverlayState = state === GameState.SCRY_SELECT || state === GameState.MODAL_SELECT ||
-    state === GameState.POWER_CHOICE;
+    state === GameState.REVIVE_SELECT || state === GameState.POWER_CHOICE;
   const isCombatState = !isOverlayState && (state === GameState.COMBAT || state === GameState.TARGETING ||
     state === GameState.DEFENDING || state === GameState.DAMAGE_SOURCE ||
     state === GameState.POWER_TARGETING ||
@@ -8962,7 +9073,7 @@ function drawToast() {
   const x = (centerW - boxW) / 2;
   // Position toast above cards for overlay states (scry, modal, power choice)
   const isOverlay = state === GameState.SCRY_SELECT || state === GameState.MODAL_SELECT ||
-    state === GameState.POWER_CHOICE;
+    state === GameState.REVIVE_SELECT || state === GameState.POWER_CHOICE;
   // While in SWIMMING (whirlpool resolution OR a regular swim
   // phase), float the toast ABOVE the Swimming In Current /
   // Whirlpool showcase card. The Done button takes the slot
@@ -9927,6 +10038,37 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false) {
 // match the Summons tab — no second creature card style to keep in sync.
 function drawCreatureMiniCard(creature, rect, isPlayer) {
   drawCreatureCard(creature, rect, isPlayer, true);
+}
+
+// Normalize a card's side-creature previews. Cards may use either the
+// singular previewCreature or the plural previewCreatures (e.g. Animal
+// Companion's Misha + Huffer); the plural list wins when both are set.
+function getSideCreaturePreviews(card) {
+  if (!card) return [];
+  if (Array.isArray(card.previewCreatures) && card.previewCreatures.length) {
+    return card.previewCreatures;
+  }
+  return card.previewCreature ? [card.previewCreature] : [];
+}
+
+// Render a vertical stack of creature mini-cards next to a host card,
+// centered vertically against the host's height. Stamps each creature with
+// the source card's rarity + subtype so frame asset/tint match.
+function drawSideCreatureStack(creatures, sourceCard, sx, hostY, hostH, sideW, sideH) {
+  if (!creatures.length) return;
+  const stackGap = 8;
+  const totalH = creatures.length * sideH + (creatures.length - 1) * stackGap;
+  const sy0 = hostY + Math.floor((hostH - totalH) / 2);
+  for (let i = 0; i < creatures.length; i++) {
+    const cr = creatures[i];
+    cr._sourceRarity = sourceCard.rarity || 'common';
+    cr._sourceSubtype = sourceCard.subtype || '';
+    drawCreatureMiniCard(
+      cr,
+      { x: sx, y: sy0 + i * (sideH + stackGap), w: sideW, h: sideH },
+      true,
+    );
+  }
 }
 
 function drawCombatLog() {
@@ -12529,6 +12671,31 @@ function resolveEffect(eff, caster, target) {
       if (lastEntry) lastEntry.creature = spider;
       break;
     }
+    case 'revivify': {
+      // Surface up to `eff.value` ally cards from the discard pile and let
+      // the player pick ONE to replay (summons that card's creature, like
+      // playing it from hand). 0 candidates → log; 1 → auto-revive; 2+ →
+      // open the REVIVE_SELECT modal.
+      const limit = Math.max(1, eff.value || 1);
+      const candidates = [];
+      for (let i = caster.deck.discardPile.length - 1; i >= 0 && candidates.length < limit; i--) {
+        const c = caster.deck.discardPile[i];
+        if (c && c.subtype === 'allies' && cardCanRevive(c)) candidates.push(c);
+      }
+      if (candidates.length === 0) {
+        addLog(`  No dead allies to revive.`, Colors.GRAY);
+        break;
+      }
+      if (candidates.length === 1) {
+        reviveAllyFromCard(candidates[0]);
+        break;
+      }
+      reviveChoiceCards = candidates;
+      reviveChoiceRects = [];
+      reviveCancelRect = null;
+      state = GameState.REVIVE_SELECT;
+      break;
+    }
     case 'create_goodberries': {
       // Create N Goodberry token cards directly into the player's hand (capped by MAX_HAND_SIZE)
       const count = eff.value;
@@ -14426,6 +14593,40 @@ function endPlayerTurn() {
     }
   }
 
+  // Valdrisa — Turn End: heal 1 HP on a random damaged ally (player or
+  // any living ally creature). Player counts as damaged when there are
+  // cards in the discard pile or any Poison stacks.
+  for (const valdrisa of player.creatures) {
+    if (!valdrisa.isAlive || valdrisa.name !== 'Valdrisa') continue;
+    const candidates = [];
+    const playerDamaged =
+      player.deck.discardPile.length > 0 || (player.getStatus('POISON') || 0) > 0;
+    if (playerDamaged) candidates.push(player);
+    for (const a of player.creatures) {
+      if (a.isAlive && (a.currentHp < a.maxHp || a.poisonStacks > 0)) candidates.push(a);
+    }
+    if (candidates.length === 0) break;
+    const tgt = candidates[Math.floor(Math.random() * candidates.length)];
+    if (tgt === player) {
+      addLog(`  Valdrisa heals you`, Colors.GREEN);
+      healPlayer(1);
+    } else {
+      let healed = 0;
+      if (tgt.poisonStacks > 0) { tgt.poisonStacks -= 1; healed = 1; }
+      else {
+        const before = tgt.currentHp;
+        tgt.currentHp = Math.min(tgt.maxHp, tgt.currentHp + 1);
+        healed = tgt.currentHp - before;
+      }
+      if (healed > 0) {
+        spawnHealOnTarget(tgt, healed);
+        addLog(`  Valdrisa heals ${tgt.name}: +${healed} HP`, Colors.GREEN);
+        playSound('heal');
+      }
+    }
+    break; // only one Valdrisa heal per turn even if multiple were summoned
+  }
+
   // Allies with end-of-turn damage hit a random enemy (Dwarven Scout, etc.).
   // Hits a random enemy creature if any are alive, otherwise the enemy character.
   for (const ally of player.creatures) {
@@ -15471,6 +15672,22 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+      } else if (eff.effectType === 'armor_bonus_damage') {
+        // Mirror the player handler's value encoding: <100 → base*10+bonus,
+        // ≥100 → base*100+bonus. Pick base or bonus based on target armor/shield,
+        // then route through the normal arrow + showcase swing path.
+        let base, bonus;
+        if (eff.value >= 100) { base = Math.floor(eff.value / 100); bonus = eff.value % 100; }
+        else { base = Math.floor(eff.value / 10); bonus = eff.value % 10; }
+        const hasArmor = (cardTarget.armor || 0) > 0 || (cardTarget.shield || 0) > 0;
+        if (hasArmor) addLog(`  Armor bonus: ${bonus} dmg (target has armor/shield)`, Colors.GOLD);
+        else addLog(`  Base: ${base} dmg`, Colors.GRAY);
+        let dmg = Math.max(0, (hasArmor ? bonus : base) + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(player);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
       } else if (eff.effectType === 'unpreventable_damage') {
         // Unpreventable damage bypasses defense flow + the normal
         // routeEnemyDamageToTarget path, so the active card's flesh
@@ -16428,6 +16645,13 @@ function countAndRemoveDeadCreatures() {
 }
 
 function combatVictory() {
+  trackEvent('combat_completed', {
+    encounter_id: currentEncounter && currentEncounter.id,
+    encounter_name: currentEncounter && currentEncounter.name,
+    enemy_name: enemy && enemy.name,
+    class: selectedClass,
+    level: player && player.level,
+  });
   const gritHeal = player.getPerkStacks('combat_end_heal');
   if (gritHeal > 0) {
     healPlayer(gritHeal);
@@ -16734,6 +16958,138 @@ function cancelModalSelect() {
   modalChoiceRects = [];
   modalCancelRect = null;
   state = GameState.COMBAT;
+}
+
+// === REVIVE SELECT ===
+// Triggered by the Revivify ability. Up to 3 ally cards from the discard
+// pile are offered; clicking one resummons that card's creature (like
+// playing it again from the graveyard).
+let reviveChoiceCards = [];
+let reviveChoiceRects = [];
+let reviveCancelRect = null;
+
+function cardCanRevive(card) {
+  const isSummon = e => typeof e?.effectType === 'string' && e.effectType.startsWith('summon_');
+  if ((card.currentEffects || []).some(isSummon)) return true;
+  if (Array.isArray(card.modes)) {
+    for (const m of card.modes) if ((m.effects || []).some(isSummon)) return true;
+  }
+  return false;
+}
+
+function reviveAllyFromCard(card) {
+  const idx = player.deck.discardPile.indexOf(card);
+  if (idx === -1) return false;
+  player.deck.discardPile.splice(idx, 1);
+  let effs = card.currentEffects || [];
+  if ((!effs || effs.length === 0) && Array.isArray(card.modes) && card.modes.length > 0) {
+    effs = card.modes[0].effects || [];
+  }
+  const prev = _activePlayCard;
+  _activePlayCard = card;
+  let summoned = false;
+  for (const e of effs) {
+    if (typeof e.effectType === 'string' && e.effectType.startsWith('summon_')) {
+      if (!player.canSummonMore()) break;
+      resolveEffect(e, player, enemy);
+      summoned = true;
+    }
+  }
+  _activePlayCard = prev;
+  if (card._routeToPlayPile) {
+    player.deck.playPile.push(card);
+    delete card._routeToPlayPile;
+  } else {
+    player.deck.discardPile.push(card);
+  }
+  if (summoned) addLog(`  Revivify: ${card.name} returns!`, Colors.GREEN);
+  else addLog(`  Revivify: ${card.name} cannot return.`, Colors.GRAY);
+  return summoned;
+}
+
+function layoutReviveChoiceRects() {
+  const { w: cw, h: ch } = getModalChoiceCardSize();
+  const gap = 40;
+  const count = reviveChoiceCards.length;
+  if (count === 0) return [];
+  const totalW = count * cw + (count - 1) * gap;
+  const startX = Math.floor((SCREEN_WIDTH - totalW) / 2);
+  const cardY = 200;
+  return reviveChoiceCards.map((c, i) => ({
+    x: startX + i * (cw + gap),
+    y: cardY,
+    w: cw,
+    h: ch,
+    card: c,
+    index: i,
+  }));
+}
+
+function handleReviveSelectClick(x, y) {
+  for (const r of reviveChoiceRects) {
+    if (hitTest(x, y, r)) {
+      const chosen = r.card;
+      reviveChoiceCards = [];
+      reviveChoiceRects = [];
+      reviveCancelRect = null;
+      reviveAllyFromCard(chosen);
+      state = GameState.COMBAT;
+      checkCombatEnd();
+      return;
+    }
+  }
+  if (reviveCancelRect && hitTest(x, y, reviveCancelRect)) {
+    cancelReviveSelect();
+  }
+}
+
+function cancelReviveSelect() {
+  reviveChoiceCards = [];
+  reviveChoiceRects = [];
+  reviveCancelRect = null;
+  state = GameState.COMBAT;
+}
+
+function drawReviveSelectOverlay() {
+  if (reviveChoiceCards.length === 0) return;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 32px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Revivify: Choose an ally to return', SCREEN_WIDTH / 2, 110);
+
+  reviveChoiceRects = layoutReviveChoiceRects();
+  for (const r of reviveChoiceRects) {
+    const hov = hitTest(mouseX, mouseY, r);
+    if (hov) {
+      ctx.strokeStyle = Colors.GOLD;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
+    }
+    drawCard(r.card, r.x, r.y, r.w, r.h, false, false, 'full');
+  }
+
+  const cw = 220, ch = 50;
+  const cx = Math.floor((SCREEN_WIDTH - cw) / 2);
+  const firstRect = reviveChoiceRects[0];
+  const cy = (firstRect ? firstRect.y + firstRect.h : 500) + 30;
+  reviveCancelRect = { x: cx, y: cy, w: cw, h: ch };
+  const cancelHov = hitTest(mouseX, mouseY, reviveCancelRect);
+  ctx.fillStyle = cancelHov ? '#642828' : '#3c1818';
+  ctx.fillRect(cx, cy, cw, ch);
+  ctx.strokeStyle = Colors.RED;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx, cy, cw, ch);
+  ctx.fillStyle = Colors.RED;
+  ctx.font = 'bold 22px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Cancel (Esc)', cx + cw / 2, cy + ch / 2);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
 }
 
 // === SCRY SELECT ===
@@ -17541,6 +17897,7 @@ function exitInventory() {
     // Now we finally fade out to Chapter 2 and load the mountain path map.
     if (pendingChapter2Transition) {
       pendingChapter2Transition = false;
+      trackEvent('chapter_completed', { chapter: 1, class: selectedClass });
       showTitleCard('Chapter 2: The Mountain Path', 'Freedom at last...', () => {
         currentMap = createMountainPathMap();
         visitedNodes = new Set();
@@ -19024,7 +19381,7 @@ function drawSaveLoadBackground() {
     drawMap();
   } else if (ps === GameState.INGAME_MENU) {
     const ipState = previousState;
-    if (ipState === GameState.COMBAT || ipState === GameState.TARGETING || ipState === GameState.MODAL_SELECT) {
+    if (ipState === GameState.COMBAT || ipState === GameState.TARGETING || ipState === GameState.MODAL_SELECT || ipState === GameState.REVIVE_SELECT) {
       drawCombat();
     } else if (ipState === GameState.MAP) {
       drawMap();
@@ -19550,6 +19907,7 @@ function draw() {
     case GameState.COMBAT:
     case GameState.TARGETING:
     case GameState.MODAL_SELECT:
+    case GameState.REVIVE_SELECT:
     case GameState.DEFENDING:
     case GameState.DAMAGE_SOURCE:
     case GameState.POWER_TARGETING:
@@ -19559,6 +19917,7 @@ function draw() {
     case GameState.SCRY_SELECT:
       drawCombat();
       if (state === GameState.MODAL_SELECT) drawModalOverlay();
+      if (state === GameState.REVIVE_SELECT) drawReviveSelectOverlay();
       if (state === GameState.DEFENDING) drawDefendingOverlay();
       if (state === GameState.DAMAGE_SOURCE) drawDamageSourceOverlay();
       if (state === GameState.POWER_CHOICE) drawPowerChoiceOverlay();
@@ -19700,7 +20059,7 @@ function handleHelpClick(x, y) {
 function drawHelpScreen() {
   // Draw the previous game state underneath so the game shows through
   const ps = previousState;
-  if (ps === GameState.COMBAT || ps === GameState.TARGETING || ps === GameState.MODAL_SELECT) {
+  if (ps === GameState.COMBAT || ps === GameState.TARGETING || ps === GameState.MODAL_SELECT || ps === GameState.REVIVE_SELECT) {
     drawCombat();
   } else if (ps === GameState.MAP) {
     drawMap();
@@ -20106,7 +20465,7 @@ function handleIngameMenuClick(x, y) {
 function drawIngameMenu() {
   // Draw the previous game state underneath so the game shows through
   const ps = previousState;
-  if (ps === GameState.COMBAT || ps === GameState.TARGETING || ps === GameState.MODAL_SELECT) {
+  if (ps === GameState.COMBAT || ps === GameState.TARGETING || ps === GameState.MODAL_SELECT || ps === GameState.REVIVE_SELECT) {
     drawCombat();
   } else if (ps === GameState.MAP) {
     drawMap();
@@ -20574,6 +20933,170 @@ function spawnDamageNumber(x, y, text, color = Colors.RED) {
 // override — caller falls back to 'hit_blocked' for blocked, silent for
 // landed.
 //
+// Per-card SFX override map. Hoisted out of getWeaponSfxKeys so the
+// codex Sound tab can iterate the same data and surface card-keyed
+// events in its wiredTo column. Keys are card / power ids; values
+// pick the wired SOUND_MAP aliases for the flesh / blocked / play /
+// playMulti / defense channels.
+const CARD_SFX_OVERRIDES = {
+  white_claw:               { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  white_claw_reforged:      { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  rock_mace:                { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
+  bone_club:                { flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
+  big_bone:                 { flesh: 'big_bone_hit',   blocked: 'big_bone_hit' },
+  partially_digested_bone:  { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
+  magic_missiles:           { flesh: 'missile_flesh', blocked: 'missile_flesh' },
+  // Arcane Beam — cast cue fires from prepareBeamFire as a duration-
+  // scaled electric_beam_01 hum. Mapped here as `play` so the codex
+  // shows the wiring even though the actual playback is bespoke.
+  arcane_beam:              { play: 'arcane_beam' },
+  fire_burst:               { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
+  wand_of_fire:             { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
+  ice_bolt:                 { flesh: 'ice_flesh',     blocked: 'ice_flesh' },
+  // Ranger Multi Shot — three staggered bow shots on cast, same UX
+  // as Sprint / Shield Wall / Treants. flesh/blocked omitted so the
+  // multi_damage handler doesn't pile a 4th-6th hit cue on top.
+  multi_shot:               { playMulti: { key: 'bow_flesh', count: 3, stagger: 130 } },
+  sturdy_boots:             { flesh: 'boots_flesh', defense: 'boots_flesh' },
+  goblin_rocket_boots:      { flesh: 'goblin_explosion', blocked: 'goblin_explosion',
+                              defense: 'goblin_explosion' },
+  zhosts_buckler:           { flesh: 'shield_flesh', blocked: 'shield_blocked' },
+  kobold_shield:            { flesh: 'shield_flesh', blocked: 'shield_flesh' },
+  kobold_spear:             { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
+  trident_thrust:           { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
+  trident_throw:            { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
+  sahuagin_trident:         { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
+  shield_bash:              { flesh: 'shield_flesh', blocked: 'shield_blocked' },
+  cleave:                   { flesh: 'axe_2h_flesh',  blocked: 'axe_blocked' },
+  quick_strike:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  aimed_shot:               { flesh: 'bow_flesh',     blocked: 'bow_blocked',
+                              play:  'aimed_shot' },
+  hunters_mark:             { play: 'bow_flesh' },
+  crush:                    { playMulti: { key: 'rocks_impact_small', count: 2, stagger: 260 } },
+  battle_fury:              { play: 'battle_fury' },
+  careful_strike:           { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  wrath:                    { flesh: 'wrath_cast', blocked: 'wrath_cast',
+                              play:  'wrath_cast' },
+  charge:                   { flesh: 'sword_1h_flesh', blocked: 'sword_blocked',
+                              play:  'battle_fury' },
+  sneak_attack:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  backstab:                 { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  fan_of_blades:            { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  sprint:                   { playMulti: { key: 'footstep', count: 5, stagger: 220 } },
+  shield_of_faith:          { play: 'arcane_shield' },
+  reckless_strike:          { flesh: 'reckless_axe_hit', blocked: 'axe_blocked' },
+  execute:                  { flesh: 'execute_axe', blocked: 'axe_blocked' },
+  battle_shout:             { play: 'battle_fury' },
+  burning_hands:            { flesh: 'fire_flesh', blocked: 'fire_flesh' },
+  explosive_shot:           { flesh: 'bow_flesh', blocked: 'bow_blocked' },
+  feral_bite:               { flesh: 'big_bite', blocked: 'big_bite',
+                              play:  'bear_growl' },
+  hammer_of_wrath:          { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
+                              play:  'sparkle_spell' },
+  healing_touch:            { play: 'heal_touch' },
+  // Ice Block layers a second sound (ice_flesh) inline in playCardAmbient.
+  ice_block:                { play: 'arcane_shield' },
+  ice_nova:                 { flesh: 'ice_flesh', blocked: 'ice_flesh' },
+  piercing_shot:            { flesh: 'bow_flesh', blocked: 'bow_blocked' },
+  revivify:                 { play: 'heal_revivify' },
+  shield_wall:              { playMulti: { key: 'hit_blocked', count: 3, stagger: 110 } },
+  // Starfire — celestial wind rush. Single play on the actual hit
+  // via flesh/blocked; no separate `play` cue (would double-fire the
+  // same sample on cast + impact for the same wind_blast sample).
+  starfire:                 { flesh: 'wind_blast', blocked: 'wind_blast' },
+  summon_treants:           { playMulti: { key: 'leaf_fall', count: 2, stagger: 240 } },
+  // Thunderclap — sparkle bell pulses fired imperatively from the
+  // apply_shock_all handler (cap 3). The playMulti override here also
+  // makes the cast cue audible directly when the card is played.
+  thunderclap:              { playMulti: { key: 'sparkle_spell', count: 3, stagger: 140 } },
+  consecration:             { flesh: 'fire_blast', blocked: 'fire_blast' },
+  heroic_strike:            { play: 'heroic_strike_cast' },
+  defensive_formation:      { play: 'arcane_shield' },
+  icy_breath:               { flesh: 'ice_flesh', blocked: 'ice_flesh' },
+  bear_form_token:          { flesh: 'bear_form_attack', blocked: 'bear_form_attack' },
+  cat_form_token:           { flesh: 'cat_form_attack',  blocked: 'cat_form_attack' },
+  fire_token:               { play: 'fire_flesh' },
+  ice_token:                { play: 'ice_flesh' },
+  feral_swipe:              { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
+                              play:  'bear_form_attack' },
+  arcane_shield:            { play: 'arcane_shield' },
+  pet_slime:                { play: 'ooze_attack' },
+  tamed_rat:                { play: 'rat_screech' },
+  raena_card:               { play: 'raena_summon' },
+  raena_card_2:             { play: 'raena_summon' },
+  valdrisa_card:            { play: 'valdrisa_summon' },
+  thorb_card:               { play: 'thorb_shout' },
+  thorb_card_2:             { play: 'thorb_shout' },
+  dwarven_scout:            { play: 'dwarven_scout_shout' },
+  pet_spider:               { play: 'spider_scuttle' },
+  queens_locket:            { play: 'queens_gift_cast' },
+  cracked_buckler:          { play: 'shield_grab' },
+  runeforged_buckler:       { play: 'shield_grab' },
+  web_spider:               { play: 'spider_scuttle' },
+  poisoned_bite:            { flesh: 'spider_scuttle', blocked: 'spider_scuttle' },
+  kobold_backup:            { play: 'kobold_attack' },
+  kobold_army:              { play: 'kobold_attack' },
+  split:                    { play: 'ooze_attack' },
+  bone_wand:                { flesh: 'bone_wand_cast', blocked: 'bone_wand_cast' },
+  skreeeeeeeek:             { flesh: 'rat_screech', blocked: 'rat_screech' },
+  dire_rat_screech:         { flesh: 'rat_screech', blocked: 'rat_screech' },
+  guards:                   { flesh: 'warden_hiss', blocked: 'warden_hiss' },
+  hide_in_corner:           { flesh: 'warden_hiss', blocked: 'warden_hiss',
+                              play:  'warden_hiss' },
+  bite:                     { flesh: 'rat_bite_flesh', blocked: 'rat_bite_flesh' },
+  chunky_bite:              { flesh: 'big_bite',       blocked: 'big_bite' },
+  dire_rat_bite:            { flesh: 'big_bite',       blocked: 'big_bite' },
+  mimic_bite:               { flesh: 'mimic_chomp',    blocked: 'mimic_chomp' },
+  pulling_back_the_ram:     { play: 'ogre_groan' },
+  massive_ogre_ram:         { flesh: 'battering_ram', blocked: 'battering_ram',
+                              play:  'battering_ram' },
+  slime_appendage:          { flesh: 'ooze_attack',    blocked: 'ooze_attack' },
+  goodberry:                { play: 'eat' },
+  goodberries:              { play: 'goodberries_cast' },
+  chicken_leg:              { play: 'eat' },
+  bad_rations:              { play: 'eat' },
+  lambas_bread:             { play: 'eat' },
+  travel_rations:           { play: 'eat' },
+  bandages:                 { play: 'cloth_use' },
+  scraps:                   { play: 'cloth_use' },
+  sack:                     { play: 'bag_use' },
+  small_pouch:              { play: 'bag_use' },
+  slime_jar:                { play: 'jar_use' },
+  vial_of_poison:           { play: 'jar_use' },
+  torch:                    { play: 'torch_use' },
+  scroll_of_potency:        { play: 'scroll_use' },
+  ale:                      { play: 'drink' },
+  dwarven_brew:             { play: 'drink' },
+  minor_healing_potion:     { play: 'drink' },
+  flash_heal:               { play: 'heal_spell' },
+  holy_light:               { play: 'heal_spell' },
+  regrowth:                 { play: 'heal_spell' },
+  small_faery:              { play: 'faery_cast' },
+  blood_in_the_water:       { play: 'piranha_swarm' },
+};
+
+// Extra wirings for cards/effects that fire sounds outside the per-id
+// override (e.g. stagger inside an effect handler). Surfaced in the
+// codex Sound tab so the player can find every sound a card produces.
+const CARD_SFX_HINTS = {
+  // splash_fire (Explosive Shot) stutters fire_flesh per affected enemy.
+  explosive_shot:   ['fire_flesh'],
+  // playCardAmbient fires arcane_shield + ice_flesh on cast.
+  ice_block:        ['ice_flesh'],
+  // buff_allies_heroism plays each ally's signature shout.
+  battle_shout:     ['thorb_shout', 'raena_summon', 'valdrisa_summon',
+                     'bear_growl', 'pig_grunt', 'dwarven_scout_shout'],
+  // STAGGERED_AOE cards — damage_all fires the flesh sample 3x on cast
+  // when at least one enemy is hit (or blocked sample if all blocked).
+  // Surfaced here so the codex card details show the cast cue too.
+  burning_hands:    ['fire_flesh'],
+  ice_nova:         ['ice_flesh'],
+  consecration:     ['fire_blast'],
+  fan_of_blades:    ['dagger_flesh'],
+  // apply_shock_all stutters sparkle_spell per shocked enemy (cap 3).
+  thunderclap:      ['sparkle_spell'],
+};
+
 // The two-arg form is used by the codex stats panel so it can preview
 // the wired sounds for any selected card/creature without disturbing
 // the live combat-state globals.
@@ -20699,257 +21222,10 @@ function getWeaponSfxKeys(card = null, creature = null) {
   // cards like "Rock Mace" route to blunt sounds (not rock shatter) and
   // cards whose ids don't carry their family name ("white_claw" is
   // really a sword, "big_bone" is really a 2H club) still classify.
-  const ID_OVERRIDES = {
-    white_claw:               { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
-    white_claw_reforged:      { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
-    rock_mace:                { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
-    bone_club:                { flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
-    big_bone:                 { flesh: 'big_bone_hit',   blocked: 'big_bone_hit' },
-    partially_digested_bone:  { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
-    // Spells — blocked deliberately reuses the flesh sample so a
-    // deflected fireball still sounds like a fireball, not a hammer
-    // hitting armor. Multi Shot is a ranger ability but classifies
-    // as a bow swing for sound purposes.
-    magic_missiles:           { flesh: 'missile_flesh', blocked: 'missile_flesh' },
-    // Arcane Beam — entire cast cue fires from prepareBeamFire as a
-    // duration-scaled electric_beam_01 hum. No flesh/blocked override
-    // here so we don't layer a second spell_burst on top of the beam;
-    // the rare blocked path falls back to the generic hit_blocked thud.
-    fire_burst:               { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
-    wand_of_fire:             { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
-    ice_bolt:                 { flesh: 'ice_flesh',     blocked: 'ice_flesh' },
-    multi_shot:               { flesh: 'bow_flesh',     blocked: 'bow_blocked' },
-    // Boots-as-weapon. Dwarven Greaves keeps the default heavy_armor
-    // block_heavy sound (set automatically from subtype) — only
-    // Sturdy Boots overrides defense to the leather-step sample.
-    sturdy_boots:             { flesh: 'boots_flesh', defense: 'boots_flesh' },
-    // Goblin Rocket Boots — all three channels (cast/block, fire-hit,
-    // fire-blocked) share the goblin explosion sample so the rigged
-    // boot stays sonically unmistakable.
-    goblin_rocket_boots:      { flesh: 'goblin_explosion', blocked: 'goblin_explosion',
-                                defense: 'goblin_explosion' },
-    // Shield bashes — distinct hit / blocked samples.
-    zhosts_buckler:           { flesh: 'shield_flesh', blocked: 'shield_blocked' },
-    // Kobold attack cards — blocked sample reuses the flesh sample so
-    // every kobold swing sounds the same whether or not it lands.
-    kobold_shield:            { flesh: 'shield_flesh', blocked: 'shield_flesh' },
-    kobold_spear:             { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
-    // Sahuagin trident cards — thrust uses the standard spear stab,
-    // throw uses the heavier thrown-spear sample. Block on either
-    // uses the sword-on-rock-wall clang.
-    trident_thrust:           { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
-    trident_throw:            { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
-    // Player-side Sahuagin Trident loot — heavier thrown-spear hit
-    // when it lands; same rock-wall clang on block.
-    sahuagin_trident:         { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
-    // Warrior Shield Bash — gain shield + deal damage = shield. Use
-    // the same shield clang family as Buckler / Kobold Shield.
-    shield_bash:              { flesh: 'shield_flesh', blocked: 'shield_blocked' },
-    // Class powers — id matches the Power object's id, picked up when
-    // the power-driven attack stamps _activePlayCard = power before
-    // routing damage. Wizard's elemental_infusion is intentionally
-    // omitted — fire/ice apply cues already cover its sound.
-    cleave:                   { flesh: 'axe_2h_flesh',  blocked: 'axe_blocked' },
-    quick_strike:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
-    aimed_shot:               { flesh: 'bow_flesh',     blocked: 'bow_blocked',
-                                play:  'aimed_shot' },
-    // Hunter's Mark — arrow-thwock on cast (mark cannot be blocked).
-    hunters_mark:             { play: 'bow_flesh' },
-    // Obsidian Golem boss attack card — 2 spaced rocks_impact_small
-    // on the swing. flesh/blocked left blank so the on-hit cue doesn't
-    // stack a 3rd rock; the burst already covers the audible hit.
-    crush:                    { playMulti: { key: 'rocks_impact_small', count: 2, stagger: 260 } },
-    battle_fury:              { play: 'battle_fury' },
-    // Class cards
-    careful_strike:           { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
-    // Wrath (druid) — leaf-fall on cast for both modal modes (3 dmg
-    // and 1 dmg + draw both share the same sound).
-    wrath:                    { flesh: 'wrath_cast', blocked: 'wrath_cast',
-                                play:  'wrath_cast' },
-    charge:                   { flesh: 'sword_1h_flesh', blocked: 'sword_blocked',
-                                play:  'battle_fury' },
-    // Rogue Sneak Attack — dagger family.
-    sneak_attack:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
-    // Rogue Backstab — same dagger family (single hit + draw).
-    backstab:                 { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
-    // Rogue Fan of Blades — three thrown daggers fan across the row.
-    // The damage_all handler reads this override and stutters 3
-    // dagger-flesh hits when at least one lands, or 3 dagger-blocked
-    // thuds when none do.
-    fan_of_blades:            { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
-    // Rogue Sprint — multi-footstep sequence on cast.
-    sprint:                   { playMulti: { key: 'footstep', count: 5, stagger: 220 } },
-    // Paladin Shield of Faith — bright spell ping on cast.
-    shield_of_faith:          { play: 'arcane_shield' },
-    // Warrior Reckless Strike — heavier 2H axe variant.
-    reckless_strike:          { flesh: 'reckless_axe_hit', blocked: 'axe_blocked' },
-    // Warrior Execute — heaviest 2H axe sample on a landed cleave;
-    // standard axe clang on a fully blocked finisher.
-    execute:                  { flesh: 'execute_axe', blocked: 'axe_blocked' },
-    // Warrior Battle Shout — guttural battle grunt on cast. Each
-    // living ally also shouts (per-ally voice) via the buff_allies_
-    // heroism handler with stagger.
-    battle_shout:             { play: 'battle_fury' },
-    // Wizard Burning Hands — staggered fireball-whooshes via damage_all.
-    burning_hands:            { flesh: 'fire_flesh', blocked: 'fire_flesh' },
-    // Ranger Explosive Shot — bow shot lands the main hit; the
-    // splash_fire effect handler additionally stutters fire-whooshes
-    // (one per fired-up enemy, capped) so the AOE has presence.
-    explosive_shot:           { flesh: 'bow_flesh', blocked: 'bow_blocked' },
-    // Druid Feral Bite — bear growl on cast, then a chunky chew on
-    // the landed swing.
-    feral_bite:               { flesh: 'big_bite', blocked: 'big_bite',
-                                play:  'bear_growl' },
-    // Paladin Hammer of Wrath — sparkle halo on cast + a 1H blunt
-    // thwack on the landed swing.
-    hammer_of_wrath:          { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
-                                play:  'sparkle_spell' },
-    // Druid Healing Touch — soft angelic chime when the heal lands
-    // (whether on the player or an ally).
-    healing_touch:            { play: 'heal_touch' },
-    // Wizard Ice Block — buff guard sting layered with the ice blast,
-    // both on cast (handled inline in playCardAmbient).
-    ice_block:                { play: 'arcane_shield' },
-    // Wizard Ice Nova — staggered ice-blast pulses via damage_all.
-    ice_nova:                 { flesh: 'ice_flesh', blocked: 'ice_flesh' },
-    // Ranger Piercing Shot — straight bow shot. Same family as the
-    // class power so the on-hit cue is unmistakable.
-    piercing_shot:            { flesh: 'bow_flesh', blocked: 'bow_blocked' },
-    // Paladin Revivify — heal sting (heal_angelic_03). When the
-    // revivify mechanic adds an ally-pick modal, fire this on the
-    // selection instead of cast — for now it lands on cast.
-    revivify:                 { play: 'heal_revivify' },
-    // Warrior Shield Wall — three quick heavy plate impacts on cast,
-    // matching the wall going up around the party.
-    shield_wall:              { playMulti: { key: 'hit_blocked', count: 3, stagger: 110 } },
-    // Druid Starfire — celestial wind rush.
-    starfire:                 { flesh: 'wind_blast', blocked: 'wind_blast',
-                                play:  'wind_blast' },
-    // Druid Summon Treants — two leaf-falls on cast (3-4 treants
-    // emerging in pairs). Each Treant swing also plays leaf_fall via
-    // its creature SFX entry below.
-    summon_treants:           { playMulti: { key: 'leaf_fall', count: 2, stagger: 240 } },
-    // Warrior Thunderclap — sparkle bell pulses fired from the
-    // apply_shock_all handler (one per shocked enemy, cap 3).
-    // Paladin Consecration — staggered fire-blast pulses via damage_all.
-    consecration:             { flesh: 'fire_blast', blocked: 'fire_blast' },
-    // Warrior/Paladin Heroic Strike — angelic buff cast.
-    heroic_strike:            { play: 'heroic_strike_cast' },
-    // Defensive Formation — protection buff cast (same family as
-    // Arcane Shield / Shield of Faith).
-    defensive_formation:      { play: 'arcane_shield' },
-    // Icy Breath enemy card — ice blast, same as the ice_bolt spell.
-    icy_breath:               { flesh: 'ice_flesh', blocked: 'ice_flesh' },
-    bear_form_token:          { flesh: 'bear_form_attack', blocked: 'bear_form_attack' },
-    cat_form_token:           { flesh: 'cat_form_attack',  blocked: 'cat_form_attack' },
-    // Mage Elemental Infusion choice tokens — same sample as the
-    // dedicated fire/ice cards for codex consistency.
-    fire_token:               { play: 'fire_flesh' },
-    ice_token:                { play: 'ice_flesh' },
-    // Feral Swipe (druid) — bear growl on cast, then per-target hits
-    // play the 1H blunt thwack (claw swipe = mace family).
-    feral_swipe:              { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
-                                play:  'bear_form_attack' },
-    // Arcane Shield (wizard) — bright spell ping on cast.
-    arcane_shield:            { play: 'arcane_shield' },
-    // Companion / token summon cards — play their creature's signature
-    // sound on cast.
-    pet_slime:                { play: 'ooze_attack' },
-    tamed_rat:                { play: 'rat_screech' },
-    // Companion ally cards — battle shouts on summon, the actual
-    // creature attack swings keep their own weapon-family sounds.
-    raena_card:               { play: 'raena_summon' },
-    raena_card_2:             { play: 'raena_summon' },
-    valdrisa_card:            { play: 'valdrisa_summon' },
-    thorb_card:               { play: 'thorb_shout' },
-    thorb_card_2:             { play: 'thorb_shout' },
-    // Dwarven Scout summon — male warrior hit shout cue, distinct
-    // from Thorb only by being routed through its own alias for
-    // future-proofing (different sample later, etc.).
-    dwarven_scout:            { play: 'dwarven_scout_shout' },
-    pet_spider:               { play: 'spider_scuttle' },
-    // The Queen's Locket — angelic chime on cast.
-    queens_locket:            { play: 'queens_gift_cast' },
-    // Cracked Buckler — gain-shield-only play, no swing.
-    cracked_buckler:          { play: 'shield_grab' },
-    // Runeforged Buckler — physical buckler, gain-shield-only play.
-    runeforged_buckler:       { play: 'shield_grab' },
-    // Web (spider DEFENSE card) — same dry leaf-scuttle as the Pet
-    // Spider summon so the family stays consistent.
-    web_spider:               { play: 'spider_scuttle' },
-    // Deathjump Spider's bite — leaf-scuttle on flesh and on block so
-    // every Deathjump card play (attack or defense) is unmistakable.
-    poisoned_bite:            { flesh: 'spider_scuttle', blocked: 'spider_scuttle' },
-    // Kobold Backup / Kobold Army (passive powers) — start-of-turn
-    // summons with a kobold hiss so the codex reflects the in-game cue.
-    kobold_backup:            { play: 'kobold_attack' },
-    kobold_army:              { play: 'kobold_attack' },
-    // Split (passive power on Slime / others) — wet squelch each
-    // time it triggers (matches triggerSplitPower).
-    split:                    { play: 'ooze_attack' },
-    // Bone Wand — magical crystal twang on every cast.
-    bone_wand:                { flesh: 'bone_wand_cast', blocked: 'bone_wand_cast' },
-    // Rat screech summon cards (Giant Rat's Screech! / Dire Rat's
-    // Skreeeeeeeek!). Plays whenever the enemy fires the card.
-    skreeeeeeeek:             { flesh: 'rat_screech', blocked: 'rat_screech' },
-    dire_rat_screech:         { flesh: 'rat_screech', blocked: 'rat_screech' },
-    // Kobold Warden command cards — louder warden hiss.
-    guards:                   { flesh: 'warden_hiss', blocked: 'warden_hiss' },
-    hide_in_corner:           { flesh: 'warden_hiss', blocked: 'warden_hiss',
-                                play:  'warden_hiss' },
-    // Bite cards / Big Bite power. The chunky_bite "card" is actually
-    // a Power object — same id-based override catches it because the
-    // play handler stashes the power as the active card.
-    bite:                     { flesh: 'rat_bite_flesh', blocked: 'rat_bite_flesh' },
-    chunky_bite:              { flesh: 'big_bite',       blocked: 'big_bite' },
-    // Dire Rat Bite enemy attack — same beefier chew as Big Bite.
-    dire_rat_bite:            { flesh: 'big_bite',       blocked: 'big_bite' },
-    // Mimic chomp — heavy chew/rip, distinct from the Dire-rat lineage.
-    mimic_bite:               { flesh: 'mimic_chomp',    blocked: 'mimic_chomp' },
-    // Pulling Back the Ram — ogre groan each time the boss heaves the
-    // ram backward (the card is stays-in-hand so this can fire several
-    // times per turn as multiple copies stack up).
-    pulling_back_the_ram:     { play: 'ogre_groan' },
-    // Massive Ogre Ram (active power) — heavy battering-ram impact
-    // swung at every target. The flesh/blocked channels both share
-    // the same impact so a deflected swing still sounds like the ram
-    // hitting metal.
-    massive_ogre_ram:         { flesh: 'battering_ram', blocked: 'battering_ram',
-                                play:  'battering_ram' },
-    // Slime's swing card — wet squelch on hit and on block.
-    slime_appendage:          { flesh: 'ooze_attack',    blocked: 'ooze_attack' },
-    // Ambient on-play cues (no flesh/blocked — they're not attacks).
-    // The third channel `play` is consumed by the card-play handlers.
-    goodberry:                { play: 'eat' },
-    goodberries:              { play: 'goodberries_cast' },
-    chicken_leg:              { play: 'eat' },
-    bad_rations:              { play: 'eat' },
-    lambas_bread:             { play: 'eat' },
-    travel_rations:           { play: 'eat' },
-    // Cloth-flavored items.
-    bandages:                 { play: 'cloth_use' },
-    scraps:                   { play: 'cloth_use' },
-    // Bag / pouch shuffle.
-    sack:                     { play: 'bag_use' },
-    small_pouch:              { play: 'bag_use' },
-    // Stoppered jar / vial — pop the lid.
-    slime_jar:                { play: 'jar_use' },
-    vial_of_poison:           { play: 'jar_use' },
-    // Torch ignites with a whoosh.
-    torch:                    { play: 'torch_use' },
-    // Scroll of Potency unfurls.
-    scroll_of_potency:        { play: 'scroll_use' },
-    ale:                      { play: 'drink' },
-    dwarven_brew:             { play: 'drink' },
-    minor_healing_potion:     { play: 'drink' },
-    flash_heal:               { play: 'heal_spell' },
-    holy_light:               { play: 'heal_spell' },
-    regrowth:                 { play: 'heal_spell' },
-    small_faery:              { play: 'faery_cast' },
-    // Blood in the Water — bubbly piranha-pass ambient on cast.
-    blood_in_the_water:       { play: 'piranha_swarm' },
-  };
-  if (ID_OVERRIDES[id]) return ID_OVERRIDES[id];
+  // Per-card SFX overrides live at module scope (CARD_SFX_OVERRIDES)
+  // so the codex Sound tab can iterate the same map for its wiredTo
+  // column. The lookup keeps the same behavior.
+  if (CARD_SFX_OVERRIDES[id]) return CARD_SFX_OVERRIDES[id];
   // 2H is detected from subtype OR a "great*" prefix in the id.
   const isTwoHanded = sub === 'martial_2h' || id.includes('great');
   // Bows + crossbows. Subtype catches the ranger's Bow / Short Bow;
@@ -21460,7 +21736,8 @@ function gameLoop(timestamp) {
   // their own draw fn so this is a no-op for them when nothing's
   // hovered.
   const isCombatCluster = state === GameState.COMBAT || state === GameState.TARGETING ||
-    state === GameState.MODAL_SELECT || state === GameState.DEFENDING ||
+    state === GameState.MODAL_SELECT || state === GameState.REVIVE_SELECT ||
+    state === GameState.DEFENDING ||
     state === GameState.DAMAGE_SOURCE || state === GameState.POWER_TARGETING ||
     state === GameState.POWER_CHOICE || state === GameState.ALLY_TARGETING ||
     state === GameState.MULTI_TARGETING || state === GameState.SCRY_SELECT;
@@ -22938,6 +23215,28 @@ function drawCodexSoundGrid(L) {
     if (!wiredTo[path]) wiredTo[path] = [];
     for (const tag of tags) wiredTo[path].push(`tag:${tag}`);
   }
+  // Per-card SFX overrides — surface every channel (flesh / blocked /
+  // play / playMulti.key / defense) so cards like Sprint, Shield Wall,
+  // Treants, Thunderclap, etc. show up under their effective files.
+  const _addCardEvent = (alias, cardId, channel) => {
+    const path = SOUND_MAP[alias];
+    if (!path) return;
+    if (!wiredTo[path]) wiredTo[path] = [];
+    wiredTo[path].push(`card:${cardId}:${channel}`);
+  };
+  for (const [cardId, ov] of Object.entries(CARD_SFX_OVERRIDES)) {
+    if (!ov) continue;
+    if (ov.flesh)   _addCardEvent(ov.flesh,   cardId, 'flesh');
+    if (ov.blocked) _addCardEvent(ov.blocked, cardId, 'blocked');
+    if (ov.play)    _addCardEvent(ov.play,    cardId, 'play');
+    if (ov.defense) _addCardEvent(ov.defense, cardId, 'defense');
+    if (ov.playMulti && ov.playMulti.key) _addCardEvent(ov.playMulti.key, cardId, 'playMulti');
+  }
+  // Imperative SFX hints — sounds fired from effect handlers, not
+  // covered by CARD_SFX_OVERRIDES. e.g. Thunderclap's apply_shock_all.
+  for (const [cardId, keys] of Object.entries(CARD_SFX_HINTS)) {
+    for (const k of (keys || [])) _addCardEvent(k, cardId, 'effect');
+  }
 
   // Build flat list of { pack, file, fullPath } entries.
   let entries = [];
@@ -23400,18 +23699,23 @@ function buildCodexSourceCache() {
   // Player-summon creatures via cards' previewCreature field (Pet Spider,
   // Tamed Rat, Pet Slime, etc.). This populates the Summons tab and stamps
   // both _sourceRarity (frame asset) and _sourceSubtype (frame tint) so the
-  // creature card matches the source card's full visual identity.
+  // creature card matches the source card's full visual identity. Also
+  // handles previewCreatures (plural) for modal summons like Animal
+  // Companion that pick from a list (Misha / Huffer).
   for (const [id, creator] of Object.entries(CARD_REGISTRY)) {
     try {
       const card = creator();
-      if (card && card.previewCreature) {
-        card.previewCreature._codexSide = 'player';
-        card.previewCreature._sourceRarity = card.rarity || 'common';
-        card.previewCreature._sourceSubtype = card.subtype || '';
-        // Tier suffix so identical-name cards (Thorb T1 vs Thorb T2) show
-        // distinct source lines on the creature's stats panel.
-        const tierSuffix = (card.tier && card.tier > 1) ? ` (Tier ${card.tier})` : '';
-        addCreature(card.previewCreature, `Summoned by: ${card.name}${tierSuffix}`);
+      if (!card) continue;
+      const tierSuffix = (card.tier && card.tier > 1) ? ` (Tier ${card.tier})` : '';
+      const stamp = (creature) => {
+        creature._codexSide = 'player';
+        creature._sourceRarity = card.rarity || 'common';
+        creature._sourceSubtype = card.subtype || '';
+        addCreature(creature, `Summoned by: ${card.name}${tierSuffix}`);
+      };
+      if (card.previewCreature) stamp(card.previewCreature);
+      if (Array.isArray(card.previewCreatures)) {
+        for (const c of card.previewCreatures) if (c) stamp(c);
       }
     } catch (e) { /* skip */ }
   }
@@ -23843,8 +24147,23 @@ function drawCodexStatsPanel(L) {
         { label: 'Flesh',   key: sfx.flesh },
         { label: 'Blocked', key: sfx.blocked },
         { label: 'Play',    key: sfx.play,    ambient: true },
+        // playMulti is how Sprint, Shield Wall, Treants, Thunderclap,
+        // and the Crush card stutter a single sample N times on cast.
+        // Show the underlying alias so the codex matches what fires.
+        { label: 'Multi',   key: (sfx.playMulti && sfx.playMulti.key) || null,
+                            count: sfx.playMulti && sfx.playMulti.count,
+                            ambient: true },
         { label: 'Defense', key: sfx.defense, ambient: true },
       ];
+      // Imperative SFX hints — sounds fired from effect handlers, not
+      // from CARD_SFX_OVERRIDES. e.g. Explosive Shot's per-enemy fire,
+      // Ice Block's layered ice cast, Battle Shout's per-ally voices.
+      if (!sel._isCharacter && !sel._isCreature) {
+        const hints = (sel && sel.id) ? CARD_SFX_HINTS[sel.id] : null;
+        if (Array.isArray(hints)) {
+          for (const k of hints) rowEntries.push({ label: 'Effect', key: k, ambient: true });
+        }
+      }
       ctx.font = '12px sans-serif';
       ctx.textBaseline = 'middle';
       const btnW = 28, btnH = 18;
@@ -23871,7 +24190,9 @@ function drawCodexStatsPanel(L) {
         // labels (longer than Flesh/Blocked/Play/Defense).
         const valX = lineX + (sel._isCharacter ? 78 : 56);
         const valText = path
-          ? path.split('/').pop() + (isFallback ? '  (default)' : '')
+          ? path.split('/').pop()
+            + (isFallback ? '  (default)' : '')
+            + (re.label === 'Multi' && re.count ? ` ×${re.count}` : '')
           : '(unmapped)';
         ctx.fillText(valText, valX, cy);
         if (path) {
