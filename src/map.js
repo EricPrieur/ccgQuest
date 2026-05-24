@@ -231,11 +231,14 @@ export function createRuinsBasinMap() {
     { id: 'pool_edge', name: 'Pool Edge', description: 'The edge of the pool, a sentinel watches.', encounterId: 'sahuagin_sentinel', connections: ['pool_south'], position: [760, 380], mapArea: 'ruins_basin' },
     { id: 'pool_south', name: 'Pool South', description: 'The southern edge of the basin.', encounterId: 'pool_south', connections: ['pool_edge', 'pool_exit'], position: [798, 686], mapArea: 'ruins_basin', unlocks: ['pool_exit'] },
     { id: 'pool_exit', name: "Pool's Exit", description: 'A patrolling sentinel blocks the corridor.', encounterId: 'pool_exit', connections: ['pool_south', 'flooded_entrance'], position: [520, 910], mapArea: 'ruins_basin', isLocked: true, unlocks: ['flooded_entrance'], passthroughTo: 'flooded_entrance' },
-    // Flooded entrance hops back to the Piranha Pool (the first pool
-    // node), letting the player skip the cleared pool/sentinel/exit
-    // sequence on the way out. The opposite teleport lives on
-    // piranha_pool above.
-    { id: 'flooded_entrance', name: 'Flooded Entrance', description: 'The entrance to a flooded temple.', encounterId: '', connections: ['pool_exit', 'temple_right', 'temple_left', 'flooded_atrium'], position: [512, 120], mapArea: 'flood_temple', canRevisit: true, passthroughTo: 'piranha_pool' },
+    // Flooded entrance hops back to Pool's Exit so the cross-area pair
+    // is symmetric (pool_exit ↔ flooded_entrance). Earlier this hopped
+    // to piranha_pool to "skip the cleared corridor", but pool_exit's
+    // own forward-teleport chained into that backward-teleport and
+    // dumped the player back at piranha_pool right after the sentinel
+    // fight — fixed by repointing here and the suppressFloodPair guard
+    // in arriveAtNode is no longer needed (kept for safety).
+    { id: 'flooded_entrance', name: 'Flooded Entrance', description: 'The entrance to a flooded temple.', encounterId: '', connections: ['pool_exit', 'temple_right', 'temple_left', 'flooded_atrium'], position: [512, 120], mapArea: 'flood_temple', canRevisit: true, passthroughTo: 'pool_exit' },
     { id: 'temple_right', name: 'Conservatory Wing', description: 'A well-conserved area of the temple. Some light shows through cracks in the ceiling.', encounterId: 'conservatory_wing', connections: ['flooded_entrance', 'temple_depths', 'altar_entrance', 'flooded_atrium'], position: [902, 492], mapArea: 'flood_temple', passthroughTo: 'altar_entrance', unlocks: ['altar_entrance'] },
     // Atrium: new mid-room node not in the PY map. A direct link from
     // the flooded entrance straight down to the temple depths so the
@@ -394,6 +397,457 @@ export function createVolcanoMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'volcano_approach';
+  return map;
+}
+
+// === Lower Caverns Map (Chapter 7 — lower path) ===
+// Mirrors PY map.py:create_lower_caverns_map. Three-node tunnel
+// descent from the volcano base: entrance -> winding descent ->
+// chamber opening. Player arrives at cavern_entrance which fires the
+// lower_caverns_arrival narrative.
+export function createLowerCavernsMap() {
+  const map = new GameMap('lower_caverns', 'Tunnel to Lower Chamber');
+  map.mapImages = {
+    lower_caverns: 'Maps/VolcanoTunnelToLowerChamber.jpg',
+  };
+
+  const nodes = [
+    // cavern_entrance: arrival dialog fires once (canRevisit:false so
+    // the dialog doesn't replay). After done, walking back onto it
+    // teleports the party back to the volcano map (handled in
+    // arriveAtNode). Same pattern on chamber_entry below.
+    { id: 'cavern_entrance', name: 'Cavern Entrance', description: 'A narrow opening in the rock leads down into darkness. Warm air rises from below.', encounterId: 'lower_caverns_arrival', connections: ['cavern_descent'], unlocks: ['cavern_descent'], position: [790, 740], mapArea: 'lower_caverns', hiddenName: '???', hiddenDescription: 'A passage leads back.' },
+    { id: 'cavern_descent', name: 'Winding Descent', description: 'The tunnel spirals downward, carved by ancient lava flows. Obsidian veins glitter in the walls.', encounterId: '', connections: ['cavern_entrance', 'cavern_exit'], unlocks: ['cavern_entrance', 'cavern_exit'], isLocked: true, canRevisit: true, position: [550, 510], mapArea: 'lower_caverns', hiddenName: '???', hiddenDescription: 'The tunnel continues deeper.' },
+    { id: 'cavern_exit', name: 'Chamber Opening', description: 'The tunnel widens dramatically. A vast cavern opens up ahead, glowing with inner heat.', encounterId: '', connections: ['cavern_descent'], isLocked: true, canRevisit: true, position: [280, 330], mapArea: 'lower_caverns', hiddenName: '???', hiddenDescription: 'Something glows in the distance.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'cavern_entrance';
+  return map;
+}
+
+// === Lava Chamber Map (Chapter 7 — lower path, second area) ===
+// Mirrors PY map.py:create_lava_chamber_map. Five-node climb from
+// the lower-caverns exit up through molten rivers to the obsidian
+// tunnels above. Both the bottom entry (chamber_entry) AND the top
+// entry (upper_passage) carry the same arrival encounter id so the
+// "first visit" dialog fires exactly once regardless of direction.
+export function createLavaChamberMap() {
+  const map = new GameMap('lava_chamber', 'Lava Lower Chamber');
+  map.mapImages = {
+    lava_chamber: 'Maps/VolcanoLavvaLowerChamber.jpg',
+  };
+
+  // Symmetric unlocks: every inner node lists BOTH neighbors in its
+  // unlocks array so the path opens in either direction as the player
+  // walks through. Means a future top-entry at upper_passage chains
+  // back down through thermal_vent → magma_shelf → lava_bridge →
+  // chamber_entry the same way the bottom-entry chains up. The
+  // arrival encounter id is stamped on both terminal nodes so the
+  // first-visit dialog fires exactly once regardless of direction
+  // (completedEncounters force-isDone catches the second-time entry).
+  const nodes = [
+    // chamber_entry / upper_passage: terminal arrival nodes. The
+    // dialog fires once (canRevisit:false), then subsequent arrivals
+    // teleport the party back to the previous map (see arriveAtNode).
+    { id: 'chamber_entry', name: 'Chamber Entry', description: 'You emerge into a massive underground cavern. Rivers of sluggish lava cast an orange glow over everything.', encounterId: 'lava_chamber_arrival', connections: ['lava_bridge'], unlocks: ['lava_bridge'], position: [1080, 750], mapArea: 'lava_chamber', hiddenName: '???', hiddenDescription: 'A passage opens here.' },
+    { id: 'lava_bridge', name: 'Lava Bridge', description: 'A natural stone bridge spans a river of slowly moving magma.', encounterId: '', connections: ['chamber_entry', 'magma_shelf'], unlocks: ['chamber_entry', 'magma_shelf'], isLocked: true, canRevisit: true, position: [960, 500], mapArea: 'lava_chamber', hiddenName: '???', hiddenDescription: 'A crossing of some kind.' },
+    { id: 'magma_shelf', name: 'Magma Shelf', description: 'A wide ledge of cooled obsidian overlooks the churning magma below.', encounterId: '', connections: ['lava_bridge', 'thermal_vent'], unlocks: ['lava_bridge', 'thermal_vent'], isLocked: true, canRevisit: true, position: [570, 420], mapArea: 'lava_chamber', hiddenName: '???', hiddenDescription: 'A dark shelf above the glow.' },
+    { id: 'thermal_vent', name: 'Thermal Vent', description: 'Superheated air blasts upward through cracks in the floor. The walls are streaked with mineral deposits.', encounterId: '', connections: ['magma_shelf', 'upper_passage'], unlocks: ['magma_shelf', 'upper_passage'], isLocked: true, canRevisit: true, position: [630, 250], mapArea: 'lava_chamber', hiddenName: '???', hiddenDescription: 'Heat shimmers in the air ahead.' },
+    { id: 'upper_passage', name: 'Upper Passage', description: 'The path climbs steeply, leaving the magma behind. Cooler obsidian tunnels branch ahead.', encounterId: 'lava_chamber_arrival', connections: ['thermal_vent'], unlocks: ['thermal_vent'], isLocked: true, canRevisit: false, position: [670, 50], mapArea: 'lava_chamber', hiddenName: '???', hiddenDescription: 'The path leads upward.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'chamber_entry';
+  return map;
+}
+
+// === Obsidian Tunnels Map (Chapter 7 — branching hub above the
+// lava chamber). Mirrors PY map.py:create_obsidian_tunnels_map.
+// Tree layout: tunnel_entry (bottom) → obsidian_ledge →
+// tunnel_junction (4-way) → { north_tunnel, west_tunnel,
+// southeast_tunnel → pillar_passage }. The three terminal arms
+// (north/west/pillar) each connect to a future chapter 7+ area
+// (Temple District, Obsidian Forge, etc.). All four terminal nodes
+// carry the same arrival encounter id so the first-visit dialog
+// plays once regardless of which entry the player uses.
+// Inner-node unlocks list both connections so the chain opens in
+// either direction (matches the lava_chamber pattern).
+export function createObsidianTunnelsMap() {
+  const map = new GameMap('obsidian_tunnels', 'Obsidian Tunnels');
+  map.mapImages = {
+    obsidian_tunnels: 'Maps/VolcanoObsidianTunnel.jpg',
+  };
+
+  const nodes = [
+    { id: 'tunnel_entry',     name: 'Tunnel Entry',       description: 'The obsidian tunnels stretch before you, smooth walls reflecting your torchlight in dark mirrors.', encounterId: 'obsidian_tunnels_arrival', connections: ['obsidian_ledge'], unlocks: ['obsidian_ledge'], position: [420, 740], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'A passage opens here.' },
+    { id: 'obsidian_ledge',   name: 'Obsidian Ledge',     description: 'A narrow ledge of razor-sharp obsidian juts over a deep chasm. One wrong step and it\'s a long way down.', encounterId: '', connections: ['tunnel_entry', 'tunnel_junction'], unlocks: ['tunnel_entry', 'tunnel_junction'], isLocked: true, canRevisit: true, position: [620, 590], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'A narrow ledge ahead.' },
+    { id: 'tunnel_junction',  name: 'Tunnel Junction',    description: 'The tunnel splits into a wide crossroads. Faded carvings mark the walls in three directions.', encounterId: '', connections: ['obsidian_ledge', 'north_tunnel', 'southeast_tunnel', 'west_tunnel'], unlocks: ['obsidian_ledge', 'north_tunnel', 'southeast_tunnel', 'west_tunnel'], isLocked: true, canRevisit: true, position: [810, 430], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'The tunnel branches ahead.' },
+    { id: 'north_tunnel',     name: 'North Passage',      description: 'A wide, well-traveled passage heading north. The air hums with distant activity.', encounterId: 'obsidian_tunnels_arrival', connections: ['tunnel_junction'], unlocks: ['tunnel_junction'], isLocked: true, canRevisit: false, position: [880, 180], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'A passage heading north.' },
+    { id: 'southeast_tunnel', name: 'Southeast Passage',  description: 'A narrow tunnel sloping downward to the southeast. The walls are scorched black.', encounterId: '', connections: ['tunnel_junction', 'pillar_passage'], unlocks: ['tunnel_junction', 'pillar_passage'], isLocked: true, canRevisit: true, position: [950, 340], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'A passage heading southeast.' },
+    { id: 'pillar_passage',   name: 'Behind the Pillar',  description: 'A hidden passage behind a massive obsidian pillar. The air here is thick with heat from somewhere below.', encounterId: 'obsidian_tunnels_arrival', connections: ['southeast_tunnel'], unlocks: ['southeast_tunnel'], isLocked: true, position: [1310, 450], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'Something behind the pillar.' },
+    { id: 'west_tunnel',      name: 'West Passage',       description: 'A corridor heading west, lined with ancient carvings. A faint scent of old incense drifts from the darkness.', encounterId: 'obsidian_tunnels_arrival', connections: ['tunnel_junction'], unlocks: ['tunnel_junction'], isLocked: true, position: [440, 360], mapArea: 'obsidian_tunnels', hiddenName: '???', hiddenDescription: 'A passage heading west.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tunnel_entry';
+  return map;
+}
+
+// === Temple District Map (Chapter 7 — west branch from
+// west_tunnel). Mirrors PY map.py:create_temple_district_map.
+// Inner Road is the 4-way hub. temple_left_passage leads to the
+// future Obsidian Cathedral; temple_deep_chamber is the volcano_heart
+// encounter (not yet wired). For now they settle silently on arrival.
+export function createTempleDistrictMap() {
+  const map = new GameMap('temple_district', 'Temple District');
+  map.mapImages = {
+    temple_district: 'Maps/ObsidianTempleDistrict.jpg',
+  };
+
+  const nodes = [
+    { id: 'temple_entry',         name: 'Temple Entry',     description: 'The tunnel opens into a vast chamber lined with crumbling stone columns. The air is heavy with the scent of old incense.', encounterId: 'temple_district_arrival', connections: ['temple_inner_road'], unlocks: ['temple_inner_road'], position: [650, 760], mapArea: 'temple_district', hiddenName: '???', hiddenDescription: 'A chamber opens here.' },
+    { id: 'temple_inner_road',    name: 'Inner Road',        description: 'A wide road of polished obsidian stretches through the heart of the district. Passages branch off in several directions.', encounterId: '', connections: ['temple_entry', 'temple_side_passage', 'temple_left_passage', 'temple_deep_chamber'], unlocks: ['temple_entry', 'temple_side_passage', 'temple_left_passage', 'temple_deep_chamber'], isLocked: true, canRevisit: true, position: [690, 520], mapArea: 'temple_district', hiddenName: '???', hiddenDescription: 'A wide road ahead.' },
+    { id: 'temple_side_passage',  name: 'Side Passage',     description: 'A narrow passage branches off to the right, partially concealed by fallen masonry.', encounterId: 'temple_district_arrival_side', connections: ['temple_inner_road'], unlocks: ['temple_inner_road'], isLocked: true, canRevisit: false, position: [1180, 540], mapArea: 'temple_district', hiddenName: '???', hiddenDescription: 'A passage to the right.' },
+    { id: 'temple_left_passage',  name: 'Gate to Cathedral', description: 'A grand archway leads to what was once a cathedral. Faded murals of forgotten deities line the walls.', encounterId: '', connections: ['temple_inner_road'], unlocks: ['temple_inner_road'], isLocked: true, canRevisit: true, position: [300, 550], mapArea: 'temple_district', hiddenName: '???', hiddenDescription: 'A passage to the left.' },
+    { id: 'temple_deep_chamber',  name: 'Deep Chamber',     description: 'The deepest part of the temple district. Strange symbols glow faintly on the obsidian walls.', encounterId: 'volcano_heart', connections: ['temple_inner_road'], unlocks: ['temple_inner_road'], isLocked: true, canRevisit: true, position: [790, 360], mapArea: 'temple_district', hiddenName: '???', hiddenDescription: 'A faint glow in the distance.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'temple_entry';
+  return map;
+}
+
+// === Obsidian Cathedral Map (Chapter 7 — accessed from the temple
+// district's left passage). Mirrors PY map.py:create_obsidian_cathedral_map.
+// Three-node lane: cathedral_entry (arrival dialog) → cathedral_ruins
+// (Obsidian Oracle mini-boss) → cathedral_shrine (pray for a tier 2
+// ability OR rest for 8 HP).
+export function createObsidianCathedralMap() {
+  const map = new GameMap('obsidian_cathedral', 'Obsidian Cathedral');
+  map.mapImages = {
+    obsidian_cathedral: 'Maps/ObsidianCathedral.jpg',
+  };
+
+  const nodes = [
+    { id: 'cathedral_entry',  name: 'Cathedral Entry',  description: 'The archway opens into a vast ruined cathedral. Broken pillars rise into darkness above.', encounterId: 'cathedral_arrival', connections: ['cathedral_ruins'], unlocks: ['cathedral_ruins'], position: [970, 750], mapArea: 'obsidian_cathedral' },
+    { id: 'cathedral_ruins',  name: 'Cathedral Ruins',  description: 'The remains of the cathedral nave. Shattered pews and fallen stones litter the floor.', encounterId: 'obsidian_oracle', connections: ['cathedral_entry', 'cathedral_shrine'], unlocks: ['cathedral_shrine'], isLocked: true, position: [650, 570], mapArea: 'obsidian_cathedral', hiddenName: '???', hiddenDescription: 'Ruins stretch ahead.' },
+    { id: 'cathedral_shrine', name: 'Ancient Shrine',   description: 'At the far end of the cathedral, a shrine stands untouched by time. Strange power radiates from it.', encounterId: 'cathedral_shrine', connections: ['cathedral_ruins'], isLocked: true, canRevisit: true, position: [920, 440], mapArea: 'obsidian_cathedral', hiddenName: '???', hiddenDescription: 'Something glows at the end of the cathedral.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'cathedral_entry';
+  return map;
+}
+
+// === Obsidian Plaza Map (Chapter 7 — north passage hub). Mirrors
+// PY map.py:create_obsidian_plaza_map. Two entry points feed into the
+// same map: north_tunnel (obsidian_tunnels) lands on plaza_entry, and
+// the temple_side_passage (temple_district) lands on plaza_west. Both
+// of those nodes share the same `obsidian_plaza_arrival` encounter id
+// so the first visit (from either side) plays the dialog once; the
+// global completedEncounters force-isDone rule blocks the re-fire.
+// plaza_center is the one-time Magma Drake mini-boss fight.
+export function createObsidianPlazaMap() {
+  const map = new GameMap('obsidian_plaza', 'Obsidian Plaza');
+  map.mapImages = {
+    obsidian_plaza: 'Maps/ObsidianPlaza.jpg',
+  };
+
+  const nodes = [
+    { id: 'plaza_entry',     name: 'Plaza Entry',      description: 'The tunnel opens into a vast underground plaza. Obsidian pillars rise to a ceiling lost in shadow.', encounterId: 'obsidian_plaza_arrival', connections: ['plaza_center'], unlocks: ['plaza_center'], position: [520, 730], mapArea: 'obsidian_plaza', hiddenName: '???', hiddenDescription: 'A passage opens here.' },
+    { id: 'plaza_center',    name: 'Center Plaza',     description: 'The heart of the plaza. A crumbling fountain of obsidian stands at the center, long dry.', encounterId: 'magma_drake', connections: ['plaza_entry', 'plaza_west', 'plaza_north', 'plaza_northwest'], unlocks: ['plaza_west', 'plaza_north', 'plaza_northwest'], isLocked: true, position: [720, 420], mapArea: 'obsidian_plaza', hiddenName: '???', hiddenDescription: 'The center of the plaza.' },
+    { id: 'plaza_west',      name: 'Western Passage',  description: 'A passage heading west toward the Temple District. Faded carvings mark the archway.', encounterId: 'obsidian_plaza_arrival_west', connections: ['plaza_center'], unlocks: ['plaza_center'], isLocked: true, position: [240, 550], mapArea: 'obsidian_plaza', hiddenName: '???', hiddenDescription: 'A passage to the west.' },
+    { id: 'plaza_north',     name: 'Northern Corridor', description: 'A wide corridor stretches north into darkness. The air grows colder.', encounterId: '', connections: ['plaza_center'], unlocks: ['plaza_center'], isLocked: true, canRevisit: true, position: [730, 190], mapArea: 'obsidian_plaza', hiddenName: '???', hiddenDescription: 'A corridor heading north.' },
+    { id: 'plaza_northwest', name: 'Northwest Passage', description: 'A narrow passage winds northwest. Strange sounds echo from within.', encounterId: 'obsidian_plaza_arrival_nw', connections: ['plaza_center'], unlocks: ['plaza_center'], isLocked: true, canRevisit: false, position: [160, 400], mapArea: 'obsidian_plaza', hiddenName: '???', hiddenDescription: 'A passage heading northwest.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'plaza_entry';
+  return map;
+}
+
+// === Obsidian Streets Map (Chapter 7 — reached via the plaza's
+// Northern Corridor). Mirrors PY map.py:create_obsidian_streets_map.
+// Linear flow: streets_entry → streets_market → streets_residential
+// → streets_upper. streets_upper will lead to the Upper Bridge in a
+// future pass (left as a locked dead-end here).
+export function createObsidianStreetsMap() {
+  const map = new GameMap('obsidian_streets', 'Obsidian Streets');
+  map.mapImages = {
+    obsidian_streets: 'Maps/ObsidianStreets.jpg',
+  };
+
+  const nodes = [
+    { id: 'streets_entry',       name: 'Streets Entry',       description: 'The corridor opens into a network of narrow obsidian streets. Buildings carved from the rock line both sides.', encounterId: 'obsidian_streets_arrival', connections: ['streets_market'], unlocks: ['streets_market'], position: [920, 740], mapArea: 'obsidian_streets', hiddenName: '???', hiddenDescription: 'A passage opens here.' },
+    { id: 'streets_market',      name: 'Quiet Crossroads',    description: 'A small intersection where several streets meet. Faded signs hang above doorways long sealed shut.', encounterId: '', connections: ['streets_entry', 'streets_residential'], unlocks: ['streets_residential'], isLocked: true, canRevisit: true, position: [760, 560], mapArea: 'obsidian_streets', hiddenName: '???', hiddenDescription: 'Open space ahead.' },
+    { id: 'streets_residential', name: 'Residential Quarter', description: 'Rows of small dwellings carved into the obsidian walls. Some still have furnishings inside.', encounterId: '', connections: ['streets_market', 'streets_upper'], unlocks: ['streets_upper'], isLocked: true, canRevisit: true, position: [640, 490], mapArea: 'obsidian_streets', hiddenName: '???', hiddenDescription: 'Dwellings line the walls.' },
+    { id: 'streets_upper',       name: 'To the Bridge',       description: 'The streets climb upward, opening to a vast underground bridge spanning a chasm of darkness.', encounterId: 'obsidian_streets_arrival_upper', connections: ['streets_residential'], isLocked: true, canRevisit: false, position: [580, 360], mapArea: 'obsidian_streets', hiddenName: '???', hiddenDescription: 'The streets rise ahead.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'streets_entry';
+  return map;
+}
+
+// === Obsidian Market Map (Chapter 7 — reached via the plaza's
+// Northern Corridor). Mirrors PY map.py:create_obsidian_market_map.
+// Flow: market_entry → market_street (4-way hub) → market_stalls
+// (search-for-loot) + market_square → market_deep (rest).
+export function createObsidianMarketMap() {
+  const map = new GameMap('obsidian_market', 'Obsidian Market');
+  map.mapImages = {
+    obsidian_market: 'Maps/ObsidianMarket.jpg',
+  };
+
+  const nodes = [
+    { id: 'market_entry',  name: 'Market Entry',  description: 'The corridor opens into a vast marketplace. Stalls and shops stretch in every direction.', encounterId: 'obsidian_market_arrival', connections: ['market_street'], unlocks: ['market_street'], position: [560, 740], mapArea: 'obsidian_market' },
+    { id: 'market_street', name: 'Market Street', description: 'A wide street flanked by merchant stalls. The obsidian cobblestones are worn smooth by countless footsteps.', encounterId: '', connections: ['market_entry', 'market_stalls', 'market_square'], unlocks: ['market_stalls', 'market_square'], isLocked: true, canRevisit: true, position: [750, 620], mapArea: 'obsidian_market', hiddenName: '???', hiddenDescription: 'A wide street ahead.' },
+    { id: 'market_stalls', name: 'Market Stalls', description: 'Rows of abandoned stalls, some still bearing goods covered in dust.', encounterId: 'market_stalls', connections: ['market_street'], unlocks: ['market_street'], isLocked: true, canRevisit: true, position: [570, 450], mapArea: 'obsidian_market', hiddenName: '???', hiddenDescription: 'Stalls line the passage.' },
+    { id: 'market_square', name: 'Market Square', description: 'The central square of the market. A dry fountain sits at its center, surrounded by larger shops.', encounterId: '', connections: ['market_street', 'market_deep'], unlocks: ['market_deep'], isLocked: true, canRevisit: true, position: [1130, 550], mapArea: 'obsidian_market', hiddenName: '???', hiddenDescription: 'An open space ahead.' },
+    { id: 'market_deep',   name: 'Deep Market',   description: 'The far end of the market. Larger warehouses and sealed vaults line the walls.', encounterId: 'deep_market_rest', connections: ['market_square'], isLocked: true, canRevisit: true, position: [1240, 460], mapArea: 'obsidian_market', hiddenName: '???', hiddenDescription: 'Something larger lies beyond.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'market_entry';
+  return map;
+}
+
+// === Upper Bridge Map (Chapter 7 — reached via the obsidian streets'
+// streets_upper exit). Mirrors PY map.py:create_upper_bridge_map.
+// Flow: bridge_down_city (entry from streets) → bridge_entry
+// (General Zhost's Revenge boss fight) → bridge_middle →
+// bridge_far_side → bridge_to_volcano (point-of-no-return bridge
+// crossing dialog). bridge_to_dwarven is a future side exit.
+export function createUpperBridgeMap() {
+  const map = new GameMap('upper_bridge', 'The Upper Bridge');
+  map.mapImages = {
+    upper_bridge: 'Maps/UpperBridgeMap.jpg',
+  };
+
+  const nodes = [
+    { id: 'bridge_down_city',  name: 'Down to Obsidian City', description: 'A stairway descends back toward the streets of the underground city below.', encounterId: 'upper_bridge_arrival', connections: ['bridge_entry'], unlocks: ['bridge_entry'], canRevisit: false, position: [120, 620], mapArea: 'upper_bridge' },
+    { id: 'bridge_entry',      name: 'Bridge Entry',          description: 'The streets open onto a massive obsidian bridge. It spans a seemingly bottomless chasm, disappearing into darkness on the far side.', encounterId: 'zhost_revenge', connections: ['bridge_down_city', 'bridge_middle', 'bridge_to_dwarven'], unlocks: ['bridge_down_city', 'bridge_middle', 'bridge_to_dwarven'], isLocked: true, canRevisit: false, position: [370, 490], mapArea: 'upper_bridge', hiddenName: '???', hiddenDescription: 'The bridge stretches ahead.' },
+    { id: 'bridge_to_dwarven', name: 'Up to Dwarven City',    description: 'A passage leads back toward the upper levels of an ancient dwarven settlement.', encounterId: 'upper_bridge_arrival', connections: ['bridge_entry'], isLocked: true, canRevisit: false, position: [480, 740], mapArea: 'upper_bridge', hiddenName: '???', hiddenDescription: 'A passage leads somewhere.' },
+    { id: 'bridge_middle',     name: 'Bridge Midpoint',       description: 'The center of the bridge. Wind howls up from the chasm below. The far side is barely visible through the gloom.', encounterId: '', connections: ['bridge_entry', 'bridge_far_side'], unlocks: ['bridge_far_side'], isLocked: true, canRevisit: true, position: [780, 380], mapArea: 'upper_bridge', hiddenName: '???', hiddenDescription: 'The bridge stretches on.' },
+    { id: 'bridge_far_side',   name: 'Far Side',              description: 'The far end of the bridge. A great obsidian gate looms ahead, partially open.', encounterId: '', connections: ['bridge_middle', 'bridge_to_volcano'], unlocks: ['bridge_to_volcano'], isLocked: true, canRevisit: true, position: [1000, 310], mapArea: 'upper_bridge', hiddenName: '???', hiddenDescription: 'Something looms on the far side.' },
+    { id: 'bridge_to_volcano', name: 'To Upper Volcano',      description: "A steep path climbs upward toward the volcano's upper chambers.", encounterId: 'bridge_crossing', connections: ['bridge_far_side'], isLocked: true, canRevisit: true, position: [590, 90], mapArea: 'upper_bridge', hiddenName: '???', hiddenDescription: 'A path leads upward.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'bridge_down_city';
+  return map;
+}
+
+// === Volcano Stairs Maps (Chapter 8 — post-bridge climb into the
+// upper volcano). Three back-to-back maps form a linear ascent:
+// stairs_1 → stairs_2 → stairs_3. Each map has 5 nodes wired
+// linearly entry → 3 middle → exit. The exit node of map N
+// auto-transitions to the entry of map N+1 (cross-map gate in
+// main.js arriveAtNode, same pattern as streets_upper →
+// bridge_down_city). No encounters yet — placeholder lanes that
+// the next content pass will populate.
+function buildVolcanoStairsMap(id, label, imageKey, imageFile, entryId, middleIds, exitId, entryName, exitName, positions) {
+  const map = new GameMap(id, label);
+  map.mapImages = { [imageKey]: imageFile };
+  // positions: [entry, mid_a, mid_b, mid_c, exit] — per-map override
+  // so each stairway's dots can be tuned against its own background.
+  const nodes = [
+    {
+      id: entryId,
+      name: entryName,
+      description: `The stair levels out for a breath before the climb resumes.`,
+      encounterId: '',
+      connections: [middleIds[0]],
+      unlocks: [middleIds[0]],
+      canRevisit: true,
+      position: positions[0],
+      mapArea: id,
+    },
+    {
+      id: middleIds[0],
+      name: 'Ascending Steps',
+      description: 'Volcanic stone steps wind upward, glowing faintly at the edges.',
+      encounterId: '',
+      connections: [entryId, middleIds[1]],
+      unlocks: [middleIds[1]],
+      isLocked: true,
+      canRevisit: true,
+      position: positions[1],
+      mapArea: id,
+      hiddenName: '???',
+      hiddenDescription: 'Steps climb ahead.',
+    },
+    {
+      id: middleIds[1],
+      name: 'Landing',
+      description: 'A narrow landing carved from black rock. Heat radiates from below.',
+      encounterId: '',
+      connections: [middleIds[0], middleIds[2]],
+      unlocks: [middleIds[2]],
+      isLocked: true,
+      canRevisit: true,
+      position: positions[2],
+      mapArea: id,
+      hiddenName: '???',
+      hiddenDescription: 'A landing waits.',
+    },
+    {
+      id: middleIds[2],
+      name: 'Higher Steps',
+      description: 'The stair steepens. Below, the molten chasm stretches out of sight.',
+      encounterId: '',
+      connections: [middleIds[1], exitId],
+      unlocks: [exitId],
+      isLocked: true,
+      canRevisit: true,
+      position: positions[3],
+      mapArea: id,
+      hiddenName: '???',
+      hiddenDescription: 'The stair climbs higher.',
+    },
+    {
+      id: exitId,
+      name: exitName,
+      description: 'The stair continues beyond into the next stretch of the climb.',
+      encounterId: '',
+      connections: [middleIds[2]],
+      isLocked: true,
+      canRevisit: true,
+      position: positions[4],
+      mapArea: id,
+      hiddenName: '???',
+      hiddenDescription: 'The stair continues upward.',
+    },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = entryId;
+  return map;
+}
+
+// Default fallback positions for the stairs maps when no per-map
+// override has been authored yet. Hand-tuned via the debug node-
+// position editor (ctrl-click + arrow keys).
+const _STAIRS_DEFAULT_POSITIONS = [
+  [180, 820], [380, 640], [560, 470], [740, 300], [920, 140],
+];
+
+export function createVolcanoStairs1Map() {
+  return buildVolcanoStairsMap(
+    'volcano_stairs_1', 'Volcano Stairs - Lower',
+    'volcano_stairs_1', 'Maps/VolcanoStairs1.png',
+    'stairs1_entry', ['stairs1_a', 'stairs1_b', 'stairs1_c'], 'stairs1_exit',
+    'Stair Foot', 'Upward Bend',
+    // User-tuned via the debug node-position editor.
+    [
+      [380, 910],  // Stair Foot
+      [211, 660],  // Ascending Steps
+      [800, 420],  // Landing
+      [340, 160],  // Higher Steps
+      [590, 70],   // Upward Bend
+    ],
+  );
+}
+
+export function createVolcanoStairs2Map() {
+  return buildVolcanoStairsMap(
+    'volcano_stairs_2', 'Volcano Stairs - Middle',
+    'volcano_stairs_2', 'Maps/VolcanoStairs2.png',
+    'stairs2_entry', ['stairs2_a', 'stairs2_b', 'stairs2_c'], 'stairs2_exit',
+    'Mid-Stair Landing', 'Higher Path',
+    // User-tuned via the debug node-position editor.
+    [
+      [640, 930],  // Mid-Stair Landing
+      [240, 700],  // Ascending Steps
+      [660, 460],  // Landing
+      [450, 390],  // Higher Steps
+      [640, 310],  // Higher Path
+    ],
+  );
+}
+
+export function createVolcanoStairs3Map() {
+  return buildVolcanoStairsMap(
+    'volcano_stairs_3', 'Volcano Stairs - Upper',
+    'volcano_stairs_3', 'Maps/VolcanoStairs3.png',
+    'stairs3_entry', ['stairs3_a', 'stairs3_b', 'stairs3_c'], 'stairs3_exit',
+    'Upper Stair Landing', 'To Summit Ridge',
+    // User-tuned via the debug node-position editor.
+    [
+      [930, 870],  // Upper Stair Landing
+      [370, 790],  // Ascending Steps
+      [880, 450],  // Landing
+      [490, 240],  // Higher Steps
+      [560, 150],  // To Summit Ridge
+    ],
+  );
+}
+
+// === Volcano Summit Ridge Map (Chapter 8 — exit of the stairs
+// climb). Player walks onto a clifftop plateau. 4 nodes: 1 entry
+// (back-teleport to stairs3_exit), 2 stair-path movement nodes,
+// 1 ridge encounter node. Encounter TBD.
+export function createVolcanoSummitRidgeMap() {
+  const map = new GameMap('volcano_summit_ridge', 'Volcano Summit Ridge');
+  map.mapImages = { volcano_summit_ridge: 'Maps/Volcano_SummitRidge.png' };
+  // Fully open plateau — every node unlocked from the start (NO_FOG_MAPS
+  // already removes the fog overlay, and now there's nothing keeping
+  // the player from clicking forward as soon as they arrive). Click
+  // adjacency still forces them along the chain entry → a → b → ridge.
+  const nodes = [
+    // Entry — drops in from the stairs (PNG's stair landing at the
+    // bottom-right). Click-on-self back-teleports to stairs3_exit.
+    { id: 'summit_entry',     name: 'Stair Top',     description: 'The stair levels out onto a wind-swept ridge.', encounterId: '', connections: ['summit_path_a'], unlocks: ['summit_path_a'], canRevisit: true, position: [1160, 750], mapArea: 'volcano_summit_ridge' },
+    { id: 'summit_path_a',    name: 'Ridge Stairs',  description: 'Rough-cut steps lead upward along the clifftop.', encounterId: '', connections: ['summit_entry', 'summit_path_b'], unlocks: ['summit_path_b'], canRevisit: true, position: [900, 430], mapArea: 'volcano_summit_ridge' },
+    { id: 'summit_path_b',    name: 'Higher Steps',  description: 'The path narrows. The sheer drop yawns to the left.', encounterId: '', connections: ['summit_path_a', 'summit_ridge'], unlocks: ['summit_ridge'], canRevisit: true, position: [1170, 220], mapArea: 'volcano_summit_ridge' },
+    // Encounter node on the ridge — content TBD.
+    { id: 'summit_ridge',     name: 'The Ridge',     description: 'A bare obsidian ridge above the volcano. Something waits ahead.', encounterId: '', connections: ['summit_path_b'], canRevisit: true, position: [690, 130], mapArea: 'volcano_summit_ridge' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'summit_entry';
+  return map;
+}
+
+// === Obsidian Forge Map (Chapter 7 — southeast branch from
+// pillar_passage). Mirrors PY map.py:create_obsidian_forge_map.
+// Three-node lane: forge_entry → forge_passage → the_obsidian_forge.
+// forge_entry is the only entry slot (no future side-routes here);
+// the_obsidian_forge is the inner shrine, encounter to be wired
+// later. forge_passage is the rolling random-encounter node.
+export function createObsidianForgeMap() {
+  const map = new GameMap('obsidian_forge', 'The Obsidian Forge');
+  map.mapImages = {
+    obsidian_forge: 'Maps/TheObsidianForge.jpg',
+  };
+
+  const nodes = [
+    { id: 'forge_entry',        name: 'Forge Entry',     description: 'The tunnel opens into a scorching chamber. The walls glow with residual heat from ancient forges.', encounterId: 'obsidian_forge_arrival', connections: ['forge_passage'], unlocks: ['forge_passage'], position: [210, 310], mapArea: 'obsidian_forge' },
+    { id: 'forge_passage',      name: 'Molten Corridor', description: 'A wide corridor lined with dormant furnaces. Slag and cooled metal litter the floor.', encounterId: '', connections: ['forge_entry', 'the_obsidian_forge'], unlocks: ['forge_entry', 'the_obsidian_forge'], isLocked: true, canRevisit: true, position: [400, 590], mapArea: 'obsidian_forge', hiddenName: '???', hiddenDescription: 'A corridor stretches ahead.' },
+    { id: 'the_obsidian_forge', name: 'The Obsidian Forge', description: 'A massive forge dominates the chamber, its anvil carved from a single block of obsidian. Even dormant, the air shimmers with heat.', encounterId: 'obsidian_forge', connections: ['forge_passage'], unlocks: ['forge_passage'], isLocked: true, canRevisit: true, position: [830, 420], mapArea: 'obsidian_forge', hiddenName: '???', hiddenDescription: 'An intense heat radiates from ahead.' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'forge_entry';
   return map;
 }
 
@@ -713,9 +1167,17 @@ export function createEntryCorridorMap() {
   };
 
   const nodes = [
-    { id: 'corridor_entrance', name: 'Corridor Entrance', description: 'The entrance to the dwarven city corridor.', encounterId: 'entry_corridor_arrival', connections: ['corridor_ruins'], position: [720, 720], mapArea: 'entry_corridor', canRevisit: true, unlocks: ['corridor_ruins'] },
-    { id: 'corridor_ruins', name: 'Corridor Ruins', description: 'Crumbling ruins along the corridor.', encounterId: '', connections: ['corridor_entrance', 'corridor_gate_approach'], position: [650, 500], mapArea: 'entry_corridor', isLocked: true, canRevisit: true, unlocks: ['corridor_gate_approach'] },
-    { id: 'corridor_gate_approach', name: 'Corridor Gate Approach', description: 'Approaching the corridor gate.', encounterId: 'corridor_gate_approach', connections: ['corridor_ruins'], position: [590, 360], mapArea: 'entry_corridor', isLocked: true, canRevisit: true, hiddenName: '???' },
+    // Entry point from the volcano choice (upper path). Dialog is
+    // one-shot — canRevisit:false so the arrival speech doesn't replay
+    // every time the player walks back through.
+    { id: 'corridor_entrance', name: 'Corridor Entrance', description: 'The entrance to the dwarven city corridor.', encounterId: 'entry_corridor_arrival', connections: ['corridor_ruins'], position: [720, 720], mapArea: 'entry_corridor', canRevisit: false, unlocks: ['corridor_ruins'], hiddenName: '???', hiddenDescription: 'A way out leads here.' },
+    // Random-encounter movement node — stays ??? until walked so the
+    // fog matches the lower-volcano feel.
+    { id: 'corridor_ruins', name: 'Corridor Ruins', description: 'Crumbling ruins along the corridor.', encounterId: '', connections: ['corridor_entrance', 'corridor_gate_approach'], position: [650, 500], mapArea: 'entry_corridor', isLocked: true, canRevisit: true, unlocks: ['corridor_gate_approach'], hiddenName: '???', hiddenDescription: 'Something lies ahead.' },
+    // Entry point from the Hall of Ancestors (backwards traversal).
+    // canRevisit:true so the gate dialog replays when re-entering
+    // from the upper city side.
+    { id: 'corridor_gate_approach', name: 'Corridor Gate Approach', description: 'Approaching the corridor gate.', encounterId: 'corridor_gate_approach', connections: ['corridor_ruins'], position: [590, 360], mapArea: 'entry_corridor', isLocked: true, canRevisit: false, hiddenName: '???', hiddenDescription: 'A gate looms ahead.' },
   ];
 
   for (const data of nodes) {
@@ -733,10 +1195,16 @@ export function createGateAreaMap() {
   };
 
   const nodes = [
-    { id: 'gate_back_to_corridor', name: 'Gate Back to Corridor', description: 'The path back to the entry corridor.', encounterId: '', connections: ['gate_entrance'], position: [610, 750], mapArea: 'gate_area', canRevisit: true },
-    { id: 'gate_entrance', name: 'Gate Entrance', description: 'The main gate entrance.', encounterId: '', connections: ['gate_back_to_corridor', 'gate_guardroom', 'gate_passage'], position: [880, 660], mapArea: 'gate_area', canRevisit: true, unlocks: ['gate_guardroom', 'gate_passage'] },
-    { id: 'gate_guardroom', name: 'Gate Guardroom', description: 'A guardroom beside the gate.', encounterId: 'gate_guardroom', connections: ['gate_entrance'], position: [780, 550], mapArea: 'gate_area', isLocked: true, canRevisit: true, hiddenName: '???' },
-    { id: 'gate_passage', name: 'Gate Passage', description: 'A passage through the gate.', encounterId: 'gate_passage', connections: ['gate_entrance'], position: [1000, 560], mapArea: 'gate_area', isLocked: true, canRevisit: true, hiddenName: '???' },
+    // Entry point from the entry_corridor map (forward).
+    { id: 'gate_back_to_corridor', name: 'Gate Back to Corridor', description: 'The path back to the entry corridor.', encounterId: '', connections: ['gate_entrance'], position: [610, 750], mapArea: 'gate_area', canRevisit: true, hiddenName: '???', hiddenDescription: 'A passage leads back the way you came.' },
+    // Middle hub — neighbors should stay ??? until walked.
+    { id: 'gate_entrance', name: 'Gate Entrance', description: 'The main gate entrance.', encounterId: '', connections: ['gate_back_to_corridor', 'gate_guardroom', 'gate_passage'], position: [880, 660], mapArea: 'gate_area', canRevisit: true, unlocks: ['gate_guardroom', 'gate_passage'], hiddenName: '???', hiddenDescription: 'A passage continues ahead.' },
+    { id: 'gate_guardroom', name: 'Gate Guardroom', description: 'A guardroom beside the gate.', encounterId: 'gate_guardroom', connections: ['gate_entrance'], position: [780, 550], mapArea: 'gate_area', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A side chamber.' },
+    // Entry point from the Hall of Ancestors (backwards traversal).
+    // Entry point from the Hall of Ancestors (backwards traversal).
+    // PY parity: node name "Into Thorgazad", flavor about the warm
+    // air rising from below.
+    { id: 'gate_passage', name: 'Into Thorgazad', description: 'A broad stairway descends into the ancient dwarven city. Warm air rises from below.', encounterId: 'gate_passage', connections: ['gate_entrance'], position: [1000, 560], mapArea: 'gate_area', isLocked: true, canRevisit: false, hiddenName: '???', hiddenDescription: 'Something lies beyond.' },
   ];
 
   for (const data of nodes) {
@@ -753,11 +1221,19 @@ export function createHallOfAncestorsMap() {
     hall_of_ancestors: 'Maps/DwarvenCityHallofAncestors.jpg',
   };
 
+  // PY parity: Hall is the central hub with 3 unlockable exits +
+  // 2 entry points (hall_entry from the Gate, ancestors_artisan_district
+  // from the artisan side backwards). The Sky Shaft is Ruga's arena —
+  // one-shot fight (canRevisit:false).
   const nodes = [
-    { id: 'ancestors_entry', name: 'Ancestors Entry', description: 'The entry to the Hall of Ancestors.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [606, 760], mapArea: 'hall_of_ancestors', canRevisit: true, unlocks: ['ancestors_sky_shaft'] },
-    { id: 'ancestors_sky_shaft', name: 'Ancestors Sky Shaft', description: 'A shaft of light from above.', encounterId: 'ruga_slave_master', connections: ['ancestors_entry', 'ancestors_monument_alley', 'ancestors_artisan_district'], position: [740, 680], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true, unlocks: ['ancestors_monument_alley', 'ancestors_artisan_district'] },
-    { id: 'ancestors_monument_alley', name: 'Ancestors Monument Alley', description: 'An alley lined with monuments.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [150, 620], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true },
-    { id: 'ancestors_artisan_district', name: 'Ancestors Artisan District', description: 'The artisan district entrance.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [1250, 620], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true },
+    { id: 'ancestors_entry', name: 'Hall Entry', description: 'The stairway from the northern gate opens into the vast Hall of Ancestors.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [606, 760], mapArea: 'hall_of_ancestors', canRevisit: true, unlocks: ['ancestors_sky_shaft'], hiddenName: '???', hiddenDescription: 'A stairway descends from the gate.' },
+    { id: 'ancestors_sky_shaft', name: 'The Sky Shaft', description: 'The center of the hall, bathed in true sunlight from a shaft cut through the mountain above.', encounterId: 'ruga_slave_master', connections: ['ancestors_entry', 'ancestors_monument_alley', 'ancestors_artisan_district', 'ancestors_kings_district'], position: [740, 680], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: false, unlocks: ['ancestors_monument_alley', 'ancestors_artisan_district', 'ancestors_kings_district'], hiddenName: '???', hiddenDescription: 'A shaft of light filters down from above.' },
+    { id: 'ancestors_monument_alley', name: 'To Monument Alley', description: 'A wide passage lined with toppled statues leads west.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [150, 620], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'An alley leads to the west.' },
+    // Entry point from the Artisan District (backwards traversal).
+    { id: 'ancestors_artisan_district', name: 'To the Artisan District', description: 'The eastern passage reeks of old soot and cold metal.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [1250, 620], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A passage leads to the east.' },
+    // PY had this node — JS was missing it. Climbs north toward the
+    // upper city / Grand Stairs.
+    { id: 'ancestors_kings_district', name: "To the King's District", description: 'A grand stairway climbs north toward the upper city. Firelight flickers above.', encounterId: '', connections: ['ancestors_sky_shaft'], position: [730, 590], mapArea: 'hall_of_ancestors', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A grand stairway climbs north.' },
   ];
 
   for (const data of nodes) {
@@ -774,13 +1250,23 @@ export function createMonumentAlleyMap() {
     monument_alley: 'Maps/DwarvenCityMonumentAlley.jpg',
   };
 
+  // Mirrors PY map.py:create_monument_alley_map. Six nodes in a
+  // diamond: entry → south_hub branches to left/right far →
+  // converge at north_hub → tomb. Random encounters fire on the
+  // middle nodes (monument_south_hub, monument_left_far,
+  // monument_right_far, monument_north_hub) via the dwarven-city
+  // pool. monument_tomb hands off to the Tomb of the Ancestor map.
   const nodes = [
-    { id: 'monument_entry', name: 'Monument Entry', description: 'The entry to Monument Alley.', encounterId: 'monument_alley_entry', connections: ['monument_south_hub'], position: [720, 750], mapArea: 'monument_alley', canRevisit: true, unlocks: ['monument_south_hub'] },
-    { id: 'monument_south_hub', name: 'Monument South Hub', description: 'A hub in the southern part of the alley.', encounterId: '', connections: ['monument_entry', 'monument_left_far', 'monument_right_far'], position: [720, 650], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_left_far', 'monument_right_far'] },
-    { id: 'monument_left_far', name: 'Monument Left Far', description: 'The far left of the alley.', encounterId: '', connections: ['monument_south_hub', 'monument_north_hub'], position: [440, 440], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_north_hub'] },
-    { id: 'monument_right_far', name: 'Monument Right Far', description: 'The far right of the alley.', encounterId: '', connections: ['monument_south_hub', 'monument_north_hub'], position: [1000, 440], mapArea: 'monument_alley', isLocked: true, canRevisit: true },
-    { id: 'monument_north_hub', name: 'Monument North Hub', description: 'A hub in the northern part of the alley.', encounterId: '', connections: ['monument_left_far', 'monument_right_far', 'monument_tomb'], position: [720, 280], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_tomb'] },
-    { id: 'monument_tomb', name: 'Monument Tomb', description: 'A tomb at the end of the alley.', encounterId: '', connections: ['monument_north_hub'], position: [720, 190], mapArea: 'monument_alley', isLocked: true, canRevisit: true },
+    // One-shot arrival dialog — canRevisit:false so the corridor
+    // intro doesn't replay every time the party comes back from
+    // the Hall. Also serves as the back-teleport node (click-on-
+    // self after first visit hops back to ancestors_monument_alley).
+    { id: 'monument_entry', name: 'Monument Alley Entry', description: 'The wide passage from the Hall of Ancestors opens into a long corridor lined with carved monuments.', encounterId: 'monument_alley_entry', connections: ['monument_south_hub'], position: [720, 750], mapArea: 'monument_alley', canRevisit: false, unlocks: ['monument_south_hub'] },
+    { id: 'monument_south_hub', name: 'The Central Monument', description: 'A massive statue of a dwarven king sits at the center, dividing the path into two.', encounterId: '', connections: ['monument_entry', 'monument_left_far', 'monument_right_far'], position: [720, 650], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_left_far', 'monument_right_far'], hiddenName: '???', hiddenDescription: 'A central monument waits ahead.' },
+    { id: 'monument_left_far', name: 'Hall of Oaths', description: 'The western alcove deepens into a chamber where ancient oaths were sworn in stone.', encounterId: '', connections: ['monument_south_hub', 'monument_north_hub'], position: [440, 440], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_north_hub'], hiddenName: '???', hiddenDescription: 'A western alcove.' },
+    { id: 'monument_right_far', name: 'Chronicle Wall', description: 'A massive wall of carved text stretches floor to ceiling — the Chronicle of Thorgazad.', encounterId: '', connections: ['monument_south_hub', 'monument_north_hub'], position: [1000, 440], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_north_hub'], hiddenName: '???', hiddenDescription: 'An eastern alcove.' },
+    { id: 'monument_north_hub', name: "The Ancestor's Threshold", description: 'The two paths converge before a sealed stone door. The air feels heavy here.', encounterId: '', connections: ['monument_left_far', 'monument_right_far', 'monument_tomb'], position: [720, 280], mapArea: 'monument_alley', isLocked: true, canRevisit: true, unlocks: ['monument_tomb'], hiddenName: '???', hiddenDescription: 'Paths converge ahead.' },
+    { id: 'monument_tomb', name: 'Tomb of the Ancestor', description: 'A sealed stone door bearing the sigil of the first dwarven king of Thorgazad.', encounterId: '', connections: ['monument_north_hub'], position: [720, 190], mapArea: 'monument_alley', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A sealed stone door.' },
   ];
 
   for (const data of nodes) {
@@ -798,8 +1284,16 @@ export function createTombOfAncestorMap() {
   };
 
   const nodes = [
-    { id: 'tomb_entry', name: 'Tomb Entry', description: 'The entry to the ancestor tomb.', encounterId: 'tomb_of_ancestor_entry', connections: ['tomb_sarcophagus'], position: [680, 740], mapArea: 'tomb_of_ancestor', canRevisit: true, unlocks: ['tomb_sarcophagus'] },
-    { id: 'tomb_sarcophagus', name: 'Tomb Sarcophagus', description: 'The ancient sarcophagus.', encounterId: 'tomb_sarcophagus', connections: ['tomb_entry'], position: [677, 570], mapArea: 'tomb_of_ancestor', isLocked: true, canRevisit: true },
+    // canRevisit:false so the antechamber intro plays once. The
+    // node still doubles as the back-portal to Monument Alley
+    // (handled in main.js arriveAtNode).
+    { id: 'tomb_entry', name: 'Tomb Antechamber', description: 'A dark antechamber beyond the sealed door. The air is cold and still.', encounterId: 'tomb_of_ancestor_entry', connections: ['tomb_sarcophagus'], position: [680, 740], mapArea: 'tomb_of_ancestor', canRevisit: false, unlocks: ['tomb_sarcophagus'] },
+    // canRevisit:true — if the player "Leaves them in peace"
+    // without triggering the fight, they can come back and pick the
+    // fight on a future visit. The startNodeEncounter hook checks
+    // `ancestorSpiritsDefeated` to suppress the encounter once the
+    // fight has actually been won.
+    { id: 'tomb_sarcophagus', name: 'The Sarcophagus', description: "The final resting place of Durin Stoneheart, founder of Thorgazad.", encounterId: 'tomb_sarcophagus', connections: ['tomb_entry'], position: [677, 570], mapArea: 'tomb_of_ancestor', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A sarcophagus rests within.' },
   ];
 
   for (const data of nodes) {
@@ -811,16 +1305,25 @@ export function createTombOfAncestorMap() {
 
 // === Grand Stairs Map ===
 export function createGrandStairsMap() {
-  const map = new GameMap('grand_stairs', 'Grand Stairs');
+  // Mirrors PY map.py:create_grand_stairs_map — stairway to the
+  // King's District. Entry from the Hall of Ancestors via
+  // ancestors_kings_district → stairs_entry. Names + descriptions
+  // match PY exactly: Base of the Stairs, Lower Landing (king
+  // reliefs), Upper Landing (warmer + firelight), To the Throne
+  // Hall (top exit).
+  const map = new GameMap('grand_stairs', 'The Grand Stairs');
   map.mapImages = {
     grand_stairs: 'Maps/DwarvenCityGrandStairs.jpg',
   };
 
   const nodes = [
-    { id: 'stairs_entry', name: 'Stairs Entry', description: 'The base of the grand stairs.', encounterId: 'grand_stairs_entry', connections: ['stairs_lower'], position: [400, 720], mapArea: 'grand_stairs', canRevisit: true, unlocks: ['stairs_lower'] },
-    { id: 'stairs_lower', name: 'Stairs Lower', description: 'The lower section of the stairs.', encounterId: '', connections: ['stairs_entry', 'stairs_upper'], position: [760, 540], mapArea: 'grand_stairs', isLocked: true, canRevisit: true, unlocks: ['stairs_upper'] },
-    { id: 'stairs_upper', name: 'Stairs Upper', description: 'The upper section of the stairs.', encounterId: '', connections: ['stairs_lower', 'stairs_to_throne'], position: [970, 400], mapArea: 'grand_stairs', isLocked: true, canRevisit: true, unlocks: ['stairs_to_throne'] },
-    { id: 'stairs_to_throne', name: 'Stairs to Throne', description: 'The stairs leading to the throne room.', encounterId: '', connections: ['stairs_upper'], position: [1130, 280], mapArea: 'grand_stairs', isLocked: true, canRevisit: true },
+    // One-shot arrival dialog — canRevisit:false so the climb up
+    // from the Hall doesn't replay the firelight/kobold-voices
+    // intro every time the party comes back through.
+    { id: 'stairs_entry', name: 'Base of the Stairs', description: 'A grand stairway flanked by massive pillars climbs into the darkness above.', encounterId: 'grand_stairs_entry', connections: ['stairs_lower'], position: [400, 720], mapArea: 'grand_stairs', canRevisit: false, unlocks: ['stairs_lower'] },
+    { id: 'stairs_lower', name: 'Lower Landing', description: 'A wide landing where the stairs turn. Carved reliefs depict the coronation of dwarven kings.', encounterId: '', connections: ['stairs_entry', 'stairs_upper'], position: [760, 540], mapArea: 'grand_stairs', isLocked: true, canRevisit: true, unlocks: ['stairs_upper'], hiddenName: '???', hiddenDescription: 'A landing waits ahead.' },
+    { id: 'stairs_upper', name: 'Upper Landing', description: 'The air grows warmer here. The faint glow of firelight spills down from above.', encounterId: '', connections: ['stairs_lower', 'stairs_to_throne'], position: [970, 400], mapArea: 'grand_stairs', isLocked: true, canRevisit: true, unlocks: ['stairs_to_throne'], hiddenName: '???', hiddenDescription: 'The stair climbs higher.' },
+    { id: 'stairs_to_throne', name: 'To the Throne Hall', description: 'The top of the stairs opens into the King\'s District. A grand archway leads to the throne hall.', encounterId: '', connections: ['stairs_upper'], position: [1130, 280], mapArea: 'grand_stairs', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'Something looms beyond.' },
   ];
 
   for (const data of nodes) {
@@ -837,16 +1340,39 @@ export function createDwarvenThroneRoomMap() {
     dwarven_throne_room: 'Maps/DwarvenCityThroneRoom.jpg',
   };
 
+  // PY parity (map.py:2593). Unlock chain: entry → dais →
+  // to_map_room. Fog labels until visited.
   const nodes = [
-    { id: 'throne_entry', name: 'Throne Entry', description: 'The entry to the throne room.', encounterId: 'dwarven_throne_room_entry', connections: ['throne_dais'], position: [720, 720], mapArea: 'dwarven_throne_room', canRevisit: true, unlocks: ['throne_dais'] },
-    { id: 'throne_dais', name: 'Throne Dais', description: 'The raised dais of the throne.', encounterId: 'throne_specter', connections: ['throne_entry', 'throne_to_map_room'], position: [750, 550], mapArea: 'dwarven_throne_room', isLocked: true, canRevisit: true, unlocks: ['throne_to_map_room'] },
-    { id: 'throne_to_map_room', name: 'Throne to Map Room', description: 'A passage to the map room.', encounterId: '', connections: ['throne_dais'], position: [600, 470], mapArea: 'dwarven_throne_room', isLocked: true, canRevisit: true },
+    { id: 'throne_entry', name: 'Throne Room Entry', description: 'The grand archway opens into the ruined throne room of Thorgazad.', encounterId: 'dwarven_throne_room_entry', connections: ['throne_dais'], position: [720, 720], mapArea: 'dwarven_throne_room', canRevisit: true, unlocks: ['throne_dais'] },
+    { id: 'throne_dais', name: 'The Throne', description: "The stone throne of Thorgazad's kings sits upon a raised dais, cracked but standing.", encounterId: 'throne_specter', connections: ['throne_entry', 'throne_to_map_room'], position: [750, 550], mapArea: 'dwarven_throne_room', isLocked: true, canRevisit: false, unlocks: ['throne_to_map_room'], hiddenName: '???', hiddenDescription: 'A raised dais looms ahead.' },
+    { id: 'throne_to_map_room', name: 'To the Map Room', description: 'A hidden passage behind the throne leads to a chamber beyond.', encounterId: '', connections: ['throne_dais'], position: [600, 470], mapArea: 'dwarven_throne_room', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'Something beyond the throne.' },
   ];
 
   for (const data of nodes) {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'throne_entry';
+  return map;
+}
+
+// === Tunnel to Bridge Map ===
+// PY parity (map.py:2811-2851). Three nodes — entry → mid → exit.
+// Entry triggers the obsidian-tunnel dialog (artisan exit → here);
+// exit teleports to the Upper Bridge map (bridge_to_dwarven).
+export function createTunnelToBridgeMap() {
+  const map = new GameMap('tunnel_to_bridge', 'Obsidian Tunnel');
+  map.mapImages = {
+    tunnel_to_bridge: 'Maps/DwarvenCityTunnelToBridge.jpg',
+  };
+  const nodes = [
+    { id: 'bridge_tunnel_entry', name: 'Tunnel Entrance', description: 'The passage descends into a dark tunnel. Veins of obsidian glint in the walls.', encounterId: 'tunnel_to_bridge_entry', connections: ['bridge_tunnel_mid'], unlocks: ['bridge_tunnel_mid'], canRevisit: false, position: [720, 700], mapArea: 'tunnel_to_bridge', hiddenName: '???', hiddenDescription: 'A dark passage descends.' },
+    { id: 'bridge_tunnel_mid', name: 'Obsidian Corridor', description: 'The tunnel grows darker. Obsidian veins thicken in the walls, drinking the torchlight.', encounterId: '', connections: ['bridge_tunnel_entry', 'bridge_tunnel_exit'], unlocks: ['bridge_tunnel_exit'], isLocked: true, canRevisit: true, position: [820, 480], mapArea: 'tunnel_to_bridge', hiddenName: '???', hiddenDescription: 'The tunnel stretches on.' },
+    { id: 'bridge_tunnel_exit', name: 'To the Bridge', description: 'The tunnel opens ahead. You can hear wind howling through a vast open space.', encounterId: '', connections: ['bridge_tunnel_mid'], isLocked: true, canRevisit: true, position: [810, 330], mapArea: 'tunnel_to_bridge', hiddenName: '???', hiddenDescription: 'Wind howls from beyond.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'bridge_tunnel_entry';
   return map;
 }
 
@@ -857,9 +1383,11 @@ export function createMapRoomMap() {
     map_room: 'Maps/DwarvenCityMapRoom.jpg',
   };
 
+  // PY parity (map.py:2637-2666). 2 nodes: entry + map table. ???
+  // fog on the table until first visit.
   const nodes = [
-    { id: 'map_room_entry', name: 'Map Room Entry', description: 'The entry to the map room.', encounterId: 'map_room_entry', connections: ['map_table'], position: [500, 700], mapArea: 'map_room', canRevisit: true, unlocks: ['map_table'] },
-    { id: 'map_table', name: 'Map Table', description: 'A large table with maps spread across it.', encounterId: 'map_table', connections: ['map_room_entry'], position: [720, 450], mapArea: 'map_room', isLocked: true, canRevisit: true },
+    { id: 'map_room_entry', name: 'Map Room Entry', description: 'A hidden chamber behind the throne, dominated by a massive stone map table.', encounterId: 'map_room_entry', connections: ['map_table'], position: [500, 700], mapArea: 'map_room', canRevisit: false, unlocks: ['map_table'] },
+    { id: 'map_table', name: 'The Map Table', description: 'A great stone table carved with a detailed map of the entire volcano and the city beneath it.', encounterId: 'map_table', connections: ['map_room_entry'], position: [720, 450], mapArea: 'map_room', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A massive stone table.' },
   ];
 
   for (const data of nodes) {
@@ -876,10 +1404,17 @@ export function createDeeperTunnelsMap() {
     deeper_tunnels: 'Maps/DwarvenCityDeeperTunnels.jpg',
   };
 
+  // Mirrors PY map.py:create_deeper_tunnels_map — 4 nodes: entry
+  // (back-portal to Hall), two middle movement nodes that roll the
+  // dwarven-city random encounter pool, and exit (forward to
+  // Artisan District). canRevisit:false on entry so the intro
+  // dialog plays once and the node can be used as a back-portal
+  // after.
   const nodes = [
-    { id: 'tunnels_entry', name: 'Tunnels Entry', description: 'The entry to the deeper tunnels.', encounterId: 'deeper_tunnels_entry', connections: ['tunnels_mid'], position: [760, 700], mapArea: 'deeper_tunnels', canRevisit: true, unlocks: ['tunnels_mid'] },
-    { id: 'tunnels_mid', name: 'Tunnels Mid', description: 'The middle of the deeper tunnels.', encounterId: '', connections: ['tunnels_entry', 'tunnels_exit'], position: [750, 570], mapArea: 'deeper_tunnels', isLocked: true, canRevisit: true, unlocks: ['tunnels_exit'] },
-    { id: 'tunnels_exit', name: 'Tunnels Exit', description: 'The exit of the deeper tunnels.', encounterId: '', connections: ['tunnels_mid'], position: [760, 360], mapArea: 'deeper_tunnels', isLocked: true, canRevisit: true },
+    { id: 'tunnels_entry', name: 'Tunnel Entrance', description: 'The eastern passage from the Hall of Ancestors descends into a long, torch-lit tunnel.', encounterId: 'deeper_tunnels_entry', connections: ['tunnels_mid_1'], position: [760, 700], mapArea: 'deeper_tunnels', canRevisit: false, unlocks: ['tunnels_mid_1'], hiddenName: '???', hiddenDescription: 'A torch-lit passage descends.' },
+    { id: 'tunnels_mid_1', name: 'Carved Passage', description: 'The tunnel narrows. Dwarven carvings line the walls, half-obscured by soot and kobold scratches.', encounterId: '', connections: ['tunnels_entry', 'tunnels_mid_2'], position: [750, 570], mapArea: 'deeper_tunnels', isLocked: true, canRevisit: true, unlocks: ['tunnels_mid_2'], hiddenName: '???', hiddenDescription: 'The tunnel narrows.' },
+    { id: 'tunnels_mid_2', name: 'Torch Gallery', description: 'Old torch sconces still burn with a faint magical flame. The air smells of soot and hot metal.', encounterId: '', connections: ['tunnels_mid_1', 'tunnels_exit'], position: [740, 460], mapArea: 'deeper_tunnels', isLocked: true, canRevisit: true, unlocks: ['tunnels_exit'], hiddenName: '???', hiddenDescription: 'A torchlit gallery ahead.' },
+    { id: 'tunnels_exit', name: 'To the Artisan District', description: 'The tunnel opens ahead. The orange glow of furnaces spills through the archway.', encounterId: '', connections: ['tunnels_mid_2'], position: [760, 360], mapArea: 'deeper_tunnels', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'Light spills from beyond.' },
   ];
 
   for (const data of nodes) {
@@ -896,11 +1431,18 @@ export function createArtisanDistrictMap() {
     artisan_district: 'Maps/DwarvenCityArtisanDistrict.jpg',
   };
 
+  // PY parity: 7 nodes — entry → lower → upper → walkway → overlook,
+  // which then unlocks both artisan_exit (back out) and the sealed
+  // artisan_workshop (the forge). All middle nodes are random-
+  // encounter candidates via DWARVEN_CITY_RANDOM_NODES.
   const nodes = [
-    { id: 'artisan_entry', name: 'Artisan Entry', description: 'The entry to the artisan district.', encounterId: 'artisan_district_entry', connections: ['artisan_lower'], position: [1340, 760], mapArea: 'artisan_district', canRevisit: true, unlocks: ['artisan_lower'] },
-    { id: 'artisan_lower', name: 'Artisan Lower', description: 'The lower artisan district.', encounterId: '', connections: ['artisan_entry', 'artisan_upper'], position: [1020, 640], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_upper'] },
-    { id: 'artisan_upper', name: 'Artisan Upper', description: 'The upper artisan district.', encounterId: '', connections: ['artisan_lower', 'artisan_workshop'], position: [330, 410], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_workshop'] },
-    { id: 'artisan_workshop', name: 'Artisan Workshop', description: 'A dwarven artisan workshop.', encounterId: 'artisan_workshop', connections: ['artisan_upper'], position: [580, 200], mapArea: 'artisan_district', isLocked: true, canRevisit: true },
+    { id: 'artisan_entry', name: 'District Entry', description: 'The tunnel opens into a vast cavern of workshops and forges, lit by rivers of lava below.', encounterId: 'artisan_district_entry', connections: ['artisan_lower_shops'], position: [1340, 760], mapArea: 'artisan_district', canRevisit: false, unlocks: ['artisan_lower_shops'], hiddenName: '???', hiddenDescription: 'A wide cavern opens here.' },
+    { id: 'artisan_lower_shops', name: 'Lower Workshops', description: 'Rows of abandoned workshops line the lower level. Anvils, quenching troughs, and scattered tools.', encounterId: '', connections: ['artisan_entry', 'artisan_upper_shops'], position: [1020, 640], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_upper_shops'], hiddenName: '???', hiddenDescription: 'A lower row of abandoned workshops.' },
+    { id: 'artisan_upper_shops', name: 'Upper Workshops', description: 'The upper level workshops. Finer work was done here — jewelry, enchanting, runecraft.', encounterId: '', connections: ['artisan_lower_shops', 'artisan_walkway'], position: [330, 410], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_walkway'], hiddenName: '???', hiddenDescription: 'An upper row of finer workshops.' },
+    { id: 'artisan_walkway', name: 'Iron Walkway', description: 'A narrow iron walkway spans the gap between workshop platforms. Lava glows far below.', encounterId: '', connections: ['artisan_upper_shops', 'artisan_overlook'], position: [620, 380], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_overlook'], hiddenName: '???', hiddenDescription: 'A narrow iron walkway.' },
+    { id: 'artisan_overlook', name: 'Forge Overlook', description: 'A raised platform overlooking the entire district. The central forge sits cold and dark below.', encounterId: '', connections: ['artisan_walkway', 'artisan_exit', 'artisan_workshop'], position: [890, 260], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_exit', 'artisan_workshop'], hiddenName: '???', hiddenDescription: 'A raised platform above the district.' },
+    { id: 'artisan_workshop', name: 'Intact Workshop', description: 'A sealed workshop door, untouched by kobold hands. Dwarven runes glow faintly around the frame.', encounterId: 'artisan_workshop', connections: ['artisan_overlook'], position: [580, 200], mapArea: 'artisan_district', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A sealed dwarven workshop.' },
+    { id: 'artisan_exit', name: 'District Exit', description: 'A passage leads out of the Artisan District toward other parts of the city.', encounterId: '', connections: ['artisan_overlook'], position: [1240, 220], mapArea: 'artisan_district', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A passage leading onward.' },
   ];
 
   for (const data of nodes) {

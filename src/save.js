@@ -17,6 +17,18 @@ function slotKey(slot) {
   return `${SAVE_KEY}_${slot}`;
 }
 
+// Cards normally serialize as bare ids, but cards carrying in-place
+// modifications (e.g. an Obsidian Forge enchant) need their enchant
+// list captured so loadFromSave can re-apply the effect. We expand
+// only cards that actually have enchants — everything else stays as
+// a string so existing saves load unchanged.
+function serializeCard(c) {
+  if (Array.isArray(c._enchants) && c._enchants.length > 0) {
+    return { id: c.id, enchants: c._enchants.slice() };
+  }
+  return c.id;
+}
+
 export function saveGame(state, saveName = '') {
   const data = {
     version: 1,
@@ -25,10 +37,10 @@ export function saveGame(state, saveName = '') {
     selectedClass: state.selectedClass,
     gold: state.gold,
     // Player deck (master deck card IDs)
-    masterDeck: state.player.deck.masterDeck.map(c => c.id),
+    masterDeck: state.player.deck.masterDeck.map(serializeCard),
     // Persistent piles (survive between combats)
-    hand: state.player.deck.hand.map(c => c.id),
-    discardPile: state.player.deck.discardPile.map(c => c.id),
+    hand: state.player.deck.hand.map(serializeCard),
+    discardPile: state.player.deck.discardPile.map(serializeCard),
     // Map state
     mapId: state.currentMap.id,
     currentNodeId: state.currentMap.currentNodeId,
@@ -38,7 +50,7 @@ export function saveGame(state, saveName = '') {
     perks: (state.player.perks || []).map(p => p.id),
     deckLimitBonuses: state.player.deckLimitBonuses || {},
     // Backpack
-    backpack: (state.backpack || []).map(c => c.id),
+    backpack: (state.backpack || []).map(serializeCard),
     // Story flags that drive later encounters (kitchen choice gates the
     // prison barrel snatch chance; barrel-looted flag skips the post-combat
     // rummage phase).
@@ -49,6 +61,50 @@ export function saveGame(state, saveName = '') {
     calmGroveBreadTaken: !!state.calmGroveBreadTaken,
     // Antiquity shop: monster cleared yet? + buyback ledger.
     antiquityShopCleared: !!state.antiquityShopCleared,
+    // Obsidian Forge one-time flags + Volcano Heart sacrifice flag.
+    // Drive the revisit-encounter selector + gray-out of the
+    // forge_weapon / forge_rest / sacrifice_* choices on revisit.
+    forgeUsed: !!state.forgeUsed,
+    forgeRested: !!state.forgeRested,
+    volcanoHeartSacrificed: !!state.volcanoHeartSacrificed,
+    // Volcano's Blessing flavor — type + per-combat duration set at
+    // sacrifice time. Re-applied at each volcano-area combat start.
+    volcanoBuffType: state.volcanoBuffType || '',
+    volcanoBuffTurns: typeof state.volcanoBuffTurns === 'number' ? state.volcanoBuffTurns : 0,
+    // Cathedral Shrine one-time flags. Drive the revisit-encounter
+    // selector + gray-out of pray_cathedral / cathedral_rest choices.
+    cathedralPrayed: !!state.cathedralPrayed,
+    cathedralRested: !!state.cathedralRested,
+    // Tomb of the Ancestor + Dwarven Workshop + Map Room one-time
+    // flags. Each drives a revisit-encounter selector AND a
+    // mechanical buff (ancestor rest pool, workbench armor enchant,
+    // map knowledge -2% encounter step). Without persisting these,
+    // a reload lost the Map Knowledge buff + reset the once-per-
+    // save heal/forge gates.
+    ancestorSpiritsDefeated: !!state.ancestorSpiritsDefeated,
+    ancestorRested: !!state.ancestorRested,
+    workbenchRested: !!state.workbenchRested,
+    workbenchUsed: !!state.workbenchUsed,
+    mapTableCopied: !!state.mapTableCopied,
+    mapTableRested: !!state.mapTableRested,
+    caveEntranceDoubledBack: !!state.caveEntranceDoubledBack,
+    corridorEntranceDoubledBack: !!state.corridorEntranceDoubledBack,
+    // Persistent buffs (Old God's Blessing, Volcano's Blessing) — these
+    // live on the character sheet and survive between combats. Previously
+    // wiped on every load because the load path rebuilt Character from
+    // scratch.
+    persistentBuffs: (state.player && Array.isArray(state.player.persistentBuffs))
+      ? state.player.persistentBuffs.map(b => ({
+          id: b.id,
+          name: b.name,
+          description: b.description,
+          imageId: b.imageId,
+          effectType: b.effectType,
+          effectValue: b.effectValue,
+          trigger: b.trigger,
+          condition: b.condition,
+        }))
+      : [],
     soldCardsHistory: Array.isArray(state.soldCardsHistory) ? state.soldCardsHistory.slice() : [],
     // Filibaf Forest maze state — drives the post-clear teleport pair
     // and the in-loop counters when saving mid-maze.
@@ -82,24 +138,58 @@ export function saveGame(state, saveName = '') {
     labyrinthSeed: typeof state.labyrinthSeed === 'number' ? state.labyrinthSeed : 0,
     labyrinthEncounterChance: typeof state.labyrinthEncounterChance === 'number' ? state.labyrinthEncounterChance : 0.2,
     labyrinthComplete: !!state.labyrinthComplete,
-    // Node states
+    // Well Rested snapshot: the deck size at the time of the last
+    // qualifying rest / level-up rebalance. Without this in the save
+    // payload the city gates re-locked the player after a reload even
+    // when they were minutes past an inn rest.
+    wellRestedDeckSize: typeof state.wellRestedDeckSize === 'number' ? state.wellRestedDeckSize : -1,
+    // Node states for the CURRENT map (kept for back-compat with old
+    // loaders; the same data also lives in mapCacheStates below).
     nodeStates: {},
+    // Per-map node states for every map the player has visited this
+    // run. Without this, loading at any cross-map node (e.g. forge)
+    // wipes progress on the maps that aren't currently loaded
+    // (lower_caverns / lava_chamber / obsidian_tunnels …) — they get
+    // re-created fresh by MAP_CREATORS the next time the player
+    // teleports back. mapCacheStates restores them in place.
+    mapCacheStates: {},
   };
 
-  // Save each node's done/locked state
-  for (const [id, node] of Object.entries(state.currentMap.nodes)) {
-    data.nodeStates[id] = {
-      isDone: node.isDone,
-      isLocked: node.isLocked,
-      canRevisit: node.canRevisit,
-      // Persist the hidden labels so unlocking via a story flag
-      // (north_pass clearing "???" after the throne audience, etc.)
-      // survives a load. Only carries through when the node was
-      // unlocked at save time and its label was cleared.
-      hiddenName: node.hiddenName || '',
-      hiddenDescription: node.hiddenDescription || '',
-      exhaustedChoices: Array.isArray(node.exhaustedChoices) ? node.exhaustedChoices.slice() : [],
-    };
+  // Helper: serialize one map's nodes the same shape as the legacy
+  // top-level nodeStates blob. Used for both currentMap and every
+  // cached map.
+  const serializeMapNodes = (map) => {
+    const out = {};
+    for (const [id, node] of Object.entries(map.nodes)) {
+      out[id] = {
+        isDone: node.isDone,
+        isLocked: node.isLocked,
+        canRevisit: node.canRevisit,
+        // Persist the hidden labels so unlocking via a story flag
+        // (north_pass clearing "???" after the throne audience, etc.)
+        // survives a load. Only carries through when the node was
+        // unlocked at save time and its label was cleared.
+        hiddenName: node.hiddenName || '',
+        hiddenDescription: node.hiddenDescription || '',
+        exhaustedChoices: Array.isArray(node.exhaustedChoices) ? node.exhaustedChoices.slice() : [],
+      };
+    }
+    return out;
+  };
+
+  data.nodeStates = serializeMapNodes(state.currentMap);
+  data.mapCacheStates[state.currentMap.id] = {
+    nodeStates: data.nodeStates,
+    currentNodeId: state.currentMap.currentNodeId,
+  };
+  if (state.mapCache && typeof state.mapCache === 'object') {
+    for (const [mid, m] of Object.entries(state.mapCache)) {
+      if (!m || mid === state.currentMap.id) continue;
+      data.mapCacheStates[mid] = {
+        nodeStates: serializeMapNodes(m),
+        currentNodeId: m.currentNodeId,
+      };
+    }
   }
 
   return data;

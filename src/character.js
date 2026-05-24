@@ -188,6 +188,15 @@ export class Character {
     if (this._invulnerable) return 0;
     if (!this.deck) return 0;
     if (amount <= 0) return 0;
+    // Ethereal — clamp incoming damage to 1 BEFORE deck removal.
+    // Catches unpreventable hits, Fire/Poison/Shock ticks, and any
+    // other path that bypasses takeDamageWithDefense's clamp.
+    // Mirrors PY game.py's repeated "damage > 1 and ethereal"
+    // checks at every direct deck-damage site.
+    if (amount > 1 && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'ethereal')) {
+      amount = 1;
+    }
     // Outside combat, ensure there's a draw pile for non-combat damage events.
     if (!this.deck.drawPile.length && !this.deck.hand.length && !this.deck.rechargePile.length) {
       this.deck.initializeForAdventure();
@@ -240,23 +249,42 @@ export class Character {
 
   takeDamageWithDefense(amount) {
     if (this._invulnerable) return [amount, 0];
-    // Shield absorbs first
+    // Brute (Ruga's passive) — every incoming attack deals +1 more
+    // damage. Applied at the source so every damage-routing path in
+    // main.js benefits without each site having to know about it.
+    if (amount > 0 && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'brute')) {
+      amount = amount + 1;
+    }
+    // Ethereal (Dwarven Specter passive) — clamp any incoming
+    // attack damage to a maximum of 1, regardless of source. Run
+    // AFTER Brute so a +1 bonus can't sneak past. Mirrors PY
+    // game.py:9396-9398 — every damage-routing site clamps to 1.
+    if (amount > 1 && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'ethereal')) {
+      amount = 1;
+    }
     let remaining = amount;
+    // Block absorbs FIRST — it's a one-attack temp absorber, so
+    // consume it before the persistent layers (shield, armor) so
+    // the player's standing buffs aren't wasted. NOTE: legacy
+    // behavior wiped currentBlock to 0 after the first hit; that
+    // turned a Block 4 into "absorb 1 then vanish". We now drain
+    // only what we used so multi-hit turns chip away at block.
+    if (this.currentBlock > 0) {
+      const blockAbsorb = Math.min(this.currentBlock, remaining);
+      this.currentBlock -= blockAbsorb;
+      remaining -= blockAbsorb;
+    }
+    // Shield absorbs next (persistent across turns).
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, remaining);
       this.shield -= shieldAbsorb;
       remaining -= shieldAbsorb;
     }
-    // Armor absorbs next
-    const blocked = Math.min(this.armor, remaining);
-    remaining -= blocked;
-    // Block absorbs next. Block is a one-attack absorber: whatever block the
-    // target had at the start of this hit is consumed (or wasted) on this
-    // attack only — leftover doesn't carry over to the next swing.
-    const blockAbsorb = Math.min(this.currentBlock, remaining);
-    this.currentBlock = 0;
-    remaining -= blockAbsorb;
-    const totalBlocked = blocked + blockAbsorb + (amount - remaining - (amount - blocked - blockAbsorb - remaining));
+    // Armor absorbs last (permanent, doesn't deplete).
+    const armorAbsorb = Math.min(this.armor, remaining);
+    remaining -= armorAbsorb;
     const taken = this.takeDamageFromDeck(remaining);
     return [amount - remaining, taken];
   }
@@ -404,6 +432,36 @@ export class Character {
             }
             break;
           }
+          case 'magma_tablet_tick': {
+            // Magma Tablet buff — +1 Ignite each turn for N turns,
+            // PLUS the Burning rider: if the player has FIRE at tick
+            // time, +1 more Ignite and Draw 1. Was missing the burning
+            // half-pulse — matches PY game.py:14867-14876.
+            this.ignite = (this.ignite || 0) + buff.effectValue;
+            logs.push({
+              text: `  ${buff.name}: +${buff.effectValue} Ignite (Ignite:${this.ignite})`,
+              color: '#ff8c40',
+              token: 'Ignite', tokenAmount: buff.effectValue, tokenColor: '#ff8c40',
+              buff,
+            });
+            const fire = (this.statusEffects && this.statusEffects.FIRE) || 0;
+            if (fire > 0) {
+              this.ignite += 1;
+              logs.push({
+                text: `    Burning! +1 Ignite (Ignite:${this.ignite})`,
+                color: '#ff8c40',
+                token: 'Ignite', tokenAmount: 1, tokenColor: '#ff8c40',
+                buff,
+              });
+              if (this.deck && typeof this.deck.draw === 'function') {
+                const drawn = this.deck.draw(1, this.maxHandSize || 10);
+                for (const d of drawn) {
+                  logs.push({ text: `    Burning! Draw ${d.name}`, color: '#7ec8ff', card: d, buff });
+                }
+              }
+            }
+            break;
+          }
         }
         if (buff.turnsRemaining > 0) {
           buff.turnsRemaining--;
@@ -450,7 +508,7 @@ export class Character {
 export function createToughPerk() {
   return new Perk({
     id: 'tough', name: 'Tough',
-    description: 'Combat Start: +1 Shield.',
+    description: 'Combat Start: +Shield.',
     imageId: 'tough_perk', effectType: 'combat_start_shield', effectValue: 1,
   });
 }

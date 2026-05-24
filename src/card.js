@@ -124,6 +124,13 @@ export class Card {
       isUnique: this.isUnique,
     });
     if (preserveUid) c.uid = this.uid;
+    // Preserve the on-card enchant tags (Obsidian Forge, Dwarven
+    // Workbench, etc.) — drawCard reads `_enchants` to render the
+    // badge + tooltip. Without this, copying an enchanted card into
+    // hand or recharge stripped the badge mid-combat.
+    if (Array.isArray(this._enchants) && this._enchants.length > 0) {
+      c._enchants = [...this._enchants];
+    }
     return c;
   }
 

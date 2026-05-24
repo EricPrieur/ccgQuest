@@ -110,7 +110,7 @@ export function createBattleFury() {
     effectDescription: 'Gain 1 Heroism, 1 Shield, Draw 2.',
     rechargeCost: 1,
     costIsDiscard: true,
-    shortDesc: 'D1->+1 Heroism\n+1 Shield, Draw 2',
+    shortDesc: 'D1->+1 Heroism\n+Shield, Draw 2',
   });
 }
 
@@ -310,6 +310,37 @@ export function createKoboldArmy() {
   });
 }
 
+// Lava Floor — Magma Mephit / Magma Drake passive. Each turn, every
+// creature on the board (player + allies + enemy + enemy allies)
+// gains 1 Fire. Mirrors PY power.py:create_lava_floor.
+export function createLavaFloor() {
+  return new Power({
+    id: 'lava_floor',
+    name: 'Lava Floor',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: All creatures gain 1 Fire.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: '1 Fire\nto ALL',
+  });
+}
+
+// Kobold Army Swarm — Kobold Drake Rider's escalating reinforcements.
+// Each turn N more kobolds pour in; once the fight runs long enough
+// the swarm starts including Dragonshields. Mirrors PY
+// power.py:create_kobold_army_swarm + game.py:14063 spawn handler.
+export function createKoboldArmySwarm() {
+  return new Power({
+    id: 'kobold_army_swarm',
+    name: 'Kobold Army',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: Kobolds are swarming you! (Escalating spawns each turn)',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Kobold Swarm',
+  });
+}
+
 // Obsidian Construct (Golem boss) — passive: every time the boss is
 // attacked, lose 1 base armor and gain 1 Rage. Mirrors PY
 // power.py:create_obsidian_construct.
@@ -322,6 +353,38 @@ export function createObsidianConstructPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'When Hit:\n-1 Armor, +1 Rage',
+  });
+}
+
+// Obsidian Body (Oracle) — bare armor-peel variant. Mirrors the slime
+// power's "When Hit: -1 Armor" rule but drops the slime-spawn rider.
+// Pairs with Dark Vision on the Oracle: 15 armor + every successful
+// hit chips 1 (no auto-regen, no rage gain).
+export function createObsidianOracleBodyPower() {
+  return new Power({
+    id: 'obsidian_oracle_body',
+    name: 'Obsidian Body',
+    costDescription: 'Passive',
+    effectDescription: 'When Hit: -1 Armor.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'When Hit:\n-1 Armor',
+  });
+}
+
+// Dark Vision (Obsidian Oracle) — passive: each enemy turn the Oracle
+// scries the top 3 cards of the player's draw pile and discards the
+// single highest-value card (tier > rarity > random tiebreaker). Slow
+// erosion of the player's best draws. Mirrors PY power.py:create_dark_vision.
+export function createDarkVisionPower() {
+  return new Power({
+    id: 'dark_vision',
+    name: 'Dark Vision',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: Scry 3 of your draw pile. The best card goes to your discard pile.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Scry 3\nDiscard Best',
   });
 }
 
@@ -338,6 +401,58 @@ export function createObsidianBodyPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'When Hit:\n-1 Armor +Slime',
+  });
+}
+
+// Dwarven Specter passive — incoming damage is clamped to 1
+// regardless of source (attacks, unpreventable, Fire/Poison ticks).
+// The CLAMP itself lives in Character.takeDamageWithDefense and
+// .takeDamageFromDeck so every damage path picks it up. Mirrors
+// PY power.py:create_ethereal.
+export function createEthereal() {
+  return new Power({
+    id: 'ethereal',
+    name: 'Ethereal',
+    costDescription: 'Passive',
+    effectDescription: 'No damage dealt to this character can be greater than 1.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Max 1 dmg\ntaken / hit',
+  });
+}
+
+// Ruga the Slave Master passive — attacks against Ruga deal +1
+// extra damage, and Ruga draws a card whenever he's hit. Mirrors PY
+// power.py:create_brute.
+export function createBrute() {
+  return new Power({
+    id: 'brute',
+    name: 'Brute',
+    costDescription: 'Passive',
+    // Lead with "On Hit:" so the perk-badge tokenizer in main.js
+    // catches the prefix and renders the pill. The +1-damage clause
+    // sits below as the passive footnote.
+    effectDescription: 'On Hit: Draw.\nAttacks against Ruga deal +1 damage.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'On Hit: Draw\n+1 Dmg taken',
+  });
+}
+
+// Kobold Slyblade passive — on hit (after damage lands), 50% chance
+// to phase out and become invulnerable until the start of the
+// slyblade's next turn. The attack itself goes through; subsequent
+// attacks that turn read the invulnerable flag and absorb. Mirrors
+// PY power.py:create_vanish.
+export function createVanish() {
+  return new Power({
+    id: 'vanish',
+    name: 'Vanish',
+    costDescription: 'Passive',
+    effectDescription: 'On Hit: 50% chance to vanish AFTER the attack, becoming invulnerable until next turn.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'On Hit:\n50% Vanish',
   });
 }
 

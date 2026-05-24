@@ -61,6 +61,16 @@ export const CARD_ART_MAP = {
   backstab: 'Backstab.jpg',
   poisoned_dagger: 'PoisonedDagger.jpg',
   sprint: 'Sprint.jpg',
+  // Slyblade enemy-side aliases — same art as the Rogue cards above
+  // since the slyblade's kit is the same six abilities a Rogue player
+  // could equip. Without these, the enemy versions render as brown
+  // placeholders despite the JPGs sitting right there.
+  slyblade_backstab: 'Backstab.jpg',
+  slyblade_poisoned_dagger: 'PoisonedDagger.jpg',
+  slyblade_fan_of_blades: 'FanofBlades.jpg',
+  slyblade_sprint: 'Sprint.jpg',
+  slyblade_pet_spider: 'PetSpider.jpg',
+  slyblade_sneak_attack: 'SneakAttack.jpg',
 
   // === Warrior ===
   greater_cleave: 'GreaterCleave.jpg',
@@ -180,6 +190,16 @@ export const CARD_ART_MAP = {
   buff_obsidian_core: 'ObsidianCore.jpg',
   obsidian_shard: 'ObsidianShard.jpg',
   obsidian_curse: 'ObsidianCurseShard.jpg',
+  // Token shoved into the player deck by the Oracle's Curse. Uses
+  // the same shard art as the curse-card itself so the family reads
+  // consistently in hand + draw pile.
+  obsidian_shard_token: 'ObsidianCurseShard.jpg',
+  // Passive powers that want to "showcase" themselves like a played
+  // card (center-screen pop with the arrow timing) need a CARD_ART_MAP
+  // entry too — POWER_ART_MAP covers the in-combat power-card render,
+  // but the showcase uses drawCard which goes through getCardArt.
+  dark_vision: 'ObsidianOracle.jpg',
+  lava_floor:  'MagmaFloor.jpg',
   obsidian_shard_token: 'ObsidianCurseShard.jpg',
   obsidian_candle: 'ObsidianCandle.jpg',
 
@@ -190,9 +210,30 @@ export const CARD_ART_MAP = {
   magma_rock: 'MagmaRock.jpg',
   molten_scale_armor: 'MoltenScale.jpg',
   molten_scale_armor_loot: 'MoltenScaleArmor.jpg',
+  // Magma Drake plaza-loot relic (rare). Reuses the MoltenScale art.
+  molten_scale_relic: 'MoltenScale.jpg',
   magma_mephit_summon: 'MagmaMephit.jpg',
   mephit_skin_sandals: 'MephitSkinSandals.jpg',
   mephit_skin_gloves: 'MephitSkinGloves.jpg',
+  magma_tablet: 'MagmaTablet.jpg',
+  buff_magma_tablet: 'MagmaTablet.jpg',
+  // Volcano's Blessing — granted at the Heart of the Volcano. PY uses
+  // the HeartOfTheVolcanoBG.jpg for the buff icon; we reach it via a
+  // relative path out of the Cards/ folder so getCardArt's hard-coded
+  // assets/Cards/ prefix still resolves correctly.
+  buff_volcano_blessing: '../Backgrounds/HeartOfTheVolcanoBG.jpg',
+
+  // Map Knowledge — granted at the Map Table in the Map Room.
+  // No dedicated buff art; PY uses the map_room map image, so we
+  // reach into the Maps/ folder for the same image (same relative-
+  // path trick as buff_volcano_blessing above).
+  buff_map_knowledge: '../Maps/DwarvenCityMapRoom.jpg',
+
+  // Dwarven Workbench card-enchant badge art (on-card icon shown
+  // next to the enchant name). No dedicated icon yet; pull the
+  // intact-workshop bg (DwarvenSmithyBG.jpg) via the same Cards/
+  // relative-path escape that the buff entries use.
+  enchant_dwarven_workbench: '../Backgrounds/DwarvenSmithyBG.jpg',
 
   // === Enemy Cards - Other ===
   mimic_bite: 'MimicInAntiquity.jpg',
@@ -289,6 +330,31 @@ export const CARD_ART_MAP = {
   slime_monster: 'Slime.jpg',
   kobold_warden: 'KoboldWarden.jpg',
   kobold_drake_rider: 'KoboldDrakeRider.jpg',
+  // Slyblade enemy portrait. The `sly_blade` (singular) entry above
+  // points at the WEAPON card's art (Slyblade.jpg); the kobold itself
+  // gets the dedicated KoboldSlyblade.jpg portrait.
+  kobold_slyblade: 'KoboldSlyblade.jpg',
+  // Dwarven Specter enemy portrait — chapter-7 upper-path random.
+  dwarven_specter: 'DwarvenSpecter.jpg',
+  // Ruga the Slave Master — Hall of Ancestors boss. The enemy
+  // character is named "Ruga the Slave Master" (lowercased +
+  // underscored → ruga_the_slave_master), and the encounter id is
+  // ruga_slave_master. Map both to the portrait so the combat
+  // splash and codex tile both resolve. Brute (Ruga's passive)
+  // borrows the same art per PY game.py:810.
+  ruga_slave_master: 'RugaTheSlaveMaster.jpg',
+  ruga_the_slave_master: 'RugaTheSlaveMaster.jpg',
+  brute: 'RugaTheSlaveMaster.jpg',
+  // Ancestor Spirits — Sarcophagus boss-shell + three named
+  // creatures. SummonAncestor.jpg doesn't exist yet, so the summon
+  // card and the boss-shell both fall back to Durin's portrait
+  // (he's the founder and named first in the dialog).
+  ancestor_spirits:        'DurinStoneheart.jpg',
+  the_3_ancestors:         'DurinStoneheart.jpg',
+  summon_ancestor:         'DurinStoneheart.jpg',
+  durin_stoneheart:        'DurinStoneheart.jpg',
+  balgrim_ironvein:        'BalgrimIronvein.jpg',
+  thordak_ashmantle:       'ThordakAshmantle.jpg',
   kobold_dragonshield: 'KoboldDragonShield.jpg',
   kobold_slinger: 'KoboldSlinger.jpg',
   stone_giant: 'StoneGiant.jpg',
@@ -397,9 +463,20 @@ export const POWER_ART_MAP = {
   obsidian_construct: 'ObsidianGolem.jpg',
   obsidian_body: 'ObsidianSlime.jpg',
   lava_floor: 'MagmaFloor.jpg',
+  dark_vision: 'ObsidianOracle.jpg',
+  obsidian_oracle_body: 'ObsidianOracle.jpg',
   vanish: 'Vanish.jpg',
+  // Brute is Ruga's signature passive — share his portrait so the
+  // power card matches the boss. PY game.py:810 uses the same file.
+  brute: 'RugaTheSlaveMaster.jpg',
+  // Ethereal is the Specter's signature passive — share its portrait.
+  // PY game.py:809 uses DwarvenSpecter.jpg.
+  ethereal: 'DwarvenSpecter.jpg',
   kobold_backup: 'KoboldGuard.jpg',
   kobold_army: 'KoboldArmy.jpg',
+  // Kobold Drake Rider's escalating-swarm variant uses the same art
+  // as General Zhost's kobold_army power.
+  kobold_army_swarm: 'KoboldArmy.jpg',
   amalgam: 'BonePile.jpg',
 };
 

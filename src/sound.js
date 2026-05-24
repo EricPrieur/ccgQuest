@@ -51,9 +51,19 @@ const LOOP_START_OFFSET = {
 // (some cinematic stems are mastered hotter than the ambient beds).
 const MUSIC_VOLUME_SCALE = {
   // Guild theme is mastered hotter than the rest of the soundtrack —
-  // 25 % reduction keeps it comfortable across every dwarven city
-  // interior area + post-siege Tharnag exterior.
-  'Music/music_guild_of_unlikely_heroes_01': 0.75,
+  // started at 0.75 (25 % cut for the dwarven city interior + post-siege
+  // exterior); dropped to 0.60 after another pass of playtesting
+  // confirmed it was still loud against combat cues and dialogue.
+  'Music/music_guild_of_unlikely_heroes_01': 0.60,
+  // Castle Festivities — same hot-master problem on the Qualibaf city
+  // bed. 20 % reduction so the arriving_city / qualibaf / north_qualibaf
+  // areas don't drown out combat cues and dialogue.
+  'Music/music_castle_festivities_01': 0.80,
+  // ES_Tension 2 (Fredrik Ekstrom) — chapter 7 underground bed for
+  // lower_caverns / lava_chamber / obsidian_tunnels. 20 % reduction
+  // so the volcano interior doesn't drown out combat and the lava
+  // floor / mephit cues.
+  'Music/music_tension_02': 0.80,
 };
 function _musicGainFor(key) {
   const scale = (key && MUSIC_VOLUME_SCALE[key]) || 1;
@@ -255,6 +265,7 @@ export const SOUND_PACKS = {
     'music_orchestra_piano_01',
     'music_sentimental_01',
     'music_tension_01',
+    'music_tension_02',
     'music_thriller_brass_01',
     // Newly added — auditioned via codex; not yet wired to any scene.
     'music_castle_festivities_01',
@@ -337,6 +348,10 @@ export const SOUND_MAP = {
   blunt_1h_flesh: 'Weapons/hammer_small_flesh_01',
   blunt_2h_flesh: 'Weapons/mace_heavy_flesh_01',
   blunt_blocked:  'Weapons/bat_wooden_hit_01',
+  // Ruga's Pummel — wooden-bat thud on every swing, regardless of
+  // whether the player has armor/shield up. Dedicated alias so the
+  // codex Sounds tab surfaces it under "pummel_hit".
+  pummel_hit:     'Weapons/bat_wooden_hit_01',
   // Bows + crossbows — flesh on landed shots, metal clang when blocked.
   bow_flesh:      'Weapons/arrow_flesh_01',
   bow_blocked:    'Weapons/arrow_metal_01',
@@ -380,6 +395,10 @@ export const SOUND_MAP = {
   ooze_attack:    'Monster/gore_ooze_01',
   // Bone Wand — eerie crystal twang.
   bone_wand_cast: 'Magic/dark_crystals_01',
+  // Direct-alias for the heavier dark-crystal variant — Specter
+  // Ectoplasm plays this on use so the necrotic relic reads
+  // sonically distinct from the lighter Bone Wand cue.
+  dark_crystals_02: 'Magic/dark_crystals_02',
   // Plate-on-strap — picking up / equipping a shield for shields-only
   // play (Cracked Buckler etc.).
   shield_grab:    'ImpactAudio/impactPlate_medium_000',
@@ -416,6 +435,22 @@ export const SOUND_MAP = {
   // Kobold Drake Rider — same reptilian roar so the drake's signature
   // hiss bookends its fight (showcase + death).
   drake_rider_hiss: 'Monster/reptilian_hiss_03',
+  // Kobold Slyblade — lighter reptilian hiss bookends its ambush.
+  // Fight start + death route through this alias via getFight/Death
+  // SfxKey so the codex Sounds tab can play it under "slyblade_hiss".
+  slyblade_hiss:    'Monster/reptilian_hiss_01',
+  // Ruga the Slave Master — heavier reptilian chuff for fight-start,
+  // death, AND the Brute on-hit reaction (draw 1 card). Distinct
+  // from the slyblade's hiss so the upper-city beasts read sonically
+  // different.
+  ruga_chuff:       'Monster/reptilian_chuff_01',
+  // Dwarven Specter — demon screech bookends the haunting (fight
+  // start + death). Dedicated alias so the codex Sounds tab can
+  // surface it under "specter_screech".
+  specter_screech:  'Monster/monster_demon_screech_01',
+  // Vanish trigger — soft poof when the slyblade dodges an attack
+  // and turns invulnerable. Fires from the vanish runtime hook.
+  vanish_poof:      'Magic/vanish_poof_01',
   // Frost Drake — alien wail. Wired to its attack swings, its death
   // cue, and the staggered second beat on the Drake Rider fight-start
   // splash so the drake is heard before the rider's hiss settles.
@@ -436,6 +471,32 @@ export const SOUND_MAP = {
   // Old God's Blessing — eerie wood-glitch reveal when the buff is
   // granted at the Old God Statue. Plays once on the loot page.
   dark_glitch_wood: 'Magic/dark_glitch_wood_01',
+  // Obsidian Oracle family — dark incantation for the Curse + a
+  // distinct warp cue for Dark Vision. Same file names as the SOUND_PACKS
+  // entries; this map wires the SOUND_MAP keys callers reference.
+  dark_spell_01:    'Magic/dark_spell_01',
+  dark_warp_01:     'Magic/dark_warp_01',
+  // Drain Essence — Dwarven Specter's signature cast. Heavier
+  // dark warp variant so it reads distinct from Dark Vision's
+  // dark_warp_01.
+  drain_essence:    'Magic/dark_warp_02',
+  // Magma Drake family — fire spell on Fire Breath, fireball whoosh +
+  // monster bite layered on Molten Bite. Same file path convention.
+  fire_spell_01:    'Magic/fire_spell_01',
+  monster_bite_01:  'Monster/monster_bite_01',
+  // Direct alias for fireball_whoosh_01 — already mapped via
+  // fire_apply/fire_flesh/torch_use for other callers, but several
+  // direct playSound('fireball_whoosh_01') sites (Molten Bite cast,
+  // Obsidian Edge tail) need the literal key resolvable.
+  fireball_whoosh_01: 'Magic/fireball_whoosh_01',
+  // Magma Drake bookend + Fire Breath roar — same alien-throat sample
+  // the Frost Drake uses. Aliased separately so the codex Sounds tab
+  // surfaces the drake by name (otherwise the file only shows up under
+  // frost_drake_scream, hiding the drake from a name search).
+  magma_drake_scream:        'Monster/monster_alien_scream_01',
+  monster_alien_scream_01:   'Monster/monster_alien_scream_01',
+  monster_demon_screech_01:  'Monster/monster_demon_screech_01',
+  monster_scream_01:         'Monster/monster_scream_01',
   // Sahuagin Sentinel + Priest — same cave-monster scream bookends
   // both fights (start + end).
   sahuagin_scream:       'Monster/sahuagin_scream_01',
@@ -914,6 +975,13 @@ let _ambienceKey = null;
 let _ambienceSource = null;
 let _ambienceGain = null;
 let _ambienceVolumeScale = 1; // remembered so live music-volume changes can rescale it.
+// Monotonic token bumped on every play/stop. The async start callback
+// captures the token at call time and only proceeds if it matches the
+// current value — protects against a stale fetch firing after a
+// fast stop+restart cycle that would otherwise spawn a ghost loop
+// (e.g. I Win during a Magma Drake fight before the lava_bubble
+// buffer finished decoding).
+let _ambienceToken = 0;
 
 export function playAmbienceLayer(packAndFile, volumeScale = 1) {
   if (!packAndFile) return;
@@ -933,7 +1001,9 @@ export function playAmbienceLayer(packAndFile, volumeScale = 1) {
   }
   _ambienceKey = packAndFile;
   _ambienceVolumeScale = volumeScale;
+  const myToken = ++_ambienceToken;
   const start = (buffer) => {
+    if (_ambienceToken !== myToken) return;
     if (_ambienceKey !== packAndFile) return;
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
@@ -972,6 +1042,9 @@ export function playAmbienceLayer(packAndFile, volumeScale = 1) {
 export function stopAmbienceLayer(fadeOutMs = 800) {
   _ambienceKey = null;
   _ambienceVolumeScale = 1;
+  // Bump the token so any in-flight fetch's start callback aborts
+  // when it finally resolves.
+  _ambienceToken++;
   if (!_ambienceSource || !_ambienceGain || !audioCtx) {
     _ambienceSource = null;
     _ambienceGain = null;

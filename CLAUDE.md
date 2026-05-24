@@ -54,7 +54,26 @@ When adding any of these, also update the listed file:
    - If it's a **player class power**, also add the id to
      `PLAYER_POWER_IDS` so the codex tags it player-side (default is
      enemy).
-6. **A new player summon that no card has `previewCreature` for**
+6. **A sound fired imperatively from an event** (any
+   `playSound('foo', ...)` call NOT routed through
+   `CARD_SFX_OVERRIDES`/play/flesh/blocked/defense — e.g. a card's
+   `playCardAmbient` special-case, an enemy power's start-of-turn
+   hook, a fight-start splash, a death cue, an ambient layer) →
+   - Make sure the alias is in `SOUND_MAP` (`src/sound.js`); if it's
+     only in `SOUND_PACKS` it won't actually play.
+   - If the cue is layered on top of a card cast, register it in
+     `CARD_SFX_HINTS` (main.js, near `CARD_SFX_OVERRIDES`) so the
+     codex Sounds tab shows that card under the file.
+   - For per-enemy fight-start / fight-end cues, return the alias
+     from `getFightStartSfxKey` / `getDeathSfxKey`. The codex
+     Character panel reads those.
+   - For looping `playAmbienceLayer(...)` beds, add the file path
+     to `MUSIC_TAGS` with a `combat ambience: <fight name>` tag so
+     the codex Sounds tab surfaces the wiring.
+   - Per-creature swing sounds (Magma Mephit fire whoosh, Shark
+     splash, etc.) belong in the creature-name branches of
+     `getWeaponSfxKeys` (`flesh`/`blocked`/`play` keys).
+7. **A new player summon that no card has `previewCreature` for**
    (e.g. spawned only by an effect handler) → add an explicit
    `addCreature(new Creature({...}), 'Summoned by: <source>')` block in
    `buildCodexSourceCache` (main.js, near the existing Restless Bone /

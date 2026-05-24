@@ -1077,7 +1077,7 @@ export function createCaveLedgeEncounter() {
           '', 'cave_climb_down', 1,
         ),
         new EncounterChoice(
-          'Use gear as rope  [Require Clothing, Light Armor, Whip or Scraps]',
+          'Use gear as rope',
           '', 'cave_rope_down', 1,
         ),
         new EncounterChoice(
@@ -2101,10 +2101,9 @@ export function createTharnagSideDoorEncounter() {
 
 // Kobold Drake Rider — random encounter on the volcano slopes
 // (volcano_east_path / volcano_lava_crossing / volcano_base). Mirrors
-// PY encounter.py:create_kobold_drake_rider_encounter. The volcano-
-// path arrival flow stamps `loot_cards = ["drake_rider_loot_city"]`
-// on the loot phase so the drop rolls at 50% (vs the guaranteed roll
-// used by the dwarven-city variant).
+// PY encounter.py:create_kobold_drake_rider_encounter. Every spawn
+// path shares the same loot table now (unified at 50 % drop rate);
+// the gate is applied in the encounter loot loop in main.js.
 export function createKoboldDrakeRiderEncounter() {
   return new Encounter('kobold_drake_rider', 'Kobold Drake Rider', 'A kobold drake rider charges at you from the volcanic ridge.', [
     new EncounterPhaseData({
@@ -2146,28 +2145,700 @@ export function createVolcanoArrivalEncounter() {
   ]);
 }
 
+// Volcano Base (the_point_of_no_return) — chapter 6 climax. Mirrors PY
+// encounter.py:create_volcano_choice_encounter. The choice routes are
+// flavor-only for now (chapter 7 upper/lower paths not yet implemented);
+// the LOOT phase grants a tier-2 level-up so the player still gets a
+// chapter-style payoff for clearing the slopes.
 export function createVolcanoChoiceEncounter() {
-  return new Encounter('volcano_choice', 'Volcano Base', 'A choice at the volcano base', [
+  return new Encounter('volcano_choice', 'The Point of No Return', 'The kobold army closes in. You must choose your path now.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You stand at the base of the volcano where the path diverges. One trail leads upward, switchbacking across the steep slope toward the smoking summit.'),
-        new EncounterText('The other descends into a series of tunnels carved into the rock — whether by nature or by hand, you cannot tell. Warm air gusts from the tunnel mouth.'),
+        new EncounterText('You press against the volcanic rock, catching your breath. Behind you, the sound of kobold war horns echoes across the frozen wastes. Dozens of patrols are converging on your position.'),
+        new EncounterText("We're out of time. Once we go in, there's no coming back out this way — they'll have every exit covered within the hour.", 'Thorb'),
+        new EncounterText("I see two options. There's a series of vents further up the slope — old mining shafts, by the look of them. If we climb up and squeeze through, we should come out somewhere in old Thorgazad's upper city. Higher ground, better sight lines, but we'll be exposed on the climb.", 'Thorb'),
+        new EncounterText('Or… there.', 'Valdrisa'),
+        new EncounterText('Valdrisa points to a partially collapsed opening near the base of the mountain, half-buried under frozen lava flow. Warm air seeps from the cracks.'),
+        new EncounterText("That leads to the lower chambers — the old mining tunnels and foundries beneath the city. With the volcano frozen, the heat down there should be bearable. And the kobolds seem to be avoiding the lower levels. Fewer patrols, but who knows what else is down there.", 'Valdrisa'),
+        new EncounterText("Both sound equally terrible, for what it's worth.", 'Raena'),
+        new EncounterText('Another horn sounds, closer this time. Shadows move along the ridgeline above. Whatever you decide, decide now.', 'Thorb'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.CHOICE,
       choices: [
         new EncounterChoice(
-          'Climb toward the summit',
-          'You begin the steep ascent, the heat growing more intense with every step.',
-          '', 0
+          "Climb to the upper vents (Thorb's plan)",
+          'You scramble up the frozen slope, boots slipping on obsidian glass. The vents are narrow but passable. One by one you squeeze through into darkness. Behind you, the sounds of the kobold army fade as the mountain swallows you whole.',
+          'volcano_upper', 1,
         ),
         new EncounterChoice(
-          'Enter the tunnels below',
-          'You duck into the tunnel entrance. The rock walls glow faintly with residual heat.',
-          '', 0
+          "Enter the lower caves (Valdrisa's plan)",
+          "You slide through the collapsed opening, warm air washing over you. The tunnel opens into a vast cavern — old mining tracks and rusted carts line the walls. It's dark, but the heat from below keeps the ice at bay. The kobolds won't follow you down here.",
+          'volcano_lower', 1,
         ),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      // PY has lootTitle 'Prepare for the Descent' here, but the upper
+      // path (Thorb's plan) climbs UP, not down, so the title reads
+      // wrong on that branch. Empty title → loot screen uses the
+      // encounter's own name ("The Point of No Return"), which still
+      // sells the moment without the descent-specific framing.
+      triggersLevelUp: true,
+      levelUpTier: 2,
+    }),
+  ]);
+}
+
+// Kobold Slyblade — random encounter on the dwarven city / upper path
+// movement nodes (entry_corridor's corridor_ruins for now). Mirrors PY
+// encounter.py:create_kobold_slyblade_encounter. Loot table
+// `kobold_slyblade_loot` references cards not yet ported to JS
+// (sly_blade, shadow_cloak, kobold_smoke_bomb, kobold_lockpick_set);
+// dropping it here gives gold-only loot until those creators exist.
+export function createKoboldSlybladeEncounter() {
+  return new Encounter('kobold_slyblade', 'Kobold Slyblade', 'A kobold assassin ambushes you from the shadows.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('A blur of movement from the shadows — a kobold in dark leather drops from above, blades drawn. It grins with malicious cunning, already lunging before you can react.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'kobold_slyblade',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [2, 6],
+      // Pick-one slyblade pool: sundries, sly_blade, shadow_cloak,
+      // kobold_smoke_bomb, kobold_lockpick_set.
+      lootCards: ['kobold_slyblade_loot'],
+    }),
+  ]);
+}
+
+// Dwarven Specter — random encounter on the dwarven city / upper path
+// movement nodes. Mirrors PY encounter.py:create_dwarven_specter_encounter.
+// Same caveat on loot as the Slyblade — PY's `dwarven_specter_loot`
+// pool references specter-themed cards not yet in the JS port
+// (gravechill_shard, soul_ward, spectral_hand, specter_ectoplasm).
+export function createDwarvenSpecterEncounter() {
+  return new Encounter('dwarven_specter', 'Dwarven Specter', 'A ghostly figure drifts through the ruins.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The air turns cold. A translucent figure materializes from the stone wall — a dwarven warrior, dead for centuries, its hollow eyes burning with pale light. It reaches toward you with spectral hands, hungry for the warmth of the living.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'dwarven_specter',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [1, 6],
+      // Pick-one specter pool: gravechill_shard, soul_ward,
+      // spectral_hand, specter_ectoplasm (rare).
+      lootCards: ['dwarven_specter_loot'],
+    }),
+  ]);
+}
+
+// Lower Caverns arrival (Chapter 7 — lower path opener). TEXT-only,
+// one-time. Mirrors PY encounter.py:create_lower_caverns_arrival_encounter.
+export function createLowerCavernsArrivalEncounter() {
+  return new Encounter('lower_caverns_arrival', 'The Lower Caverns', "You descend into the volcano's depths.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The tunnel plunges steeply downward from the volcano's base, carved by centuries of lava flow. The walls are smooth obsidian, and the air grows warmer with each step. Somewhere far below, you can hear the deep rumble of the mountain's heart."),
+        new EncounterText("These tunnels are old. Older than the kobolds, older than anything up on the surface. Watch your step — the floor's been polished smooth by flowing magma.", 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Temple District arrival (Chapter 7 — west_tunnel branch). TEXT-only.
+// Mirrors PY encounter.py:create_temple_district_arrival_encounter.
+export function createTempleDistrictArrivalEncounter() {
+  return new Encounter('temple_district_arrival', 'The Temple District', 'Ancient temples carved from living obsidian.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The western passage opens into a district of towering obsidian columns and crumbling archways. This was once a place of worship — broken altars and shattered idols line the walls. The architecture is far older than anything else you\'ve seen in the volcano.'),
+        new EncounterText("These temples are ancient. Look at the stonework — this predates anything the dwarves built. Whoever carved this place did it with a reverence we've long forgotten.", 'Thorb'),
+        new EncounterText('Stay sharp. Old temples usually mean old traps… or old guardians.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Obsidian Forge arrival (Chapter 7 — pillar_passage branch).
+// TEXT-only, fires on first arrival at forge_entry. Mirrors PY
+// encounter.py:create_obsidian_forge_arrival_encounter.
+export function createObsidianForgeArrivalEncounter() {
+  return new Encounter('obsidian_forge_arrival', 'The Obsidian Forge', "An ancient forge built into the volcano's heart.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The passage opens into a massive chamber dominated by heat. Rows of dormant furnaces line the walls, their fires long cold but the stone still warm to the touch. At the far end, an enormous anvil carved from pure obsidian sits waiting, as if its smiths merely stepped away.'),
+        new EncounterText('A forge this size… you could arm an entire army down here. Whoever built this knew their craft. The metalwork on these furnaces puts our finest dwarven smiths to shame.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// The Obsidian Forge — first visit (the_obsidian_forge node). 3-choice
+// prompt: forge a weapon (one-time), rest (one-time), leave. Mirrors PY
+// encounter.py:create_obsidian_forge_encounter.
+export function createObsidianForgeEncounter() {
+  return new Encounter('obsidian_forge', 'The Obsidian Forge', 'An ancient forge with power still lingering in its anvil.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You approach the massive forge. The obsidian anvil radiates a faint warmth, and scattered around the chamber are ingots of dark metal and tools that look like they were set down yesterday.'),
+        new EncounterText("By the ancestors... there's still material here. Obsidian ingots, flux, even a crucible that's still intact. I bet we could fire this forge up one more time. Maybe enough for a single piece.", 'Thorb'),
+        new EncounterText("The obsidian here has unusual properties. If we could infuse a weapon with it, the edge would cut through armor like parchment. It's worth trying, at least once.", 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The forge awaits.',
+      choices: [
+        new EncounterChoice('Forge a weapon with obsidian', '', 'forge_weapon', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', 'You rest by the warm forge. The heat soothes your wounds.', 'forge_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// The Obsidian Forge — revisit (skips intro text). Mirrors PY
+// encounter.py:create_obsidian_forge_revisit_encounter.
+export function createObsidianForgeRevisitEncounter() {
+  return new Encounter('obsidian_forge_revisit', 'The Obsidian Forge', 'The forge stands quiet.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The forge is warm and quiet.',
+      choices: [
+        new EncounterChoice('Forge a weapon with obsidian', '', 'forge_weapon', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', 'You rest by the warm forge. The heat soothes your wounds.', 'forge_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// General Zhost's Revenge — boss fight at the bridge entry. The
+// crippled general from the Tharnag siege returns to settle the
+// score. Mirrors PY encounter.py:create_zhost_revenge_encounter.
+export function createZhostRevengeEncounter() {
+  return new Encounter('zhost_revenge', "General Zhost's Revenge", 'The wounded general blocks the bridge.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('As you step onto the bridge, a familiar figure emerges from the shadows on the far side. General Zhost — scarred, limping, one arm hanging at his side — but still gripping the White Claw in his good hand. His eyes burn with fury.'),
+        new EncounterText('"You thought you could walk away from me? I lost everything because of you. My army, my fortress, my honor. But I still have THIS."', 'General Zhost'),
+        new EncounterText('He raises the White Claw and charges.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'zhost_revenge',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Zhost collapses to his knees, the White Claw clattering across the obsidian bridge. He looks up at you with something between rage and respect.'),
+        new EncounterText('"Finish it then. I won\'t beg."', 'General Zhost'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [3, 6],
+      // 'white_claw_reforged' is the shared id (enemy deck + player loot
+      // card share one creator now). drake_rider_loot is the 50%-gated
+      // common-soldier drop table.
+      lootCards: ['white_claw_reforged', 'drake_rider_loot'],
+    }),
+  ]);
+}
+
+// Upper Bridge arrival — TEXT-only intro that fires once when the
+// player first crosses from obsidian_streets/streets_upper into the
+// bridge map. Mirrors PY encounter.py:create_upper_bridge_arrival_encounter.
+export function createUpperBridgeArrivalEncounter() {
+  return new Encounter('upper_bridge_arrival', 'The Upper Bridge', 'A massive bridge over a bottomless chasm.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The streets end abruptly at the edge of a vast chasm. Spanning it is a bridge of solid obsidian, wide enough for ten to walk abreast. Wind howls up from the darkness below, and the far side is lost in shadow."),
+        new EncounterText("That's... a long way down. And a long way across. Whatever's on the other side, they didn't want visitors.", 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Bridge Crossing — point-of-no-return dialog at the bridge's far
+// end. Blow the bridge to cut off pursuit and commit to the upper
+// volcano route. Mirrors PY encounter.py:create_bridge_crossing_encounter.
+export function createBridgeCrossingEncounter() {
+  return new Encounter('bridge_crossing', 'Point of No Return', 'The path ahead leads into the heart of the volcano.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("As you approach the far end of the bridge, you hear the rumble of countless kobold feet echoing from the tunnels behind you. They've found your trail. It won't be long before they swarm the bridge."),
+        new EncounterText("We can't go back the way we came. But I still have some of those Goblin Sapper charges we found earlier. If we rig the bridge... well, that's a one-way trip.", 'Thorb'),
+        new EncounterText("He's right. We blow the bridge, we cut off their pursuit. But we'll have to find another way out of this volcano. Are you ready for that?", 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Once you destroy the bridge, there is no going back.',
+      choices: [
+        // "Blow" — NO completesEncounter so the encounter advances to
+        // the LOOT phase below, which triggers the chapter-8 level-up.
+        // The map swap to volcano_stairs_1 fires from the rest-exit
+        // crossingBridge hook in main.js.
+        new EncounterChoice('Blow the bridge and push forward', 'The charges detonate with a thunderous roar. The great obsidian bridge cracks and crumbles into the abyss. There is no turning back now.', 'cross_bridge', 0),
+        new EncounterChoice("Stay — we're not ready yet", '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+    // Level-up reward — chapter-8 tier-3 ability + perk + deck
+    // rebalance. Only reached when "Blow" was picked (the "Stay"
+    // choice completesEncounter and never advances here).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'The Bridge Falls',
+      triggersLevelUp: true,
+      // Tier 2 abilities — same pool as the Tharnag side-door level-up.
+      // Chapter 8 doesn't get its own ability tier yet; bumping to 3
+      // would force the fallback to tier 1 (no tier-3 abilities exist).
+      levelUpTier: 2,
+    }),
+  ]);
+}
+
+// Obsidian Market arrival — reached via the plaza's Northern
+// Corridor. TEXT-only intro. Mirrors PY
+// encounter.py:create_obsidian_market_arrival_encounter.
+export function createObsidianMarketArrivalEncounter() {
+  return new Encounter('obsidian_market_arrival', 'The Obsidian Market', 'A grand underground marketplace.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The northern corridor opens into an enormous underground marketplace. Stalls and shops stretch as far as the eye can see, carved from obsidian and decorated with faded banners. Goods still sit on some counters, covered in thick dust.'),
+        new EncounterText('This must have been the trading heart of the whole city. Look at the size of those warehouses at the far end.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Market Stalls — search-the-rubble salvage encounter. One-time
+// dwarven loot pull. Mirrors PY encounter.py:create_market_stalls_encounter.
+export function createMarketStallsEncounter() {
+  return new Encounter('market_stalls', 'Market Stalls', 'Abandoned merchant stalls covered in dust and rubble.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You pick through the rows of abandoned stalls. Most have been picked clean by time and scavengers, but some still hold goods buried under collapsed awnings and obsidian rubble.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Search the rubble?',
+      choices: [
+        new EncounterChoice('Search the stalls', 'You dig through the rubble and debris, pushing aside collapsed shelving and crumbled stone. Your hands close around something solid — dwarven craftsmanship, still intact after all these years.', 'market_stalls_loot', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Deep Market — sheltered rest spot at the far end of the market.
+// Heals up to 8 cards from discard. Mirrors PY
+// encounter.py:create_deep_market_rest_encounter.
+export function createDeepMarketRestEncounter() {
+  return new Encounter('deep_market_rest', 'Deep Market', 'A sheltered corner in the far end of the market.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("At the far end of the market, behind a row of sealed warehouses, you find a sheltered alcove. The stone floor is smooth, the walls block the drafts, and it's quiet — as safe a resting spot as you'll find in these ruins."),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Rest here?',
+      choices: [
+        new EncounterChoice('Rest', 'You settle into the alcove and tend your wounds. The quiet of the deep market is almost peaceful.', 'deep_market_rest', 8, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Obsidian Streets arrival — reached via the plaza's Northern
+// Corridor. TEXT-only intro. Mirrors PY
+// encounter.py:create_obsidian_streets_arrival_encounter.
+export function createObsidianStreetsArrivalEncounter() {
+  return new Encounter('obsidian_streets_arrival', 'The Obsidian Streets', 'Narrow streets of an underground city.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The northern corridor leads into a network of narrow streets, carved directly from the obsidian rock. Small buildings line both sides — homes, shops, workshops — all empty and silent. This was once a bustling underground city.'),
+        new EncounterText('People lived here. Families, merchants, craftsmen. Whatever happened to drive them away, they left in a hurry.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Cavern Entrance — fires when the player doubles back from the
+// lower caverns toward the original descent point. PY parity
+// equivalent: a flavor reminder that the cave entrance only leads
+// back up and the player should continue deeper to progress.
+export function createLowerCavernsDoubleBackEncounter() {
+  return new Encounter('lower_caverns_double_back', 'Cavern Entrance', 'You\'ve circled back to the way in.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The tunnel narrows back toward the surface. You\'ve doubled back to the cave entrance — there\'s nothing else this way. To go deeper into the volcano, you\'ll need to turn around.'),
+      ],
+    }),
+  ]);
+}
+
+// Backward-arrival wrappers — reuse the same dialog text as the
+// forward entry encounters but with unique encounter ids so each
+// entry node tracks completion independently. Without this, sharing
+// the forward encounterId on the backward entry would (1) suppress
+// the dialog on the backward visit via force-flip, and
+// (2) auto-clear the FORWARD entry's `???` hidden label in
+// hydrateMapFromGlobalState the next time the map is rehydrated,
+// because the shared id is in completedEncounters.
+export function createArtisanDistrictEntryBackEncounter() {
+  const e = createArtisanDistrictEntryEncounter();
+  e.id = 'artisan_district_entry_back';
+  return e;
+}
+
+export function createTunnelToBridgeEntryBackEncounter() {
+  const e = createTunnelToBridgeEntryEncounter();
+  e.id = 'tunnel_to_bridge_entry_back';
+  return e;
+}
+
+export function createDeeperTunnelsEntryBackEncounter() {
+  const e = createDeeperTunnelsEntryEncounter();
+  e.id = 'deeper_tunnels_entry_back';
+  return e;
+}
+
+export function createGatePassageBackEncounter() {
+  const e = createGatePassageEncounter();
+  e.id = 'gate_passage_back';
+  return e;
+}
+
+// Entry Corridor doubled-back dialog — fires once when the player
+// backtracks from corridor_ruins to corridor_entrance after first
+// entering Thorgazad. The way out is no longer safe; pushes the
+// party back into the city.
+export function createEntryCorridorDoubleBackEncounter() {
+  return new Encounter('entry_corridor_double_back', 'Corridor Entrance', 'The way back is no longer safe.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You retrace your steps to the corridor entrance — but the slope down is no longer empty. Kobold voices echo up from below, dozens of them, fanning through the lower passages.'),
+        new EncounterText('Going back the way you came is no longer an option. Whatever you came here to do, it has to be done from inside Thorgazad now. You turn back into the corridor.'),
+      ],
+    }),
+  ]);
+}
+
+// Plaza arrival variants — each entry node uses a distinct id so
+// completedEncounters doesn't auto-isDone the OTHER entry points
+// when one fires. Same body as the canonical obsidian_plaza_arrival
+// (tunnels side). Dropped per-side flavor lines for now; can be
+// expanded later when the player asks for them.
+export function createObsidianPlazaArrivalWestEncounter() {
+  return new Encounter('obsidian_plaza_arrival_west', 'The Obsidian Plaza', 'A vast underground plaza.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The temple corridor opens into an enormous underground plaza. The ceiling soars impossibly high, supported by massive obsidian pillars carved with intricate patterns.'),
+        new EncounterText('This place is huge. We should be careful — sound carries in a chamber this size.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+export function createObsidianPlazaArrivalNwEncounter() {
+  return new Encounter('obsidian_plaza_arrival_nw', 'The Obsidian Plaza', 'A vast underground plaza.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The narrow passage opens into an enormous underground plaza. Obsidian pillars rise to a ceiling lost in shadow.'),
+        new EncounterText('Quiet here. Whatever lived in this plaza is long gone.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Temple District side-passage arrival — distinct id from
+// temple_district_arrival so completedEncounters doesn't reveal
+// temple_entry on backward traversal from the plaza side.
+export function createTempleDistrictArrivalSideEncounter() {
+  return new Encounter('temple_district_arrival_side', 'The Temple District', 'Ancient temples carved from living obsidian.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The narrow side-passage opens into a chamber of old stone temples. Crumbling columns line the walls, half-hidden under centuries of fallen masonry.'),
+        new EncounterText('We came in through the back door. The main approach must be somewhere south of here.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Same dialog body, but tagged with a distinct id so the bridge-side
+// arrival (streets_upper) doesn't share completedEncounters with the
+// plaza-side arrival (streets_entry). Without this, walking the
+// streets backward from the bridge entry force-revealed every
+// streets node's real name because the shared encounter id
+// auto-isDone'd every node carrying it.
+export function createObsidianStreetsArrivalUpperEncounter() {
+  return new Encounter('obsidian_streets_arrival_upper', 'The Obsidian Streets', 'Narrow streets of an underground city.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The streets climb down past empty doorways and shuttered workshops. The torchlight catches obsidian carvings — patterns dwarven craftsmen would have recognized centuries ago. Whatever lived here is long gone.'),
+        new EncounterText('Quiet. Too quiet, even for a dead city.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Obsidian Plaza arrival — Chapter 7 north passage hub. Shared
+// dialog id across both entry points (plaza_entry from
+// obsidian_tunnels and plaza_west from temple_district) so the first
+// visit from EITHER side plays the dialog and the global
+// completedEncounters force-isDone rule blocks the re-fire on the
+// second entry. Mirrors PY encounter.py:create_obsidian_plaza_arrival_encounter.
+export function createObsidianPlazaArrivalEncounter() {
+  return new Encounter('obsidian_plaza_arrival', 'The Obsidian Plaza', 'A vast underground plaza.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The north passage opens into an enormous underground plaza. The ceiling soars impossibly high, supported by massive obsidian pillars carved with intricate patterns. This was once a gathering place — a city square buried deep within the volcano.'),
+        new EncounterText('Look at the size of this place. An entire army could muster here. Passages branch out in every direction.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Magma Drake — Chapter 7 mini-boss at the center of the plaza. One
+// fight (canRevisit:false on the node + completedEncounters latch).
+// Mirrors PY encounter.py:create_magma_drake_encounter.
+export function createMagmaDrakeEncounter() {
+  return new Encounter('magma_drake', 'Magma Drake', 'A massive drake made of living magma guards the plaza.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The ground shudders as you enter the plaza. A massive shape unfurls from the obsidian fountain — a drake of living magma, its scales glowing like embers. Molten rock drips from its jaws as it turns its burning gaze toward you.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'magma_drake',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [4, 6],
+      lootCards: ['magma_drake_loot', 'molten_scale_armor_loot'],
+    }),
+  ]);
+}
+
+// Obsidian Cathedral arrival — temple_left_passage forwards into the
+// cathedral and lands the party on cathedral_entry where this
+// TEXT-only intro plays. Mirrors PY
+// encounter.py:create_cathedral_arrival_encounter.
+export function createCathedralArrivalEncounter() {
+  return new Encounter('cathedral_arrival', 'The Obsidian Cathedral', 'A ruined cathedral carved from obsidian.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Through the archway, a vast cathedral opens before you. The ceiling soars impossibly high, lost in shadow. Broken pillars of polished obsidian line what was once a grand nave, and fragments of stained glass crunch beneath your boots.'),
+        new EncounterText('This place is ancient. Look at the stonework — whoever built this worshipped something powerful. And from the look of the shrine at the far end... that power might still linger.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Obsidian Oracle — the mini-boss sitting on a fused-glass throne in
+// the cathedral ruins. Plays a short intro, then drops into the combat
+// + loot phases. Mirrors PY encounter.py:create_obsidian_oracle_encounter.
+export function createObsidianOracleEncounter() {
+  return new Encounter('obsidian_oracle', 'Obsidian Oracle', 'An ancient being fused with volcanic glass guards the cathedral.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("Among the shattered pews, a figure sits motionless on a throne of fused obsidian. Its body is more glass than flesh — dark, reflective surfaces where skin once was. As you approach, its eyes open, glowing with an inner violet light. It speaks without moving its lips: 'I have seen your end. It is written in stone.'"),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'obsidian_oracle',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [3, 6],
+      // PY parity (encounter.py:4579): guaranteed golem-pool roll +
+      // a guaranteed Obsidian Candle. The candle is the headline drop
+      // (rare tier-2 item that scry-2's via a forced recharge).
+      lootCards: ['obsidian_golem_loot_guaranteed', 'obsidian_candle'],
+    }),
+  ]);
+}
+
+// Cathedral Shrine revisit — skips the intro text and drops straight
+// into the choice prompt once any choice has been used. Mirrors PY
+// encounter.py:create_cathedral_shrine_revisit_encounter.
+export function createCathedralShrineRevisitEncounter() {
+  return new Encounter('cathedral_shrine_revisit', 'Ancient Shrine', 'The shrine pulses with ancient energy.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The shrine pulses with ancient energy.',
+      choices: [
+        new EncounterChoice('Pray to the old gods', 'You kneel before the shrine. Power surges through you as ancient knowledge fills your mind.', 'pray_cathedral', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', "You sit in the quiet of the cathedral. The shrine's warmth eases your wounds.", 'cathedral_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Cathedral Shrine — first-visit text + 3 choices: pray for a Tier 2
+// ability (one-time), rest (one-time, heal 8), leave. Mirrors PY
+// encounter.py:create_cathedral_shrine_encounter.
+export function createCathedralShrineEncounter() {
+  return new Encounter('cathedral_shrine', 'Ancient Shrine', 'An altar radiating with forgotten power.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The shrine stands at the heart of the ruined cathedral, untouched by the decay around it. Strange symbols pulse with a faint light across its surface. The air here feels charged, as if the stone itself remembers the prayers offered long ago."),
+        new EncounterText("I can feel it... there's still power here. Old power. If you kneel and offer a prayer, the shrine might answer.", 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The shrine pulses with ancient energy.',
+      choices: [
+        new EncounterChoice('Pray to the old gods', 'You kneel before the shrine. Power surges through you as ancient knowledge fills your mind.', 'pray_cathedral', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', "You sit in the quiet of the cathedral. The shrine's warmth eases your wounds.", 'cathedral_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave the shrine alone', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Heart of the Volcano — temple_deep_chamber. The party stands on a
+// ledge above the lava and may sacrifice one piece of gear into the
+// magma (permanently banished). Mirrors PY
+// encounter.py:create_volcano_heart_encounter.
+export function createVolcanoHeartEncounter() {
+  return new Encounter('volcano_heart', 'Heart of the Volcano', 'A stone arch over a bottomless pit of magma.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You step through a massive stone archway and the ground drops away. Before you is a vast pit — the heart of the volcano itself. Magma churns far below, radiating heat that makes your skin prickle. A narrow ledge is all that separates you from the abyss.'),
+        new EncounterText("By the forge-fires... this is it. The heart of the mountain. In the old stories, offerings made to the volcano's heart would be answered with blessings. Or curses.", 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: "The volcano's heat is intense. You could sacrifice something forever...",
+      choices: [
+        new EncounterChoice('Sacrifice a Weapon (permanently banished)', '', 'sacrifice_weapon', 0, { returnToChoices: true }),
+        new EncounterChoice('Sacrifice Armor (permanently banished)',    '', 'sacrifice_armor',  0, { returnToChoices: true }),
+        new EncounterChoice('Sacrifice an Item (permanently banished)',  '', 'sacrifice_item',   0, { returnToChoices: true }),
+        new EncounterChoice('Sacrifice a Relic (permanently banished)',  '', 'sacrifice_relic',  0, { returnToChoices: true }),
+        new EncounterChoice('Do nothing', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Volcano Heart revisit — once any sacrifice has been made the mountain
+// is quiet. Mirrors PY encounter.py:create_volcano_heart_revisit_encounter.
+export function createVolcanoHeartRevisitEncounter() {
+  return new Encounter('volcano_heart_revisit', 'Heart of the Volcano', "The volcano's heart still burns.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The volcano's heart still churns below, but the strange pull you felt before has faded. Whatever the mountain wanted, it has received."),
+      ],
+    }),
+  ]);
+}
+
+// Magma Mephit random encounter — fires randomly while crossing the
+// chapter-7 volcano maps. Mirrors PY encounter.py:create_magma_mephit_encounter.
+export function createMagmaMephitEncounter() {
+  return new Encounter('magma_mephit', 'Magma Mephits', 'A swarm of small fiery creatures erupts from the rock.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The ground cracks and hisses. Small winged creatures made of living magma burst from fissures in the rock, their bodies dripping molten stone. They cackle with malicious glee as they swarm toward you.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'magma_mephit',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [2, 6],
+      lootCards: ['magma_mephit_loot'],
+    }),
+  ]);
+}
+
+// Obsidian Tunnels arrival (Chapter 7 — branching hub opener). The
+// dialog id is shared across all 4 terminal entry nodes (tunnel_entry,
+// north_tunnel, west_tunnel, pillar_passage). First visit from any
+// direction fires it; subsequent re-entries from another arm skip via
+// the completedEncounters force-isDone rescue. Mirrors PY
+// encounter.py:create_obsidian_tunnels_arrival_encounter.
+export function createObsidianTunnelsArrivalEncounter() {
+  return new Encounter('obsidian_tunnels_arrival', 'The Obsidian Tunnels', 'Smooth obsidian tunnels branch in every direction.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You emerge from the lava chamber into a network of obsidian tunnels. The walls are impossibly smooth, reflecting your torchlight like dark mirrors. Something carved these passages long ago — this is no natural formation. The air is cooler here, and eerily still.'),
+        new EncounterText('These tunnels branch in three directions. The stone is worked, not natural. I can make out what looks like a wide open space to the north, some kind of warm glow to the southeast, and older, more ornate carvings to the west.', 'Raena'),
+        new EncounterText("An underground city, built inside a volcano. I've heard legends, but I never thought I'd see one with my own eyes.", 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Lava Chamber arrival (Chapter 7 — second area opener). TEXT-only,
+// one-time. Mirrors PY encounter.py:create_lava_chamber_arrival_encounter.
+// Same encounter id is stamped on BOTH the bottom-entry (chamber_entry)
+// and the future top-entry (upper_passage) node — the completedEncounters
+// force-isDone rule ensures it fires exactly once regardless of direction.
+export function createLavaChamberArrivalEncounter() {
+  return new Encounter('lava_chamber_arrival', 'The Lava Chamber', 'A vast underground cavern filled with magma.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The tunnel opens into an enormous underground chamber. Rivers of sluggish magma wind between islands of cooled obsidian, casting everything in a hellish orange glow. The heat is nearly unbearable, and the air shimmers with waves of distortion.'),
+        new EncounterText("By the forge-fires… this is where the mountain's blood flows. I can feel the heat through my boots. Stay on the solid ground and don't touch anything that glows.", 'Thorb'),
+        new EncounterText('There — look at the far side. There\'s a path leading up. We need to cross this chamber to reach the tunnels above.', 'Raena'),
       ],
     }),
   ]);
@@ -2496,65 +3167,77 @@ export function createDwarvenSmithyEncounter() {
 // ============================================================
 
 export function createEntryCorridorArrivalEncounter() {
-  return new Encounter('entry_corridor_arrival', 'Entry Corridor', 'A ruined dwarven corridor', [
+  // Mirrors PY encounter.py:create_entry_corridor_arrival_encounter —
+  // the exposed climb into the ruined lookout. Replaces the earlier
+  // placeholder text that read like a generic dwarven hallway.
+  return new Encounter('entry_corridor_arrival', 'The Ruined Lookout', 'A destroyed dwarven outpost clings to the mountainside.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You step into a long corridor carved from living stone. The walls bear the remnants of dwarven bas-reliefs, their details worn smooth by time.'),
-        new EncounterText('Ancient stonework stretches ahead, the craftsmanship still evident despite centuries of neglect. Fallen masonry litters the floor.'),
-        new EncounterText('Dust hangs thick in the still air. The silence here is absolute — the deep, patient silence of a place long abandoned.'),
+        new EncounterText('You scramble up the frozen slope toward the vents. The floor has given way in places — nothing but mountain air and a long drop to the rocks below. The only way forward is along the wall, using handholds carved by dwarven masons centuries ago.'),
+        new EncounterText('One at a time. Test every hold before you trust it.', 'Valdrisa'),
+        new EncounterText("Below, the kobold army is a seething carpet of scales and torchlight. A war horn sounds — they've spotted movement on the cliff face. Arrows clatter against the stone beneath you, but you're too high. The kobolds shriek and snarl, loosing volley after volley that falls short. For now."),
+        new EncounterText("Raena's foot slips and she swings out over the void for a heart-stopping moment before Thorb catches her wrist."),
+        new EncounterText("I've got you. Don't look down.", 'Thorb'),
+        new EncounterText("You haul yourselves up and collapse onto solid ground. This used to be a dwarven lookout post — you can see where the watchtower stood, but the rest has been ripped clean off the mountainside. What's left is a corridor of broken stone hanging out over the cliff face, burrowing deeper into the mountain."),
       ],
     }),
   ]);
 }
 
 export function createCorridorGateApproachEncounter() {
-  return new Encounter('corridor_gate_approach', 'Gate Approach', 'A massive gate blocks the corridor', [
+  // Mirrors PY encounter.py:create_corridor_gate_approach_encounter —
+  // TEXT-only. The earlier JS port wedged an Obsidian Golem fight in
+  // here, but PY treats this beat as pure dialog: the corridor opens
+  // into Thorgazad's upper gate and the party steps through. The
+  // three city random encounters (slyblade / specter / drake rider)
+  // cover the combat side via the corridor_ruins random roll.
+  return new Encounter('corridor_gate_approach', 'The Gate Ahead', 'The corridor opens into a massive dwarven gate.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('A massive gate looms ahead, its iron surface etched with dwarven runes that still faintly glow.'),
-        new EncounterText('As you approach, stone grinds against stone. An Obsidian Golem pulls itself free from the wall, its eyes blazing with ancient fire.'),
+        new EncounterText("The corridor widens and the stonework improves. Through the gloom, a massive archway emerges — one of Thorgazad's upper city gates, dwarven runes etched deep into the stone. The gate stands open. Something has been through here recently."),
+        new EncounterText('You step through into a grand entrance hall. Vaulted ceilings rest on pillars carved as dwarven warriors — most defaced, their stone faces smashed. Kobold claw marks cover the walls. Patrol routes scratched into the floor.', 'Valdrisa'),
+        new EncounterText("They've been through here in force, but it looks like they pulled back weeks ago. Stay sharp — patrols could still sweep through this area.", 'Thorb'),
       ],
-    }),
-    new EncounterPhaseData({
-      phaseType: EncounterPhase.COMBAT,
-      enemyId: 'obsidian_golem',
-    }),
-    new EncounterPhaseData({
-      phaseType: EncounterPhase.TEXT,
-      texts: [
-        new EncounterText('The golem crumbles into shards of obsidian, its protective enchantment finally spent. The gate stands unguarded.'),
-      ],
-    }),
-    new EncounterPhaseData({
-      phaseType: EncounterPhase.LOOT,
-      lootGoldDice: [3, 6],
     }),
   ]);
 }
 
 export function createGateGuardroomEncounter() {
-  return new Encounter('gate_guardroom', 'Guardroom', 'An old guardroom near the gate', [
+  // Mirrors PY encounter.py:create_gate_guardroom_encounter — the
+  // "Old Guardroom" beat. Earlier port used a generic 'search_camp'
+  // effect that rolled the camp/abandoned loot list. PY actually
+  // rolls the dwarven_market_loot table here (same table as the
+  // Obsidian Market salvage), so the find is dwarven gear, not
+  // bandages and chicken legs.
+  return new Encounter('gate_guardroom', 'The Old Guardroom', 'A ruined guardroom beside the gate.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('A side chamber opens into what was once the gate guardroom. Weapon racks line the walls, though most are empty now.'),
-        new EncounterText('A few crates and barrels remain in the corner, their contents unknown. Supplies may yet be salvageable.'),
+        new EncounterText('A side chamber opens off the main hall — an old guardroom. Weapon racks line the walls, long since emptied. A stone table sits in the center, covered in dust and kobold scratch marks.'),
+        new EncounterText('They used this as a staging area. Maps scratched into the table, patrol routes maybe. Looks like they pulled out weeks ago.', 'Valdrisa'),
+        new EncounterText("There's something else here. A dwarven journal, half-buried under rubble. The last entry mentions sealing the lower passages and retreating to the Artisan District. It speaks of deep tunnels leading to workshops and forges beyond the Hall of Ancestors.", 'Raena'),
+        new EncounterText("The Artisan District… that's deeper in, past the Hall and through the tunnels. If there were survivors, that's where they'd have made their stand.", 'Thorb'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Search the outpost?',
       choices: [
         new EncounterChoice(
-          'Search for supplies',
-          'You dig through the crates and find some provisions the dwarves left behind. Still usable, remarkably.',
-          'search_camp', 1
+          'Search the remains',
+          'You sift through the scattered equipment and rubble. Most has been picked clean by kobolds, but wedged under an overturned rack you find something they missed — dwarven-made, still in good condition.',
+          'guardroom_loot', 0, { returnToChoices: true },
         ),
         new EncounterChoice(
+          // Empty result_text → encounter completes immediately on
+          // click without a result page. Avoids the wrong "You leave
+          // the guardroom undisturbed" message after the player has
+          // already searched the place.
           'Leave',
           '',
-          '', 0
+          '', 0, { completesEncounter: true },
         ),
       ],
     }),
@@ -2562,12 +3245,19 @@ export function createGateGuardroomEncounter() {
 }
 
 export function createGatePassageEncounter() {
-  return new Encounter('gate_passage', 'Gate Passage', 'A passage deeper into the city', [
+  // Mirrors PY encounter.py:create_gate_passage_encounter — the
+  // descent into the Hall of Ancestors. Earlier JS port used a
+  // generic 2-line "passage deeper into the city" filler; this is
+  // the real PY dialog (4 lines, with Thorb explaining the Sky
+  // Shaft and Valdrisa flagging the kobold tracks + branches).
+  return new Encounter('gate_passage', 'Into Thorgazad', 'The passage descends into the Hall of Ancestors.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('Beyond the gate, the passage widens into a broad thoroughfare leading deeper into the dwarven city.'),
-        new EncounterText('Echoes drift from ahead — the creak of stone, the whisper of air currents through vast chambers. The city awaits.'),
+        new EncounterText('A broad stairway descends into darkness. The air grows warmer with each step. You can smell wood smoke — something is burning down there. Something recent.'),
+        new EncounterText('The stairway opens into an enormous hall. Massive pillars carved as dwarven warriors stand in rows, gazing down from the shadows. And there — real sunlight, pouring down from a shaft cut straight through the mountain above.'),
+        new EncounterText('The Sky Shaft. The dwarves carved it centuries ago so their ancestors could still feel the sun. Polished mirrors and crystal lenses catch the beam and scatter it across the hall. Most are cracked now, but enough still work.', 'Thorb'),
+        new EncounterText("Kobold tracks everywhere — fresh ones. They're using this hall as a crossroads. Passages branch in every direction. Monument Alley to the west, the Artisan District to the east, and the King's District to the north.", 'Valdrisa'),
       ],
     }),
   ]);
@@ -2578,13 +3268,18 @@ export function createGatePassageEncounter() {
 // ============================================================
 
 export function createRugaSlaveMasterEncounter() {
-  return new Encounter('ruga_slave_master', 'Ruga the Slave Master', 'A massive ogre blocks the path', [
+  // Mirrors PY encounter.py:create_ruga_encounter. Old JS port read
+  // Ruga as a small ogre; PY frames him as the biggest kobold the
+  // party has ever seen, descending into a sunlit arena with his
+  // horde chanting around him.
+  return new Encounter('ruga_slave_master', 'Ruga the Slave Master', "The largest kobold you've ever seen blocks the way.", [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('A shaft of daylight pierces the chamber from a crack in the ceiling high above. Dust motes drift lazily through the beam.'),
-        new EncounterText('Beneath the light stands a massive ogre, his scarred hide draped in chains and trophies. Ruga, the Slave Master. The crack of his whip echoes off the stone.'),
-        new EncounterText('He spots you and grins, revealing tusks filed to points. "Fresh meat for the pits," he snarls, raising his weapon.'),
+        new EncounterText('The Sky Shaft opens before you — a vast chamber where true sunlight streams down from a shaft cut through the mountain above. The room appears empty at first.'),
+        new EncounterText('Then heavy footsteps echo from the grand stairway. The biggest kobold you have ever seen descends into the light — easily twice the height of a normal kobold, muscles bulging beneath scarred hide. He carries a massive iron chain in each fist.'),
+        new EncounterText('Dozens of smaller kobolds pour in behind him, forming a ring around the chamber. They bang weapons against shields, creating a makeshift arena. Their chanting fills the hall.'),
+        new EncounterText("I am Ruga! Slave Master of the deep warrens! You think you can walk through MY city? I'll break you like I broke the dwarves!", 'Ruga'),
       ],
     }),
     new EncounterPhaseData({
@@ -2594,24 +3289,31 @@ export function createRugaSlaveMasterEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('Ruga crashes to the ground, his whip clattering across the stone. The hall falls silent at last.'),
-        new EncounterText('With the Slave Master gone, the path deeper into the ancestors\' domain lies open.'),
+        new EncounterText('Ruga collapses with a thunderous crash. The chanting stops. For a moment, the kobold horde stares in stunned silence at their fallen champion.'),
+        new EncounterText('Then panic. The kobolds scatter in every direction, fleeing into the darkness of side passages and stairwells. Within moments, the Sky Shaft is empty and silent once more.'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootGoldDice: [3, 6],
+      lootGoldDice: [4, 6],
+      // PY drops Ruga's Spiked Gauntlets + the 50%-gated city drake
+      // loot table. drake_rider_loot is the unified table; gauntlets
+      // is the signature drop.
+      lootCards: ['rugas_spiked_gauntlets', 'drake_rider_loot'],
     }),
   ], true);
 }
 
 export function createMonumentAlleyEntryEncounter() {
-  return new Encounter('monument_alley_entry', 'Monument Alley', 'A row of dwarven monuments', [
+  // Mirrors PY encounter.py:create_monument_alley_entry_encounter.
+  // Replaces the earlier 2-line filler with the PY 2-block dialog
+  // (corridor reveal + Valdrisa's kobold-shortcut observation).
+  return new Encounter('monument_alley_entry', 'Monument Alley', 'A long corridor of dwarven monuments stretches before you.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You walk between rows of carved stone monuments, each one depicting a dwarven hero of ages past.'),
-        new EncounterText('Their names are etched in deep runes beneath stern, bearded faces. Even in ruin, the honor of the ancestors endures.'),
+        new EncounterText('The passage opens into a long, wide corridor. Stone monuments rise on both sides — carved tablets, statues, and obelisks commemorating centuries of dwarven history. A massive statue sits at the center, dividing the path into two.'),
+        new EncounterText("Kobold patrols have been through here. Some of the monuments have been smashed, others scratched with crude markings. But this doesn't look like their territory — more like a shortcut they use between districts.", 'Valdrisa'),
       ],
     }),
   ]);
@@ -2635,27 +3337,90 @@ export function createTombOfAncestorEntryEncounter() {
 }
 
 export function createTombSarcophagusEncounter() {
-  return new Encounter('tomb_sarcophagus', 'The Sarcophagus', 'An ornate dwarven sarcophagus', [
+  // Mirrors PY encounter.py:create_tomb_sarcophagus_encounter — the
+  // three Founder spirits beckon. CHOICE: fight or leave. After the
+  // fight, the party gets the Summon Ancestor card and a rest beat
+  // at the sarcophagus. PY uses a separate _rest variant after the
+  // ancestors_defeated flag flips; we lean on canRevisit + the
+  // global completedEncounters latch instead.
+  return new Encounter('tomb_sarcophagus', 'The Sarcophagus', 'Translucent forms shimmer around the ancient tomb.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('At the chamber\'s center rests an ornate sarcophagus of white marble veined with gold. The likeness of a dwarven king is carved into its lid, his hands folded over a stone warhammer.'),
-        new EncounterText('Runes circle the base, their meaning lost to you, but the power radiating from them is unmistakable — a steady pulse like a heartbeat in the stone.'),
-        new EncounterText('This was no ordinary dwarf. A king rests here, and his legacy still holds sway over the mountain.'),
+        new EncounterText('As you approach the sarcophagus, the air grows heavy. Three translucent forms shimmer into existence around the tomb — dwarven kings in ancient armor, their eyes burning with cold blue light. They beckon you closer.'),
+        new EncounterText('Ancestors above… those are the old kings. Durin Stoneheart, Balgrim Ironvein, and Thordak Ashmantle. The founders.', 'Thorb'),
+        new EncounterText("I don't think they're offering a handshake. Look at their weapons.", 'Valdrisa'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The ancestor spirits watch you with unreadable expressions.',
       choices: [
         new EncounterChoice(
-          'Pray to the Ancestor',
-          'You kneel before the sarcophagus and bow your head. Warmth spreads through you as the golden light intensifies. The ancestor\'s blessing settles over you like a mantle.',
-          'pray_shrine', 1
+          'Approach the sarcophagus',
+          'The spirits raise their weapons. They will test your worth.',
+          'ancestor_fight', 0,
         ),
         new EncounterChoice(
-          'Leave respectfully',
+          'Leave them in peace',
           '',
-          '', 0
+          '', 0, { completesEncounter: true },
+        ),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'ancestor_spirits',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['summon_ancestor'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The ancestor spirits lower their weapons and bow deeply. A warm light fills the tomb as their forms begin to fade.'),
+        new EncounterText('You have proven your worth, outsider. The strength of Thorgazad\'s founders is yours to call upon.', 'Durin Stoneheart'),
+        new EncounterText('The light settles into the sarcophagus. When you look inside, a glowing rune hovers above the stone — the mark of the ancestors.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The tomb is quiet now. A sense of peace fills the chamber.',
+      choices: [
+        new EncounterChoice(
+          'Rest among the ancestors',
+          'You rest in the sacred tomb. The warmth of the ancestors soothes your wounds.',
+          'ancestor_rest', 8, { completesEncounter: true },
+        ),
+        new EncounterChoice(
+          'Leave',
+          '',
+          '', 0, { completesEncounter: true },
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Tomb Sarcophagus rest-only revisit — after the ancestor_spirits
+// fight is won, the node fires this trimmed variant instead of the
+// full 6-phase flow. Mirrors PY encounter.py:6503-6526.
+export function createTombSarcophagusRestEncounter() {
+  return new Encounter('tomb_sarcophagus_rest', 'The Sarcophagus', 'The tomb is quiet. The warmth of the ancestors lingers.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The tomb is quiet now. A sense of peace fills the chamber.',
+      choices: [
+        new EncounterChoice(
+          'Rest among the ancestors',
+          'You rest in the sacred tomb. The warmth of the ancestors soothes your wounds.',
+          'ancestor_rest', 8, { completesEncounter: true },
+        ),
+        new EncounterChoice(
+          'Leave',
+          '',
+          '', 0, { completesEncounter: true },
         ),
       ],
     }),
@@ -2667,38 +3432,44 @@ export function createTombSarcophagusEncounter() {
 // ============================================================
 
 export function createGrandStairsEntryEncounter() {
-  return new Encounter('grand_stairs_entry', 'Grand Stairs', 'A grand dwarven staircase', [
+  // Mirrors PY encounter.py:create_grand_stairs_entry_encounter.
+  // Earlier JS used a generic 2-line "grand staircase / dwarven
+  // craftsmanship" filler; this is the PY dialog (3 blocks with
+  // Valdrisa + Thorb tagging the kobold command post above).
+  return new Encounter('grand_stairs_entry', 'The Grand Stairs', 'A monumental stairway climbs toward the King\'s District.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('A grand staircase spirals upward through the mountain, each step carved from a single block of granite.'),
-        new EncounterText('The banisters are shaped like interlocking hammers and anvils — dwarven craftsmanship at its finest, even in something as simple as stairs.'),
+        new EncounterText('The northern passage opens into a vast stairway — the Grand Stairs of Thorgazad. Massive pillars flank the steps, carved with the faces of every king who ever ruled this city. Ice hangs from the ceiling in long, jagged teeth.'),
+        new EncounterText("There's firelight at the top. And voices — kobold voices. Lots of them.", 'Valdrisa'),
+        new EncounterText('The King\'s District. If the White Claw has set up a command post in this city, it\'ll be up there. Stay close and keep quiet.', 'Thorb'),
       ],
     }),
   ]);
 }
 
 export function createDwarvenThroneRoomEntryEncounter() {
-  return new Encounter('dwarven_throne_room_entry', 'Throne Room', 'The entrance to the throne room', [
+  return new Encounter('dwarven_throne_room_entry', 'The Throne Room', "The ruined throne room of Thorgazad's kings.", [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You stand at the entrance to Tharnag\'s throne room. The doors — each thirty feet tall and bound in mithril — hang open on broken hinges.'),
-        new EncounterText('Beyond them lies a vast chamber draped in shadow. The throne itself is barely visible at the far end, a dark shape on a raised dais.'),
-        new EncounterText('Something shifts in the darkness. The shadows here feel alive, coiling and watching. You are not alone.'),
+        new EncounterText('The archway opens into a cavernous hall. Towering pillars rise on both sides, their surfaces cracked and covered in frost. Tattered banners hang from the ceiling — the colors of Thorgazad, faded to grey.'),
+        new EncounterText('At the far end of the hall, upon a raised stone dais, sits the throne. Carved from a single block of obsidian, it has endured where everything else has crumbled. Kobold markings cover the steps leading up to it.', 'Thorb'),
+        new EncounterText("They've been using this place. Recently. Look — the fires are still warm.", 'Val'),
       ],
     }),
   ]);
 }
 
 export function createThroneSpecterEncounter() {
-  return new Encounter('throne_specter', 'The Specter King', 'A spectral figure guards the throne', [
+  // PY parity (encounter.py:create_throne_specter_encounter): just
+  // the king's challenge → fight → loot. No post-fight TEXT.
+  return new Encounter('throne_specter', 'The Fallen King', 'A spectral figure sits upon the cracked throne.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('A spectral figure materializes on the throne, translucent and flickering with pale blue light. The ghost of a dwarven king, his crown still bright upon his brow.'),
-        new EncounterText('He rises, ancient armor shimmering, and levels a ghostly warhammer at you. His voice echoes from everywhere and nowhere.'),
-        new EncounterText('"None shall claim this throne who have not proven their worth. Defend yourself, intruder!"'),
+        new EncounterText('As you approach the throne, the air turns deathly cold. A spectral figure materializes on the stone seat — the ghost of a dwarven king, still wearing a crown of tarnished mithril. His hollow eyes fix on you with ancient fury.'),
+        new EncounterText('"You dare trespass in my hall? I am the last king of Thorgazad, and I will not suffer the living to desecrate what remains."', 'The Fallen King'),
       ],
     }),
     new EncounterPhaseData({
@@ -2706,15 +3477,9 @@ export function createThroneSpecterEncounter() {
       enemyId: 'dwarven_specter',
     }),
     new EncounterPhaseData({
-      phaseType: EncounterPhase.TEXT,
-      texts: [
-        new EncounterText('The specter flickers and fades, his expression shifting from fury to something like approval. "Perhaps... you are worthy after all."'),
-        new EncounterText('The throne room falls silent. The seat of power stands empty, its guardian at rest.'),
-      ],
-    }),
-    new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootGoldDice: [4, 6],
+      lootGoldDice: [2, 6],
+      lootCards: ['dwarven_specter_loot'],
     }),
   ]);
 }
@@ -2724,38 +3489,78 @@ export function createThroneSpecterEncounter() {
 // ============================================================
 
 export function createMapRoomEntryEncounter() {
-  return new Encounter('map_room_entry', 'Map Room', 'A room with ancient maps', [
+  // PY parity (encounter.py:create_map_room_entry_encounter).
+  return new Encounter('map_room_entry', 'The Map Room', 'A hidden chamber behind the throne.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You enter a chamber dominated by a great stone table. Its surface is not flat but sculpted — a detailed topographic map carved directly into the rock.'),
-        new EncounterText('Ancient maps of the dwarven city and surrounding tunnels are etched into the walls, their paths and chambers marked with tiny rune-labels.'),
+        new EncounterText('Behind the throne, a narrow passage opens into a chamber you would never have found without clearing the room. A massive stone table dominates the space, its surface carved with an intricate map of the entire volcano — every tunnel, every chamber, every passage laid out in precise detail.'),
+        new EncounterText('This is the war room. The kings of Thorgazad planned their defenses from this table. Every passage in and out of the mountain is marked here.', 'Thorb'),
+        new EncounterText('Look — someone has been adding to the map. Fresh markings, kobold script. They\'ve been mapping their own movements through the city.', 'Val'),
       ],
     }),
   ]);
 }
 
 export function createMapTableEncounter() {
-  return new Encounter('map_table', 'The Map Table', 'A detailed stone map of the city', [
+  // PY parity (encounter.py:create_map_table_encounter). Two choices:
+  // Copy the map (one-time, grants Map Knowledge — reduces random
+  // encounter chance step from 7% → 5% across upper city + volcano
+  // underground) and Rest (one-time +8 HP).
+  return new Encounter('map_table', 'The Map Table', 'A detailed map of the volcano carved in stone.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('The stone table bears a remarkably detailed map of the entire dwarven city. Tunnels, chambers, forges, and halls are all meticulously rendered.'),
-        new EncounterText('Studying it carefully could reveal hidden paths and forgotten chambers that would otherwise take weeks to discover.'),
+        new EncounterText('You lean over the massive stone table. Every passage, chamber, and tunnel in the volcano is carved in meticulous detail. Kobold additions — scratched in a cruder hand — mark recent patrol routes and supply caches.'),
+        new EncounterText('This is invaluable. If we copy the key routes, we\'ll know every shortcut and ambush point in the mountain.', 'Val'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The war table awaits.',
       choices: [
         new EncounterChoice(
-          'Study the map',
-          'You spend time tracing the carved pathways with your fingers. The layout of the city becomes clearer, and you feel more confident navigating these halls.',
-          'short_rest', 3
+          'Copy relevant map information',
+          'You carefully trace the key routes and passages onto parchment. This knowledge will serve you well.',
+          'map_table_copy', 0, { returnToChoices: true },
+        ),
+        new EncounterChoice(
+          'Rest here for a while',
+          'You rest in the quiet map room. The thick stone walls muffle all sound from outside.',
+          'map_table_rest', 0, { returnToChoices: true },
         ),
         new EncounterChoice(
           'Leave',
           '',
-          '', 0
+          '', 0, { completesEncounter: true },
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Map Table revisit — skips the TEXT intro, drops straight into the
+// choice prompt. Mirrors PY encounter.py:create_map_table_revisit_encounter.
+export function createMapTableRevisitEncounter() {
+  return new Encounter('map_table_revisit', 'The Map Table', 'The war room map awaits.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The war table awaits.',
+      choices: [
+        new EncounterChoice(
+          'Copy relevant map information',
+          'You carefully trace the key routes and passages onto parchment. This knowledge will serve you well.',
+          'map_table_copy', 0, { returnToChoices: true },
+        ),
+        new EncounterChoice(
+          'Rest here for a while',
+          'You rest in the quiet map room. The thick stone walls muffle all sound from outside.',
+          'map_table_rest', 0, { returnToChoices: true },
+        ),
+        new EncounterChoice(
+          'Leave',
+          '',
+          '', 0, { completesEncounter: true },
         ),
       ],
     }),
@@ -2767,52 +3572,99 @@ export function createMapTableEncounter() {
 // ============================================================
 
 export function createDeeperTunnelsEntryEncounter() {
-  return new Encounter('deeper_tunnels_entry', 'Deeper Tunnels', 'Narrow tunnels descend further', [
+  // Mirrors PY encounter.py:create_deeper_tunnels_entry_encounter.
+  return new Encounter('deeper_tunnels_entry', 'The Deeper Tunnels', 'A long tunnel descends toward the Artisan District.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('The corridor narrows and descends. Pick marks score the walls here — this section was still being carved when the city fell.'),
-        new EncounterText('The air grows warmer as you go deeper, carrying a faint mineral tang. The tunnels branch and twist ahead.'),
+        new EncounterText('The eastern passage drops steeply, carved steps giving way to a long tunnel lined with columns and old torch sconces. Some still burn with a faint magical flame that has endured for centuries. The air grows warmer and smells of soot and hot metal.'),
+        new EncounterText('These tunnels connect the Hall of Ancestors to the Artisan District. The craftsmen used them every day. Kobold patrols have been through here — watch for ambushes in the dark.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel to Bridge exit — fires on first arrival at the bridge end
+// of the obsidian tunnel. Sets the scene before the player steps
+// onto the bridge proper. No PY equivalent — JS-only entry-point
+// dialog so the gate reads as a doorway rather than an instant
+// teleport.
+export function createTunnelToBridgeExitEncounter() {
+  return new Encounter('tunnel_to_bridge_exit', 'End of the Tunnel', 'The tunnel opens onto something vast.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The tunnel opens into a wide stone landing. Wind howls in from a cavernous space ahead — colder, deeper, alive with sound. Whatever lies beyond is BIG.'),
+        new EncounterText("That's the chasm. The bridge spans it. If we're going to the other side, we cross there.", 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel to Bridge entry — fires on arrival from the Artisan District
+// (artisan_exit → bridge_tunnel_entry). PY parity (encounter.py:
+// create_tunnel_to_bridge_entry_encounter).
+export function createTunnelToBridgeEntryEncounter() {
+  return new Encounter('tunnel_to_bridge_entry', 'Obsidian Tunnel', 'The tunnels grow darker as obsidian veins thicken.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The passage from the Artisan District plunges downward. The walls shift from carved stone to raw rock, threaded with thick veins of obsidian that drink the torchlight. The air grows colder with each step.'),
+        new EncounterText("These tunnels are old. Older than the city. The dwarves didn't carve these — they just widened what was already here.", 'Thorb'),
+        new EncounterText("Kobold tracks in the dust, but fewer now. Whatever patrols used these tunnels, they don't come this way often.", 'Val'),
       ],
     }),
   ]);
 }
 
 export function createArtisanDistrictEntryEncounter() {
-  return new Encounter('artisan_district_entry', 'Artisan District', 'The workshops and forges of Tharnag', [
+  return new Encounter('artisan_district_entry', 'The Artisan District', 'Workshops and forges above rivers of lava.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You emerge into a broad cavern lined with workshops and forges. Anvils stand at cold hearths, and tools hang in orderly rows along the walls.'),
-        new EncounterText('This was the beating heart of dwarven industry — where master smiths and artisans plied their craft. The district stretches on in every direction.'),
-        new EncounterText('The silence is oppressive. These forges once rang with the sound of hammers day and night. Now only dust and memory remain.'),
+        new EncounterText('The tunnel opens into a vast cavern. Below, rivers of slow-moving lava cast an orange glow across everything. Above the lava, platforms of stone and iron hold rows of workshops and forges — the Artisan District of Thorgazad.'),
+        new EncounterText("This is where the finest dwarven weapons and armor were made. If there's anything useful left in this city, it's here. Dwarven tools don't rust easy.", 'Thorb'),
+        new EncounterText("The kobolds have been picking through the workshops. Some of the forges look like they've been relit recently.", 'Val'),
       ],
     }),
   ]);
 }
 
 export function createArtisanWorkshopEncounter() {
-  return new Encounter('artisan_workshop', 'Artisan Workshop', 'An intact dwarven workshop', [
+  return new Encounter('artisan_workshop', 'Intact Workshop', 'A sealed dwarven workshop, untouched by time.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('You find a workshop in remarkable condition. The forge is intact, its chimney still drawing air, and racks of half-finished work line the walls.'),
-        new EncounterText('With some effort, this forge could be put to use. The dwarven tools here are of exceptional quality.'),
+        new EncounterText('The door is sealed tight — no handle, no keyhole. Just smooth stone with dwarven runes etched around the frame.'),
+        new EncounterText("Thorb runs his fingers along the runes, pressing them in a specific sequence. There's a deep click, and the door slides silently into the wall.", 'Thorb'),
+        new EncounterText('Every dwarf learns the opening sequence as a child. Keeps the good tools safe from thieves and kobolds.', 'Thorb'),
+        new EncounterText('Inside, the workshop is pristine. A dwarven workbench sits against the far wall, its tools still gleaming. Reinforcement plates, rivets, and padding line the shelves. Everything needed to harden a piece of armor.'),
       ],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The dwarven workbench is ready.',
       choices: [
-        new EncounterChoice(
-          'Use the forge',
-          'dwarven_smithy',
-          'open_shop', 0
-        ),
-        new EncounterChoice(
-          'Leave',
-          '',
-          '', 0
-        ),
+        new EncounterChoice('Reinforce a piece of armor', '', 'workbench_armor', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', '', 'workbench_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Artisan Workshop revisit — skips the rune-door intro and drops
+// straight into the workbench choice prompt. Mirrors PY
+// encounter.py:create_artisan_workshop_revisit_encounter.
+export function createArtisanWorkshopRevisitEncounter() {
+  return new Encounter('artisan_workshop_revisit', 'Intact Workshop', 'The dwarven workbench awaits.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The dwarven workbench is ready.',
+      choices: [
+        new EncounterChoice('Reinforce a piece of armor', '', 'workbench_armor', 0, { returnToChoices: true }),
+        new EncounterChoice('Rest here for a while', '', 'workbench_rest', 0, { returnToChoices: true }),
+        new EncounterChoice('Leave', '', '', 0, { completesEncounter: true }),
       ],
     }),
   ]);
@@ -2898,12 +3750,48 @@ export const ENCOUNTER_REGISTRY = {
   // Volcano
   volcano_arrival: createVolcanoArrivalEncounter,
   volcano_choice: createVolcanoChoiceEncounter,
+  lower_caverns_arrival: createLowerCavernsArrivalEncounter,
+  lava_chamber_arrival: createLavaChamberArrivalEncounter,
+  obsidian_tunnels_arrival: createObsidianTunnelsArrivalEncounter,
+  obsidian_forge_arrival: createObsidianForgeArrivalEncounter,
+  obsidian_forge: createObsidianForgeEncounter,
+  obsidian_forge_revisit: createObsidianForgeRevisitEncounter,
+  temple_district_arrival: createTempleDistrictArrivalEncounter,
+  volcano_heart: createVolcanoHeartEncounter,
+  volcano_heart_revisit: createVolcanoHeartRevisitEncounter,
+  cathedral_arrival: createCathedralArrivalEncounter,
+  cathedral_shrine: createCathedralShrineEncounter,
+  cathedral_shrine_revisit: createCathedralShrineRevisitEncounter,
+  obsidian_oracle: createObsidianOracleEncounter,
+  obsidian_plaza_arrival: createObsidianPlazaArrivalEncounter,
+  obsidian_streets_arrival: createObsidianStreetsArrivalEncounter,
+  obsidian_streets_arrival_upper: createObsidianStreetsArrivalUpperEncounter,
+  obsidian_plaza_arrival_west: createObsidianPlazaArrivalWestEncounter,
+  obsidian_plaza_arrival_nw: createObsidianPlazaArrivalNwEncounter,
+  temple_district_arrival_side: createTempleDistrictArrivalSideEncounter,
+  lower_caverns_double_back: createLowerCavernsDoubleBackEncounter,
+  entry_corridor_double_back: createEntryCorridorDoubleBackEncounter,
+  artisan_district_entry_back: createArtisanDistrictEntryBackEncounter,
+  tunnel_to_bridge_entry_back: createTunnelToBridgeEntryBackEncounter,
+  deeper_tunnels_entry_back: createDeeperTunnelsEntryBackEncounter,
+  gate_passage_back: createGatePassageBackEncounter,
+  obsidian_market_arrival: createObsidianMarketArrivalEncounter,
+  market_stalls: createMarketStallsEncounter,
+  deep_market_rest: createDeepMarketRestEncounter,
+  upper_bridge_arrival: createUpperBridgeArrivalEncounter,
+  bridge_crossing: createBridgeCrossingEncounter,
+  zhost_revenge: createZhostRevengeEncounter,
+  magma_drake: createMagmaDrakeEncounter,
+  magma_mephit: createMagmaMephitEncounter,
   // Obsidian Wastes
   obsidian_wastes_arrival: createObsidianWastesArrivalEncounter,
   obsidian_golem: createObsidianGolemEncounter,
   obsidian_slime: createObsidianSlimeEncounter,
   wastes_north: createWastesNorthEncounter,
   kobold_drake_rider: createKoboldDrakeRiderEncounter,
+  // Dwarven city random encounters (upper path)
+  kobold_slyblade: createKoboldSlybladeEncounter,
+  dwarven_specter: createDwarvenSpecterEncounter,
   // Tharnag Interior
   grand_hall_arrival: createGrandHallArrivalEncounter,
   grand_staircase_arrival: createGrandStaircaseArrivalEncounter,
@@ -2927,6 +3815,7 @@ export const ENCOUNTER_REGISTRY = {
   // Dwarven City — Tomb
   tomb_of_ancestor_entry: createTombOfAncestorEntryEncounter,
   tomb_sarcophagus: createTombSarcophagusEncounter,
+  tomb_sarcophagus_rest: createTombSarcophagusRestEncounter,
   // Dwarven City — Stairs / Throne
   grand_stairs_entry: createGrandStairsEntryEncounter,
   dwarven_throne_room_entry: createDwarvenThroneRoomEntryEncounter,
@@ -2934,8 +3823,12 @@ export const ENCOUNTER_REGISTRY = {
   // Dwarven City — Map Room
   map_room_entry: createMapRoomEntryEncounter,
   map_table: createMapTableEncounter,
+  map_table_revisit: createMapTableRevisitEncounter,
   // Dwarven City — Tunnels / Artisan
   deeper_tunnels_entry: createDeeperTunnelsEntryEncounter,
   artisan_district_entry: createArtisanDistrictEntryEncounter,
   artisan_workshop: createArtisanWorkshopEncounter,
+  artisan_workshop_revisit: createArtisanWorkshopRevisitEncounter,
+  tunnel_to_bridge_entry: createTunnelToBridgeEntryEncounter,
+  tunnel_to_bridge_exit: createTunnelToBridgeExitEncounter,
 };
