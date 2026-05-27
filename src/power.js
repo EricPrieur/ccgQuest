@@ -325,6 +325,45 @@ export function createLavaFloor() {
   });
 }
 
+// Blizzard — Overseer Gnikan phase-2 passive. Mirrors the lava_floor
+// pattern but with Ice instead of Fire: at the start of every enemy
+// turn the entire battlefield gets 1 Ice — player, every alive ally,
+// the boss himself, and every alive enemy creature. Ice Elemental
+// allies on Gnikan's side carry `_iceAbsorb`, so the storm actively
+// FEEDS them +1/+1 each turn instead of stacking ice. Gnikan's own
+// Ice stacks fold into the next Gnikan's Staff burst, scaling the
+// summoned elemental over the long fight.
+export function createBlizzard() {
+  return new Power({
+    id: 'blizzard',
+    name: 'Blizzard',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: All creatures gain 1 Ice.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: '1 Ice\nto ALL',
+  });
+}
+
+// Ancient White — Varimatras's signature passive. Any Ice that
+// would land on the dragon (his own Blizzard tick, player Ice
+// spells like Ice Bolt / Nova, Cold Breath's apply_ice_all, etc.)
+// is converted into 1 Shield per stack instead. The dragon never
+// accumulates Ice; he builds Shield from every attempt to freeze
+// him. Mirrors the Ice Elemental `_iceAbsorb` pattern but pays
+// out in Shield rather than +1/+1.
+export function createAncientWhite() {
+  return new Power({
+    id: 'ancient_white',
+    name: 'Ancient White',
+    costDescription: 'Passive',
+    effectDescription: 'Ice on this dragon becomes Shield instead.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Ice -> Shield',
+  });
+}
+
 // Kobold Army Swarm — Kobold Drake Rider's escalating reinforcements.
 // Each turn N more kobolds pour in; once the fight runs long enough
 // the swarm starts including Dragonshields. Mirrors PY

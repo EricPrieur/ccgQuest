@@ -13,6 +13,7 @@ export class Creature {
     poisonAttack = false,
     fireAttack = 0,
     iceAttack = 0,
+    iceAttackAll = 0,
     fireImmune = false,
     attackAll = false,
     multiAttack = 0,
@@ -64,6 +65,7 @@ export class Creature {
     this.poisonAttack = poisonAttack;
     this.fireAttack = fireAttack;
     this.iceAttack = iceAttack;
+    this.iceAttackAll = iceAttackAll;
     this.fireImmune = fireImmune;
     this.attackAll = attackAll;
     this.multiAttack = multiAttack;

@@ -89,6 +89,9 @@ export function saveGame(state, saveName = '') {
     mapTableRested: !!state.mapTableRested,
     caveEntranceDoubledBack: !!state.caveEntranceDoubledBack,
     corridorEntranceDoubledBack: !!state.corridorEntranceDoubledBack,
+    backwardRefoggedOnce: state.backwardRefoggedOnce instanceof Set
+      ? Array.from(state.backwardRefoggedOnce)
+      : (Array.isArray(state.backwardRefoggedOnce) ? state.backwardRefoggedOnce.slice() : []),
     // Persistent buffs (Old God's Blessing, Volcano's Blessing) — these
     // live on the character sheet and survive between combats. Previously
     // wiped on every load because the load path rebuilt Character from
@@ -121,6 +124,9 @@ export function saveGame(state, saveName = '') {
     // post-rest exit through the hallway.
     throneAudienceComplete: !!state.throneAudienceComplete,
     quartersRested: !!state.quartersRested,
+    dragonSlain: !!state.dragonSlain,
+    dragonEggDamage: typeof state.dragonEggDamage === 'number' ? state.dragonEggDamage : 0,
+    heroesOfQualibaf: !!state.heroesOfQualibaf,
     valdrisaJoined: !!state.valdrisaJoined,
     upperStairsReturnSeen: !!state.upperStairsReturnSeen,
     tharnagExitSeen: !!state.tharnagExitSeen,

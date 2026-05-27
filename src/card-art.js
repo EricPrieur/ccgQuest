@@ -17,6 +17,13 @@ export const CARD_ART_MAP = {
   short_staff: 'ShortStaff.jpg',
   small_pouch: 'SmallPouch.jpg',
   bone_dagger: 'BoneDagger.jpg',
+  dragon_tooth_dagger: 'DragonToothDagger.png',
+  white_dragonscale_shield: 'WhiteDragonscaleShield.png',
+  white_dragonscale_armor: 'WhiteDragonscaleArmor.png',
+  dragon_bone_bow: 'DragonBoneBow.png',
+  dragon_eye_mace: 'DragonEyeMace.png',
+  white_dragon_egg: 'WhiteDragonEgg.png',
+  white_dragon_wyrmling: 'WhiteDragonWyrmling.png',
   cloth_armor: 'ClothArmor.jpg',
   buckler: 'Buckler.jpg',
   sharp_rock: 'SharpRock.jpg',
@@ -51,6 +58,16 @@ export const CARD_ART_MAP = {
   burning_hands: 'BurningHands.jpg',
   ice_nova: 'FrostNova.jpg',
   ice_block: 'IceBlock.jpg',
+  ice_shatter: 'IceShatter.png',
+  cold_breath: 'VarimatrasBreath.png',
+  varimatras_bite: 'VarimatrasBiteAttack.png',
+  varimatras_claw: 'VarimatrasClawAttack.png',
+  varimatras_tail: 'VarimatrasTailSwipe.png',
+  varimatras_wing: 'VarimatrasWingBuffet.png',
+  // Varimatras Scale — player relic dropped by the dragon (eventual
+  // loot). Reuses the Frost Drake Scale art to keep the dragon-scale
+  // visual family consistent across both relics.
+  varimatras_scale: 'FrostDrakeScale.jpg',
   arcane_beam: 'ArcaneBeam.jpg',
 
   // === Rogue ===
@@ -161,6 +178,8 @@ export const CARD_ART_MAP = {
   swimming_in_current: 'SwimingInCurrent.jpg',
   sahuagin_priest_staff: 'SahuaginPriestStaff.jpg',
   sahuagin_staff_enemy: 'SahuaginPriestStaff.jpg',
+  // Gnikan's Staff — chapter 8 frost-shaman placeholder drop.
+  gnikans_staff: 'GnikansStaff.png',
   barnacle_encrusted_plate: 'BarnacleEncrustedPlate.jpg',
   barnacle_encrusted_plate_enemy: 'BarnacleEncrustedPlate.jpg',
   barnacle: 'Barnacle.jpg',
@@ -200,6 +219,10 @@ export const CARD_ART_MAP = {
   // but the showcase uses drawCard which goes through getCardArt.
   dark_vision: 'ObsidianOracle.jpg',
   lava_floor:  'MagmaFloor.jpg',
+  // Blizzard — Overseer Gnikan phase-2 showcase art (reuses the
+  // chapter-4 Wolf Blizzard env image so the storm feel is the same
+  // across both Blizzard appearances).
+  blizzard:    'BlizzardEnv.jpg',
   obsidian_shard_token: 'ObsidianCurseShard.jpg',
   obsidian_candle: 'ObsidianCandle.jpg',
 
@@ -383,9 +406,15 @@ export const CARD_ART_MAP = {
   ruga: 'RugaTheSlaveMaster.jpg',
   skeletal_king: 'SkeletalKing.jpg',
   wolf: 'WolfInSnow.jpg',
+  // Chapter 8 — Overseer Gnikan, kobold frost shaman boss on the
+  // summit ridge. Summons Ice Elemental allies at fight start.
+  overseer_gnikan: 'OverseerGnikan.png',
 
   // === Creature summons ===
   rat: 'SummonRat.jpg',
+  // Ice Elemental — Gnikan's summons. Three sizes (1/1, 2/2, 3/3)
+  // share the same art; the boss spawns them at fight start.
+  ice_elemental: 'IceElemental.png',
   // tamed_rat conflicts with the player's Tamed Rat ability card (ability) — keep
   // ability art at the top of the file (line 36); the lookup uses tamed_rat for both.
   restless_bone: 'RestlessBoneSummon.jpg',
@@ -463,6 +492,10 @@ export const POWER_ART_MAP = {
   obsidian_construct: 'ObsidianGolem.jpg',
   obsidian_body: 'ObsidianSlime.jpg',
   lava_floor: 'MagmaFloor.jpg',
+  // Blizzard — Overseer Gnikan phase-2 passive. Reuses the
+  // BlizzardEnv art (same wind-and-snow vibe as the Wolf Blizzard
+  // combat buff in chapter 4).
+  blizzard: 'BlizzardEnv.jpg',
   dark_vision: 'ObsidianOracle.jpg',
   obsidian_oracle_body: 'ObsidianOracle.jpg',
   vanish: 'Vanish.jpg',
@@ -478,6 +511,10 @@ export const POWER_ART_MAP = {
   // as General Zhost's kobold_army power.
   kobold_army_swarm: 'KoboldArmy.jpg',
   amalgam: 'BonePile.jpg',
+  // Ancient White — Varimatras's signature passive: incoming Ice
+  // on the dragon flips to +1 Shield instead. Uses his own backdrop
+  // art so the power card reads as "the dragon himself".
+  ancient_white: 'VarimatrasBG.png',
 };
 
 // Lazy-loading image cache

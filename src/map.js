@@ -815,11 +815,12 @@ export function createVolcanoSummitRidgeMap() {
   const nodes = [
     // Entry — drops in from the stairs (PNG's stair landing at the
     // bottom-right). Click-on-self back-teleports to stairs3_exit.
-    { id: 'summit_entry',     name: 'Stair Top',     description: 'The stair levels out onto a wind-swept ridge.', encounterId: '', connections: ['summit_path_a'], unlocks: ['summit_path_a'], canRevisit: true, position: [1160, 750], mapArea: 'volcano_summit_ridge' },
+    { id: 'summit_entry',     name: 'Stair Top',     description: 'The stair levels out onto a wind-swept ridge.', encounterId: 'stair_top_arrival', connections: ['summit_path_a'], unlocks: ['summit_path_a'], canRevisit: false, position: [1160, 750], mapArea: 'volcano_summit_ridge' },
     { id: 'summit_path_a',    name: 'Ridge Stairs',  description: 'Rough-cut steps lead upward along the clifftop.', encounterId: '', connections: ['summit_entry', 'summit_path_b'], unlocks: ['summit_path_b'], canRevisit: true, position: [900, 430], mapArea: 'volcano_summit_ridge' },
     { id: 'summit_path_b',    name: 'Higher Steps',  description: 'The path narrows. The sheer drop yawns to the left.', encounterId: '', connections: ['summit_path_a', 'summit_ridge'], unlocks: ['summit_ridge'], canRevisit: true, position: [1170, 220], mapArea: 'volcano_summit_ridge' },
-    // Encounter node on the ridge — content TBD.
-    { id: 'summit_ridge',     name: 'The Ridge',     description: 'A bare obsidian ridge above the volcano. Something waits ahead.', encounterId: '', connections: ['summit_path_b'], canRevisit: true, position: [690, 130], mapArea: 'volcano_summit_ridge' },
+    // Boss node on the ridge — Overseer Gnikan, kobold frost shaman.
+    // canRevisit=false so the boss + loot fire exactly once.
+    { id: 'summit_ridge',     name: 'The Ridge',     description: 'A bare obsidian ridge above the volcano. A lone figure waits at the far end.', encounterId: 'overseer_gnikan', connections: ['summit_path_b'], canRevisit: false, position: [690, 130], mapArea: 'volcano_summit_ridge' },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'summit_entry';

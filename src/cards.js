@@ -261,6 +261,196 @@ export function createBoneDagger() {
   });
 }
 
+// White Dragonscale Shield — Varimatras loot pick. Light-armor
+// shield that auto-fires reactively like any other DEFENSE card;
+// each play stacks +5 persistent Shield AND converts every Ice
+// stack currently on the player into a matching Shield stack
+// (transform_ice_to_shield_self). Pairs hard with Blizzard /
+// Cold Breath piling Ice on you between fights — every chill
+// becomes incoming Shield instead of incoming damage.
+export function createWhiteDragonscaleShield() {
+  return new Card({
+    id: 'white_dragonscale_shield', name: 'White Dragonscale Shield',
+    description: 'Recharge -> Gain 5 Shield. Transform Ice into Shield on yourself.',
+    shortDesc: 'R->+5 Shield\nIce -> Shield',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 5, TargetType.SELF),
+      new CardEffect('transform_ice_to_shield_self', 0, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// White Dragonscale Armor — heavy-armor DEFENSE drop. Same +8
+// Block beat as a normal heavy armor, riding an attacker_gains_ice
+// kicker that transfers all of the player's current Ice stacks
+// onto the enemy character (typically the attacker in the moment
+// this card fires reactively). Note that bosses with Ancient
+// White (Varimatras himself) flip incoming Ice into +1 Shield, so
+// against him the card is "burn my Ice for his Shield" — a
+// strategic call rather than always-on alpha.
+export function createWhiteDragonscaleArmor() {
+  return new Card({
+    id: 'white_dragonscale_armor', name: 'White Dragonscale Armor',
+    description: 'Recharge -> Block 8. Attacker gains your Ice.',
+    shortDesc: 'R->Block 8\nAttacker gets Ice',
+    subtype: 'heavy_armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 8, TargetType.SELF),
+      new CardEffect('attacker_gains_ice', 0, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Dragon Bone Bow — Tier 2 ranged drop. Recharge +1 cost (one
+// extra hand card burned alongside the bow itself), hits up to
+// 3 enemies for 4 damage each, then draws a card. The cycle
+// pressure offsets the steep cost so the bow can keep firing
+// across a long fight.
+export function createDragonBoneBow() {
+  return new Card({
+    id: 'dragon_bone_bow', name: 'Dragon Bone Bow',
+    description: 'Recharge +1 -> Deal 4 Damage to up to 3 targets. Draw.',
+    shortDesc: 'R+1->4 Dmg x3\nDraw',
+    subtype: 'ranged_2h',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('multi_damage', 4, TargetType.SINGLE_ENEMY, 3),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Dragon Eye Mace — Tier 2 martial drop. Strips up to 4 Shield
+// stacks off the target and replaces them with the same number
+// of Ice stacks, then hits for 5 damage with a +4 Iced-bonus
+// rider. The shield → ice transfer is the engine: shred their
+// defenses, freeze them with the same number, then the Iced
+// bonus pays out via the same damage path Dragon Tooth Dagger uses.
+export function createDragonEyeMace() {
+  return new Card({
+    id: 'dragon_eye_mace', name: 'Dragon Eye Mace',
+    description: "Recharge -> Transform up to 4 of the target's Shield into Ice, then deal 5 Damage. Iced: +4 Damage.",
+    shortDesc: 'R->4 Shield->Ice\nOn target\n5 Dmg +4 if Iced',
+    subtype: 'martial',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('transform_shield_to_ice_target', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('iced_bonus_damage', 4, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// White Dragon Egg — picked up at the foot of the ridge as the
+// party flees the erupting volcano. Plays as a summon that fields
+// a 0-attack / 3-HP ally carrying 3 Armor. The egg can never swing
+// (special-cased in the attack-target picker via the _cantAttack
+// flag) but every hit it eats counts toward its hatch threshold
+// (Creature._eggDamage, persisted via save.js). At the threshold
+// the egg transforms into a White Dragon Wyrmling — stats wired
+// once the user provides them.
+export function createWhiteDragonEgg() {
+  return new Card({
+    id: 'white_dragon_egg', name: 'White Dragon Egg',
+    description: 'Recharge -> Call the White Dragon Egg to the battle.',
+    shortDesc: 'R->Call the Egg\n0/3 Armor 3',
+    subtype: 'relic',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_white_dragon_egg', 1, TargetType.SUMMON),
+    ],
+    tier: 2,
+    rarity: 'legendary',
+    previewCreature: (() => {
+      const c = new Creature({
+        name: 'White Dragon Egg', attack: 0, maxHp: 3, armor: 3,
+        description: 'Cannot attack. When Attacked: Attacker gains 1 Ice.',
+      });
+      c._cantAttack = true;
+      return c;
+    })(),
+  });
+}
+
+// White Dragon Wyrmling — what hatches from the egg once it's
+// eaten the threshold damage. Placeholder stats until the user
+// provides final numbers + art. Plays like a normal CREATURE
+// card; the summon_white_dragon_wyrmling effect spawns the
+// matching ally creature. Hatch flow in main.js
+// (hatchWhiteDragonEgg) also swaps the on-field egg for a fresh
+// Wyrmling creature without re-playing this card.
+export function createWhiteDragonWyrmling() {
+  return new Card({
+    id: 'white_dragon_wyrmling', name: 'White Dragon Wyrmling',
+    description: 'Recharge +1 -> Call the White Dragon Wyrmling to the battle!',
+    shortDesc: 'R+1->Call\nthe Wyrmling',
+    // 'allies' subtype (matches Thorb / Raena / Valdrisa companion
+    // cards) — the wyrmling fights alongside the party as a
+    // companion ally, so it gets the brown ally-card frame tint
+    // and codex-categorizes under Allies instead of Relics.
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    // Effect order matters: arrow + ice spread on enemies first
+    // (the "Called" beat the player sees), then the caster's Ice
+    // converts to Shield, then the wyrmling actually enters.
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('transform_ice_to_shield_self', 0, TargetType.SELF),
+      new CardEffect('summon_white_dragon_wyrmling', 1, TargetType.SUMMON),
+    ],
+    tier: 2,
+    rarity: 'legendary',
+    previewCreature: new Creature({
+      name: 'White Dragon Wyrmling', attack: 3, maxHp: 6, iceAttack: 1, armor: 1,
+      description: 'Called: Deal Ice to all enemies. Ice becomes Shields. Attacks apply 1 Ice.',
+    }),
+  });
+}
+
+// Dragon Tooth Dagger — Tier 2 epic stays-in-hand weapon, one of
+// the Varimatras loot picks. Hits for a respectable 3 damage on
+// any target, and another +2 when the target is already Iced
+// (synergizes with Wing Buffet's board-wide chill + the player's
+// own Ice spells / Gnikan's Staff Ice tick). Same baton/dagger
+// SFX family as the other dagger weapons — wired in main.js via
+// the dagger keyword sniff in getWeaponSfxKeys (no override needed).
+export function createDragonToothDagger() {
+  return new Card({
+    id: 'dragon_tooth_dagger',
+    name: 'Dragon Tooth Dagger',
+    description: 'Deal 3 Damage. Iced: +2 Damage. Stays in hand.',
+    shortDesc: '3 Dmg\n+2 if Iced\nStays',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      // Modifier rider — read by the 'damage' handler in main.js
+      // (mirrors damaged_bonus_damage). Adds the value to the swing
+      // when the picked target currently has any Ice stacks.
+      new CardEffect('iced_bonus_damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
 // ============================================================
 // Wizard Cards
 // ============================================================
@@ -1040,6 +1230,140 @@ export function createIceNova() {
       new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
     ],
     characterClass: ['wizard'], tier: 2,
+  });
+}
+
+// Ice Shatter — chapter 8 frost-shaman finisher. Strips all Ice
+// stacks off every enemy and converts each stack into 1 damage to
+// that enemy, so a frozen target eats the entire shelf as a single
+// burst. Used by the awakened Gnikan in phase 2; can also drop as
+// loot in future content.
+export function createIceShatter() {
+  return new Card({
+    id: 'ice_shatter', name: 'Ice Shatter',
+    description: 'Recharge -> Each enemy loses all Ice and takes damage equal to the Ice lost.',
+    shortDesc: 'R->Shatter Ice\n1 dmg per Ice',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('ice_shatter', 0, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['wizard'], tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Cold Breath — Varimatras's signature card. Monster-only: the dragon
+// breathes a freezing gale over the party, stacking 3 Ice on every
+// enemy (= player + allies) and then immediately shattering it for
+// damage equal to the new total. Priority 50 so the AI fires it first
+// the turn it has it in hand. Used by overseer_gnikan_phase_2 when the
+// dragon takes over from the dying overseer.
+export function createColdBreath() {
+  return new Card({
+    id: 'cold_breath', name: 'Cold Breath',
+    description: 'Recharge -> Apply 3 Ice to ALL enemies, then each enemy takes damage equal to their Ice.',
+    shortDesc: 'R->3 Ice ALL\nDmg = Ice',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_ice_all', 3, TargetType.ALL_ENEMIES),
+      new CardEffect('damage_per_ice_all', 0, TargetType.ALL_ENEMIES),
+    ],
+    tier: 2,
+    rarity: 'epic',
+    priority: 50,
+  });
+}
+
+// Varimatras Bite — heavy single-target chomp. Monster-only.
+export function createVarimatrasBite() {
+  return new Card({
+    id: 'varimatras_bite', name: 'Bite',
+    description: 'Recharge -> Deal 5 Damage + Ice.',
+    shortDesc: 'R->5 Dmg + Ice',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Varimatras Claw — picks up to 2 random player-side targets and
+// hits each for 2 damage. Monster-only.
+export function createVarimatrasClaw() {
+  return new Card({
+    id: 'varimatras_claw', name: 'Claw',
+    description: 'Recharge -> Deal 2 Damage to up to 2 targets.',
+    shortDesc: 'R->2 Dmg x2',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_random_split', 2, TargetType.ALL_ENEMIES),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Varimatras Tail Swipe — 1 damage to the entire party. Monster-only.
+export function createVarimatrasTail() {
+  return new Card({
+    id: 'varimatras_tail', name: 'Tail Swipe',
+    description: 'Recharge -> Deal 1 Damage to ALL enemies.',
+    shortDesc: 'R->1 Dmg ALL',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Varimatras Wing Buffet — every creature on the field gains 1 Ice.
+// Pairs with Ancient White (dragon converts his own Ice tick into
+// Shield) so the buffet stacks the party while still building the
+// dragon's defense each turn.
+export function createVarimatrasWing() {
+  return new Card({
+    id: 'varimatras_wing', name: 'Wing Buffet',
+    description: 'Recharge -> Every creature gains 1 Ice. Draw.',
+    shortDesc: 'R->1 Ice all\nDraw',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_ice_creatures_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
+  });
+}
+
+// Varimatras Scale — the dragon's own armor card. DEFENSE type so
+// it auto-fires reactively on the player's swing (mirrors how
+// every other armor card the AI plays works), not on the dragon's
+// own action turn. enemyAutoPlayDefenses pulls these out of hand
+// when an incoming hit would otherwise land.
+export function createVarimatrasScale() {
+  return new Card({
+    id: 'varimatras_scale', name: 'Varimatras Scale',
+    description: 'Recharge -> Block 10. Draw.',
+    shortDesc: 'R->Block 10\nDraw',
+    subtype: 'armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 10, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
   });
 }
 
@@ -3995,6 +4319,55 @@ export function createWhirlpool() {
     ],
     priority: 7,
     rarity: 'rare',
+  });
+}
+
+// Gnikan's Staff — chapter-8 frost-shaman drop. Builds up Ice on
+// the caster, then explodes that Ice into an Ice Elemental ally
+// whose stats scale with the burst size. Each cast deals 1 dmg +
+// applies 1 Ice to the target AND adds 1 Ice to the caster; then
+// `summon_ice_burst` consumes ALL stacked Ice on the caster and
+// spawns an N/N elemental (N = Ice lost). So a fresh first cast
+// summons a 1/1, but if the caster already had Ice stacked (from
+// Ice Bolt riders, Gravechill Shard, Ice Block, etc.) the staff
+// pays off proportionally — 5 Ice stored + 1 from the cast → 6/6
+// elemental.
+export function createGnikansStaff() {
+  return new Card({
+    id: 'gnikans_staff',
+    name: "Gnikan's Staff",
+    description: 'Recharge +1 -> Gain 1 Ice. Allies lose all Ice -> Summon an Ice Elemental with Atk and HP equal to the Ice lost. Then 3 Damage + Ice.',
+    shortDesc: 'R+1->Gain Ice\nAllies->N/N\n3 Dmg + Ice',
+    subtype: 'staff',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    // Effect order matters: gain Ice on the caster first (cosmetic
+    // for Gnikan, useful synergy for the player), then the burst
+    // strips all Ice from the caster's allies and converts the sum
+    // into an Ice Elemental, THEN the swing lands.
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_ice_self', 1, TargetType.SELF),
+      new CardEffect('summon_ice_burst', 1, TargetType.SUMMON),
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
+    ],
+    rarity: 'epic',
+    tier: 2,
+    previewCreature: (() => {
+      // Ice Elemental side preview. `_iceAbsorb` matches the boss's
+      // version so the codex Summons entry advertises the same
+      // power; `_codexVariableStats` keeps the player-side card
+      // entry collapsed to a single X / X tile. `iceAttack` shows
+      // the ice rider in the codex stats panel.
+      const c = new Creature({
+        name: 'Ice Elemental', attack: 1, maxHp: 1, iceAttack: 1,
+        description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+      });
+      c._iceAbsorb = true;
+      c._codexVariableStats = true;
+      return c;
+    })(),
   });
 }
 

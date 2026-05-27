@@ -277,6 +277,11 @@ export const SOUND_PACKS = {
     'music_guild_of_unlikely_heroes_01',
     // Wind / cold storm bed for the Obsidian Wastes lab traversal.
     'ambience_obsidian_wastes_01',
+    // Newly added — auditioned via codex; not yet wired to any scene.
+    'music_alter_hero_01',
+    'music_saga_of_shakti_01',
+    'music_shadow_of_mortus_01',
+    'music_the_trailer_01',
   ],
   // Heroes pack — player-character voice grunts and pain cries.
   Heroes: [
@@ -312,6 +317,9 @@ export const SOUND_PACKS = {
     // Coin pickup variations — short positive musical stings; audition
     // in the codex Sound tab to pick a gold-loot cue.
     'coin_pickup_01','coin_pickup_02','coin_pickup_03',
+    // White Dragon Egg — chick / hatch chirp layered on top of the
+    // normal attack hit when the egg ally is struck.
+    'egg_hatch_01',
   ],
 };
 
@@ -382,6 +390,15 @@ export const SOUND_MAP = {
   // Fires whenever Ice actually lands on any character or creature
   // (player attacks, enemy Icy Breath, blizzard buffs). Not a hit cue.
   ice_apply:     'Magic/cold_whoosh_01',
+  // Direct alias for cold_whoosh_01 — already mapped via ice_apply,
+  // but a literal-key handle lets cards play the cold gust as the
+  // cast cue without aliasing meaning (Gnikan's Staff layers it
+  // on top of the baton_hit_01 swing).
+  cold_whoosh:   'Magic/cold_whoosh_01',
+  // Varimatras Wing Buffet — howling-wind spell cue. Already in the
+  // Magic pack as windy_spell_01; alias surfaces it as a friendlier
+  // key for CARD_SFX_OVERRIDES.
+  wing_buffet:   'Magic/windy_spell_01',
   // Same idea for Fire — every fresh Fire stack puffs the fireball
   // whoosh. Suppressed when the source card already played fire_flesh
   // (avoid double-up on Fire Burst / Wand of Fire).
@@ -435,6 +452,13 @@ export const SOUND_MAP = {
   // Kobold Drake Rider — same reptilian roar so the drake's signature
   // hiss bookends its fight (showcase + death).
   drake_rider_hiss: 'Monster/reptilian_hiss_03',
+  // Overseer Gnikan (chapter-8 frost-shaman boss) — reuses the
+  // heaviest reptilian hiss for fight-start / death.
+  gnikan_hiss:    'Monster/reptilian_hiss_03',
+  // Ice Elemental — ice-blast cue for summon, swing, and death.
+  // Same sample as the `ice_flesh` alias; separate name keeps the
+  // codex Sounds tab listing it under the Ice Elemental row.
+  ice_elemental:  'Magic/ice_blast_01',
   // Kobold Slyblade — lighter reptilian hiss bookends its ambush.
   // Fight start + death route through this alias via getFight/Death
   // SfxKey so the codex Sounds tab can play it under "slyblade_hiss".
@@ -484,6 +508,9 @@ export const SOUND_MAP = {
   // monster bite layered on Molten Bite. Same file path convention.
   fire_spell_01:    'Magic/fire_spell_01',
   monster_bite_01:  'Monster/monster_bite_01',
+  // Varimatras Bite — heavier dragon-jaws variant. Played on the
+  // attack's flesh/blocked hits via CARD_SFX_OVERRIDES.
+  monster_bite_02:  'Monster/monster_bite_02',
   // Direct alias for fireball_whoosh_01 — already mapped via
   // fire_apply/fire_flesh/torch_use for other callers, but several
   // direct playSound('fireball_whoosh_01') sites (Molten Bite cast,
@@ -502,6 +529,16 @@ export const SOUND_MAP = {
   sahuagin_scream:       'Monster/sahuagin_scream_01',
   // Sahuagin Baron — heavier scream variant for the boss bookend.
   sahuagin_baron_scream: 'Monster/sahuagin_scream_02',
+  // Varimatras — heaviest cave-monster scream variant (03). Doubles
+  // as the dragon's fight-start / death cue AND the Cold Breath
+  // play SFX so every breath weapon feels like the dragon roaring
+  // through the strike.
+  varimatras_scream:     'Monster/sahuagin_scream_03',
+  // White Dragon Egg — chirpy "chick hatching" sample. Layered on
+  // top of the normal attack hit cue whenever the egg creature is
+  // struck, so every blow on the egg sounds like the chick inside
+  // is trying to peck its way out.
+  egg_hatch:             'Misc/egg_hatch_01',
   // Wrath (druid) — leaf-fall on cast for both modal options.
   wrath_cast:     'Misc/leaf_fall_01',
   // Reckless Strike (warrior) — heavier 2H axe variant.

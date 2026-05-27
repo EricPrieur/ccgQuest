@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '1.9';
+export const GAME_VERSION = '1.10';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -53,6 +53,15 @@ export const GameState = Object.freeze({
   GAME_OVER: 'GAME_OVER',
   VICTORY: 'VICTORY',
   CODEX: 'CODEX',
+  // Loot-pick screen: player chooses N cards out of M offered
+  // (e.g. Varimatras drops 5, player keeps 2). Used in place of
+  // the standard ENCOUNTER_LOOT auto-roll when a phase carries
+  // lootPickCount + lootPickCards.
+  ENCOUNTER_LOOT_PICK: 'ENCOUNTER_LOOT_PICK',
+  // Slow-scrolling end credits — entered after the post-Varimatras
+  // sleep-in-room beat. Auto-advances back to MENU when the scroll
+  // runs out, or clicks-to-skip back early.
+  END_CREDITS: 'END_CREDITS',
 });
 
 // === Card Enums ===

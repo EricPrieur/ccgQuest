@@ -38,7 +38,10 @@ import {
   createWoodenAxe, createWoodenGreatsword, createRockMace,
   createCrackedBuckler, createBuckler, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
-  createBoneDagger, createClothArmor,
+  createBoneDagger, createClothArmor, createDragonToothDagger,
+  createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
+  createDragonBoneBow, createDragonEyeMace, createWhiteDragonEgg,
+  createWhiteDragonWyrmling,
   createHeroicStrike, createHolyLight, createShieldOfFaith, createFlashHeal,
   createFireBurst, createIceBolt, createMagicMissiles, createArcaneShield,
   createVialOfPoison, createSneakAttack, createPetSpider, createCarefulStrike,
@@ -80,6 +83,7 @@ import {
   createCaveShroom,
   createSahuaginTridentLoot, createFishScaleBoots, createSahuaginEye,
   createSahuaginPriestStaffLoot, createWhirlpool, createSwimmingShowcase,
+  createGnikansStaff,
   createEnragedStrike,
   createQueensLocket, createValdrisaCard, createValdrisaCreature,
   createObsidianRock, createObsidianEdge, createObsidianStaff, createObsidianSpear,
@@ -89,7 +93,8 @@ import {
   // Tier 2 ability cards (Tharnag arrival level-up + Cathedral Shrine)
   createConsecration, createHammerOfWrath, createHolySword, createRevivify,
   createHuntersMark, createAnimalCompanion, createPiercingShot, createExplosiveShot,
-  createBurningHands, createIceNova, createIceBlock, createArcaneBeam,
+  createBurningHands, createIceNova, createIceBlock, createIceShatter, createColdBreath, createArcaneBeam,
+  createVarimatrasBite, createVarimatrasClaw, createVarimatrasTail, createVarimatrasWing, createVarimatrasScale,
   createFanOfBlades, createBackstab, createPoisonedDagger, createSprint,
   createThunderclap, createShieldWall, createBattleShout, createExecute,
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
@@ -103,7 +108,7 @@ import {
   createQuickStrike, createBattleFury, createFeralForm,
   createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower,
   createMassiveOgreRam, createGoblinSapperSquad,
-  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor,
+  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
@@ -238,6 +243,12 @@ let caveEntranceDoubledBack = false;
 // flag flips ("kobolds swarm the way out — go back in"). Cleared on
 // new game.
 let corridorEntranceDoubledBack = false;
+// Nodes that have already been re-fogged once by a back-teleport.
+// Each entry node (Tunnel Entrance, Corridor Entrance, ...) shows
+// ??? on the first backward traversal and reveals on walk-onto;
+// without this set, every subsequent back-teleport would re-fog
+// the node again and erase the player's prior exploration.
+let _backwardRefoggedOnce = new Set();
 // Forge picker mode — 'weapon' (Obsidian Forge) or 'armor' (Dwarven
 // Workbench). The GameState.FORGE_WEAPON picker is reused for both;
 // click resolution dispatches on this flag.
@@ -297,6 +308,25 @@ let siegeComplete = false;
 //   valdrisaJoined — locks the valdrisa encounter from re-firing.
 let throneAudienceComplete = false;
 let quartersRested = false;
+// Set when the player completes the Varimatras encounter (Part 1
+// ending). Persists across sleeps so the next quarters_rest jumps
+// straight into the end-of-game fade-to-menu instead of the normal
+// rebalance. Reset on startNewGame; saved via save.js below.
+let dragonSlain = false;
+// Set when the player walks back into the Guild Hall after slaying
+// Varimatras and triggers the Heroes of Qualibaf celebration. Grants
+// free rests at every inn in the city for life (resolveInnRest waives
+// the gold cost). Reset on startNewGame; persisted via save.js.
+let heroesOfQualibaf = false;
+// Lifetime damage dealt to the White Dragon Egg across all combats
+// since it was picked up — tracked BEFORE shield/armor mitigation
+// (the raw hit). At threshold (10 for testing, 100 in shipping),
+// the egg hatches into a White Dragon Wyrmling: the egg card is
+// removed from every pile + masterDeck and replaced by the
+// Wyrmling card, the on-field egg creature transforms in place.
+// Persisted via save.js as `dragonEggDamage`.
+let dragonEggDamage = 0;
+const WHITE_DRAGON_EGG_HATCH_THRESHOLD = 10;
 let valdrisaJoined = false;
 // One-shot dialog at the upper stairs after the throne audience —
 // "So, a prince" recap with Raena, then a nudge toward the artisans.
@@ -1051,6 +1081,13 @@ const CARD_REGISTRY = {
   short_staff: createShortStaff, small_pouch: createSmallPouch,
   kobold_spear: createKoboldSpear, kobold_shield: createKoboldShield,
   bone_dagger: createBoneDagger, cloth_armor: createClothArmor,
+  dragon_tooth_dagger: createDragonToothDagger,
+  white_dragonscale_shield: createWhiteDragonscaleShield,
+  white_dragonscale_armor: createWhiteDragonscaleArmor,
+  dragon_bone_bow: createDragonBoneBow,
+  dragon_eye_mace: createDragonEyeMace,
+  white_dragon_egg: createWhiteDragonEgg,
+  white_dragon_wyrmling: createWhiteDragonWyrmling,
   // Abilities
   heroic_strike: createHeroicStrike, holy_light: createHolyLight,
   shield_of_faith: createShieldOfFaith, flash_heal: createFlashHeal,
@@ -1069,6 +1106,16 @@ const CARD_REGISTRY = {
   piercing_shot: createPiercingShot, explosive_shot: createExplosiveShot,
   burning_hands: createBurningHands, ice_nova: createIceNova,
   ice_block: createIceBlock, arcane_beam: createArcaneBeam,
+  // Ice Shatter intentionally NOT in CARD_REGISTRY — it's the
+  // dragon's ability, not a player card. Surfaces in the codex
+  // Enemy Cards tab via cache.enemyOnlyCards (ENEMY_DECKS.overseer_gnikan_phase_2
+  // is its only source).
+  // Cold Breath, Varimatras Bite / Claw / Tail / Wing, and Varimatras
+  // Scale are all monster-only cards — kept out of CARD_REGISTRY so
+  // they show under Enemy Cards (via cache.enemyOnlyCards in
+  // buildCodexSourceCache) instead of cluttering the Player Cards
+  // tab. They're still imported above for ENEMY_DECKS.varimatras +
+  // continueCombatPhase2's force-injected Cold Breath.
   fan_of_blades: createFanOfBlades, backstab: createBackstab,
   poisoned_dagger: createPoisonedDagger, sprint: createSprint,
   thunderclap: createThunderclap, shield_wall: createShieldWall,
@@ -1141,6 +1188,7 @@ const CARD_REGISTRY = {
   sahuagin_trident: createSahuaginTridentLoot,
   fish_scale_boots: createFishScaleBoots, sahuagin_eye: createSahuaginEye,
   sahuagin_priest_staff: createSahuaginPriestStaffLoot,
+  gnikans_staff: createGnikansStaff,
   barnacle_encrusted_plate: createBarnacleEncrustedPlate, barnacle: createBarnacle,
   mimic_bite: createMimicBite, mimic_tongue: createMimicTongue,
   // Web spider is the enemy ABILITY card that adds Web tokens to the
@@ -1260,6 +1308,12 @@ const LOOT_TABLES = {
   // Mirrors PY get_sahuagin_priest_loot.
   sahuagin_priest_loot: [
     { creator: createSahuaginPriestStaffLoot, weight: 1.0 },
+  ],
+  // Overseer Gnikan loot — guaranteed Gnikan's Staff drop (chapter 8
+  // summit boss). Placeholder pool until a wider chapter 8 loot kit
+  // is authored.
+  overseer_gnikan_loot: [
+    { creator: createGnikansStaff, weight: 1.0 },
   ],
   // Lucky Pebble — guaranteed drop from the River Crossing 25% bonus.
   // Mirrors PY get_lucky_pebble_loot.
@@ -1406,6 +1460,7 @@ const LOOT_TABLE_LABELS = {
   magma_mephit_loot:      'Magma Mephit',
   kobold_slyblade_loot:   'Kobold Slyblade',
   dwarven_specter_loot:   'Dwarven Specter',
+  overseer_gnikan_loot:   'Overseer Gnikan',
 };
 
 // Wired below in CARD_SFX_OVERRIDES so the drake rider's roar plays at
@@ -1437,6 +1492,7 @@ const LOOT_TABLE_NOTES = {
   magma_mephit_loot:      'Magma Mephit chapter-7 random encounter. 50% chance to drop a card (Magma Rock common); gold drops on every win.',
   kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common, Lockpick Set rare.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
+  overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
 };
 
 function rollLootTable(id) {
@@ -1585,7 +1641,8 @@ async function loadAssets() {
     loadImage('frame_common', `${BASE}assets/Icons/FrameCommon.png`),
     loadImage('frame_uncommon', `${BASE}assets/Icons/FrameUncCommon.png`),
     loadImage('frame_rare',     `${BASE}assets/Icons/FrameRare.png`),
-    loadImage('frame_epic',     `${BASE}assets/Icons/FrameEpic.png`), // loaded but not yet wired — no epic cards in-game yet
+    loadImage('frame_epic',     `${BASE}assets/Icons/FrameEpic.png`),
+    loadImage('frame_legendary',`${BASE}assets/Icons/FrameLegendary.png`),
     // Common creature art (eager preload so summons render immediately)
     loadImage('creature_rat', `${BASE}assets/Cards/SummonRat.jpg`),
     loadImage('creature_tamed_rat', `${BASE}assets/Cards/TamedRatAbility.jpg`),
@@ -1620,6 +1677,14 @@ async function loadAssets() {
     loadImage('obsidian_oracle',             `${BASE}assets/Cards/ObsidianOracle.jpg`),
     // Plaza mini-boss portrait.
     loadImage('magma_drake',                 `${BASE}assets/Cards/MagmaDrake.jpg`),
+    // Chapter 8 — Overseer Gnikan (summit ridge boss) + Ice Elemental
+    // creature art. Preload so the splash + summons render with art
+    // on the very first frame.
+    loadImage('overseer_gnikan',             `${BASE}assets/Cards/OverseerGnikan.png`),
+    loadImage('creature_ice_elemental',      `${BASE}assets/Cards/IceElemental.png`),
+    // Varimatras — phase-3 dragon. VarimatrasBG.png doubles as the
+    // monster portrait and the encounter backdrop for the fight.
+    loadImage('varimatras',                  `${BASE}assets/Backgrounds/VarimatrasBG.png`),
     // All power art (eager preload — eliminates lazy-load quality flicker on hover)
     ...Object.entries(POWER_ART_MAP).map(([id, file]) =>
       loadImage(`power_${id}`, `${BASE}assets/Cards/${file}`)
@@ -2070,6 +2135,12 @@ function handleClick(x, y) {
     case GameState.ENCOUNTER_LOOT:
       handleEncounterLootClick(x, y);
       break;
+    case GameState.ENCOUNTER_LOOT_PICK:
+      handleEncounterLootPickClick(x, y);
+      break;
+    case GameState.END_CREDITS:
+      handleEndCreditsClick();
+      break;
     case GameState.COMBAT:
       handleCombatClick(x, y);
       break;
@@ -2502,6 +2573,20 @@ function handleMenuClick(x, y) {
 let _menuMusicStarted = false;
 let _hasEnteredCombat = false;
 let _lastMusicArea = null; // map area currently bedded under the music
+// Re-entry guard for the Gnikan P1→P2 death intercept: true while
+// endPlayerTurn is running its wrap-up beats (ice decay, draws,
+// ally end-of-turn damage). Suppresses checkCombatEnd's normal
+// victory / intercept logic so endPlayerTurn doesn't short-circuit
+// and the intercept doesn't recurse.
+let _inGnikanP1Transition = false;
+// Loot-pick state — populated by advanceEncounterPhase's LOOT
+// branch when the phase carries lootPickCount + lootPickCards.
+// Stays around until the player picks the required number of
+// cards; drawEncounterLootPick / handleEncounterLootPickClick
+// consume it.
+let _lootPickOffered = [];   // [{ id, card }, ...]
+let _lootPickKept = [];      // ids the player has already kept
+let _lootPickRemaining = 0;
 function startMenuMusicIfNeeded() {
   if (_menuMusicStarted) return;
   if (_hasEnteredCombat) return;
@@ -2616,11 +2701,17 @@ const MUSIC_TAGS = {
   'Music/music_tension_01': ['boss: General Zhost (army + boss)', 'boss: General Zhost (Revenge — upper bridge)'],
   'Music/music_tension_02': ['area: lower_caverns', 'area: lava_chamber', 'area: obsidian_tunnels', 'area: obsidian_forge', 'area: temple_district', 'area: obsidian_cathedral', 'area: obsidian_plaza', 'area: obsidian_streets', 'area: obsidian_market', 'area: upper_bridge', 'area: tunnel_to_bridge'],
   'Music/music_final_streak_01': ['area: volcano_stairs_1', 'area: volcano_stairs_2', 'area: volcano_stairs_3', 'area: volcano_summit_ridge'],
+  // Awakened-master phase 2 of the Overseer Gnikan summit fight.
+  // Crossfaded in when combat starts against overseer_gnikan_phase_2.
+  'Music/music_one_last_battle_01': ['boss: Overseer Gnikan (Phase 2 — awakened master)'],
   'Music/music_forgotten_castle_01': ['area: entry_corridor', 'area: gate_area', 'area: hall_of_ancestors', 'area: monument_alley', 'area: grand_stairs', 'area: deeper_tunnels', 'area: artisan_district', 'area: dwarven_throne_room', 'area: map_room'],
   // Looping wet-magma bubble bed — layered during any fight whose
   // boss carries the lava_floor passive (Magma Drake at the Plaza,
   // Magma Mephit kill-count). Stopped at combatVictory + defeat.
   'Misc/lava_bubble_01': ['combat ambience: Magma Drake', 'combat ambience: Magma Mephits'],
+  // Varimatras phase-3 dragon fight. Crossfaded in when combat
+  // starts against the varimatras enemyId.
+  'Music/music_the_trailer_01': ['boss: Varimatras (Phase 3 — frost dragon)'],
 };
 
 // Per-node overrides — win over MUSIC_FOR_AREA for specific nodes
@@ -2737,6 +2828,14 @@ function startNewGame() {
   siegeComplete = false;
   throneAudienceComplete = false;
   quartersRested = false;
+  dragonSlain = false;
+  dragonEggDamage = 0;
+  heroesOfQualibaf = false;
+  // Runtime-only backdrop overrides (Varimatras, volcano-awakening,
+  // bridge-exploding, dwarven-city per-map) can leak across a New
+  // Game from a previous Varimatras run since they're not saved.
+  // Hard reset here so P1 always opens against the summit-ridge bg.
+  _encounterBgOverride = null;
   valdrisaJoined = false;
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
@@ -2763,6 +2862,7 @@ function startNewGame() {
   mapTableRested = false;
   caveEntranceDoubledBack = false;
   corridorEntranceDoubledBack = false;
+  _backwardRefoggedOnce = new Set();
   forgePickerMode = 'weapon';
   // Wipe the per-session map cache so a new run doesn't inherit stale
   // node state from the previous one (cross-map teleports use this).
@@ -2782,9 +2882,13 @@ function drawMenu() {
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 
-  // Semi-transparent black panel behind title and buttons
+  // Semi-transparent black panel behind title and buttons. Tall
+  // enough to cover the title, New Game / Load Game CTAs, the
+  // Discord banner, AND the Ko-fi banner below it. Bumping the
+  // height (was 540) keeps the bottom button from sticking out
+  // past the panel edge.
   const panelW = 540;
-  const panelH = 540;
+  const panelH = 620;
   const panelX = (SCREEN_WIDTH - panelW) / 2;
   const panelY = 130;
   ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
@@ -2844,9 +2948,9 @@ function drawMenu() {
     ty += 18;
 
     const body = (
-      'Welcome to ccgQuest! Please keep in mind this game is an ongoing project. ' +
-      "Currently you can play the first 7 chapters, and I'll be adding more over time. " +
-      'Join the Discord for feedback and to report bugs. Have Fun!'
+      'Welcome to ccgQuest! Part 1 — all 8 chapters — is fully done and playable now. ' +
+      'Escape the Prison, Enter the Volcano, and Save Qualibaf! ' +
+      'Join the Discord for feedback, to report bugs, or just to chat about your run. Enjoy!'
     );
     ctx.fillStyle = '#e8d59a';
     ctx.font = '16px serif';
@@ -2930,6 +3034,52 @@ function drawMenu() {
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
     ctx.textBaseline = 'alphabetic';
+  }
+
+  // Support button — Ko-fi tip jar. Same banner sprite as Discord
+  // so the pair reads as a matched "extras" row. Optional support
+  // for the project; opens the Ko-fi page in a new tab.
+  btnY += 80;
+  const kofiW = 360, kofiH = 60;
+  const kofiX = (SCREEN_WIDTH - kofiW) / 2;
+  drawStyledButton(kofiX, btnY, kofiW, kofiH, '', () => {
+    window.open('https://ko-fi.com/ericprieur', '_blank', 'noopener,noreferrer');
+  }, 'banner', 18);
+  {
+    const kofiHovered = hitTest(mouseX, mouseY, { x: kofiX, y: btnY, w: kofiW, h: kofiH });
+    const kofiCup = '☕';
+    const kofiLabel = 'Support ccgQuest — Ko-fi';
+    const cupGap = 10;
+    const cy = btnY + kofiH / 2;
+    // Measure label width separately from the cup so we can lay
+    // the pair out as a single centered group (cup glyph on the
+    // left, label on the right). The cup is drawn at a slightly
+    // larger size than the body text so it reads as a real icon.
+    ctx.font = 'bold 18px serif';
+    const labelW = ctx.measureText(kofiLabel).width;
+    const cupFont = '22px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", serif';
+    ctx.font = cupFont;
+    const cupW = ctx.measureText(kofiCup).width;
+    const groupW = cupW + cupGap + labelW;
+    const groupX = kofiX + Math.floor((kofiW - groupW) / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+    // Cup glyph (no color override — emoji renders in its native
+    // palette on the player's OS / browser font).
+    ctx.fillStyle = kofiHovered ? Colors.GOLD : '#fff';
+    ctx.fillText(kofiCup, groupX, cy + 1);
+    // Label.
+    ctx.font = 'bold 18px serif';
+    ctx.fillStyle = kofiHovered ? Colors.GOLD : Colors.WHITE;
+    ctx.fillText(kofiLabel, groupX + cupW + cupGap, cy);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
   }
 
   // Options button (bottom-left)
@@ -3089,6 +3239,10 @@ function startGameWithAbility(ability) {
   const cards = deckFns[selectedClass]();
   for (const c of cards) player.deck.addCard(c);
   player.deck.addCard(ability);
+  // (Removed: debug-seeded Gnikan's Staff copies. The staff is now
+  // handed to the player by Raena during the P2→P3 transition in
+  // the Varimatras encounter, so the starter deck no longer needs
+  // the placeholder pile.)
   // Add class power
   const power = getClassPower(selectedClass);
   player.addPower(power);
@@ -3865,6 +4019,32 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // regen so the player can still skip the maze if they want.
   if (!skipEncounter && nodeId === 'wastes_entry'
       && currentMap.id === 'obsidian_wastes' && labyrinthComplete) {
+    // Walking back from the north shortcut, OR click-on-self while
+    // standing at the edge → teleport back to Tharnag's north_pass
+    // (the player has already cleared the wastes once and just wants
+    // to head home). No labyrinth regen: that beat is reserved for
+    // a fresh re-entry from outside the wastes map.
+    if (fromNodeId === 'wastes_north' || fromNodeId == null
+        || fromNodeId === 'wastes_entry') {
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('tharnag', createTharnagMap);
+      visitedNodes = new Set();
+      visitedNodes.add('north_pass');
+      const np = currentMap.getNode('north_pass');
+      if (np) {
+        np.isLocked = false;
+        np.hiddenName = '';
+        np.hiddenDescription = '';
+        np.isDone = true;
+      }
+      currentMap.currentNodeId = 'north_pass';
+      updateMusicForCurrentScene();
+      state = GameState.MAP;
+      autosaveNow();
+      return;
+    }
+    // Fresh re-entry (from Tharnag's north_pass, the Volcano back-
+    // teleport, etc.) → re-roll the labyrinth from a new seed.
     labyrinthSeed = Math.floor(Math.random() * 0x7FFFFFFF);
     labyrinthEncounterChance = 0.15;
     if (currentMap.nodes) {
@@ -3885,6 +4065,25 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     }
     visitedNodes = new Set(['wastes_entry']);
     currentMap.currentNodeId = 'wastes_entry';
+    // Manually unlock + un-fog the lab nodes connected to
+    // wastes_entry. completeCurrentNode only runs the unlock pass
+    // on first completion; on a regen the entry's encounter is
+    // already done, so without this the new lab tier 1 nodes
+    // (lab_1_*) stay isLocked=true and the map filter at
+    // drawMap:8611 skips them entirely. Same for wastes_north —
+    // its incoming tier (lab_N_*) needs to be unlockable from the
+    // south so the connections render.
+    const entryRegen = currentMap.getNode('wastes_entry');
+    if (entryRegen && Array.isArray(entryRegen.unlocks)) {
+      for (const uid of entryRegen.unlocks) {
+        const u = currentMap.getNode(uid);
+        if (u && u.isLocked) {
+          u.isLocked = false;
+          u.hiddenName = '';
+          u.hiddenDescription = '';
+        }
+      }
+    }
     addLog('  The obsidian shifts. A fresh labyrinth opens before you.', Colors.GOLD);
     state = GameState.MAP;
     return;
@@ -4066,8 +4265,11 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // District map. Mirrors PY game.py:3256. Same pattern as the
   // pillar_passage → forge_entry branch above — fires on every
   // arrival so click-on-self and walk-through both forward.
+  // fromNodeId guard prevents the temple_entry → west_tunnel back-
+  // teleport's arriveAtNode call from bouncing forward.
   if (!skipEncounter && nodeId === 'west_tunnel'
-      && currentMap.id === 'obsidian_tunnels') {
+      && currentMap.id === 'obsidian_tunnels'
+      && fromNodeId !== 'temple_entry') {
     node.isDone = true;
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('temple_district', createTempleDistrictMap);
@@ -4109,16 +4311,32 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // inside temple_district / click-on-self fire; the forward
   // west_tunnel → temple_entry transition is excluded so re-entering
   // the temple on a subsequent visit doesn't instantly bounce out.
-  if (!skipEncounter && nodeId === 'temple_entry'
+  // `!skipEncounter` dropped so the temple_arrival family-
+  // suppression re-entry (after a sibling like
+  // temple_district_arrival_side fired) still auto-teleports the
+  // player to west_tunnel instead of stranding them at temple_entry.
+  if (nodeId === 'temple_entry'
       && currentMap.id === 'temple_district' && node.isDone
       && fromNodeId !== 'west_tunnel') {
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('obsidian_tunnels', createObsidianTunnelsMap);
+    // Unlock west_tunnel + the junction hub so the player can walk
+    // out of the temple landing into the broader tunnels map even
+    // on a backward-first traversal where the forward visit never
+    // unlocked tunnel_junction. Leave hiddenName='???' on the
+    // unvisited adjacents so they reveal naturally on first walk.
     const west = currentMap.getNode('west_tunnel');
-    if (west) { west.isLocked = false; west.hiddenName = ''; west.hiddenDescription = ''; west.isDone = true; }
+    if (west) { west.isLocked = false; west.hiddenName = ''; west.hiddenDescription = ''; }
+    const junction = currentMap.getNode('tunnel_junction');
+    if (junction) { junction.isLocked = false; }
     visitedNodes = new Set(['west_tunnel']);
     currentMap.currentNodeId = 'west_tunnel';
-    state = GameState.MAP;
+    // Call arriveAtNode so the BACKWARD_ENTRY_DIALOGS cavern-pattern
+    // fires the obsidian_tunnels_arrival_back wrapper on first
+    // backward arrival. The west_tunnel forward transit has a
+    // fromNodeId guard against 'temple_entry' so this doesn't
+    // bounce back into the temple.
+    arriveAtNode('west_tunnel', 'temple_entry');
     return;
   }
   // Obsidian Tunnels: north_tunnel forward-transits to the Obsidian
@@ -4413,13 +4631,15 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     visitedNodes.add('corridor_gate_approach');
     currentMap.currentNodeId = 'corridor_gate_approach';
     // Re-fog Corridor Entrance so it reads ??? from the corridor
-    // ruins on this back-traversal. The bulk loop above cleared
-    // its hiddenName because entry_corridor_arrival is in
+    // ruins on the FIRST back-traversal. The bulk loop above
+    // cleared its hiddenName because entry_corridor_arrival is in
     // completedEncounters; undo that here. On walk-onto, the
     // entry_corridor_double_back dialog fires (kobold-swarm
-    // reminder) or force-flip silently re-sets isDone.
+    // reminder) or force-flip silently re-sets isDone. Only re-fog
+    // once per game.
     const ce = currentMap.getNode('corridor_entrance');
-    if (ce) {
+    if (ce && !_backwardRefoggedOnce.has('corridor_entrance')) {
+      _backwardRefoggedOnce.add('corridor_entrance');
       ce.isDone = false;
       ce.hiddenName = '???';
       ce.hiddenDescription = 'A way out leads here.';
@@ -4694,17 +4914,20 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     const mid = currentMap.getNode('bridge_tunnel_mid');
     if (mid) { mid.isLocked = false; }
     // Re-fog Tunnel Entrance so it reads ??? from the adjacent
-    // corridor on this back-traversal even when the forward
+    // corridor on the FIRST back-traversal even when the forward
     // visit had already revealed it. On walk-onto, the
     // force-flip + cross-map transit immediately teleport the
-    // player out, so the brief reset stays in sync with the gate
-    // behaviour. Re-set hiddenName too in case hydrate cleared it.
+    // player out. Only re-fog once per game — subsequent back-
+    // teleports leave the node revealed.
     const ent = currentMap.getNode('bridge_tunnel_entry');
     if (ent) {
       ent.isLocked = false;
-      ent.isDone = false;
-      ent.hiddenName = '???';
-      ent.hiddenDescription = 'A dark passage descends.';
+      if (!_backwardRefoggedOnce.has('bridge_tunnel_entry')) {
+        _backwardRefoggedOnce.add('bridge_tunnel_entry');
+        ent.isDone = false;
+        ent.hiddenName = '???';
+        ent.hiddenDescription = 'A dark passage descends.';
+      }
     }
     visitedNodes = new Set(['bridge_tunnel_exit']);
     currentMap.currentNodeId = 'bridge_tunnel_exit';
@@ -4751,16 +4974,20 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       if (n) n.isLocked = false;
     }
     // Re-fog Tunnel Entrance so it reads ??? from Carved Passage
-    // on this back-traversal even when the forward visit had
+    // on the FIRST back-traversal even when the forward visit had
     // already revealed it. On walk-onto, force-flip silently sets
     // isDone+canRunEncounter=false and the tunnels_entry →
-    // ancestors_artisan_district cross-map transit fires.
+    // ancestors_artisan_district cross-map transit fires. Only
+    // re-fog once per game.
     const ten = currentMap.getNode('tunnels_entry');
     if (ten) {
       ten.isLocked = false;
-      ten.isDone = false;
-      ten.hiddenName = '???';
-      ten.hiddenDescription = 'A torch-lit passage descends.';
+      if (!_backwardRefoggedOnce.has('tunnels_entry')) {
+        _backwardRefoggedOnce.add('tunnels_entry');
+        ten.isDone = false;
+        ten.hiddenName = '???';
+        ten.hiddenDescription = 'A torch-lit passage descends.';
+      }
     }
     visitedNodes = new Set(['tunnels_exit']);
     currentMap.currentNodeId = 'tunnels_exit';
@@ -4943,6 +5170,22 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     // streets_residential (Residential Quarter) roll random fights
     // when walked onto.
     obsidian_streets: new Set(['streets_market', 'streets_residential']),
+    // Chapter 8 stairs: every node rolls (entry/exit included) so
+    // the climb stays tense. Kobold Slyblade is the only pool member
+    // up here — kobold raiding parties watching the route to the
+    // summit. undergroundEncounterChance + step (7%/5% with Map
+    // Knowledge) drives the rolls, same as the lower chapter-7 maps.
+    volcano_stairs_1: new Set(['stairs1_entry', 'stairs1_a', 'stairs1_b', 'stairs1_c', 'stairs1_exit']),
+    volcano_stairs_2: new Set(['stairs2_entry', 'stairs2_a', 'stairs2_b', 'stairs2_c', 'stairs2_exit']),
+    volcano_stairs_3: new Set(['stairs3_entry', 'stairs3_a', 'stairs3_b', 'stairs3_c', 'stairs3_exit']),
+  };
+  // Pool override per map. Default pool (golem/slime/mephit) applies
+  // to the chapter-7 underground maps; the chapter-8 stairs swap in
+  // a kobold-only pool.
+  const UNDERGROUND_POOL_OVERRIDES = {
+    volcano_stairs_1: ['kobold_slyblade'],
+    volcano_stairs_2: ['kobold_slyblade'],
+    volcano_stairs_3: ['kobold_slyblade'],
   };
   // Outer gate keyed off the set above (was a hardcoded 5-map OR
   // chain that silently skipped obsidian_streets / obsidian_market
@@ -4985,7 +5228,8 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       // per PY game.py:4103-4110.
       if (Math.random() < undergroundEncounterChance) {
         undergroundEncounterChance = undergroundEncounterStep();
-        const pool = ['obsidian_golem', 'obsidian_slime', 'magma_mephit'];
+        const pool = UNDERGROUND_POOL_OVERRIDES[currentMap.id]
+          || ['obsidian_golem', 'obsidian_slime', 'magma_mephit'];
         const pick = pool[Math.floor(Math.random() * pool.length)];
         const factory = ENCOUNTER_REGISTRY[pick];
         if (factory) {
@@ -5000,6 +5244,9 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
             currentMap.id === 'temple_district'  ? 'bg_temple_district' :
             currentMap.id === 'obsidian_streets' ? 'bg_obsidian_streets' :
             currentMap.id === 'obsidian_market'  ? 'bg_obsidian_market' :
+            currentMap.id === 'volcano_stairs_1' ? 'bg_volcano_stairs_1' :
+            currentMap.id === 'volcano_stairs_2' ? 'bg_volcano_stairs_2' :
+            currentMap.id === 'volcano_stairs_3' ? 'bg_volcano_stairs_3' :
                                                    'bg_lower_caverns';
           currentEncounter = factory();
           encounterTextIndex = 0;
@@ -5382,6 +5629,8 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     deeper_tunnels_entry_back:   'deeper_tunnels_arrival',
     gate_passage:                'thorgazad_arrival',
     gate_passage_back:           'thorgazad_arrival',
+    obsidian_tunnels_arrival:      'obsidian_tunnels_arrival',
+    obsidian_tunnels_arrival_back: 'obsidian_tunnels_arrival',
   };
   if (canRunEncounter && node.encounterId && ENCOUNTER_FAMILIES[node.encounterId]) {
     const family = ENCOUNTER_FAMILIES[node.encounterId];
@@ -5462,7 +5711,12 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // the forward dialog quiet once its backward sibling has played.
   const BACKWARD_ENTRY_DIALOGS = [
     { node: 'artisan_exit', map: 'artisan_district', from: 'bridge_tunnel_entry', encounter: 'artisan_district_entry_back' },
-    { node: 'bridge_tunnel_exit', map: 'tunnel_to_bridge', from: 'bridge_to_dwarven', encounter: 'tunnel_to_bridge_entry_back' },
+    // bridge_tunnel_exit intentionally NOT here — the obsidian-tunnel
+    // intro text reads as descending FROM the artisan district, so
+    // replaying it on the bridge-side back-arrival makes the dialog
+    // contradict the player's actual direction. The forward dialog
+    // at bridge_tunnel_entry still covers first-tunnel-arrival in
+    // either direction (force-flip suppresses on revisit).
     { node: 'tunnels_exit', map: 'deeper_tunnels', from: 'artisan_entry', encounter: 'deeper_tunnels_entry_back' },
     { node: 'ancestors_artisan_district', map: 'hall_of_ancestors', from: 'tunnels_entry', encounter: 'gate_passage_back' },
     // Into Thorgazad — second backward entry into gate_area. The
@@ -5471,7 +5725,30 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     // whichever backward path the player walks first fires the
     // dialog and the other is suppressed via the encounter check.
     { node: 'gate_passage', map: 'gate_area', from: 'ancestors_entry', encounter: 'gate_passage_back' },
+    // West Passage — backward entry into obsidian_tunnels from the
+    // temple side. Fires the Obsidian Tunnels arrival dialog on
+    // first backward arrival so the player gets the same intro
+    // they would have seen at tunnel_entry going forward.
+    { node: 'west_tunnel', map: 'obsidian_tunnels', from: 'temple_entry', encounter: 'obsidian_tunnels_arrival_back' },
   ];
+  // Guild Hall — Heroes of Qualibaf celebration. Walking back into
+  // the guild hall AFTER killing Varimatras (one-shot per save) fires
+  // the celebration encounter instead of the silent revisit. Grants
+  // heroesOfQualibaf, which waives every inn rest cost.
+  if (!skipEncounter && nodeId === 'guild_hall' && currentMap.id === 'qualibaf'
+      && dragonSlain && !heroesOfQualibaf) {
+    currentMap.currentNodeId = nodeId;
+    const factory = ENCOUNTER_REGISTRY['guild_hall_victory'];
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      heroesOfQualibaf = true;
+      advanceEncounterPhase();
+      return;
+    }
+  }
   if (!skipEncounter) {
     for (const cfg of BACKWARD_ENTRY_DIALOGS) {
       if (nodeId === cfg.node && currentMap.id === cfg.map
@@ -5940,6 +6217,12 @@ const ENCOUNTER_BG_MAP = {
   // Arrival TEXT, mid-bridge Zhost boss, and far-end bridge_crossing
   // dialog all share the bridge map art.
   upper_bridge_arrival: 'bg_upper_bridge',
+  // Chapter 8 — summit ridge above the volcano stairs. The arrival
+  // dialog plays against the summit ridge map art.
+  stair_top_arrival: 'bg_volcano_summit_ridge',
+  // Overseer Gnikan boss fight at the far end of the ridge — same
+  // backdrop as the arrival dialog.
+  overseer_gnikan: 'bg_volcano_summit_ridge',
   zhost_revenge: 'bg_upper_bridge',
   bridge_crossing: 'bg_upper_bridge',
   // Chapter 7 volcano heart — temple_deep_chamber. Backdrop is the
@@ -6043,6 +6326,21 @@ const ENCOUNTER_BG_FILES = {
   // `Backgrounds/` so no path prefix here.
   bg_bridge_exploding: 'TheObsidianBridgeExplodingBG.jpg',
   bg_volcano_heart: 'HeartOfTheVolcanoBG.jpg',
+  // Chapter 8 stairs — reuse the map art so random kobold encounters
+  // on the climb stay tied to the right backdrop.
+  bg_volcano_stairs_1: 'Maps/VolcanoStairs1.png',
+  bg_volcano_stairs_2: 'Maps/VolcanoStairs2.png',
+  bg_volcano_stairs_3: 'Maps/VolcanoStairs3.png',
+  // Chapter 8 summit ridge — backdrop for the stair_top_arrival dialog.
+  bg_volcano_summit_ridge: 'Maps/Volcano_SummitRidge.png',
+  // Chapter 8 — Varimatras phase-3 fight. Same VarimatrasBG.png is
+  // loaded as the dragon's portrait so the boss panel matches the
+  // sky-filling silhouette in the background.
+  bg_varimatras: 'VarimatrasBG.png',
+  // Chapter 8 — post-Varimatras victory dialog. Volcano starts
+  // erupting in the background of the same ridge as the party
+  // celebrates their narrow win and bolts down the mountain.
+  bg_volcano_ridge_awakening: 'VolcanoRidgeAwakeningBG.png',
 };
 
 function getEncounterBgImage(bgKey) {
@@ -6103,10 +6401,35 @@ function getEncounterBg() {
 
 function drawEncounterBg() {
   const bg = getEncounterBg();
+  // Cinematic boss mode (Varimatras phase 3 combat): skip the
+  // half-opacity black wash so the dragon backdrop reads as a
+  // proper cinematic still. Also rock the whole sky when the
+  // dragon swings — same shake math the per-target enemy card
+  // shake uses, scaled up so the entire backdrop feels weighty.
+  // Fires only when enemyArrow is active AND has no source creature
+  // (= the dragon himself is the attacker; he has no creatures of
+  // his own anyway, so this matches every dragon swing).
+  const cinematicCombat = state === GameState.COMBAT
+    && enemy && enemy._enemyId === 'varimatras';
+  let shakeX = 0, shakeY = 0;
+  if (cinematicCombat && enemyArrow && enemyArrow.timer > 0 && !enemyArrow.sourceCreature) {
+    const si = Math.min(1, enemyArrow.timer / ENEMY_ARROW_DURATION) * 14;
+    shakeX = Math.round((Math.random() - 0.5) * si * 2);
+    shakeY = Math.round((Math.random() - 0.5) * si * 2);
+  }
   if (bg) {
-    ctx.drawImage(bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    if (shakeX || shakeY) {
+      // Draw slightly oversized + offset so the shake never reveals
+      // a black gutter at the screen edges.
+      const pad = 24;
+      ctx.drawImage(bg, shakeX - pad, shakeY - pad, SCREEN_WIDTH + pad * 2, SCREEN_HEIGHT + pad * 2);
+    } else {
+      ctx.drawImage(bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    }
+    if (!cinematicCombat) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    }
   } else {
     ctx.fillStyle = '#0e0e14';
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -6454,9 +6777,35 @@ function transitionToObsidianWastes(fromNodeId) {
     labyrinthGenerated = true;
     labyrinthEncounterChance = 0.15;
   }
+  // Cross-map re-entry after the player has already crossed the
+  // labyrinth once → re-roll the maze with a fresh seed before
+  // arriveAtNode fires. The old lab_ nodes get wiped first so
+  // generateLabyrinthNodes always starts from a clean slate. The
+  // first crossing skips this branch because labyrinthComplete is
+  // still false.
+  if (labyrinthComplete) {
+    labyrinthSeed = Math.floor(Math.random() * 0x7FFFFFFF);
+    if (currentMap.nodes) {
+      for (const id of Object.keys(currentMap.nodes)) {
+        if (id.startsWith('lab_')) delete currentMap.nodes[id];
+      }
+    }
+    // Belt-and-suspenders: prune stale lab_ connections off the
+    // entry/north nodes before generateLabyrinthNodes rewires
+    // them, in case mapCache restore brought in stale refs.
+    const entry = currentMap.getNode('wastes_entry');
+    if (entry && Array.isArray(entry.connections)) {
+      entry.connections = entry.connections.filter(c => !c.startsWith('lab_'));
+    }
+    const north = currentMap.getNode('wastes_north');
+    if (north && Array.isArray(north.connections)) {
+      north.connections = north.connections.filter(c => !c.startsWith('lab_'));
+    }
+  }
   // Always (re)build the lab nodes from the seed — covers fresh
-  // generation AND the post-load case where getOrCreateMap returned
-  // a freshly-created base map.
+  // generation, the post-load case where getOrCreateMap returned
+  // a freshly-created base map, AND the cross-map re-entry regen
+  // above.
   if (!currentMap.getNode('lab_1_0')) {
     generateLabyrinthNodes(currentMap, labyrinthSeed);
     if (labyrinthComplete) {
@@ -6484,6 +6833,64 @@ function transitionToObsidianWastes(fromNodeId) {
   visitedNodes = new Set();
   visitedNodes.add('wastes_entry');
   arriveAtNode('wastes_entry', fromNodeId);
+  autosaveNow();
+}
+
+// Post-Varimatras → Tharnag throne room. Fires when the dragon
+// encounter completes (see the completion hook in advanceEncounterPhase).
+// Restores the cached Tharnag interior, drops the party at the
+// throne, swaps to the Alter Hero theme, and starts the Part 1
+// ending dialog directly (bypassing the throne_audience node id
+// which has already been one-shotted on the player's first
+// homecoming). Sets dragonSlain so the next quarters_rest fades to
+// the main menu instead of doing a normal rebalance.
+function transitionToTharnagPart1Ending(fromNodeId) {
+  dragonSlain = true;
+  // Volcano arc is over — wipe the Volcano's Blessing persistent
+  // buff projection + zero the timer globals so the buff icon
+  // doesn't keep haunting the character sheet through the Tharnag
+  // ending. volcanoHeartSacrificed stays set as a story latch;
+  // only the active-buff bookkeeping is cleared.
+  if (player && Array.isArray(player.persistentBuffs)) {
+    player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== 'volcano_blessing');
+  }
+  if (player && Array.isArray(player.combatBuffs)) {
+    player.combatBuffs = player.combatBuffs.filter(b => b.id !== 'volcano_blessing');
+  }
+  volcanoBuffTurns = 0;
+  volcanoBuffType = '';
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+  visitedNodes = new Set();
+  visitedNodes.add('throne');
+  currentMap.currentNodeId = 'throne';
+  // Force the throne node back open so the player can land on it.
+  // The bedroom path (personal quarters) is already unlocked from
+  // the original Tharnag stay, so no extra hand-holding needed.
+  const throneNode = currentMap.getNode('throne');
+  if (throneNode) {
+    throneNode.isLocked = false;
+    throneNode.hiddenName = '';
+    throneNode.hiddenDescription = '';
+    // canRevisit stays false — once the ending encounter runs, the
+    // node clears and the player wanders to their quarters.
+  }
+  // Triumphant homecoming theme (one of the newly-added tracks).
+  crossfadeMusic('Music/music_alter_hero_01', 1500, 2500);
+  _lastMusicArea = null;
+  _lastMusicNodeId = null;
+  // Start the custom ending encounter — bypasses the node's default
+  // encounterId (throne_audience) by setting currentEncounter
+  // directly and routing through advanceEncounterPhase.
+  const factory = ENCOUNTER_REGISTRY['tharnag_part1_ending'];
+  if (factory) {
+    currentEncounter = factory();
+    encounterTextIndex = 0;
+    encounterTextScrollY = 0;
+    advanceEncounterPhase();
+  } else {
+    state = GameState.MAP;
+  }
   autosaveNow();
 }
 
@@ -6826,6 +7233,27 @@ function advanceEncounterPhase() {
     // re-crossings (the encounter is one-shot now).
     if (completedEncounterId === 'city_north_gate') {
       transitionToNorthQualibaf('city_north_gate');
+      return;
+    }
+    // Varimatras encounter (chapter 8 summit ridge): once the loot
+    // pick + victory dialog + egg dialog all complete, teleport the
+    // party back to the Tharnag throne room for the Part 1 ending
+    // dialog. Sets dragonSlain so the eventual quarters_rest fades
+    // to the main menu.
+    if (completedEncounterId === 'overseer_gnikan') {
+      transitionToTharnagPart1Ending('summit_ridge');
+      return;
+    }
+    // Tharnag Part 1 ending encounter wraps up — pop the full
+    // "End of Part 1" title card (matching the style of the
+    // "Part 1: The White Claw" card the game opens with), then
+    // drop the player onto the Tharnag interior map so they can
+    // walk to their quarters and trigger the fade-to-menu sleep.
+    if (completedEncounterId === 'tharnag_part1_ending') {
+      currentMap.completeCurrentNode();
+      showTitleCard('End of Part 1', 'Thanks for playing!', () => {
+        state = GameState.MAP;
+      });
       return;
     }
 
@@ -7266,9 +7694,40 @@ function advanceEncounterPhase() {
         _lastMusicArea = null;
         _lastMusicNodeId = null;
       }
-      startCombat();
+      // Overseer Gnikan phase-2 keeps the phase-1 board state (player
+      // creatures, hand, deck, status, shield, heroism, rage) instead
+      // of running the full startCombat reset. Hands the first turn to
+      // the dragon so Cold Breath fires before the party can react.
+      if (phase.enemyId === 'overseer_gnikan_phase_2') {
+        continueCombatPhase2();
+      } else {
+        startCombat();
+      }
       break;
     case EncounterPhase.LOOT: {
+      // Loot-pick mode: phase carries lootPickCards (ids) +
+      // lootPickCount (how many the player keeps). Skip the auto-
+      // roll path and pop the dedicated pick screen instead. The
+      // pick handler addLootedCard's each chosen card and advances
+      // the encounter when the picks run out.
+      if (phase.lootPickCount > 0 && Array.isArray(phase.lootPickCards) && phase.lootPickCards.length > 0) {
+        const offered = [];
+        for (const id of phase.lootPickCards) {
+          const creator = CARD_REGISTRY[id];
+          if (creator) offered.push({ id, card: creator() });
+        }
+        if (offered.length === 0) {
+          // No valid cards — bail out by advancing the encounter.
+          currentEncounter.advancePhase();
+          advanceEncounterPhase();
+          return;
+        }
+        _lootPickOffered = offered;
+        _lootPickRemaining = Math.min(phase.lootPickCount, offered.length);
+        _lootPickKept = [];
+        state = GameState.ENCOUNTER_LOOT_PICK;
+        break;
+      }
       // Calculate gold
       let lootGoldAmount = phase.lootGold || 0;
       if (phase.lootGoldDice) {
@@ -7650,7 +8109,7 @@ function setupEnemyForCombat(enemyId) {
     enemy.addPower(createKoboldArmySwarm());
     // Mirrors PY cards_basic.py:create_frost_drake_creature. NOT sentinel.
     enemy.addCreature(new Creature({
-      name: 'Frost Drake', attack: 3, maxHp: 8, iceAttack: 1, armor: 1,
+      name: 'Frost Drake', attack: 3, maxHp: 8, iceAttackAll: 1, armor: 1,
       description: 'Attack + Ice to all enemies.',
     }));
   };
@@ -8010,6 +8469,154 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.magma_drake = 2;
 
+  // Chapter 8 — Overseer Gnikan, kobold frost shaman boss on the
+  // summit ridge. Frost kit: 6 Gravechill Shard + 12 Gnikan's Staff
+  // + 6 Ice Nova + 6 Ice Bolt + 6 Ice Block + 6 Arcane Shield.
+  // Play order is enforced by `card.priority` (descending): Grave-
+  // chill Shard (30) → Ice Block (20) → Gnikan's Staff (10) → the
+  // rest at default priority 0 in draw order. The Shard / Ice Block
+  // / Ice Bolt riders stack Ice on Gnikan; Gnikan's Staff then
+  // explodes that Ice into a scaling Ice Elemental ally. Fight
+  // opens with three Ice Elementals already on the field — 1/1,
+  // 2/2, 3/3 — wired here via addCreature so they appear the
+  // instant combat starts.
+  //
+  // Ice Elemental power (per-creature `_iceAbsorb`): any Ice that
+  // would land on them is converted to a permanent +1 attack /
+  // +1 max HP buff instead. Lets Gnikan's own Ice Nova actively
+  // feed his allies. `_codexVariableStats` collapses the three
+  // elementals into a single codex entry rendered as X / X.
+  ENEMY_DECKS.overseer_gnikan = () => {
+    enemy = new Character('Overseer Gnikan');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 6; i++) {
+      const c = createGravechillShard();
+      c.priority = 30;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 12; i++) {
+      const c = createGnikansStaff();
+      c.priority = 10;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceNova());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createIceBolt());
+    for (let i = 0; i < 4; i++) {
+      const c = createIceBlock();
+      c.priority = 20;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createArcaneShield());
+    const stats = [
+      { name: 'Ice Elemental', attack: 1, maxHp: 1, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+      { name: 'Ice Elemental', attack: 2, maxHp: 2, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+      { name: 'Ice Elemental', attack: 3, maxHp: 3, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+    ];
+    for (const s of stats) {
+      const e = new Creature(s);
+      e._iceAbsorb = true;
+      e._codexVariableStats = true;
+      enemy.addCreature(e);
+    }
+  };
+  ENEMY_HAND_SIZE.overseer_gnikan = 4;
+
+  // Chapter 8 — Overseer Gnikan PHASE 2 (post-death rise). Same
+  // deck + same three elementals on the field, but the player
+  // suffers a Blizzard buff for the duration: every turn-start ticks
+  // 1 Ice on the player + every alive ally (mirrors the Wolf Pack
+  // blizzard rider). For now the deck composition is identical to
+  // phase 1 — the awakened "master" is purely a difficulty bump via
+  // the persistent Ice tick. Re-entry guard so the buff doesn't
+  // double-stack on retry.
+  ENEMY_DECKS.overseer_gnikan_phase_2 = () => {
+    enemy = new Character('Overseer Gnikan');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 6; i++) {
+      const c = createGravechillShard();
+      c.priority = 30;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 12; i++) {
+      const c = createGnikansStaff();
+      c.priority = 10;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceNova());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createIceBolt());
+    for (let i = 0; i < 4; i++) {
+      const c = createIceBlock();
+      c.priority = 20;
+      enemy.deck.addCard(c);
+    }
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createArcaneShield());
+    // Ice Shatter — phase-2 exclusive payoff. Default priority so it
+    // queues after Gravechill / Ice Block but before the staff burst:
+    // any Ice that landed on the party (via Ice Bolt / Nova / Blizzard
+    // ticks) gets converted to damage. Devastating once the player
+    // has been Ice-buffed for a few turns.
+    for (let i = 0; i < 4; i++) enemy.deck.addCard(createIceShatter());
+    // Cold Breath — Varimatras's signature card. Priority 50 means it
+    // jumps to the front of the queue every time it's in hand: the
+    // dragon stacks 3 Ice on the entire party then deals damage equal
+    // to each target's Ice (leaving the Ice on). 2 copies in the deck;
+    // continueCombatPhase2 force-injects an EXTRA copy into the
+    // opening hand so phase 2 starts with the scripted breath without
+    // permanently inflating the deck size.
+    for (let i = 0; i < 2; i++) enemy.deck.addCard(createColdBreath());
+    const stats = [
+      { name: 'Ice Elemental', attack: 1, maxHp: 1, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+      { name: 'Ice Elemental', attack: 2, maxHp: 2, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+      { name: 'Ice Elemental', attack: 3, maxHp: 3, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
+    ];
+    for (const s of stats) {
+      const e = new Creature(s);
+      e._iceAbsorb = true;
+      e._codexVariableStats = true;
+      enemy.addCreature(e);
+    }
+    // Blizzard passive — every start of enemy turn the whole board
+    // gains 1 Ice (player, allies, Gnikan himself, every Ice
+    // Elemental). The elementals' `_iceAbsorb` flips that Ice into
+    // permanent +1/+1 buffs, so the storm escalates them each
+    // round; Gnikan's Ice fuels the next staff burst. Mirrors the
+    // lava_floor pattern used by the Magma Drake / Mephit fights.
+    enemy.addPower(createBlizzard());
+  };
+  ENEMY_HAND_SIZE.overseer_gnikan_phase_2 = 3;
+
+  // Chapter 8 — Varimatras (PHASE 3, ancient frost dragon). Steps
+  // out of the storm after Gnikan dies. Full melee/breath kit:
+  // Cold Breath for AoE ice + payoff, Bite for heavy single-target,
+  // Claw for split hits, Tail Swipe for chip AoE, Wing Buffet for
+  // board-wide Ice stacking that feeds future breath / shatter
+  // plays. Powers: Blizzard ticks Ice on everyone (the dragon's
+  // own Ice flips to +1 Shield via Ancient White instead of
+  // stacking); Dire Fury + Overwhelm + Armor 1 keep his attack
+  // pressure brutal; Ancient White turns every incoming Ice (own
+  // Blizzard, player Ice spells, etc.) into a Shield gain.
+  ENEMY_DECKS.varimatras = () => {
+    enemy = new Character('Varimatras');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 7; i++) enemy.deck.addCard(createColdBreath());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasBite());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasClaw());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasTail());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasWing());
+    // Varimatras Scale — dragon-only DEFENSE card. Auto-fires
+    // reactively on player swings via enemyAutoPlayDefenses, so the
+    // 10 copies act as the dragon's "armor stack" — each one
+    // absorbs the next 5 damage of incoming attacks before being
+    // recharged.
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasScale());
+    enemy.addPower(createBlizzard());
+    enemy.addPower(createDireFury());
+    enemy.addPower(createOverwhelm());
+    enemy.addPower(createArmorPower(1));
+    enemy.addPower(createAncientWhite());
+  };
+  ENEMY_HAND_SIZE.varimatras = 2;
+
   if (ENEMY_DECKS[enemyId]) {
     ENEMY_DECKS[enemyId]();
   } else {
@@ -8235,6 +8842,10 @@ function drawMapDebugOverlay() {
     'temple_district', 'obsidian_plaza', 'obsidian_market',
     'obsidian_streets', 'obsidian_cathedral', 'upper_bridge',
     'tunnel_to_bridge',
+    // Chapter 8 stairs share the undergroundEncounterChance counter
+    // (kobold_slyblade pool) so the debug HUD shows the climb's
+    // running chance.
+    'volcano_stairs_1', 'volcano_stairs_2', 'volcano_stairs_3',
   ]);
   if (currentMap && UNDERGROUND_DEBUG_MAPS.has(currentMap.id)) {
     const node = currentMap.getCurrentNode && currentMap.getCurrentNode();
@@ -8367,17 +8978,23 @@ function drawEncounterText() {
   const boxX = (SCREEN_WIDTH - boxW) / 2;
   const boxY = (SCREEN_HEIGHT - boxH) / 2 + 30; // shifted down so title sits higher
 
-  // Encounter title — higher up
-  ctx.fillStyle = Colors.GOLD;
-  ctx.font = 'bold 40px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(currentEncounter.name, Math.round(SCREEN_WIDTH / 2), boxY - 30);
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
+  // Encounter title — higher up. Phase-level override wins over the
+  // encounter name so a single encounter can step through multiple
+  // narrative beats (Overseer Gnikan → Varimatras → Aftermath).
+  // Empty string suppresses the title entirely.
+  const phaseTitle = (phase.phaseTitle != null) ? phase.phaseTitle : currentEncounter.name;
+  if (phaseTitle) {
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 40px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(phaseTitle, Math.round(SCREEN_WIDTH / 2), boxY - 30);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  }
 
   // Text box background
   ctx.fillStyle = 'rgba(0,0,0,0.82)';
@@ -8618,6 +9235,57 @@ function handleEncounterChoiceClick(x, y) {
         // Personal Quarters bed — same flow as the inn rest: drop into
         // inventory rest mode for a free rebalance and full heal. Mirrors
         // PY game.py:5889-5893 + 4818-4837.
+        // Part 1 ending: if the dragon has been slain, sleeping in
+        // the bed instead fades out to the main menu (the volcano
+        // arc is the credits beat). Skip the rebalance / inventory
+        // pop entirely so the closing fade plays clean.
+        if (dragonSlain) {
+          addLog('You sink into the furs. Sleep takes you instantly.', Colors.WHITE);
+          playSound('click');
+          // Swap music to the homecoming theme that plays in the
+          // throne room right after Varimatras — same alter-hero
+          // cinematic that scored the king dialog. The credits
+          // scroll plays over it, leaning into the "fade-to-credits"
+          // beat of the Part 1 finale.
+          try { crossfadeMusic('Music/music_alter_hero_01', 1800, 2500); _lastMusicArea = null; _lastMusicNodeId = null; } catch (_) {}
+          // Snapshot the run into a dedicated "End of Part 1" slot
+          // — won't get overwritten by autosaves, shows in the Load
+          // Game list with that label, and Part 2 (when it ships)
+          // can look for this slot first to carry the player state
+          // forward (deck, level, dragonSlain, dragonEggDamage, etc.).
+          try {
+            saveToSlot({
+              selectedClass, gold, player, currentMap, visitedNodes, backpack,
+              kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
+              calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
+              soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath,
+              siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
+              dragonSlain, dragonEggDamage, heroesOfQualibaf,
+              valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
+              completedEncounters, labyrinthGenerated, labyrinthSeed,
+              labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
+              volcanoEncounterChance, undergroundEncounterChance, forgeUsed, forgeRested,
+              volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns,
+              cathedralPrayed, cathedralRested, ancestorSpiritsDefeated,
+              ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
+              mapTableRested, caveEntranceDoubledBack,
+              mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize,
+            }, 'part1_complete', 'End of Part 1');
+          } catch (err) {
+            console.warn('Part 1 save failed:', err);
+          }
+          // (No fadeOutMusic — the alter-hero crossfade above keeps
+          // playing through the screen fade and under the scrolling
+          // credits.)
+          startFade(() => {
+            currentEncounter = null;
+            // Kick off the slow-scrolling end credits. After the
+            // scroll finishes (or the player clicks to skip), we
+            // land on the main menu.
+            startEndCredits();
+          }, null, 3);
+          return;
+        }
         if (player && player.deck) {
           player.deck.rebalance(getPlayerHandSize(), MAX_HAND_SIZE);
         }
@@ -9151,6 +9819,14 @@ function handleEncounterChoiceClick(x, y) {
       // cathedral, themed to the ancestor spirits. One-time per
       // save via ancestorRested.
       if (r.choice.effectType === 'ancestor_rest') resolveAncestorRest(r.choice);
+      // Stair Top rest — Chapter 8 summit arrival. Same heal-up-to-8
+      // beat. canRevisit=false on summit_entry keeps the encounter
+      // (and both choices) one-shot, so no extra latch flag needed.
+      if (r.choice.effectType === 'stair_top_rest') resolveStairTopRest(r.choice);
+      // Catch-breath rest — sandwiched between the Gnikan-dies dialog
+      // and the party-rally dialog in the Varimatras phase 2→3
+      // transition. Same heal-up-to-8 mechanic as the stair top.
+      if (r.choice.effectType === 'catch_breath_rest') resolveCatchBreathRest(r.choice);
       // Dwarven Workbench rest — quiet workshop heal up to 8. PY
       // gates this with workbench_rested (one-time). Uses its own
       // resolver so the toast/result-text reads "workshop" rather
@@ -9219,7 +9895,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
     addLog('  [Auto-saved]', Colors.GRAY);
   } catch (err) {
     console.warn('Autosave failed:', err);
@@ -9692,6 +10368,51 @@ function resolveCathedralRest(choice) {
   }
 }
 
+// Stair Top — chapter 8 summit arrival "take a break" choice. Same
+// heal-up-to-8 beat as the Cathedral / Ancestor rests. canRevisit=
+// false on summit_entry keeps the encounter one-shot so no extra
+// latch flag is needed here.
+function resolveStairTopRest(choice) {
+  if (!player || !player.deck) return;
+  const amount = 8;
+  const healed = [];
+  for (let i = 0; i < amount && player.deck.discardPile.length > 0; i++) {
+    const card = player.deck.discardPile.pop();
+    healed.push(card.name);
+  }
+  if (healed.length > 0) {
+    choice.resultText = `You sit on the warm stone and catch your breath. Healed ${healed.length} HP.`;
+    spawnHealOnTarget(player, healed.length);
+    showStyledToast(`+${healed.length} Healed`, 'heal', 2500);
+    addLog(`Rested at the Stair Top. Healed ${healed.length} HP!`, Colors.GREEN);
+  } else {
+    choice.resultText = 'You sit on the warm stone and catch your breath. Already at full health.';
+  }
+}
+
+// Varimatras phase-2→3 transition — single-button "Catch your
+// breath" beat sandwiched between the dying-Gnikan dialog and the
+// party-rally dialog. Same heal-up-to-8 mechanic as the other
+// rests (pop cards back from discard); no one-time latch since
+// the encounter itself is one-shot.
+function resolveCatchBreathRest(choice) {
+  if (!player || !player.deck) return;
+  const amount = 8;
+  const healed = [];
+  for (let i = 0; i < amount && player.deck.discardPile.length > 0; i++) {
+    const card = player.deck.discardPile.pop();
+    healed.push(card.name);
+  }
+  if (healed.length > 0) {
+    choice.resultText = `You force your lungs open and steady your grip. Healed ${healed.length} HP.`;
+    spawnHealOnTarget(player, healed.length);
+    showStyledToast(`+${healed.length} Healed`, 'heal', 2500);
+    addLog(`You catch your breath. Healed ${healed.length} HP!`, Colors.GREEN);
+  } else {
+    choice.resultText = 'You force your lungs open and steady your grip. Already at full health.';
+  }
+}
+
 // Tomb of the Ancestor — sarcophagus rest. Same heal-up-to-8 beat
 // themed to the ancestor spirits. One-time per save via
 // ancestorRested. Mirrors PY's tomb_sarcophagus_rest encounter.
@@ -10041,7 +10762,13 @@ function resolveInnRest(choice) {
   if (!player) return;
   const cost = choice.effectValue || 5;
   let costLine;
-  if (gold >= cost) {
+  if (heroesOfQualibaf) {
+    // Heroes of Qualibaf warrant — the Guildmaster comped every inn
+    // in the city after Varimatras fell. The innkeeper waves the
+    // bag of gold away and ushers you upstairs.
+    addLog('Heroes of Qualibaf — the innkeeper waves your gold away.', Colors.GOLD);
+    costLine = 'The innkeeper bows you in — "On the city, hero."';
+  } else if (gold >= cost) {
     gold -= cost;
     addLog(`Donated ${cost} gold at the Inn`, Colors.GOLD);
     costLine = `You pay ${cost} gold for a warm bed.`;
@@ -10066,17 +10793,26 @@ function drawEncounterChoice() {
   iconHitAreas.length = 0;
   cardBadgeHitAreas.length = 0;
 
-  // Title — same style as encounter text (40px bold Georgia with shadow)
-  ctx.fillStyle = Colors.GOLD;
-  ctx.font = 'bold 40px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
-  ctx.fillText(currentEncounter.name, SCREEN_WIDTH / 2, 60);
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
+  // Title — same style as encounter text (40px bold Georgia with shadow).
+  // Phase-level override (phaseTitle) wins over the encounter name so a
+  // single encounter can step through different banner labels — empty
+  // string suppresses the title entirely.
+  const _phaseForTitle = currentEncounter && currentEncounter.currentPhase;
+  const choiceTitle = (_phaseForTitle && _phaseForTitle.phaseTitle != null)
+    ? _phaseForTitle.phaseTitle
+    : currentEncounter.name;
+  if (choiceTitle) {
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 40px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(choiceTitle, SCREEN_WIDTH / 2, 60);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  }
 
   if (encounterChoiceResult) {
     const lootItems = encounterChoiceResult._lootItems;
@@ -10224,6 +10960,140 @@ function drawEncounterChoice() {
 // ENCOUNTER LOOT
 // ============================================================
 
+// Pick-N-of-M loot screen (Varimatras drops 5, player keeps 2).
+// Cards laid out in a centered row; click any unpicked card to
+// claim it (addLootedCard → masterDeck + hand). Already-kept cards
+// dim out with a "KEPT" badge. When _lootPickRemaining hits 0 we
+// advance the encounter to the next phase.
+function getLootPickRects() {
+  const offered = _lootPickOffered || [];
+  if (offered.length === 0) return [];
+  const cardW = 200;
+  const cardH = 280;
+  const gap = 18;
+  const totalW = offered.length * cardW + (offered.length - 1) * gap;
+  const startX = Math.floor((SCREEN_WIDTH - totalW) / 2);
+  const y = Math.floor((SCREEN_HEIGHT - cardH) / 2);
+  return offered.map((_, i) => ({
+    x: startX + i * (cardW + gap), y, w: cardW, h: cardH,
+  }));
+}
+
+function drawEncounterLootPick() {
+  drawEncounterBg();
+  const phase = currentEncounter && currentEncounter.currentPhase;
+  const offered = _lootPickOffered || [];
+
+  // Shift-hold pinning — mirrors the combat / inventory pattern so
+  // the player can mouse over a loot card's keyword tooltips +
+  // side-creature tile (e.g. the Egg ally beside the egg loot card)
+  // without losing the cursor preview. Hover detection below
+  // suppresses while shift is held; the pinned card stays put.
+  if (isShiftFrozen()) {
+    hoveredCardPreview = shiftFreezeCard;
+    hoveredPowerPreview = shiftFreezePower;
+    hoveredCreaturePreview = shiftFreezeCreature;
+  } else {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
+
+  // Title + remaining-picks subtitle.
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 40px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  const title = (phase && phase.lootTitle) || "Dragon's Hoard";
+  ctx.fillText(title, SCREEN_WIDTH / 2, 86);
+  ctx.fillStyle = Colors.WHITE;
+  ctx.font = '20px Georgia, serif';
+  const remaining = Math.max(0, _lootPickRemaining);
+  const word = remaining === 1 ? 'card' : 'cards';
+  ctx.fillText(`Choose ${remaining} more ${word}.`, SCREEN_WIDTH / 2, 122);
+  ctx.restore();
+  ctx.textAlign = 'left';
+
+  // Cards.
+  const rects = getLootPickRects();
+  for (let i = 0; i < offered.length; i++) {
+    const { id, card } = offered[i];
+    const r = rects[i];
+    const kept = _lootPickKept.includes(id);
+    const hovered = !kept && !isShiftFrozen() && hitTest(mouseX, mouseY, r);
+    if (hovered) {
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.25)';
+      ctx.fillRect(r.x - 6, r.y - 6, r.w + 12, r.h + 12);
+      // Stamp the full preview channel so the Shift-pin captures
+      // this card on the next keydown.
+      hoveredCardPreview = card;
+    }
+    drawCard(card, r.x, r.y, r.w, r.h, false, false, 'full');
+    if (kept) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.save();
+      ctx.fillStyle = Colors.GOLD;
+      ctx.font = 'bold 22px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 6;
+      ctx.fillText('KEPT', r.x + r.w / 2, r.y + r.h / 2);
+      ctx.restore();
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // Cursor-follow hover preview (shift-pinned full card + side-creature
+  // mini cards + the "I" badge tooltip on side-creature info hovers).
+  // Without this call the badge hover sets _summonInfoHover but
+  // nothing reads it, so the egg/wyrmling info tooltip never shows.
+  drawHoverPreview();
+}
+
+function handleEncounterLootPickClick(x, y) {
+  if (_lootPickRemaining <= 0) {
+    // Defensive: shouldn't happen since we auto-advance, but if
+    // we land here just push the phase forward.
+    currentEncounter.advancePhase();
+    advanceEncounterPhase();
+    return;
+  }
+  const offered = _lootPickOffered || [];
+  const rects = getLootPickRects();
+  for (let i = 0; i < offered.length; i++) {
+    const r = rects[i];
+    if (!hitTest(x, y, r)) continue;
+    const { id, card } = offered[i];
+    if (_lootPickKept.includes(id)) return; // already taken
+    _lootPickKept.push(id);
+    _lootPickRemaining--;
+    addLootedCard(card);
+    addLog(`Picked ${card.name}!`, Colors.GOLD, card);
+    playSound('gold');
+    if (_lootPickRemaining <= 0) {
+      // Hand off — clear pick state and let the encounter advance.
+      _lootPickOffered = [];
+      _lootPickKept = [];
+      // Varimatras encounter: once the dragon's hoard is split,
+      // swap the encounter backdrop to the volcano-awakening shot
+      // for the victory dialog + mid-dialog egg loot. Persists
+      // until the encounter completes (advanceEncounterPhase
+      // clears _encounterBgOverride on the final completion path).
+      if (currentEncounter && currentEncounter.id === 'overseer_gnikan') {
+        _encounterBgOverride = 'bg_volcano_ridge_awakening';
+      }
+      currentEncounter.advancePhase();
+      advanceEncounterPhase();
+    }
+    return;
+  }
+}
+
 function handleEncounterLootClick() {
   if (pendingLevelUp) {
     const tier = pendingLevelUpTier || 1;
@@ -10284,6 +11154,20 @@ function handleEncounterLootClick() {
 
 function drawEncounterLoot() {
   drawEncounterBg();
+
+  // Shift-hold preview pinning — same flow combat / inventory /
+  // loot-pick use, so the user can mouse over loot-card keyword
+  // icons / side-creature tiles (Egg, Wyrmling, summon allies)
+  // without losing the cursor preview.
+  if (isShiftFrozen()) {
+    hoveredCardPreview = shiftFreezeCard;
+    hoveredPowerPreview = shiftFreezePower;
+    hoveredCreaturePreview = shiftFreezeCreature;
+  } else {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
 
   ctx.fillStyle = Colors.GOLD;
   ctx.font = 'bold 40px Georgia, serif';
@@ -10346,6 +11230,11 @@ function drawEncounterLoot() {
     for (let i = 0; i < lootedCards.length; i++) {
       const card = lootedCards[i];
       drawCard(card, cx, y, cardW, cardH, false, false, 'full');
+      // Loot cards already render at full size — no point popping
+      // another cursor-follow preview of the same card. The only
+      // hover we still need is the side-creature "I" badge tooltip,
+      // which drawCreatureCard stamps directly into _summonInfoHover
+      // and drawHoverPreview pops at the end of the frame.
       cx += cardW;
       const sideCreatures = getSideCreaturePreviews(card);
       if (card.previewCard) {
@@ -10380,6 +11269,10 @@ function drawEncounterLoot() {
   ctx.font = '16px sans-serif';
   ctx.fillText('Click to continue', SCREEN_WIDTH / 2, SCREEN_HEIGHT - 100);
   ctx.textAlign = 'left';
+  // Cursor-follow hover preview — same call combat/inventory use, so
+  // the side-creature "I" badge on the loot's egg/wyrmling preview
+  // can pop its description tooltip while Shift pins the main card.
+  drawHoverPreview();
 }
 
 // ============================================================
@@ -10577,6 +11470,30 @@ function startCombat() {
   if (enemy && enemy._enemyId === 'ancestor_spirits') {
     playAncestorsBurst();
   }
+  // Overseer Gnikan — three staggered ice-blast cues for the three
+  // Ice Elementals already on the field (1/1, 2/2, 3/3). Fires on
+  // top of the boss hiss so the summit fight opens icy. Same burst
+  // re-fires when phase 2 starts (the awakened master re-summons
+  // the trio + the Blizzard tick).
+  if (enemy && (enemy.name || '').toLowerCase() === 'overseer gnikan') {
+    playGnikanIceElementalBurst();
+  }
+  // Phase 2 — swap to the "one last battle" boss theme so the
+  // ridge fight escalates audibly when Gnikan's master takes over.
+  // Phase 1 keeps the summit ambience (music_final_streak_01).
+  if (enemy && enemy._enemyId === 'overseer_gnikan_phase_2') {
+    crossfadeMusic('Music/music_one_last_battle_01', 1500, 2500);
+    _lastMusicArea = null;
+    _lastMusicNodeId = null;
+  }
+  // Phase 3 — Varimatras takes over. Trailer-cinematic theme that
+  // escalates from the phase-2 boss bed into a properly epic
+  // dragon-fight track.
+  if (enemy && enemy._enemyId === 'varimatras') {
+    crossfadeMusic('Music/music_the_trailer_01', 1500, 2500);
+    _lastMusicArea = null;
+    _lastMusicNodeId = null;
+  }
   // Any fight with the Lava Floor passive (Magma Drake, Magma Mephit
   // kill-count fight) gets a looping wet-magma bubble ambient layer
   // for the duration of combat. Stopped in combatVictory + on defeat.
@@ -10584,9 +11501,17 @@ function startCombat() {
   // and decodes on first call, which can take a beat. The one-shot
   // ensures SOMETHING wet-and-magma plays at fight start while the
   // loop's buffer is still loading.
-  if (enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p.id === 'lava_floor')) {
+  const hasLavaFloor = enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p.id === 'lava_floor');
+  const hasBlizzard = enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p.id === 'blizzard');
+  if (hasLavaFloor) {
     playSound('lava_bubble', 0.85);
     playAmbienceLayer('Misc/lava_bubble_01', 0.6);
+  } else if (hasBlizzard) {
+    // Any fight with the Blizzard passive (Gnikan phase 2, Varimatras
+    // phase 3) gets the howling mountain-wind loop layered over the
+    // boss music — same bed that plays through the chapter-3 Wolf
+    // Pack snowstorm. Stopped in combatVictory + on defeat.
+    playAmbienceLayer('Music/ambience_mountain_wind_01', 0.5);
   } else {
     // Defensive cleanup: if the PREVIOUS fight ended via the I Win
     // debug button before the lava_bubble loop's async buffer load
@@ -10647,6 +11572,80 @@ function startCombat() {
     isPlayerTurn = false;
     startEnemyTurn();
   }
+}
+
+// Phase-2 continuation for the Overseer Gnikan boss fight. Called in
+// place of startCombat when the encounter advances to the
+// overseer_gnikan_phase_2 COMBAT phase.
+//
+// Unlike startCombat this DOES NOT reset the player's hand, deck,
+// creatures, shield, heroism, rage, status effects, or combat buffs —
+// the whole point of the phase transition is that the party walks
+// into phase 2 in the same beat-up state they finished phase 1 with.
+// Only enemy-side state is rebuilt (Gnikan is a fresh Character with
+// the phase-2 deck + Blizzard power + reformed Ice Elementals from
+// setupEnemyForCombat above).
+//
+// The dragon takes the first turn — Cold Breath is forced into the
+// opening enemy hand and its priority 50 puts it at the front of the
+// queue, so the party gets blasted before they can react.
+function continueCombatPhase2() {
+  // Enemy-side combat bookkeeping reset.
+  enemyActions = [];
+  enemyArrow = null;
+  enemyArrowsBatch = null;
+  enemyActionIndex = 0;
+  enemyActionTimer = 0;
+  enemyTurnNumber = 0;
+  enemyDamageAccumulator = 0;
+  awaitingEnemyDamage = false;
+
+  // Build the new enemy's draw pile + opening hand. masterDeck is
+  // already populated by ENEMY_DECKS.overseer_gnikan_phase_2.
+  const enemyStartHand = enemy._handSize || 4;
+  enemy.deck.startCombat(enemyStartHand, 10);
+
+  // Force-inject the scripted opening Cold Breath. The deck itself
+  // only carries 2 natural copies (for repeat plays later in the
+  // fight); the scripted turn-1 copy is added here as a fresh card
+  // on top of the dealt hand so the dragon ALWAYS opens with it.
+  // Pushed onto the end of the hand — _forcedOpeningCardId in
+  // startEnemyTurn matches by card id, not by hand position.
+  enemy.deck.hand.push(createColdBreath());
+
+  addLog('--- Phase 2: The Storm Awakens ---', Colors.ICE_BLUE);
+  addLog(`${enemy.name} draws ${enemy.deck.hand.length} cards`, Colors.GRAY);
+
+  // Boss-music swap to the "one last battle" theme.
+  crossfadeMusic('Music/music_one_last_battle_01', 1500, 2500);
+  _lastMusicArea = null;
+  _lastMusicNodeId = null;
+  // Howling mountain-wind ambient layer for the Blizzard passive —
+  // same wind bed that plays through the chapter-3 Wolf Pack
+  // snowstorm. Layered on top of the boss music for the rest of
+  // the fight. continueCombatPhase2 skips startCombat so we wire
+  // the ambient here explicitly; combatVictory / defeat clean it
+  // up via stopAmbienceLayer like the lava_floor bed.
+  playAmbienceLayer('Music/ambience_mountain_wind_01', 0.5);
+
+  // Splash + per-boss SFX (same hooks startCombat uses for Gnikan).
+  combatIntroTimer = 3000;
+  combatIntroMessage = 'The Storm Awakens!';
+  const startKey = getFightStartSfxKey(enemy && enemy.name);
+  if (startKey) playSound(startKey, 0.7);
+  if (enemy && (enemy.name || '').toLowerCase() === 'overseer gnikan') {
+    playGnikanIceElementalBurst();
+  }
+
+  // Hand the turn to the dragon. startEnemyTurn checks
+  // _forcedOpeningCardId and short-circuits to a one-card queue
+  // (Cold Breath only — no creature attacks, no other hand plays)
+  // so the party gets blasted by the breath and nothing else
+  // before they can react.
+  enemy._forcedOpeningCardId = 'cold_breath';
+  state = GameState.COMBAT;
+  isPlayerTurn = false;
+  startEnemyTurn();
 }
 
 function upgradeCompanions() {
@@ -11051,7 +12050,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -11087,6 +12086,21 @@ function tokenizeKeywordText(text, opts = {}) {
         // Distinct purple palette from the red ON ATTACK pill.
         badge = { type: 'badge', label: 'WHEN HIT',
           bg: 'rgba(80,40,80,0.92)', border: '#d088c0', fg: '#f8d8ec' };
+      } else if (phrase === 'When Attacked') {
+        // Same shape as WHEN HIT (fires when the holder is the
+        // target of an attack), but kept as a separate label /
+        // palette for cards that pay back the attacker rather than
+        // just reacting (White Dragon Egg: attacker gains 1 Ice).
+        badge = { type: 'badge', label: 'WHEN ATTACKED',
+          bg: 'rgba(30,70,130,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Called') {
+        // Fires once when the ally enters the field — used by
+        // White Dragon Wyrmling for its on-play ice + ice-to-shield
+        // burst. Friendly ally-blue palette so the pill reads as
+        // a positive on-enter trigger, distinct from the cool
+        // WHEN ATTACKED reactive blue.
+        badge = { type: 'badge', label: 'CALLED',
+          bg: 'rgba(40,90,130,0.92)', border: '#7fc8e8', fg: '#d6ecff' };
       } else if (phrase === 'On Death') {
         // Fires when the creature dies (Goblin Sapper explosion, etc.).
         // Purple palette — death-time, distinct from attack/tick/cost.
@@ -11105,6 +12119,14 @@ function tokenizeKeywordText(text, opts = {}) {
         // gated trigger and pops against the cool On Recharge blue.
         badge = { type: 'badge', label: 'BURNING',
           bg: 'rgba(120,40,20,0.92)', border: '#ff9050', fg: '#ffdcb8' };
+      } else if (phrase === 'Iced') {
+        // Conditional rider on Dragon Tooth Dagger / Dragon Eye Mace
+        // / future ice-payoff cards — fires when the target carries
+        // any ICE stacks at damage time. Cool blue palette mirrors
+        // the Ice status icon so the trigger reads as a frost-gated
+        // bonus right next to the damage line.
+        badge = { type: 'badge', label: 'ICED',
+          bg: 'rgba(30,70,130,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
       } else if (phrase === 'When Recharged') {
         // Dwarven Workbench enchant trigger ("When Recharged: Gain
         // Shield."). Same blue palette as the generic Recharge
@@ -11679,16 +12701,18 @@ function draw9SliceFrame(img, dx, dy, dw, dh, corner) {
   }
 }
 
-// Which frame asset to use for a given rarity string. Four tiers:
+// Which frame asset to use for a given rarity string. Five tiers:
 //   common (or unrated) → frame_common
 //   uncommon            → frame_uncommon
 //   rare                → frame_rare
-//   epic / legendary    → frame_epic
+//   epic                → frame_epic
+//   legendary           → frame_legendary (White Dragon Egg + Wyrmling)
 function getFrameKeyForRarity(rarity) {
   const r = (rarity || '').toLowerCase();
-  if (r === 'epic' || r === 'legendary') return 'frame_epic';
-  if (r === 'rare')     return 'frame_rare';
-  if (r === 'uncommon') return 'frame_uncommon';
+  if (r === 'legendary') return 'frame_legendary';
+  if (r === 'epic')      return 'frame_epic';
+  if (r === 'rare')      return 'frame_rare';
+  if (r === 'uncommon')  return 'frame_uncommon';
   return 'frame_common';
 }
 function getCardFrameKey(card) {
@@ -11704,6 +12728,10 @@ const FRAME_BASE_COLORS = {
   frame_uncommon: { r: 255, g: 215, b:   0 },
   frame_rare:     { r:  80, g: 130, b: 220 }, // blue baked into FrameRare.png
   frame_epic:     { r: 200, g: 110, b: 220 }, // purple baked into FrameEpic.png
+  // Legendary: warm sunburst-gold baked into FrameLegendary.png.
+  // Slightly more orange than common-gold so the rarity reads as
+  // "rare gold" rather than just "default frame".
+  frame_legendary: { r: 255, g: 180, b:  60 },
 };
 
 // Approximate the visible color of the tinted frame for UI accents (name
@@ -12184,14 +13212,21 @@ function drawCombat() {
   cardBadgeHitAreas.length = 0;
 
   // --- Layout panel backgrounds (subtle dividers to delimit sections) ---
-  // Right column background (log + buttons)
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(COMBAT_RIGHT_X, 0, COMBAT_RIGHT_W, SCREEN_HEIGHT);
-  // Vertical divider line between left and right
-  ctx.fillStyle = 'rgba(255,215,0,0.4)';
-  ctx.fillRect(COMBAT_RIGHT_X - 1, 0, 2, SCREEN_HEIGHT);
-  // Horizontal divider between log and buttons
-  ctx.fillRect(COMBAT_RIGHT_X, COMBAT_RIGHT_BTN_Y - 1, COMBAT_RIGHT_W, 2);
+  // Cinematic boss mode (Varimatras phase 3): skip the right column
+  // wash + dividers so the dragon backdrop reads through the log /
+  // button area uninterrupted. Log text stays the same color; only
+  // the dark backing + gold rules drop away.
+  const cinematicCombat = enemy && enemy._enemyId === 'varimatras';
+  if (!cinematicCombat) {
+    // Right column background (log + buttons)
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(COMBAT_RIGHT_X, 0, COMBAT_RIGHT_W, SCREEN_HEIGHT);
+    // Vertical divider line between left and right
+    ctx.fillStyle = 'rgba(255,215,0,0.4)';
+    ctx.fillRect(COMBAT_RIGHT_X - 1, 0, 2, SCREEN_HEIGHT);
+    // Horizontal divider between log and buttons
+    ctx.fillRect(COMBAT_RIGHT_X, COMBAT_RIGHT_BTN_Y - 1, COMBAT_RIGHT_W, 2);
+  }
 
   // --- Enemy area (top) ---
   // Shake only the attacking source (creature or enemy card), not the whole field
@@ -12207,6 +13242,14 @@ function drawCombat() {
   }
   drawCharacterPanel(enemy, 'enemy');
   if (shaking && !shakeSrc) ctx.restore();
+  // Cinematic boss debug overlay (Varimatras phase 3): the dragon
+  // panel is hidden in cinematic mode, so debug-mode players get a
+  // small text block in the top-left listing hand / deck / discard
+  // counts (with the same hover-to-see-hand tooltip the normal
+  // panel registers) so the AI's state stays inspectable.
+  if (debugMode && enemy && enemy._enemyId === 'varimatras') {
+    drawCinematicDebugInfo();
+  }
 
   // Enemy creatures — shake only the one that's attacking
   const creatureRects = getEnemyCreatureRects();
@@ -12598,7 +13641,19 @@ function drawCombat() {
 // While Shift-freeze is active, the preview pins to wherever the cursor was when
 // Shift was first pressed, so the player can mouse over its keyword icons.
 function drawHoverPreview() {
-  if (!hoveredCardPreview && !hoveredPowerPreview && !hoveredCreaturePreview) return;
+  // _summonInfoHover may have been stamped by a side-creature "i"
+  // badge hover even when nothing else is hovered (e.g. the egg
+  // ally tile inline in the loot row). Pop that tooltip regardless
+  // of whether a full hover preview is in flight; without this the
+  // early-return below silently discards the tooltip request and
+  // the player never sees the egg's ability text.
+  if (!hoveredCardPreview && !hoveredPowerPreview && !hoveredCreaturePreview) {
+    if (_summonInfoHover) {
+      drawSummonInfoTooltip(_summonInfoHover);
+      _summonInfoHover = null;
+    }
+    return;
+  }
 
   // Preview card size (~py 312x438, scaled smaller for our screen)
   const previewW = 240;
@@ -12727,7 +13782,7 @@ function drawSummonInfoTooltip({ creature, anchorX, anchorY }) {
 // semi-transparent box at the BOTTOM (like a weapon card's description box) that
 // contains the attack number on the left, the HP bar on the right, and the
 // description text above (when present).
-function drawCreaturePreviewCard(creature, x, y, w, h) {
+function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   // Codex creatures have owner=null but carry a `_codexSide` hint that tells
   // us whether they're a player summon or an enemy creature. Live combat
   // creatures use creature.owner === player. Both flow into the same blue/
@@ -12776,6 +13831,14 @@ function drawCreaturePreviewCard(creature, x, y, w, h) {
   } else if (creature.unpreventable) {
     descLines = countWrappedLines('Deals Unpreventable Damage', descBoxW - 12, dFont);
   }
+  // Add a 1-line buffer for descriptions that include inline pill
+  // badges (WHEN ATTACKED, CALLED, etc.) — countWrappedLines can
+  // undercount when a badge unit lands at a line break, leaving the
+  // tail of the description clipped by the box. The buffer guarantees
+  // the actual rendered text always fits.
+  const hasInlineBadge = creature.description
+    && /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called)\b/.test(creature.description);
+  if (hasInlineBadge) descLines += 1;
   const descContentH = descLines * lineH;
   const baseBoxH = Math.floor(h / 5);
   // Padding budget: small buffer above description + ~4 px gap between
@@ -12860,17 +13923,24 @@ function drawCreaturePreviewCard(creature, x, y, w, h) {
   ctx.font = `bold ${Math.floor(hpBarH * 0.7)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`${creature.currentHp}/${creature.maxHp}`, hpBarX + hpBarW / 2, hpBarY + hpBarH / 2 + 1);
+  // Codex-only: creatures with `_codexVariableStats` (size variants
+  // collapsed into one entry, e.g. Ice Elemental 1/1/2/2/3/3)
+  // render their attack and HP as 'X' / 'X / X'. Combat / preview
+  // contexts still show the real numbers from the live instance.
+  const variableStats = isCodex && creature._codexVariableStats;
+  const hpStr = variableStats ? 'X / X' : `${creature.currentHp}/${creature.maxHp}`;
+  const atkStr = variableStats ? 'X' : `${creature.attack}`;
+  ctx.fillText(hpStr, hpBarX + hpBarW / 2, hpBarY + hpBarH / 2 + 1);
 
   // Attack number (left half of stats row) — net 8 px toward center.
   ctx.font = `bold ${Math.floor(statsRowH * 0.85)}px sans-serif`;
   ctx.fillStyle = Colors.WHITE;
   ctx.textAlign = 'left';
-  ctx.fillText(`${creature.attack}`, boxX + 8 + 8, hpBarY + hpBarH / 2 + 1);
+  ctx.fillText(atkStr, boxX + 8 + 8, hpBarY + hpBarH / 2 + 1);
   // Attack riders (Poison fang / Fire torch / Ice wisp) shown next to the
   // attack stat — same set as the in-combat mini card.
   {
-    const atkTextW = ctx.measureText(`${creature.attack}`).width;
+    const atkTextW = ctx.measureText(atkStr).width;
     const iconSize = Math.max(12, Math.floor(statsRowH * 0.75));
     let iconX = boxX + 8 + 8 + atkTextW + 3;
     const iconY = hpBarY + (hpBarH - iconSize) / 2;
@@ -12881,7 +13951,7 @@ function drawCreaturePreviewCard(creature, x, y, w, h) {
     };
     if (creature.poisonAttack) drawRider('icon_poison');
     if (creature.fireAttack > 0) drawRider('icon_fire');
-    if (creature.iceAttack > 0) drawRider('icon_ice');
+    if (creature.iceAttack > 0 || creature.iceAttackAll > 0) drawRider('icon_ice');
   }
 
   // Buff line: passive states (armor, shield, heroism, rage) drawn just
@@ -13428,6 +14498,20 @@ const CREATURE_COLS = 6;
 
 // Get the rect for the character "big card" inside the player or enemy area
 function getCharacterCardRect(isPlayer) {
+  // Cinematic boss mode (Varimatras phase 3): the enemy card frame
+  // is hidden, but the hitbox + floating-number anchor expand to
+  // basically the entire enemy screen rectangle. The player can
+  // click anywhere on the dragon to target it, AoE arrows have
+  // somewhere to land, and damage / token numbers center over the
+  // sky instead of clipping to a tiny invisible rect at the top.
+  if (!isPlayer && enemy && enemy._enemyId === 'varimatras') {
+    return {
+      x: COMBAT_ENEMY_AREA.x,
+      y: COMBAT_ENEMY_AREA.y,
+      w: COMBAT_ENEMY_AREA.w,
+      h: COMBAT_ENEMY_AREA.h,
+    };
+  }
   const area = isPlayer ? COMBAT_PLAYER_AREA : COMBAT_ENEMY_AREA;
   // Character card takes ~2/3 of the area height. Player section pushed
   // 10 px DOWN and enemy section 10 px UP total (two 5-px iterations) to
@@ -13455,6 +14539,17 @@ function getCharacterPowerRect(isPlayer, index = 0) {
 function drawCharacterPanel(character, side) {
   const isPlayer = side === 'player';
   const rect = getCharacterCardRect(isPlayer);
+
+  // Cinematic boss mode (Varimatras phase 3): hide the enemy panel
+  // entirely so the dragon background art reads uninterrupted. The
+  // hitbox stays — targeting clicks still land where the card would
+  // have been so the player can swing at the dragon. Power icons
+  // are filtered separately in drawEnemyPowerArea. Debug mode draws
+  // a separate compact text overlay (drawCinematicDebugInfo) for
+  // hand/deck/discard counts — handled at the drawCombat level so
+  // it sits on top of everything without inheriting the panel's
+  // huge cinematic rect.
+  if (!isPlayer && enemy && enemy._enemyId === 'varimatras') return;
 
   // Targetable highlight (red border outside the card) — drawn first
   if ((state === GameState.TARGETING ||
@@ -13789,7 +14884,7 @@ function drawCharacterPanel(character, side) {
 // Draw a creature as a card-shaped mini card (half of the main character card).
 // Player allies use a blue border; enemies use brown. Targetable highlights with red,
 // already-picked (multi-target) highlights with gold.
-function drawCreatureCard(creature, rect, isPlayer, isPreview = false) {
+function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex = false) {
   // isPreview = true when drawn as a side-preview tile (e.g. next to a hovered
   // card with a previewCreature). Suppresses combat-state highlights and the
   // hover hit area so the preview doesn't pretend to be a clickable creature.
@@ -13934,7 +15029,11 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false) {
   ctx.fillStyle = Colors.WHITE;
   ctx.font = 'bold 10px sans-serif';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`${creature.currentHp}/${creature.maxHp}`, hpBarX + hpBarW / 2, hpBarY + hpBarH / 2 + 1);
+  // Codex-only: collapsed size variants (Ice Elemental) render as
+  // X / X so the codex tile communicates the variable stat block.
+  const variableStatsSmall = isCodex && creature._codexVariableStats;
+  const smallHpStr = variableStatsSmall ? 'X / X' : `${creature.currentHp}/${creature.maxHp}`;
+  ctx.fillText(smallHpStr, hpBarX + hpBarW / 2, hpBarY + hpBarH / 2 + 1);
 
   // Attack number on the left — net shift: 8 px right (toward center) and
   // up by following hpBarY. Swarm creatures (Piranha) display their
@@ -13948,12 +15047,13 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false) {
   }
   ctx.fillStyle = displayAttack > creature.attack ? Colors.GOLD : Colors.WHITE;
   ctx.textAlign = 'left';
-  ctx.fillText(`${displayAttack}`, rect.x + 6 + 8, hpBarY + hpBarH / 2 + 1);
+  const smallAtkStr = variableStatsSmall ? 'X' : `${displayAttack}`;
+  ctx.fillText(smallAtkStr, rect.x + 6 + 8, hpBarY + hpBarH / 2 + 1);
   // Attack riders displayed beside the attack number: poison fang (Pet
   // Spider), fire torch (Kobold Slinger), ice wisp (frost drake). Mirrors
   // PY's per-creature attack icon next to the swing damage.
   {
-    const atkTextW = ctx.measureText(`${displayAttack}`).width;
+    const atkTextW = ctx.measureText(smallAtkStr).width;
     const iconSize = 14;
     let iconX = rect.x + 6 + 8 + atkTextW + 2;
     const iconY = hpBarY + (hpBarH - iconSize) / 2;
@@ -13965,7 +15065,7 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false) {
     };
     if (creature.poisonAttack) drawRider('icon_poison', Colors.GREEN);
     if (creature.fireAttack > 0) drawRider('icon_fire', Colors.ORANGE);
-    if (creature.iceAttack > 0) drawRider('icon_ice', Colors.ICE_BLUE);
+    if (creature.iceAttack > 0 || creature.iceAttackAll > 0) drawRider('icon_ice', Colors.ICE_BLUE);
   }
 
   // Status badges row (above HP/attack): shield, heroism, armor, fire/ice/poison.
@@ -14158,11 +15258,17 @@ function drawCombatLog() {
   const logW = COMBAT_LOG_AREA.w - 16;
   const logH = COMBAT_LOG_AREA.h - 16;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(logX, logY, logW, logH);
-  ctx.strokeStyle = '#555';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(logX, logY, logW, logH);
+  // Cinematic boss mode (Varimatras phase 3): skip the log's
+  // dark backing + border so the dragon backdrop reads through.
+  // Text colors are unchanged — only the panel chrome drops away.
+  const cinematicLog = enemy && enemy._enemyId === 'varimatras';
+  if (!cinematicLog) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(logX, logY, logW, logH);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(logX, logY, logW, logH);
+  }
 
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'left';
@@ -14467,10 +15573,96 @@ function drawPowerArea() {
   }
 }
 
+// Compact debug-only info card for the cinematic Varimatras fight.
+// Renders a small panel in the top-left of the enemy area with the
+// dragon's HP (deck size), hand count, draw / recharge / discard
+// counts, and registers a hover hit area so the player can see the
+// full hand contents tooltip — same data the standard character
+// panel exposes when the cinematic chrome is off.
+function drawCinematicDebugInfo() {
+  if (!enemy || !enemy.deck) return;
+  const handCount = enemy.deck.hand.length;
+  const drawCount = enemy.deck.drawPile.length;
+  const rechargeCount = enemy.deck.rechargePile.length;
+  const discardCount = enemy.deck.discardPile.length;
+  const hp = getHP(enemy);
+  const maxHp = getMaxHP(enemy);
+
+  const x = 12;
+  const y = 12;
+  const w = 220;
+  const h = 130;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 10, 25, 0.78)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(200, 160, 220, 0.55)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetY = 1;
+
+  ctx.fillStyle = '#ffd9f0';
+  ctx.font = 'bold 14px Georgia, serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('[DEBUG] Varimatras', x + 10, y + 8);
+
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = Colors.WHITE;
+  let ly = y + 30;
+  ctx.fillText(`HP: ${hp} / ${maxHp}`, x + 10, ly); ly += 18;
+
+  // Hand label — register a hit area so debug hover spills the full
+  // hand contents as a tooltip (mirrors the existing character-panel
+  // debug hover).
+  const handText = `Hand: ${handCount}`;
+  ctx.fillText(handText, x + 10, ly);
+  if (handCount > 0) {
+    const handW = ctx.measureText(handText).width;
+    iconHitAreas.push({
+      x: x + 10, y: ly, w: handW + 8, h: 18,
+      enemyHandList: enemy.deck.hand.map(c => c.name),
+    });
+  }
+  ly += 18;
+
+  ctx.fillText(`Draw: ${drawCount}`, x + 10, ly); ly += 18;
+  ctx.fillText(`Recharge: ${rechargeCount}`, x + 10, ly); ly += 18;
+
+  const discardLabel = `Discard: ${discardCount}`;
+  ctx.fillStyle = discardCount > 0 ? '#ff8888' : '#aaa';
+  ctx.fillText(discardLabel, x + 10, ly);
+  if (discardCount > 0) {
+    const discardW = ctx.measureText(discardLabel).width;
+    const topCard = enemy.deck.discardPile[enemy.deck.discardPile.length - 1];
+    logCardHitAreas.push({
+      x: x + 10, y: ly, w: discardW + 8, h: 18,
+      card: topCard,
+    });
+  }
+
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawEnemyPowerArea() {
   if (!enemy || !enemy.powers || enemy.powers.length === 0) return;
-  for (let i = 0; i < enemy.powers.length; i++) {
-    const power = enemy.powers[i];
+  // Cinematic boss mode (Varimatras phase 3): only the Blizzard +
+  // Ancient White power icons stay visible — they're the two
+  // signature mechanics the player needs to read at a glance.
+  // Dire Fury / Overwhelm / Armor still tick mechanically and
+  // still log normally, just hidden from the panel so the dragon
+  // backdrop reads cleanly.
+  const cinematic = enemy._enemyId === 'varimatras';
+  const VISIBLE_CINEMATIC_POWERS = new Set(['blizzard', 'ancient_white']);
+  const visiblePowers = cinematic
+    ? enemy.powers.filter(p => p && VISIBLE_CINEMATIC_POWERS.has(p.id))
+    : enemy.powers;
+  for (let i = 0; i < visiblePowers.length; i++) {
+    const power = visiblePowers[i];
     const r = getCharacterPowerRect(false, i);
     drawPowerCard(power, r, false);
   }
@@ -14585,11 +15777,20 @@ function handleCombatClick(x, y) {
       characterSplashIsPlayer = true;
       return;
     }
-    const enemyCardRect = getCharacterCardRect(false);
-    if (hitTest(x, y, enemyCardRect)) {
-      characterSplashCharacter = enemy;
-      characterSplashIsPlayer = false;
-      return;
+    // Cinematic boss mode (Varimatras): suppress the click-to-show-
+    // full-splash for the enemy card. The dragon backdrop is already
+    // rendered at full size behind the combat layout, so a splash
+    // overlay would just duplicate it; meanwhile the now-huge enemy
+    // hitbox makes this fire on virtually any top-half click and
+    // blocks the player from targeting normally.
+    const cinematicEnemy = enemy && enemy._enemyId === 'varimatras';
+    if (!cinematicEnemy) {
+      const enemyCardRect = getCharacterCardRect(false);
+      if (hitTest(x, y, enemyCardRect)) {
+        characterSplashCharacter = enemy;
+        characterSplashIsPlayer = false;
+        return;
+      }
     }
   }
 
@@ -14624,6 +15825,14 @@ function handleCombatClick(x, y) {
     if (hitTest(x, y, allyRects[i])) {
       const ally = player.creatures[i];
       if (!ally.isAlive) return;
+      // _cantAttack — flagged on creatures that hold the field but
+      // can never swing (e.g. the White Dragon Egg). Skip the
+      // attack-target flow entirely with a friendly toast so the
+      // player understands why the creature won't engage.
+      if (ally._cantAttack) {
+        showToast(`${ally.name} can't attack.`);
+        return;
+      }
       if (ally.exhausted) {
         if (ally.justSummoned) {
           showToast(`${ally.name} can't attack the turn it's summoned.`);
@@ -14974,6 +16183,31 @@ function handleDefendingClick(x, y) {
           const cleared = Math.min(ice, eff.value);
           player.removeStatus('ICE', cleared);
           addLog(`  Cleared ${cleared} Ice`, Colors.ICE_BLUE);
+        }
+      } else if (eff.effectType === 'transform_ice_to_shield_self') {
+        // White Dragonscale Shield payoff: every Ice stack the
+        // player is carrying converts 1:1 into Shield. Strips the
+        // Ice cleanly (no Fire-cancel interaction since we're
+        // moving the stacks, not applying new ones).
+        const ice = player.getStatus('ICE') || 0;
+        if (ice > 0) {
+          player.removeStatus('ICE', ice);
+          player.shield += ice;
+          addLog(`  Ice -> Shield! +${ice} Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+          spawnTokenOnTarget(player, ice, 'Shield', Colors.ALLY_BLUE);
+        }
+      } else if (eff.effectType === 'attacker_gains_ice') {
+        // White Dragonscale Armor payoff: dump all of the player's
+        // current Ice stacks onto the attacker (the enemy character
+        // who fired the swing this card is defending against). Goes
+        // through applyIceToTarget so Fire on the enemy cancels
+        // normally, _iceAbsorb on the (rare) attacker-with-absorb
+        // converts to +1/+1, and Ancient White flips the Ice into
+        // Shield for the dragon. Strategic call against Varimatras.
+        const ice = player.getStatus('ICE') || 0;
+        if (ice > 0 && enemy) {
+          player.removeStatus('ICE', ice);
+          applyIceToTarget(enemy, ice);
         }
       } else if (eff.effectType === 'heal') {
         // Soul Ward etc. — heal also clears Poison stacks first
@@ -15626,6 +16860,19 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
         if (landingDmg !== null) landingDmg = Math.max(0, landingDmg - eff.value);
+      } else if (eff.effectType === 'draw') {
+        // Varimatras Scale's draw rider. Defense cards play during
+        // the player's swing, so feed any drawn cards into the
+        // enemy's action queue (queueEnemyDrawnCards) — but only
+        // matters when it's actually the enemy's turn. Mid-swing
+        // we just refill the hand; the draw queue is a no-op until
+        // the next enemy turn picks the new cards up via the
+        // standard planner.
+        const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
+        const drawn = enemy.deck.draw(eff.value, cap);
+        if (drawn.length > 0 && debugMode) {
+          for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
+        }
       }
     }
     // Loose Bone: spawn a Restless Bone when it blocks
@@ -15700,6 +16947,26 @@ function resolveEffect(eff, caster, target) {
       if (damagedBonus > 0 && targetDamaged) {
         dmg += damagedBonus;
         addLog(`  Target wounded! +${damagedBonus} damage`, Colors.GOLD);
+      }
+      // Iced bonus damage rider (Dragon Tooth Dagger etc.) — same
+      // pattern as damaged_bonus_damage above: the card carries an
+      // `iced_bonus_damage` effect with the bonus value, read here
+      // and added when the target currently has any Ice stacks.
+      // Creatures use direct iceStacks; characters use the status
+      // map. Stack consumption is handled by the regular damage
+      // path's consumeIceForAttack, not here.
+      const icedBonus = (card && Array.isArray(card.currentEffects))
+        ? card.currentEffects.filter(e => e.effectType === 'iced_bonus_damage')
+            .reduce((s, e) => s + e.value, 0)
+        : 0;
+      if (icedBonus > 0) {
+        const targetIced = (target instanceof Creature)
+          ? ((target.iceStacks || 0) > 0)
+          : ((target && target.getStatus && (target.getStatus('ICE') || 0)) > 0);
+        if (targetIced) {
+          dmg += icedBonus;
+          addLog(`  Target Iced! +${icedBonus} damage`, Colors.ICE_BLUE);
+        }
       }
       // Sahuagin Eye buff (CombatBuff applied by the Sahuagin Eye
       // relic) — consumed on ANY attack; +N if the target was
@@ -16251,7 +17518,56 @@ function resolveEffect(eff, caster, target) {
       addLog(`  ${caster.name}: next attack is Unpreventable`, Colors.ORANGE);
       break;
     }
+    case 'transform_ice_to_shield_self': {
+      // White Dragon Wyrmling "Called" rider + White Dragonscale
+      // Shield reactive payoff: every Ice stack on the caster
+      // converts 1:1 into Shield. Strips Ice cleanly (no Fire
+      // cancellation since we're moving stacks, not applying new
+      // ones). Same effect handler shape as the DEFENSE-card path
+      // in handleDefendingClick.
+      const ice = (caster.getStatus && caster.getStatus('ICE')) || 0;
+      if (ice > 0) {
+        if (caster.removeStatus) caster.removeStatus('ICE', ice);
+        caster.shield = (caster.shield || 0) + ice;
+        addLog(`  Ice -> Shield! +${ice} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(caster, ice, 'Shield', Colors.ALLY_BLUE);
+      }
+      break;
+    }
+    case 'transform_shield_to_ice_target': {
+      // Dragon Eye Mace: strip up to eff.value of the TARGET'S own
+      // Shield stacks (Character.shield for the boss, Creature.shield
+      // for an enemy minion) and apply that many Ice to that same
+      // target. Each Shield converts 1:1 into 1 Ice via
+      // applyIceToTarget (so Fire cancels normally, _iceAbsorb
+      // grows the minion instead of stacking Ice, and Ancient
+      // White flips the Ice into Shield for the dragon — same
+      // rules as any other Ice application). Whiffs gracefully if
+      // the target has no Shield to strip.
+      const targetShield = target ? (target.shield || 0) : 0;
+      const stripped = Math.min(targetShield, eff.value);
+      if (stripped > 0 && target) {
+        target.shield -= stripped;
+        addLog(`  ${target.name} loses ${stripped} Shield (S:${target.shield})`, Colors.GRAY);
+        applyIceToTarget(target, stripped);
+      } else {
+        addLog(`  ${target ? target.name : 'Target'} has no Shield to strip.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'apply_ice': {
+      // Ice Elemental Ice Absorb: convert each would-be Ice stack
+      // into +1 attack / +1 max HP instead of stacking Ice.
+      if (target && target._iceAbsorb && eff.value > 0) {
+        target.attack = (target.attack || 0) + eff.value;
+        target.maxHp = (target.maxHp || 0) + eff.value;
+        if (typeof target.currentHp === 'number') {
+          target.currentHp = Math.min(target.maxHp, target.currentHp + eff.value);
+        }
+        addLog(`  ${target.name} absorbs ${eff.value} Ice: +${eff.value}/+${eff.value}!`, Colors.ICE_BLUE);
+        spawnTokenOnTarget(target, eff.value, '+1/+1', Colors.ICE_BLUE);
+        break;
+      }
       let appliedIce = 0;
       if (target instanceof Creature) {
         // Ice cancels fire first
@@ -16551,6 +17867,17 @@ function resolveEffect(eff, caster, target) {
       }
       for (const c of enemy.creatures) {
         if (!c.isAlive || c._invulnerable) continue;
+        // Ice Absorb (Ice Elemental): convert to +1/+1 instead.
+        if (c._iceAbsorb && eff.value > 0) {
+          c.attack = (c.attack || 0) + eff.value;
+          c.maxHp = (c.maxHp || 0) + eff.value;
+          if (typeof c.currentHp === 'number') {
+            c.currentHp = Math.min(c.maxHp, c.currentHp + eff.value);
+          }
+          addLog(`  ${c.name} absorbs ${eff.value} Ice: +${eff.value}/+${eff.value}!`, Colors.ICE_BLUE);
+          spawnTokenOnTarget(c, eff.value, '+1/+1', Colors.ICE_BLUE);
+          continue;
+        }
         const fireC = c.fireStacks || 0;
         const cancelC = Math.min(fireC, eff.value);
         if (cancelC > 0) {
@@ -17130,6 +18457,116 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'summon_ice_burst': {
+      // Gnikan's Staff payoff: strip ALL Ice from the caster AND
+      // every living ally on the caster's side, then summon an Ice
+      // Elemental whose attack + max HP both equal the total Ice
+      // consumed. The new elemental keeps Ice Absorb so future Ice
+      // stacks keep buffing it. Player-side path — enemy-side
+      // branch lives in the enemy ATTACK resolver and mirrors
+      // this. The "Allies lose all Ice" wording in the card text
+      // includes the caster in this game's lingo: a 4-Ice you +
+      // 3-Ice ally sums into a 7/7 elemental. Whiffs gracefully
+      // when nothing on the team is frozen yet.
+      let totalIce = 0;
+      const casterIce = (caster.getStatus && caster.getStatus('ICE')) || 0;
+      if (casterIce > 0) {
+        totalIce += casterIce;
+        if (caster.removeStatus) caster.removeStatus('ICE', casterIce);
+        addLog(`  ${caster === player ? 'You shed' : `${caster.name} sheds`} ${casterIce} Ice!`, Colors.ICE_BLUE);
+      }
+      for (const ally of (caster.creatures || [])) {
+        if (!ally.isAlive) continue;
+        const n = ally.iceStacks || 0;
+        if (n > 0) {
+          totalIce += n;
+          ally.iceStacks = 0;
+          addLog(`  ${ally.name} sheds ${n} Ice!`, Colors.ICE_BLUE);
+        }
+      }
+      if (totalIce > 0) {
+        const e = new Creature({
+          name: 'Ice Elemental', attack: totalIce, maxHp: totalIce, iceAttack: 1,
+          description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+        });
+        e._iceAbsorb = true;
+        if (caster.addCreature(e)) {
+          addLog(`  ${totalIce}/${totalIce} Ice Elemental summoned!`, Colors.ICE_BLUE);
+          const lastEntry = combatLog[combatLog.length - 1];
+          if (lastEntry) lastEntry.creature = e;
+          // Fire the elemental's own entry cue (ice_elemental) so the
+          // summon punches in with the same ice-blast it'll bookend
+          // its swing / death with.
+          playCreaturePlaySfx(e);
+        } else {
+          addLog(`  No room for an Ice Elemental.`, Colors.GRAY);
+        }
+      }
+      break;
+    }
+    case 'summon_white_dragon_wyrmling': {
+      // White Dragon Wyrmling — 3-attack with Ice rider, 6 HP, 1
+      // Armor. The "Called" effects (apply_ice_all + transform_ice_
+      // to_shield_self) fired earlier in the card's effect list,
+      // so by the time we get here the board is iced and the
+      // caster's Ice is already Shield. Death + entry SFX wired
+      // via getCreaturePlaySfxKey / getDeathSfxKey
+      // (monster_scream_01); attack swing SFX via
+      // getWeaponSfxKeys creature-name branch (monster_bite_01).
+      const wyrm = new Creature({
+        name: 'White Dragon Wyrmling', attack: 3, maxHp: 6,
+        iceAttack: 1, armor: 1, isCompanion: true,
+        description: 'Called: Deal Ice to all enemies. Ice becomes Shields. Attacks apply 1 Ice.',
+      });
+      wyrm.sourceCard = _activePlayCard || null;
+      wyrm._sourceRarity = 'legendary';
+      // 'allies' subtype to match the card (brown ally tint, codex
+      // Allies category) — the wyrmling fights as a companion.
+      wyrm._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      if (caster.addCreature(wyrm)) {
+        addLog(`  White Dragon Wyrmling joins the fight!`, Colors.ALLY_BLUE);
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = wyrm;
+        playCreaturePlaySfx(wyrm);
+      } else {
+        addLog(`  No room for the Wyrmling.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'summon_white_dragon_egg': {
+      // Field the White Dragon Egg ally — 0/3 with 3 Armor and a
+      // _cantAttack flag so the manual ally-attack selector skips
+      // it. Companion-linked to the source card (like Thorb /
+      // Raena / Valdrisa): when the egg dies the card moves from
+      // the play pile to the discard pile, and re-enters the
+      // shuffled deck next combat — the egg-card / egg-ally
+      // lifecycle stays tied together. Hatch tracking lives in
+      // the global dragonEggDamage (persisted via save.js).
+      const existing = (caster.creatures || []).find(c => c && c.name === 'White Dragon Egg' && c.isAlive);
+      if (existing) {
+        addLog(`  The egg is already on the field.`, Colors.GRAY);
+        break;
+      }
+      const egg = new Creature({
+        name: 'White Dragon Egg', attack: 0, maxHp: 3, armor: 3,
+        isCompanion: true,
+        description: 'Cannot attack. When Attacked: Attacker gains 1 Ice.',
+      });
+      egg._cantAttack = true;
+      egg.sourceCard = _activePlayCard || null;
+      egg._sourceRarity = 'legendary';
+      egg._sourceSubtype = 'relic';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      if (caster.addCreature(egg)) {
+        addLog(`  The White Dragon Egg joins the fight!`, Colors.ALLY_BLUE);
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = egg;
+      } else {
+        addLog(`  No room for the White Dragon Egg.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'summon_pet_slime': {
       const slime = new Creature({ name: 'Pet Slime', attack: 1, maxHp: 1, unpreventable: true });
       caster.addCreature(slime);
@@ -17254,9 +18691,68 @@ function resolveEffect(eff, caster, target) {
       // card as _beamBonusDamage before resolveEffect runs the damage
       // case. Nothing to resolve at effect time.
       break;
+    case 'ice_shatter': {
+      // Ice Shatter — strip every alive enemy's Ice stacks and
+      // convert each stack into 1 damage. Preventable: block /
+      // shield / armor absorb the burst like a normal attack, so
+      // the boss can mitigate it with stacked defenses (mirrors how
+      // the player can armor up against the dragon's Ice Shatter
+      // plays in phase 2). Targets the enemy character (Character
+      // status map) AND every alive, non-invulnerable enemy
+      // creature (per-Creature iceStacks). Arrows paint in
+      // ice-blue from the played card to every target carrying Ice
+      // so the shatter reads as a frost burst.
+      const shatterTargets = [];
+      const iceMap = new Map(); // target -> ice consumed
+      if (enemy && enemy.isAlive && !enemy._invulnerable) {
+        const n = enemy.getStatus ? (enemy.getStatus('ICE') || 0) : 0;
+        if (n > 0) { iceMap.set(enemy, n); shatterTargets.push(enemy); }
+      }
+      for (const c of enemy.creatures) {
+        if (!c.isAlive || c._invulnerable) continue;
+        const n = c.iceStacks || 0;
+        if (n > 0) { iceMap.set(c, n); shatterTargets.push(c); }
+      }
+      if (shatterTargets.length === 0) {
+        addLog(`  No frozen targets — nothing to shatter.`, Colors.GRAY);
+        break;
+      }
+      const aoeSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      spawnPlayerArrowBatch(aoeSrc, shatterTargets, 550, Colors.ICE_BLUE);
+      screenFlashTimer = 200;
+      let anyLanded = false;
+      for (const t of shatterTargets) {
+        const consumed = iceMap.get(t);
+        if (t === enemy) {
+          if (t.removeStatus) t.removeStatus('ICE', consumed);
+          addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+          const [, taken] = enemy.takeDamageWithDefense(consumed);
+          if (taken > 0) { spawnDamageOnTarget(enemy, taken, Colors.ICE_BLUE); anyLanded = true; }
+          triggerSplitPower(enemy, taken > 0);
+          if (caster === player) onPlayerHitEnemy(taken);
+        } else {
+          t.iceStacks = 0;
+          addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+          const actual = t.takeDamage(consumed);
+          if (actual > 0) { spawnDamageOnTarget(t, actual, Colors.ICE_BLUE); anyLanded = true; }
+          triggerSplitPower(t, actual > 0);
+          if (!t.isAlive) addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t);
+        }
+      }
+      playSound('ice_flesh', 0.8);
+      countAndRemoveDeadCreatures();
+      attacksThisTurn++;
+      break;
+    }
     case 'damage_all': {
-      const dmg = eff.value + caster.heroism;
+      let dmg = eff.value + caster.heroism;
       if (caster.heroism > 0) { caster.heroism = 0; }
+      // Ice on the caster reduces this AoE swing and burns 1 stack
+      // (mirrors the single-target damage path's consumeIceForAttack).
+      // Without this, Burning Hands / Ice Nova / Consecration fired
+      // at full strength even when the player was frozen, ignoring
+      // the chill the dragon's Blizzard / Cold Breath had piled on.
+      dmg = consumeIceForAttack(caster, dmg);
       // Shoot one red arrow per legal target from the played card's
       // hand rect — mirrors the single-target attack flow where the
       // arrow comes out of the lifted card. Invulnerable boss shells
@@ -17274,6 +18770,10 @@ function resolveEffect(eff, caster, target) {
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
         if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
         addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+        // Split / on-attacked triggers fire per target — same as
+        // single-target swings — so AoEs like Ice Nova spawn slimes
+        // on Obsidian Body and peel armor on Obsidian Construct.
+        triggerSplitPower(enemy, taken > 0);
         // AoE counts as a hit on the boss for Vanish/Brute triggers
         // — mirrors single-target attacks.
         if (caster === player) onPlayerHitEnemy(taken);
@@ -17283,6 +18783,7 @@ function resolveEffect(eff, caster, target) {
         const actual = c.takeDamage(dmg);
         if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
         addLog(`  ${actual} dmg to ${c.name}`, Colors.RED);
+        triggerSplitPower(c, actual > 0);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
       // Cards with explicit per-target SFX (Fan of Blades, Burning
@@ -18361,10 +19862,13 @@ function resolveMultiTargeting() {
       cancelAllyTargeting();
       return;
     }
-    // Player-side arrow batch — one green arrow per target so the
+    // Player-side arrow batch — one red arrow per target so the
     // ally's volley reads as a single wide swing (mirrors the enemy
-    // attack-all visual). Source = ally's creature rect.
-    if (targets.length > 1) {
+    // attack-all visual). Source = ally's creature rect. Fires for
+    // any number of targets so attacks-all allies (Thordak
+    // Ashmantle, multiAttack=99) still get the AoE visual when only
+    // one enemy is alive.
+    {
       const allyRects = getPlayerCreatureRects();
       const ai = (player.creatures || []).indexOf(ally);
       const srcRect = (ai !== -1 && allyRects[ai])
@@ -18554,6 +20058,14 @@ function enterAllyMultiTargeting(ally) {
       resolveMultiTargeting();
       return;
     }
+    // No valid targets (only the invulnerable boss shell, or a
+    // vanished Slyblade as the sole target). Cancel cleanly so the
+    // player isn't stuck in a multi-target picker with nothing to
+    // click. Was incorrectly falling through into the "pick up to 99
+    // targets" toast.
+    cancelAllyTargeting();
+    showStyledToast(`${ally.name}: no valid targets`, 'recharge', 1500);
+    return;
   }
   state = GameState.MULTI_TARGETING;
   showStyledToast(`${ally.name}: pick up to ${multiMaxTargets} targets, then Done (or Cancel)`, 'multi');
@@ -18646,6 +20158,7 @@ function resolveAllyAttack(ally, target) {
         addLog(`  ${enemy.name}: ${taken} unpreventable dmg`, Colors.ORANGE);
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, tdmg);
+        maybeApplyAttackIce(ally, enemy);
       } else {
         if (tdmg > 0) enemyAutoPlayDefenses(tdmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(tdmg);
@@ -18654,6 +20167,7 @@ function resolveAllyAttack(ally, target) {
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, taken);
+        maybeApplyAttackIce(ally, enemy);
         // Ally hits also trigger Ruga's Brute (and Slyblade's Vanish).
         onPlayerHitEnemy(taken);
       }
@@ -18664,6 +20178,7 @@ function resolveAllyAttack(ally, target) {
         addLog(`  ${t.name}: ${actual} unpreventable dmg`, Colors.ORANGE);
         playAttackHitSfx(tdmg, actual, delay);
         maybeApplyAttackPoison(ally, t, tdmg);
+        maybeApplyAttackIce(ally, t);
       } else {
         const actual = t.takeDamage(tdmg);
         if (actual > 0) spawnDamageOnTarget(t, actual);
@@ -18672,6 +20187,7 @@ function resolveAllyAttack(ally, target) {
         addLog(`  ${t.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
         playAttackHitSfx(tdmg, actual, delay);
         maybeApplyAttackPoison(ally, t, actual);
+        maybeApplyAttackIce(ally, t);
       }
       if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
     }
@@ -18734,6 +20250,15 @@ function maybeApplyAttackPoison(attacker, target, damageDealt) {
     target.applyStatus('POISON', 1);
   }
   addLog(`  +1 Poison on ${target.name}`, Colors.GREEN);
+}
+
+// Ice-rider hook for player ally attacks (Ice Elemental etc.). Mirrors
+// the enemy-side `c.iceAttack` apply pass. Routes through
+// applyIceToTarget so `_iceAbsorb` targets convert to +1/+1 instead.
+function maybeApplyAttackIce(attacker, target) {
+  if (!attacker || !(attacker.iceAttack > 0)) return;
+  if (!target) return;
+  applyIceToTarget(target, attacker.iceAttack);
 }
 
 function handlePowerTargetingClick(x, y) {
@@ -18940,8 +20465,12 @@ function resolvePowerTargeting() {
         if (fire > 0) { player.removeStatus('FIRE', 1); addLog(`  Ice cancels 1 Fire on you`, Colors.ICE_BLUE); }
         else { player.applyStatus('ICE', 1); addLog(`  +1 Ice on you`, Colors.ICE_BLUE); landed = true; }
       } else {
-        if (t.fireStacks > 0) { t.fireStacks--; addLog(`  Ice cancels 1 Fire on ${t.name}`, Colors.ICE_BLUE); }
-        else { t.iceStacks = (t.iceStacks || 0) + 1; addLog(`  +1 Ice on ${t.name}`, Colors.ICE_BLUE); landed = true; }
+        // Creature target — route through applyIceToTarget so
+        // _iceAbsorb (player-side Ice Elementals from Gnikan's
+        // Staff) grows +1/+1 instead of just stacking Ice. Same
+        // Fire-cancel logic still fires inside applyIceToTarget.
+        applyIceToTarget(t, 1);
+        landed = true;
       }
       if (landed) playSound('ice_apply', 0.7);
       if (landed) firePowerSurgeIfArmed(player, 'ice');
@@ -19379,7 +20908,7 @@ function drawDamageSourceOverlay() {
   ctx.textAlign = 'left';
 }
 
-function endPlayerTurn() {
+function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   if (!isPlayerTurn) return;
   if (powerRechargeMode) return;
   playSound('click');
@@ -19550,6 +21079,11 @@ function endPlayerTurn() {
 
   selectedCardIndex = -1;
   isPlayerTurn = false;
+
+  // Skip the enemy-turn pivot for special death-transition flows
+  // (Gnikan P1→P2 wraps up the player's turn beats then advances
+  // the encounter instead of handing control to a dead enemy).
+  if (skipEnemyTurn) return;
 
   // Start enemy turn after delay
   startEnemyTurn();
@@ -19762,12 +21296,14 @@ function processPlayerAllyAttacks() {
         triggerSplitPower(target);
         playAttackHitSfx(tdmg, tdmg);
         maybeApplyAttackPoison(ally, target, tdmg);
+        maybeApplyAttackIce(ally, target);
       } else {
         const actual = target.takeDamage(tdmg);
         triggerSplitPower(target, actual > 0); if (actual > 0) spawnDamageOnTarget(target, actual);
         addLog(`  ${ally.name} attacks ${target.name} for ${actual}!`, Colors.GREEN);
         playAttackHitSfx(tdmg, actual);
         maybeApplyAttackPoison(ally, target, actual);
+        maybeApplyAttackIce(ally, target);
       }
       if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); }
     } else if (enemy.isAlive) {
@@ -19780,12 +21316,14 @@ function processPlayerAllyAttacks() {
         triggerSplitPower(enemy);
         playAttackHitSfx(edmg, edmg);
         maybeApplyAttackPoison(ally, enemy, edmg);
+        maybeApplyAttackIce(ally, enemy);
       } else {
         const [blocked, taken] = enemy.takeDamageWithDefense(edmg);
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         addLog(`  ${ally.name} attacks ${enemy.name} for ${taken}!`, Colors.GREEN);
         playAttackHitSfx(edmg, taken);
         maybeApplyAttackPoison(ally, enemy, taken);
+        maybeApplyAttackIce(ally, enemy);
       }
     }
     _activeAttacker = null;
@@ -19990,6 +21528,20 @@ function getTargetCenter(target) {
   return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
 }
 
+// Cinematic boss mode (Varimatras phase 3): the enemy "card rect"
+// covers the entire enemy area, but the dragon's body in
+// VarimatrasBG.png sits slightly right of center. This offset
+// nudges arrow origins + floating damage / token numbers ~25 px
+// to the right so they anchor on the dragon's silhouette instead
+// of empty sky on the left. Hitbox stays full-area; only the
+// visual anchor moves.
+const CINEMATIC_DRAGON_CENTER_OFFSET_X = 125;
+function _dragonVisualShiftX() {
+  return (enemy && enemy._enemyId === 'varimatras')
+    ? CINEMATIC_DRAGON_CENTER_OFFSET_X
+    : 0;
+}
+
 // Center of an enemy-side target (enemy character or one of its
 // creatures). Mirrors getTargetCenter but for the right side of the
 // board — used by playerArrowsBatch so AoE arrows actually point at
@@ -19997,7 +21549,7 @@ function getTargetCenter(target) {
 function getEnemyTargetCenter(target) {
   if (target === enemy) {
     const r = getCharacterCardRect(false);
-    return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+    return { x: r.x + r.w / 2 + _dragonVisualShiftX(), y: r.y + r.h / 2 };
   }
   const creatureRects = getEnemyCreatureRects();
   const idx = enemy.creatures.indexOf(target);
@@ -20006,12 +21558,12 @@ function getEnemyTargetCenter(target) {
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   }
   const r = getCharacterCardRect(false);
-  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  return { x: r.x + r.w / 2 + _dragonVisualShiftX(), y: r.y + r.h / 2 };
 }
 
 function getEnemyCenter() {
   const r = getCharacterCardRect(false);
-  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  return { x: r.x + r.w / 2 + _dragonVisualShiftX(), y: r.y + r.h / 2 };
 }
 
 function pickEnemyAttackTarget() {
@@ -20036,19 +21588,34 @@ function pickEnemyAttackTarget() {
 
 // Apply N damage from an enemy attack to an ally creature immediately.
 // Logs the result and removes the creature if it dies.
-function applyDamageToAlly(ally, dmg) {
+function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
+  // White Dragon Egg reaction — runs BEFORE shield/armor mitigation
+  // so the raw incoming damage counts toward the hatch threshold.
+  // Plays the hatch chirp on top of the normal attack hit, applies
+  // 1 Ice to the attacker (per the WHEN ATTACKED rider), and
+  // hatches the egg into the Wyrmling if the lifetime damage
+  // threshold is crossed. Skipped on already-dead eggs.
+  if (ally && ally.isAlive && ally._cantAttack && ally.name === 'White Dragon Egg' && dmg > 0) {
+    handleWhiteDragonEggHit(ally, dmg, attacker || enemy);
+  }
   const hpBefore = ally.currentHp;
   const actual = ally.takeDamage(dmg);
   if (actual > 0) spawnDamageOnTarget(ally, actual);
   const blocked = Math.max(0, dmg - actual);
   const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
   addLog(`  ${ally.name}: ${actual} damage${blockedSuffix}`, Colors.RED);
-  // Overwhelm passive: any overkill damage beyond the ally's HP rolls
-  // onto the player. Queue it on the enemy-damage accumulator so it
-  // joins this turn's defense phase like any other enemy hit instead
-  // of being discarded immediately.
+  // Overwhelm passive: any overkill damage beyond the ally's HP
+  // rolls onto the player. Queue it on the enemy-damage
+  // accumulator so it joins this turn's defense phase like any
+  // other enemy hit instead of being discarded immediately.
+  // AoE attacks (Cold Breath, Tail Swipe, Wing Buffet's damage
+  // payload, Ice Shatter) pass skipOverwhelm=true so the dragon
+  // doesn't double-dip — the AoE already hits the player on the
+  // same swing, no need to also spill every dead ally's overkill
+  // onto them. Single-target + multi-target picks (creature
+  // swings, Claw) keep the overflow.
   const overflow = Math.max(0, actual - hpBefore);
-  if (overflow > 0 && enemyHasPower('overwhelm') && player) {
+  if (overflow > 0 && !skipOverwhelm && enemyHasPower('overwhelm') && player) {
     enemyDamageAccumulator += overflow;
     addLog(`  Overwhelm! ${overflow} overflow → You (queued for defense)`, Colors.RED);
   }
@@ -20058,6 +21625,87 @@ function applyDamageToAlly(ally, dmg) {
     player.removeDeadCreatures();
   }
   return actual;
+}
+
+// White Dragon Egg hit reaction. Called from applyDamageToAlly +
+// any other damage path that hits player allies (damage_all, etc.).
+// Pre-mitigation damage feeds the lifetime hatch counter
+// (dragonEggDamage, saved in save.js); attacker eats 1 Ice; the
+// chick-hatch chirp layers over whatever attack SFX is firing. At
+// threshold the egg transforms into the White Dragon Wyrmling.
+function handleWhiteDragonEggHit(egg, rawDmg, attacker) {
+  playSound('egg_hatch', 0.75);
+  dragonEggDamage += rawDmg;
+  // Hatch progress is intentionally NOT logged with the running
+  // counter — the threshold is a secret discovery. Combat just
+  // hears the chick chirp and sees the WHEN ATTACKED ice rider.
+  addLog(`  The egg shudders inside its shell.`, Colors.ICE_BLUE);
+  if (attacker) {
+    applyIceToTarget(attacker, 1);
+  }
+  if (dragonEggDamage >= WHITE_DRAGON_EGG_HATCH_THRESHOLD) {
+    hatchWhiteDragonEgg(egg);
+  }
+}
+
+// Transform the egg card + on-field egg creature into a White
+// Dragon Wyrmling. Removes every copy of the egg card from the
+// player's deck piles + masterDeck, adds a fresh Wyrmling card,
+// and swaps the live egg ally for the Wyrmling creature in place
+// so the slot it was holding doesn't shift. Wyrmling stats are
+// placeholder (3/8 with iceAttack 1) until the user finalizes
+// them — see createWhiteDragonWyrmling / its preview creature for
+// the live source.
+function hatchWhiteDragonEgg(egg) {
+  if (!player || !player.deck) return;
+  addLog(`  The White Dragon Egg cracks open!`, Colors.ALLY_BLUE);
+  playSound('egg_hatch', 0.9);
+  // Strip every egg card from every pile.
+  const piles = ['masterDeck', 'drawPile', 'hand', 'discardPile', 'rechargePile', 'playPile', 'damagePile'];
+  for (const pile of piles) {
+    const arr = player.deck[pile];
+    if (!Array.isArray(arr)) continue;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (arr[i] && arr[i].id === 'white_dragon_egg') arr.splice(i, 1);
+    }
+  }
+  // Add the Wyrmling card to the player's deck (masterDeck +
+  // hand if there's room, else the bottom of the draw pile).
+  addLootedCard(createWhiteDragonWyrmling());
+  // Swap the on-field creature in place so the row layout stays
+  // stable. Player.creatures slot index is preserved. Fires the
+  // wyrmling's Called effects too — apply 1 Ice to every enemy,
+  // then convert all of the player's Ice into Shield, mirroring
+  // the card-play summon path.
+  const idx = player.creatures.indexOf(egg);
+  if (idx !== -1) {
+    const wyrmling = new Creature({
+      name: 'White Dragon Wyrmling', attack: 3, maxHp: 6,
+      iceAttack: 1, armor: 1,
+      description: 'Attacks apply 1 Ice.',
+    });
+    wyrmling.ready();
+    player.creatures[idx] = wyrmling;
+    addLog(`  A White Dragon Wyrmling rises from the shell!`, Colors.ALLY_BLUE);
+    playCreaturePlaySfx(wyrmling);
+    // Called effects on the hatch path. The card-play path runs
+    // these as regular effects in resolveEffect; here we trigger
+    // them manually since the wyrmling appeared via the egg's
+    // own damage threshold, not via casting the Wyrmling card.
+    if (enemy && enemy.isAlive && !enemy._invulnerable) {
+      applyIceToTarget(enemy, 1);
+    }
+    for (const c of (enemy && enemy.creatures || [])) {
+      if (c && c.isAlive && !c._invulnerable) applyIceToTarget(c, 1);
+    }
+    const pIce = (player.getStatus && player.getStatus('ICE')) || 0;
+    if (pIce > 0) {
+      if (player.removeStatus) player.removeStatus('ICE', pIce);
+      player.shield = (player.shield || 0) + pIce;
+      addLog(`  Ice -> Shield! +${pIce} Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(player, pIce, 'Shield', Colors.ALLY_BLUE);
+    }
+  }
 }
 
 // Helper used by applyDamageToAlly + anywhere else that needs to gate
@@ -20157,8 +21805,12 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
     return queued;
   } else {
     // Synchronous ally hit — fire the flesh-or-blocked sound at swing
-    // time using the actual damage that landed.
-    const actual = applyDamageToAlly(target, dmg);
+    // time using the actual damage that landed. Attacker is the
+    // specific enemy creature if one is swinging (sourceCreature),
+    // otherwise the boss character. Threaded through to
+    // applyDamageToAlly so the White Dragon Egg WHEN ATTACKED Ice
+    // rider lands on the right target.
+    const actual = applyDamageToAlly(target, dmg, sourceCreature || enemy);
     playAttackHitSfx(dmg, actual);
     return actual;
   }
@@ -20169,6 +21821,34 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
 // player-side handler in resolveEffectOnTarget.
 function applyIceToTarget(target, amount) {
   if (!target || amount <= 0) return;
+  // Ice Elemental power: instead of stacking Ice, the elemental
+  // absorbs each would-be Ice stack as a permanent +1 attack / +1
+  // max HP buff (and heals the new HP). Triggers before the Fire-
+  // cancel pass, so an elemental on fire that's hit by Ice grows
+  // AND keeps burning — matching the "ice feeds it" theme.
+  if (target._iceAbsorb) {
+    target.attack = (target.attack || 0) + amount;
+    target.maxHp = (target.maxHp || 0) + amount;
+    if (typeof target.currentHp === 'number') {
+      target.currentHp = Math.min(target.maxHp, target.currentHp + amount);
+    }
+    addLog(`  ${target.name} absorbs ${amount} Ice: +${amount}/+${amount}!`, Colors.ICE_BLUE);
+    spawnTokenOnTarget(target, amount, '+1/+1', Colors.ICE_BLUE);
+    return;
+  }
+  // Ancient White (Varimatras passive): every would-be Ice stack
+  // on the dragon converts into 1 Shield instead. Player Ice
+  // spells, Cold Breath's apply_ice_all, and the dragon's own
+  // Blizzard tick all funnel through here, so the dragon piles
+  // Shield every time something tries to freeze him. Fires
+  // before the Fire-cancel pass so a burning dragon iced by a
+  // player spell still gets the Shield + keeps the Fire on him.
+  if (Array.isArray(target.powers) && target.powers.some(p => p && p.id === 'ancient_white')) {
+    target.shield = (target.shield || 0) + amount;
+    addLog(`  Ancient White! ${target.name} absorbs ${amount} Ice as +${amount} Shield.`, Colors.ALLY_BLUE);
+    spawnTokenOnTarget(target, amount, 'Shield', Colors.ALLY_BLUE);
+    return;
+  }
   let applied = 0;
   if (target instanceof Creature) {
     const cancel = Math.min(target.fireStacks, amount);
@@ -20281,7 +21961,7 @@ function startEnemyTurn() {
     if (!currentEncounter._zhost_drake_summoned && curHp <= Math.floor(maxHp / 2)) {
       currentEncounter._zhost_drake_summoned = true;
       const drake = new Creature({
-        name: 'Frost Drake', attack: 3, maxHp: 8, iceAttack: 1, armor: 1,
+        name: 'Frost Drake', attack: 3, maxHp: 8, iceAttackAll: 1, armor: 1,
         description: 'Attack + Ice to all enemies.',
       });
       drake.exhausted = false; drake.justSummoned = false;
@@ -20401,6 +22081,27 @@ function startEnemyTurn() {
         if (!enemy._invulnerable) applyFireToTarget(enemy, 1);
         for (const c of [...(enemy.creatures || [])]) {
           if (c.isAlive) applyFireToTarget(c, 1);
+        }
+      } else if (power.id === 'blizzard') {
+        // Overseer Gnikan phase-2 — Ice mirror of Lava Floor. Every
+        // start of enemy turn the whole board gains 1 Ice: the
+        // player, every alive ally, the boss himself (unless
+        // invulnerable), AND every alive enemy creature. Ice
+        // Elementals on Gnikan's side carry `_iceAbsorb`, so
+        // applyIceToTarget converts the tick into a permanent +1/+1
+        // buff instead of stacking Ice on them — the storm visibly
+        // GROWS the elementals each round. Gnikan's own Ice stacks
+        // feed the next Gnikan's Staff burst.
+        showcasePower(power);
+        addLog(`  Blizzard! The storm howls — 1 Ice on everyone!`, Colors.ICE_BLUE);
+        playSound('ice_elemental', 0.6);
+        applyIceToTarget(player, 1);
+        for (const ally of [...(player.creatures || [])]) {
+          if (ally.isAlive) applyIceToTarget(ally, 1);
+        }
+        if (!enemy._invulnerable) applyIceToTarget(enemy, 1);
+        for (const c of [...(enemy.creatures || [])]) {
+          if (c.isAlive) applyIceToTarget(c, 1);
         }
       } else if (power.id === 'kobold_army_swarm') {
         // Kobold Drake Rider escalating swarm. Mirrors PY game.py:14063-
@@ -20566,6 +22267,29 @@ function startEnemyTurn() {
 
   // Plan enemy actions — respect recharge_extra costs
   enemyActions = [];
+
+  // Forced opening-turn lockout (Overseer Gnikan phase 2). When
+  // _forcedOpeningCardId is set, queue ONLY that one card play and
+  // skip everything else — no other hand plays, no power fallback,
+  // no creature attacks. The dragon breathes once, then ends his
+  // turn so the party can react. Flag is one-shot; cleared after
+  // firing. Falls through to the normal planner if the named card
+  // somehow isn't in hand.
+  if (enemy._forcedOpeningCardId) {
+    const forcedId = enemy._forcedOpeningCardId;
+    enemy._forcedOpeningCardId = null;
+    const forcedCard = enemy.deck.hand.find(c => c && c.id === forcedId);
+    if (forcedCard) {
+      const action = forcedCard.cardType === CardType.ATTACK ? 'attack'
+        : forcedCard.cardType === CardType.CREATURE ? 'summon' : 'ability';
+      enemyActions.push({ type: 'play', card: forcedCard, action });
+      enemyActions.push({ type: 'end' });
+      enemyActionIndex = 0;
+      enemyActionTimer = 625 * getEnemySpeedMul();
+      return;
+    }
+  }
+
   const hand = [...enemy.deck.hand];
   hand.sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
@@ -20828,7 +22552,7 @@ function updateEnemyTurn(dt) {
               addLog(`  0 damage to you (frozen)`, Colors.ICE_BLUE);
             }
           } else {
-            applyDamageToAlly(t, tdmg);
+            applyDamageToAlly(t, tdmg, c);
           }
         }
         // Riders apply per target. Fire / Ice / Poison.
@@ -20902,11 +22626,20 @@ function updateEnemyTurn(dt) {
       if (c.fireAttack > 0) {
         applyFireToTarget(target, c.fireAttack);
       }
-      if (c.iceAttack > 0) {
-        // Ice breath hits the player AND every player ally.
-        applyIceToTarget(player, c.iceAttack);
+      // iceAttack — single-target ice rider (matches fireAttack /
+      // poisonAttack semantics). Lands on the same target the swing
+      // picked. Ice Elemental + future per-swing ice swingers use
+      // this. For AOE "ice breath" creatures, use `iceAttackAll`
+      // below.
+      if (c.iceAttack > 0 && target) {
+        applyIceToTarget(target, c.iceAttack);
+      }
+      if (c.iceAttackAll > 0) {
+        // Ice breath rider — every swing applies Ice to the player
+        // AND every alive ally. Used for the Frost Drake.
+        applyIceToTarget(player, c.iceAttackAll);
         for (const ally of (player.creatures || [])) {
-          if (ally.isAlive) applyIceToTarget(ally, c.iceAttack);
+          if (ally.isAlive) applyIceToTarget(ally, c.iceAttackAll);
         }
       }
       if (c.poisonAttack) {
@@ -21016,7 +22749,7 @@ function updateEnemyTurn(dt) {
       routeEnemyDamageToTarget(player, dmg, power.name);
       for (const ally of [...(player.creatures || [])]) {
         if (!ally.isAlive) continue;
-        applyDamageToAlly(ally, dmg);
+        applyDamageToAlly(ally, dmg, enemy, /* skipOverwhelm */ true);
       }
       _activePlayCard = null;
     }
@@ -21218,6 +22951,212 @@ function updateEnemyTurn(dt) {
         }
       } else if (eff.effectType === 'apply_ice') {
         applyIceToTarget(cardTarget, eff.value);
+      } else if (eff.effectType === 'apply_ice_self') {
+        // Self-ice rider on enemy ATTACK cards (Gravechill Shard,
+        // Gnikan's Staff). Stacks Ice on the casting enemy via the
+        // Character status map (NOT the Creature-side iceStacks
+        // field — that was the bug where Gnikan's stacks vanished
+        // from the HUD and his Fire token persisted). Fire on the
+        // enemy cancels 1:1 first, remainder applies as Ice.
+        const fireStacks = enemy.getStatus('FIRE') || 0;
+        const cancel = Math.min(fireStacks, eff.value);
+        if (cancel > 0) {
+          enemy.removeStatus('FIRE', cancel);
+          addLog(`  Ice cancels ${cancel} Fire on ${enemy.name}`, Colors.ICE_BLUE);
+        }
+        const remaining = eff.value - cancel;
+        if (remaining > 0) {
+          enemy.applyStatus('ICE', remaining);
+          addLog(`  +${remaining} Ice on ${enemy.name}`, Colors.ICE_BLUE);
+          spawnTokenOnTarget(enemy, remaining, 'Ice', Colors.ICE_BLUE);
+        }
+      } else if (eff.effectType === 'summon_ice_burst') {
+        // Gnikan's Staff payoff: strip ALL Ice off the casting enemy
+        // AND every living enemy creature (the boss's allies), then
+        // summon a fresh Ice Elemental whose Atk + max HP equal the
+        // total Ice consumed. Mirrors the player-side handler — the
+        // "Allies lose all Ice" wording includes the caster in this
+        // game's lingo. Ice Elementals carry _iceAbsorb so they
+        // never accumulate Ice themselves; in practice only the
+        // casting enemy contributes ice (Gnikan stacks Ice via
+        // Gravechill Shard, his own staff's apply_ice_self, etc.).
+        // Whiffing is fine; the staff still delivers its 3-damage
+        // swing rider downstream.
+        let totalIce = 0;
+        const enemyIce = enemy.getStatus('ICE') || 0;
+        if (enemyIce > 0) {
+          totalIce += enemyIce;
+          enemy.removeStatus('ICE', enemyIce);
+          addLog(`  ${enemy.name} sheds ${enemyIce} Ice!`, Colors.ICE_BLUE);
+        }
+        for (const ally of (enemy.creatures || [])) {
+          if (!ally.isAlive) continue;
+          const n = ally.iceStacks || 0;
+          if (n > 0) {
+            totalIce += n;
+            ally.iceStacks = 0;
+            addLog(`  ${ally.name} sheds ${n} Ice!`, Colors.ICE_BLUE);
+          }
+        }
+        if (totalIce > 0) {
+          const e = new Creature({
+            name: 'Ice Elemental', attack: totalIce, maxHp: totalIce, iceAttack: 1,
+            description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+          });
+          e._iceAbsorb = true;
+          if (enemy.addCreature(e)) {
+            addLog(`  ${totalIce}/${totalIce} Ice Elemental summoned!`, Colors.ICE_BLUE);
+            const lastEntry = combatLog[combatLog.length - 1];
+            if (lastEntry) lastEntry.creature = e;
+            // Entry cue for the new elemental — same ice-blast that
+            // bookends its swings + death.
+            playCreaturePlaySfx(e);
+          } else {
+            addLog(`  No room for an Ice Elemental.`, Colors.GRAY);
+          }
+        }
+      } else if (eff.effectType === 'ice_shatter') {
+        // Enemy Ice Shatter: strip player + every alive player ally
+        // of Ice and deal damage equal to the Ice consumed.
+        // Preventable — Block/Shield/Armor absorb the shatter just
+        // like a regular attack. Player damage accumulates into
+        // enemyDamageAccumulator (resolves at end-of-turn defense
+        // phase, same path as a normal enemy swing or Cold Breath);
+        // ally damage hits synchronously via applyDamageToAlly so
+        // Overwhelm overflow + death handling stays consistent.
+        // Whiffs gracefully if nothing on the player side is frozen.
+        const shatterList = [];
+        const iceMap = new Map();
+        const pIce = player.getStatus ? (player.getStatus('ICE') || 0) : 0;
+        if (pIce > 0) { iceMap.set(player, pIce); shatterList.push(player); }
+        for (const ally of (player.creatures || [])) {
+          if (!ally.isAlive) continue;
+          const n = ally.iceStacks || 0;
+          if (n > 0) { iceMap.set(ally, n); shatterList.push(ally); }
+        }
+        if (shatterList.length === 0) {
+          addLog(`  Nothing frozen — Ice Shatter fizzles.`, Colors.GRAY);
+        } else {
+          if (!enemyArrowsBatch) {
+            const src = getEnemyCenter();
+            const segments = shatterList.map(t => {
+              const dst = getTargetCenter(t);
+              return { x1: src.x, y1: src.y, x2: dst.x, y2: dst.y, color: Colors.ICE_BLUE };
+            });
+            enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul() };
+            screenFlashTimer = 200;
+          }
+          for (const t of shatterList) {
+            const consumed = iceMap.get(t);
+            if (t === player) {
+              if (t.removeStatus) t.removeStatus('ICE', consumed);
+              addLog(`  You shatter! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+              // Mirror routeEnemyDamageToTarget's player branch (without
+              // the per-target arrow stamp — the arrow batch above
+              // already paints the shatter). Block → Shield → Armor
+              // absorb in turn; leftover joins enemyDamageAccumulator
+              // so the shatter resolves alongside every other queued
+              // hit at end-of-turn.
+              let queued = consumed;
+              if (player.currentBlock > 0 && queued > 0) {
+                const absorbed = Math.min(player.currentBlock, queued);
+                player.currentBlock -= absorbed;
+                queued -= absorbed;
+                addLog(`  Block absorbs ${absorbed} damage`, Colors.BLUE);
+              }
+              if (player.shield > 0 && queued > 0) {
+                const absorbed = Math.min(player.shield, queued);
+                player.shield -= absorbed;
+                queued -= absorbed;
+                addLog(`  Shield absorbs ${absorbed} (S:${player.shield} remaining)`, Colors.ALLY_BLUE);
+              }
+              if (player.armor > 0 && queued > 0) {
+                const absorbed = Math.min(player.armor, queued);
+                queued -= absorbed;
+                addLog(`  Armor absorbs ${absorbed}`, Colors.GRAY);
+              }
+              if (queued > 0) {
+                enemyDamageAccumulator += queued;
+                addLog(`  ${queued} damage incoming`, Colors.RED);
+              }
+            } else {
+              t.iceStacks = 0;
+              addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+              applyDamageToAlly(t, consumed, enemy, /* skipOverwhelm */ true);
+            }
+          }
+          playSound('ice_flesh', 0.8);
+          countAndRemoveDeadCreatures();
+        }
+      } else if (eff.effectType === 'damage_per_ice_all') {
+        // Cold Breath payoff: deal damage equal to each target's
+        // current Ice count, but DON'T strip the Ice. Player damage
+        // accumulates into enemyDamageAccumulator like a normal
+        // enemy attack (block/shield/armor mitigate first, leftover
+        // resolves at end-of-turn defense phase); ally damage hits
+        // synchronously through applyDamageToAlly (shield/armor on
+        // the creature). Whiffs gracefully if nothing is frozen.
+        const hitList = [];
+        const iceMap = new Map();
+        const pIce = player.getStatus ? (player.getStatus('ICE') || 0) : 0;
+        if (pIce > 0) { iceMap.set(player, pIce); hitList.push(player); }
+        for (const ally of (player.creatures || [])) {
+          if (!ally.isAlive) continue;
+          const n = ally.iceStacks || 0;
+          if (n > 0) { iceMap.set(ally, n); hitList.push(ally); }
+        }
+        if (hitList.length === 0) {
+          addLog(`  Nothing frozen — the breath chills but doesn't bite.`, Colors.GRAY);
+        } else {
+          if (!enemyArrowsBatch) {
+            const src = getEnemyCenter();
+            const segments = hitList.map(t => {
+              const dst = getTargetCenter(t);
+              return { x1: src.x, y1: src.y, x2: dst.x, y2: dst.y, color: Colors.ICE_BLUE };
+            });
+            enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul() };
+            screenFlashTimer = 200;
+          }
+          for (const t of hitList) {
+            const dmg = iceMap.get(t);
+            if (t === player) {
+              // Mirror routeEnemyDamageToTarget's player branch (without
+              // the per-target arrow stamp — the arrow batch above
+              // already paints the breath). Block → Shield → Armor
+              // absorb in turn; leftover damage joins this turn's
+              // enemy-damage accumulator so it resolves at end-of-turn
+              // with every other queued hit.
+              addLog(`  Cold Breath! ${dmg} damage to you (Ice ${dmg}).`, Colors.ICE_BLUE);
+              let queued = dmg;
+              if (player.currentBlock > 0 && queued > 0) {
+                const absorbed = Math.min(player.currentBlock, queued);
+                player.currentBlock -= absorbed;
+                queued -= absorbed;
+                addLog(`  Block absorbs ${absorbed} damage`, Colors.BLUE);
+              }
+              if (player.shield > 0 && queued > 0) {
+                const absorbed = Math.min(player.shield, queued);
+                player.shield -= absorbed;
+                queued -= absorbed;
+                addLog(`  Shield absorbs ${absorbed} (S:${player.shield} remaining)`, Colors.ALLY_BLUE);
+              }
+              if (player.armor > 0 && queued > 0) {
+                const absorbed = Math.min(player.armor, queued);
+                queued -= absorbed;
+                addLog(`  Armor absorbs ${absorbed}`, Colors.GRAY);
+              }
+              if (queued > 0) {
+                enemyDamageAccumulator += queued;
+                addLog(`  ${queued} damage incoming`, Colors.RED);
+              }
+            } else {
+              addLog(`  Cold Breath! ${dmg} damage to ${t.name} (Ice ${dmg}).`, Colors.ICE_BLUE);
+              applyDamageToAlly(t, dmg, enemy, /* skipOverwhelm */ true);
+            }
+          }
+          playSound('ice_flesh', 0.8);
+          countAndRemoveDeadCreatures();
+        }
       } else if (eff.effectType === 'apply_ice_all') {
         // Arrow batch: enemy AoE → player + every alive ally.
         if (!enemyArrowsBatch) {
@@ -21236,6 +23175,114 @@ function updateEnemyTurn(dt) {
         applyIceToTarget(player, eff.value);
         for (const ally of player.creatures) {
           if (ally.isAlive) applyIceToTarget(ally, eff.value);
+        }
+      } else if (eff.effectType === 'apply_ice_creatures_all') {
+        // Varimatras Wing Buffet — every entity on the field gains
+        // N Ice: player, every alive ally, every alive enemy
+        // creature, AND the dragon himself. The dragon's Ancient
+        // White flips his own Ice tick into +1 Shield, so the
+        // buffet doubles as a defensive beat for him. Player
+        // allies with _iceAbsorb (player-side Ice Elementals from
+        // Gnikan's Staff) still grow on it the same way Blizzard
+        // feeds them.
+        const playerSideTargets = [];
+        if (player) playerSideTargets.push(player);
+        for (const ally of (player.creatures || [])) {
+          if (ally.isAlive) playerSideTargets.push(ally);
+        }
+        if (!enemyArrowsBatch) {
+          const src = getEnemyCenter();
+          const segments = playerSideTargets.map(t => {
+            const dst = getTargetCenter(t);
+            return { x1: src.x, y1: src.y, x2: dst.x, y2: dst.y, color: Colors.ICE_BLUE };
+          });
+          enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul() };
+          screenFlashTimer = 200;
+        }
+        for (const t of playerSideTargets) applyIceToTarget(t, eff.value);
+        if (!enemy._invulnerable) applyIceToTarget(enemy, eff.value);
+        for (const c of (enemy.creatures || [])) {
+          if (c.isAlive) applyIceToTarget(c, eff.value);
+        }
+      } else if (eff.effectType === 'damage_random_split') {
+        // Varimatras Claw — picks up to 2 distinct random alive
+        // player-side targets (player + alive allies) and hits each
+        // for the value. Preventable like a normal enemy swing:
+        // player damage routes through Block/Shield/Armor +
+        // accumulator, ally damage hits synchronously via Creature
+        // shield/armor. Heroism / Rage / Brute / Ice cancel apply
+        // once to the per-hit damage before each strike resolves.
+        const aliveTargets = [];
+        if (player) aliveTargets.push(player);
+        for (const ally of (player.creatures || [])) {
+          if (ally.isAlive) aliveTargets.push(ally);
+        }
+        const picks = [];
+        const pool = [...aliveTargets];
+        while (pool.length > 0 && picks.length < 2) {
+          const idx = Math.floor(Math.random() * pool.length);
+          picks.push(pool.splice(idx, 1)[0]);
+        }
+        if (picks.length === 0) {
+          addLog(`  No targets for Claw.`, Colors.GRAY);
+        } else {
+          if (!enemyArrowsBatch) {
+            const src = getEnemyCenter();
+            const segments = picks.map(t => {
+              const dst = getTargetCenter(t);
+              return { x1: src.x, y1: src.y, x2: dst.x, y2: dst.y };
+            });
+            enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul() };
+            screenFlashTimer = 200;
+          }
+          let perHit = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+          perHit = consumeIceForAttack(enemy, perHit);
+          if (enemy.heroism > 0) {
+            addLog(`  Heroism! +${enemy.heroism} damage`, Colors.GOLD);
+            enemy.heroism = 0;
+          }
+          if (enemy.rage > 0) addLog(`  Rage! +${enemy.rage} damage`, Colors.RED);
+          const sfxKeys = getWeaponSfxKeys(card);
+          const fleshKey = sfxKeys && sfxKeys.flesh;
+          for (const t of picks) {
+            if (perHit <= 0) {
+              addLog(`  Claw -> ${t === player ? 'you' : t.name}: 0 damage (frozen)`, Colors.ICE_BLUE);
+              continue;
+            }
+            if (t === player) {
+              let queued = perHit;
+              if (player.currentBlock > 0 && queued > 0) {
+                const absorbed = Math.min(player.currentBlock, queued);
+                player.currentBlock -= absorbed;
+                queued -= absorbed;
+                addLog(`  Block absorbs ${absorbed} damage`, Colors.BLUE);
+              }
+              if (player.shield > 0 && queued > 0) {
+                const absorbed = Math.min(player.shield, queued);
+                player.shield -= absorbed;
+                queued -= absorbed;
+                addLog(`  Shield absorbs ${absorbed} (S:${player.shield} remaining)`, Colors.ALLY_BLUE);
+              }
+              if (player.armor > 0 && queued > 0) {
+                const absorbed = Math.min(player.armor, queued);
+                queued -= absorbed;
+                addLog(`  Armor absorbs ${absorbed}`, Colors.GRAY);
+              }
+              if (queued > 0) {
+                enemyDamageAccumulator += queued;
+                addLog(`  Claw! ${queued} damage to you`, Colors.RED);
+              }
+            } else {
+              applyDamageToAlly(t, perHit);
+            }
+            // Double-strike SFX: the claw lands twice per pick with
+            // a tight delay so each target reads as a paired slash
+            // audibly (matches the two-claws-rake-down feel).
+            if (fleshKey) {
+              playSound(fleshKey, 0.7);
+              setTimeout(() => playSound(fleshKey, 0.7), 130);
+            }
+          }
         }
       } else if (eff.effectType === 'gain_shield') {
         // Attack cards can also have a self-shield rider (Careful
@@ -21313,15 +23360,8 @@ function updateEnemyTurn(dt) {
           }
           for (const ally of [...player.creatures]) {
             if (!ally.isAlive) continue;
-            const actual = ally.takeDamage(dmg);
-            if (actual > 0) spawnDamageOnTarget(ally, actual);
-            addLog(`  ${ally.name}: ${actual} damage`, Colors.RED);
-            if (!ally.isAlive) {
-              spawnDeathAnimation(ally);
-              addLog(`  ${ally.name} destroyed!`, Colors.GOLD, null, null, ally);
-            }
+            applyDamageToAlly(ally, dmg, enemy, /* skipOverwhelm */ true);
           }
-          player.removeDeadCreatures();
         } else {
           addLog(`  0 damage (frozen)`, Colors.ICE_BLUE);
         }
@@ -21477,16 +23517,25 @@ function updateEnemyTurn(dt) {
         if (drakes.length > 0) {
           const drake = drakes[Math.floor(Math.random() * drakes.length)];
           const drakeDmg = Math.max(0, (drake.attack || 0) + (drake.heroism || 0));
-          const iceRider = drake.iceAttack || 0;
+          const iceRider = drake.iceAttackAll || drake.iceAttack || 0;
           if (iceRider > 0) {
             applyIceToTarget(player, iceRider);
             for (const a of (player.creatures || [])) {
               if (a.isAlive) applyIceToTarget(a, iceRider);
             }
           }
+          // Sentinel allies must soak the direct damage hit first
+          // (mirrors pickEnemyAttackTarget). Without this the drake
+          // charge would punch past Thorb's sentinel form / any
+          // shielded egg + go straight to the player. Picks a
+          // random sentinel if multiple are alive.
+          const sentinels = (player.creatures || []).filter(a => a.isAlive && a.sentinel);
+          const directTarget = sentinels.length > 0
+            ? sentinels[Math.floor(Math.random() * sentinels.length)]
+            : player;
           if (drakeDmg > 0) {
             addLog(`  -> ${drake.name} charges! (${drakeDmg} damage)`, Colors.ORANGE);
-            routeEnemyDamageToTarget(player, drakeDmg, drake.name, drake);
+            routeEnemyDamageToTarget(directTarget, drakeDmg, drake.name, drake);
           } else {
             addLog(`  -> ${drake.name} charges!`, Colors.ORANGE);
           }
@@ -21526,6 +23575,33 @@ function updateEnemyTurn(dt) {
         enemy.shield += eff.value;
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
+      } else if (eff.effectType === 'block') {
+        // Varimatras Scale + any other enemy ABILITY card whose
+        // payoff is one-turn temp block (cleared at end of the
+        // enemy's turn, mirrors player block cards). DEFENSE-type
+        // cards normally hold this — but the dragon's scale card
+        // is ABILITY so it gets actively queued each turn.
+        enemy.addBlock(eff.value);
+        addLog(`  +${eff.value} Block`, Colors.BLUE);
+        spawnTokenOnTarget(enemy, eff.value, 'Block', Colors.BLUE);
+      } else if (eff.effectType === 'apply_ice_self') {
+        // Enemy-side Ice Block: stack Ice on the casting enemy via
+        // the Character status map (matches player apply_ice_self).
+        // Fire cancels 1:1 first, remainder applies as Ice. Using
+        // Creature-side iceStacks/fireStacks here was the bug that
+        // hid the boss's Ice tokens and left Fire stacked on him.
+        const fireStacks = enemy.getStatus('FIRE') || 0;
+        const cancel = Math.min(fireStacks, eff.value);
+        if (cancel > 0) {
+          enemy.removeStatus('FIRE', cancel);
+          addLog(`  Ice cancels ${cancel} Fire on ${enemy.name}`, Colors.ICE_BLUE);
+        }
+        const remaining = eff.value - cancel;
+        if (remaining > 0) {
+          enemy.applyStatus('ICE', remaining);
+          addLog(`  +${remaining} Ice on ${enemy.name}`, Colors.ICE_BLUE);
+          spawnTokenOnTarget(enemy, remaining, 'Ice', Colors.ICE_BLUE);
+        }
       } else if (eff.effectType === 'team_shield') {
         enemy.shield += eff.value;
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
@@ -22154,6 +24230,15 @@ function drawSwimming() {
 
 // --- Victory/Defeat ---
 function checkCombatEnd() {
+  // Wind-down guard: while the Gnikan P1→P2 transition is running its
+  // player end-of-turn beats (ice decay, draws, ally end-of-turn
+  // damage, etc.), checkCombatEnd is re-entered every few lines from
+  // endPlayerTurn. The boss is already dead, but we don't want the
+  // re-entry to fire the P1 intercept twice OR short-circuit
+  // endPlayerTurn's wrap-up. Returning false here lets endPlayerTurn
+  // complete cleanly; the actual phase advance happens once we return
+  // to the original intercept call.
+  if (_inGnikanP1Transition) return false;
   // Kill count victory (wolf pack, etc.)
   if (killTarget > 0 && killCount >= killTarget) {
     addLog(`VICTORY! Killed ${killCount}/${killTarget}!`, Colors.GOLD);
@@ -22177,6 +24262,102 @@ function checkCombatEnd() {
   // Normal victory: enemy character is dead. Surviving minions don't matter
   // (matches py game's check_enemy_defeated). Skipped if the boss is invulnerable.
   if (!enemy._invulnerable && !enemy.isAlive) {
+    // Overseer Gnikan phase-1 → phase-2 transition. Don't fire the
+    // VICTORY screen / combatVictory teardown — that would wipe the
+    // player's creatures, hand, deck shuffle, ice stacks, shield,
+    // heroism, rage, status effects, and reset the music. Instead:
+    // play Gnikan's death cue (scream), advance the encounter to the
+    // bridge TEXT phase (the master-arrives dialog), and let
+    // continueCombatPhase2 hand the turn to the dragon. The encounter
+    // structure (TEXT → COMBAT p1 → TEXT → COMBAT p2 → ...) does
+    // the rest — phase 2's COMBAT branch calls continueCombatPhase2
+    // instead of startCombat thanks to the wiring in
+    // advanceEncounterPhase.
+    if (enemy && enemy._enemyId === 'overseer_gnikan' && currentEncounter
+        && currentEncounter.id === 'overseer_gnikan') {
+      addLog('Gnikan falls — but the storm howls back.', Colors.ICE_BLUE);
+      if (debugMode) {
+        console.log('[Gnikan P1→P2] intercept fired. Phase idx:',
+          currentEncounter.currentPhaseIndex, '→ advancing to TEXT.');
+      }
+      const deathKey = getDeathSfxKey(enemy);
+      if (deathKey) playSound(deathKey, 0.7);
+      // Wind down the player's turn cleanly before phase 2 opens:
+      // ice/shock decay, Thorb shield, Valdrisa heal, ally
+      // end-of-turn passives, draws back to hand size. Run inside
+      // the _inGnikanP1Transition guard so the embedded
+      // checkCombatEnd calls in endPlayerTurn don't re-fire this
+      // intercept or short-circuit the wrap-up. skipEnemyTurn=true
+      // suppresses startEnemyTurn — phase 2's continueCombatPhase2
+      // is what eventually hands the turn to the new enemy.
+      _inGnikanP1Transition = true;
+      try { endPlayerTurn({ skipEnemyTurn: true }); }
+      finally { _inGnikanP1Transition = false; }
+      currentEncounter.advancePhase();
+      advanceEncounterPhase();
+      return true;
+    }
+    // Overseer Gnikan phase-2 → Varimatras phase-3 transition. Gnikan
+    // dies screaming a second time, the dragon descends and takes
+    // over, and the player gets a brief rest beat in between. Unlike
+    // the P1→P2 transition we DO want a full combat-state teardown —
+    // phase 3 is a fresh fight (creatures cleared, hand reset, shield
+    // / heroism / status all wiped) before the dragon takes the
+    // field. Skip combatVictory's state=VICTORY pivot so the dialog
+    // takes over instead of the victory screen, and mark the
+    // encounter background as the Varimatras backdrop for the rest
+    // of the encounter (covers the dying-Gnikan TEXT, the catch-
+    // breath CHOICE, the rally TEXT, and the COMBAT itself).
+    if (enemy && enemy._enemyId === 'overseer_gnikan_phase_2' && currentEncounter
+        && currentEncounter.id === 'overseer_gnikan') {
+      addLog('Gnikan screams — buried by his own master.', Colors.ICE_BLUE);
+      const deathKey2 = getDeathSfxKey(enemy);
+      if (deathKey2) playSound(deathKey2, 0.7);
+      // Swap to the Varimatras "trailer cinematic" theme NOW (during
+      // the dragon-descends dialog) instead of waiting for phase 3
+      // combat to start. The track was originally crossfaded in
+      // startCombat for enemyId === 'varimatras', but starting it
+      // here so the dialog itself plays under the dragon's theme.
+      // startCombat's same-track crossfade then becomes a no-op
+      // (crossfadeMusic is idempotent on the same track).
+      crossfadeMusic('Music/music_the_trailer_01', 1500, 2500);
+      _lastMusicArea = null;
+      _lastMusicNodeId = null;
+      // Full combat-state teardown so phase 3 starts clean. Mirrors
+      // the relevant slice of combatVictory without firing the
+      // victory screen / track event. Note: we deliberately DO NOT
+      // call stopAmbienceLayer here — the mountain-wind blizzard
+      // bed should blow continuously through the dying-Gnikan
+      // dialog into phase 3 (Varimatras also has the blizzard
+      // power, so startCombat's playAmbienceLayer for phase 3 will
+      // hit the idempotent same-key path and just keep playing).
+      player.endCombatBuffCleanup();
+      clearObsidianShardsFromDeck();
+      player.deck.endCombat(getPlayerHandSize(), MAX_HAND_SIZE);
+      player.readyPowers();
+      player.creatures = [];
+      player.clearBlock();
+      player.shield = 0;
+      player.heroism = 0;
+      player.rage = 0;
+      player.poisonBuff = 0;
+      player.ignite = 0;
+      player.unpreventableBuff = 0;
+      player.statusEffects = {};
+      attacksThisTurn = 0;
+      for (const c of player.deck.hand) c.exhausted = false;
+      // Hand over Gnikan's Staff — Raena snatches it before the
+      // snow can swallow it, and it lands in the party's hand for
+      // phase 3 (the rally TEXT phase logs the pickup beat). The
+      // card is added to masterDeck + hand by addLootedCard, so
+      // player.deck.startCombat at phase-3 open dedupes it cleanly
+      // (hand match by id strips the masterDeck copy from drawPile).
+      addLootedCard(createGnikansStaff());
+      _encounterBgOverride = 'bg_varimatras';
+      currentEncounter.advancePhase();
+      advanceEncounterPhase();
+      return true;
+    }
     addLog('VICTORY!', Colors.GOLD);
     // Boss-specific death cue (Giant Rat / Dire Rat squeak etc.).
     if ((enemy.name || '').toLowerCase() === 'obsidian slime') {
@@ -22404,6 +24585,15 @@ function getCreaturePlaySfxKey(c) {
   if (name === 'pet slime') return 'ooze_attack';
   if (name === 'tamed rat') return 'rat_screech';
   if (name === 'treant') return 'leaf_fall';
+  // Ice Elemental — ice-blast cue plays on summon (both player-side
+  // staff summon and the enemy-side Gnikan's Staff burst route
+  // through this hook via playCreaturePlaySfx).
+  if (name === 'ice elemental') return 'ice_elemental';
+  // White Dragon Wyrmling — heavy monster scream on entry (and
+  // again on death via getDeathSfxKey). Swing flesh / blocked
+  // sounds route through the creature-name branch in
+  // getWeaponSfxKeys (monster_bite_01).
+  if (name === 'white dragon wyrmling') return 'monster_scream_01';
   return null;
 }
 
@@ -22500,6 +24690,18 @@ function getDeathSfxKey(c) {
   if (name === 'durin stoneheart')    return 'monster_scream_01';
   if (name === 'balgrim ironvein')    return 'monster_alien_scream_01';
   if (name === 'thordak ashmantle')   return 'monster_demon_screech_01';
+  // Overseer Gnikan + Ice Elemental — chapter 8 summit fight.
+  // Gnikan's death replays the boss hiss; the elementals shatter
+  // with the same ice-blast they spawned in with.
+  if (name === 'overseer gnikan') return 'gnikan_hiss';
+  if (name === 'ice elemental')   return 'ice_elemental';
+  // White Dragon Wyrmling — same heavy monster scream on death
+  // and entry (see getCreaturePlaySfxKey above).
+  if (name === 'white dragon wyrmling') return 'monster_scream_01';
+  // Varimatras — phase-3 frost dragon. Same heaviest cave-monster
+  // scream variant that bookends the fight (varimatras_scream =
+  // sahuagin_scream_03).
+  if (name === 'varimatras')      return 'varimatras_scream';
   // Codex-only surface for the obsidian family bursts (the layered
   // playObsidianSlimeBurst / playObsidianGolemBurst still fires at
   // runtime; this exposes the lead sample so the codex Sounds row
@@ -22548,6 +24750,13 @@ function getFightStartSfxKey(rawName) {
   if (name === 'kobold slyblade') return 'slyblade_hiss';
   if (name === 'ruga the slave master') return 'ruga_chuff';
   if (name === 'dwarven specter') return 'specter_screech';
+  // Overseer Gnikan — chapter-8 summit boss. Reuses the heaviest
+  // reptilian hiss aliased as gnikan_hiss.
+  if (name === 'overseer gnikan') return 'gnikan_hiss';
+  // Varimatras — phase-3 frost dragon. Heaviest cave-monster scream
+  // (sahuagin_scream_03 aliased as varimatras_scream) bookends the
+  // fight and also fires on every Cold Breath play.
+  if (name === 'varimatras') return 'varimatras_scream';
   // Codex display aliases — these names come from getCodexMonsterIds()
   // titled forms, while the live enemies use the names above.
   if (name === 'obsidian slime') return 'ooze_attack';
@@ -24897,15 +27106,27 @@ function drawInventory() {
   // Track hovered card for the full-card cursor preview. Clear all three
   // hover channels — including creature, which would otherwise carry the
   // last combat's creature hover into the inventory overlay (every card
-  // hovering as a rat/spider/etc.).
-  hoveredCardPreview = null;
-  hoveredPowerPreview = null;
-  hoveredCreaturePreview = null;
+  // hovering as a rat/spider/etc.). Shift-hold pins whatever preview was
+  // active when shift was first pressed (same flow combat uses), so the
+  // player can mouse over a card's keyword icons / side-creature tile
+  // (e.g. the Egg ally beside the egg loot card) without losing the
+  // full-size preview.
+  if (isShiftFrozen()) {
+    hoveredCardPreview = shiftFreezeCard;
+    hoveredPowerPreview = shiftFreezePower;
+    hoveredCreaturePreview = shiftFreezeCreature;
+  } else {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
 
   // --- Draw a stacked card section with scrollbar ---
   function drawCardSection(section, rects, label) {
     // Hover suppressed under any modal that's blocking shop interactions.
-    const allowHover = !_shopConfirm;
+    // Shift-hold also suppresses new hover detection so the pinned
+    // preview stays put while the user reads its keyword tooltips.
+    const allowHover = !_shopConfirm && !isShiftFrozen();
     // +60 mirrors getStackedCardRects' startY. clipH bumped to -70 so the
     // bottom edge stays at the same spot (section.y + section.h - 10).
     const clipY = section.y + 60;
@@ -25206,8 +27427,10 @@ function drawShopConfirmModal() {
 // Cards the player can't afford are darkened. Hovering sets
 // hoveredCardPreview for the big-card cursor overlay.
 function drawShopSection(section) {
-  // Suppress hover entirely while the buy/sell confirm modal is open.
-  const allowHover = !_shopConfirm;
+  // Suppress hover entirely while the buy/sell confirm modal is open
+  // OR while Shift is pinning the preview (so the pinned card stays
+  // visible while the user reads its keyword tooltips).
+  const allowHover = !_shopConfirm && !isShiftFrozen();
   // +60 mirrors the +60 in getShopSectionCardRects (filter chip
   // clearance). clipH bumped to -70 so the bottom edge sits at the
   // same spot (section.y + section.h - 90 with the -80 button reserve).
@@ -25797,7 +28020,8 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
+    throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf,
+    valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance,
     forgeUsed, forgeRested, volcanoHeartSacrificed,
@@ -25808,6 +28032,7 @@ function commitSaveEditing() {
     mapTableCopied, mapTableRested,
     caveEntranceDoubledBack,
     corridorEntranceDoubledBack,
+    backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
   }, saveEditingSlot, name);
@@ -26403,6 +28628,12 @@ function restoreFromSave(data) {
   siegeComplete = !!data.siegeComplete;
   throneAudienceComplete = !!data.throneAudienceComplete;
   quartersRested = !!data.quartersRested;
+  dragonSlain = !!data.dragonSlain;
+  dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
+  heroesOfQualibaf = !!data.heroesOfQualibaf;
+  // Same defensive reset as startNewGame — _encounterBgOverride is
+  // runtime-only and shouldn't survive a load.
+  _encounterBgOverride = null;
   valdrisaJoined = !!data.valdrisaJoined;
   upperStairsReturnSeen = !!data.upperStairsReturnSeen;
   tharnagExitSeen = !!data.tharnagExitSeen;
@@ -26436,6 +28667,9 @@ function restoreFromSave(data) {
   mapTableRested = !!data.mapTableRested;
   caveEntranceDoubledBack = !!data.caveEntranceDoubledBack;
   corridorEntranceDoubledBack = !!data.corridorEntranceDoubledBack;
+  _backwardRefoggedOnce = data.backwardRefoggedOnce instanceof Set
+    ? new Set(data.backwardRefoggedOnce)
+    : (Array.isArray(data.backwardRefoggedOnce) ? new Set(data.backwardRefoggedOnce) : new Set());
   // Re-hydrate persistent buffs (Old God's Blessing, Volcano's
   // Blessing, etc.). Without this the buffs vanished on reload —
   // they're stored on the Character which gets rebuilt from scratch.
@@ -26632,6 +28866,12 @@ function draw() {
       break;
     case GameState.ENCOUNTER_LOOT:
       drawEncounterLoot();
+      break;
+    case GameState.ENCOUNTER_LOOT_PICK:
+      drawEncounterLootPick();
+      break;
+    case GameState.END_CREDITS:
+      drawEndCredits();
       break;
     case GameState.COMBAT:
     case GameState.TARGETING:
@@ -27395,6 +29635,160 @@ function dismissTitleCard() {
 }
 
 // ============================================================
+// END CREDITS — fires after the post-Varimatras sleep beat.
+// Slow-scrolls the credit roll upward from below the screen, then
+// auto-returns to the main menu. Click anywhere to skip to menu.
+// ============================================================
+
+// Roughly 24 px/sec at 60 fps. Tuned to a "Star Wars crawl" pace
+// — long enough to read each block, short enough not to drag.
+const END_CREDITS_SCROLL_PX_PER_FRAME = 0.4;
+const END_CREDITS_LINE_HEIGHT = 30;
+const END_CREDITS_TAIL_PAD = 180; // extra empty space after the last line before auto-exit
+let endCreditsScrollY = 0;
+let endCreditsContentH = 0;
+let endCreditsLines = [];
+
+// Lines: { text, style }
+// style: 'header' (gold, large), 'section' (gold, medium), 'role'
+// (white, body), 'name' (light, body), 'gap' (blank line),
+// 'thanks' (gold, italic).
+const END_CREDITS_TEMPLATE = [
+  { text: 'End of Part 1', style: 'header' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: 'DESIGN', style: 'section' },
+  { text: 'Lead Designer ............................. Eric Prieur', style: 'role' },
+  { text: 'Encounter Designer ........................ Eric Prieur', style: 'role' },
+  { text: 'Card Designer ............................. Eric Prieur', style: 'role' },
+  { text: 'Narrative Designer ........................ Eric Prieur', style: 'role' },
+  { text: 'Boss Designer ............................. Eric Prieur', style: 'role' },
+  { text: 'Loot Designer ............................. Eric Prieur', style: 'role' },
+  { text: 'Combat Designer ........................... Eric Prieur', style: 'role' },
+  { text: 'Power Designer ............................ Eric Prieur', style: 'role' },
+  { text: 'Map Designer .............................. Eric Prieur', style: 'role' },
+  { text: 'UX Designer ............................... Eric Prieur', style: 'role' },
+  { text: 'Audio Designer ............................ Eric Prieur', style: 'role' },
+  { text: 'Class Designer ............................ Eric Prieur', style: 'role' },
+  { text: 'Companion Designer ........................ Eric Prieur', style: 'role' },
+  { text: 'Tutorial Designer ......................... Eric Prieur', style: 'role' },
+  { text: 'Shop Designer ............................. Eric Prieur', style: 'role' },
+  { text: 'Difficulty Curve Designer ................. Eric Prieur', style: 'role' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: 'PROGRAMMING', style: 'section' },
+  { text: 'Lead Programmer ........................... Claude (Code)', style: 'role' },
+  { text: 'Gameplay Programmer ....................... Claude (Code)', style: 'role' },
+  { text: 'AI Programmer ............................. Claude (Code)', style: 'role' },
+  { text: 'UI Programmer ............................. Claude (Code)', style: 'role' },
+  { text: 'Combat Programmer ......................... Claude (Code)', style: 'role' },
+  { text: 'Map / Encounter Programmer ................ Claude (Code)', style: 'role' },
+  { text: 'Audio Programmer .......................... Claude (Code)', style: 'role' },
+  { text: 'Save / Load Programmer .................... Claude (Code)', style: 'role' },
+  { text: 'Card Renderer Programmer .................. Claude (Code)', style: 'role' },
+  { text: 'Codex Programmer .......................... Claude (Code)', style: 'role' },
+  { text: 'Status FX Programmer ...................... Claude (Code)', style: 'role' },
+  { text: 'Tools Programmer .......................... Claude (Code)', style: 'role' },
+  { text: 'Build Engineer ............................ Claude (Code)', style: 'role' },
+  { text: 'QA Automation Engineer .................... Claude (Code)', style: 'role' },
+  { text: 'Refactoring Specialist .................... Claude (Code)', style: 'role' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: 'TESTING', style: 'section' },
+  { text: 'Lead QA ................................... Nick 1', style: 'role' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: 'SPECIAL THANKS', style: 'section' },
+  { text: 'Roch', style: 'name' },
+  { text: 'for introducing me to Claude Code', style: 'thanks' },
+  { text: 'and the motivation to start this project.', style: 'thanks' },
+  { text: '', style: 'gap' },
+  { text: '', style: 'gap' },
+  { text: 'Thanks for playing!', style: 'header' },
+  { text: '', style: 'gap' },
+  { text: 'See you in Part 2.', style: 'thanks' },
+];
+
+function startEndCredits() {
+  endCreditsLines = END_CREDITS_TEMPLATE.slice();
+  endCreditsContentH = endCreditsLines.length * END_CREDITS_LINE_HEIGHT;
+  // Start the credits below the screen so the first line scrolls in
+  // from the bottom edge.
+  endCreditsScrollY = SCREEN_HEIGHT;
+  state = GameState.END_CREDITS;
+}
+
+function updateEndCredits() {
+  endCreditsScrollY -= END_CREDITS_SCROLL_PX_PER_FRAME;
+  // Done when the LAST line has scrolled off the top.
+  if (endCreditsScrollY < -(endCreditsContentH + END_CREDITS_TAIL_PAD)) {
+    finishEndCredits();
+  }
+}
+
+function finishEndCredits() {
+  endCreditsLines = [];
+  endCreditsScrollY = 0;
+  endCreditsContentH = 0;
+  state = GameState.MENU;
+}
+
+function drawEndCredits() {
+  // Solid black backdrop — credits-style.
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  let y = Math.floor(endCreditsScrollY);
+  for (const line of endCreditsLines) {
+    if (y > -END_CREDITS_LINE_HEIGHT && y < SCREEN_HEIGHT) {
+      const cx = SCREEN_WIDTH / 2;
+      if (line.style === 'header') {
+        ctx.fillStyle = Colors.GOLD;
+        ctx.font = 'bold 38px Georgia, serif';
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = 6;
+        ctx.fillText(line.text, cx, y);
+        ctx.restore();
+      } else if (line.style === 'section') {
+        ctx.fillStyle = Colors.GOLD;
+        ctx.font = 'bold 22px Georgia, serif';
+        ctx.fillText(line.text, cx, y);
+      } else if (line.style === 'role') {
+        ctx.fillStyle = '#dde3ec';
+        ctx.font = '15px "Courier New", monospace';
+        ctx.fillText(line.text, cx, y);
+      } else if (line.style === 'name') {
+        ctx.fillStyle = '#ffe9a0';
+        ctx.font = 'bold 22px Georgia, serif';
+        ctx.fillText(line.text, cx, y);
+      } else if (line.style === 'thanks') {
+        ctx.fillStyle = '#c8d0d8';
+        ctx.font = 'italic 16px Georgia, serif';
+        ctx.fillText(line.text, cx, y);
+      }
+    }
+    y += END_CREDITS_LINE_HEIGHT;
+  }
+  // Skip hint at the bottom — fades in a few seconds after start so
+  // it doesn't compete with the first lines crossing the screen.
+  if (endCreditsScrollY < SCREEN_HEIGHT - 60) {
+    ctx.fillStyle = 'rgba(180,180,200,0.55)';
+    ctx.font = 'italic 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Click to skip to menu', SCREEN_WIDTH / 2, SCREEN_HEIGHT - 12);
+  }
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+}
+
+function handleEndCreditsClick() {
+  finishEndCredits();
+}
+
+// ============================================================
 // CHAPTER END SEQUENCE (post-leave-prison → level up)
 // ============================================================
 
@@ -27857,6 +30251,41 @@ const CARD_SFX_OVERRIDES = {
   arcane_shield:            { play: 'arcane_shield' },
   pet_slime:                { play: 'ooze_attack' },
   tamed_rat:                { play: 'rat_screech' },
+  // Gnikan's Staff cast — ice-blast cue on play so the summoned
+  // Ice Elemental arrives with its signature sound. The same alias
+  // bookends the elemental's swing + death via getWeaponSfxKeys /
+  // getDeathSfxKey.
+  // Gnikan's Staff — frost-spell whoosh on the cast layered over
+  // the baton thud on impact, so every swing reads as both "cold
+  // spell" + "heavy stick to the face." The summon_ice_burst
+  // effect handler fires the Ice Elemental's own ice-blast cue
+  // when an elemental actually spawns, separately from these.
+  gnikans_staff:            { play: 'cold_whoosh', flesh: 'staff_flesh' },
+  // Cold Breath — every dragon breath weapon roars through the
+  // same heavy scream that bookends the Varimatras fight.
+  cold_breath:              { play: 'varimatras_scream' },
+  // Varimatras Bite — heavy dragon-jaws chomp on flesh AND blocked
+  // hits so the swing reads consistently even when the party
+  // shields it. Uses the heavier monster_bite_02 sample to feel
+  // bigger than the chapter-7 magma drake bite.
+  varimatras_bite:          { flesh: 'monster_bite_02', blocked: 'monster_bite_02' },
+  // Varimatras Claw — shares The White Claw sword sample family
+  // (sword_1h_flesh / sword_blocked) so the slash audibly matches
+  // a real clawed weapon, not a generic monster cue.
+  varimatras_claw:          { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  // Varimatras Tail Swipe — whip crack for the wide arc. Reuses
+  // the whip_flesh alias which already points at whip_crack_01.
+  varimatras_tail:          { flesh: 'whip_flesh', blocked: 'whip_flesh' },
+  // Varimatras Wing Buffet — howling-wind spell cue on the cast.
+  // No flesh/blocked since the buffet only stacks Ice (no damage),
+  // so the wind whoosh is the entire audio beat.
+  varimatras_wing:          { play: 'wing_buffet' },
+  // Obsidian Shard — black-glass dagger throw. Heavy-debris crack
+  // on cast (the shard shears off) layered over the standard
+  // dagger flesh/blocked hit cues. Without this override the card
+  // fell back to no SFX (its id doesn't match the dagger/rock
+  // keyword sniff in getWeaponSfxKeys).
+  obsidian_shard:           { play: 'boulder_flesh', flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
   raena_card:               { play: 'raena_summon' },
   raena_card_2:             { play: 'raena_summon' },
   valdrisa_card:            { play: 'valdrisa_summon' },
@@ -28013,6 +30442,12 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'bone amalgam') {
       return { flesh: 'big_bone_hit', blocked: 'big_bone_hit' };
     }
+    // Ice Elemental — ice-blast cue on every swing so the elemental's
+    // attack feels frosty. Same sample bookends summon + death via
+    // getCreaturePlaySfxKey / getDeathSfxKey.
+    if (name === 'ice elemental') {
+      return { flesh: 'ice_elemental', blocked: 'ice_elemental', play: 'ice_elemental' };
+    }
     // Obsidian Slime — its swing ambient already plays the layered
     // gore-ooze + rocks burst (see playCreatureSwingAmbient). Skipping
     // flesh/blocked here avoids stacking a second ooze sample on top
@@ -28093,6 +30528,12 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // swing AND on death (death keyed in getDeathSfxKey).
     if (name === 'frost drake') {
       return { flesh: 'frost_drake_scream', blocked: 'frost_drake_scream' };
+    }
+    // White Dragon Wyrmling — heavy dragon-jaws chomp on every
+    // swing (matches the egg's monster_bite_02 family but uses
+    // the lighter monster_bite_01 sample for the smaller wyrm).
+    if (name === 'white dragon wyrmling') {
+      return { flesh: 'monster_bite_01', blocked: 'monster_bite_01' };
     }
     // Shark — splash on the swing + a chunky chew when teeth land.
     // playAttackHitSfx fires `flesh`; the splash comes from a play-
@@ -28228,6 +30669,17 @@ function playObsidianOracleBurst(volume = 0.7) {
   playSound('rocks_impact_small', volume);
   setTimeout(() => playSound('rocks_impact_small', volume), 260);
   setTimeout(() => playSound('dark_spell_01', volume), 420);
+}
+
+// Overseer Gnikan fight start — boss hiss + three staggered ice
+// blasts to herald the trio of Ice Elementals already on the field
+// (1/1, 2/2, 3/3). Each blast lines up roughly with one elemental's
+// "arrival" the moment the showcase finishes. Wider spacing so the
+// three crashes read distinctly instead of bleeding into one wash.
+function playGnikanIceElementalBurst(volume = 0.7) {
+  playSound('ice_elemental', volume);
+  setTimeout(() => playSound('ice_elemental', volume), 700);
+  setTimeout(() => playSound('ice_elemental', volume), 1400);
 }
 
 // The 3 Ancestors — fight-start burst: demon screech then a pair of
@@ -28384,10 +30836,12 @@ function playAttackHitSfx(originalDmg, taken, delay = 0) {
 function spawnDamageOnTarget(target, amount, color = Colors.RED) {
   playSound('damage', 0.6);
   let rect;
+  let shiftX = 0;
   if (target === player) {
     rect = getCharacterCardRect(true);
   } else if (target === enemy) {
     rect = getCharacterCardRect(false);
+    shiftX = _dragonVisualShiftX();
   } else {
     // It's a creature — find its rect
     const playerIdx = player.creatures.indexOf(target);
@@ -28403,7 +30857,7 @@ function spawnDamageOnTarget(target, amount, color = Colors.RED) {
     }
   }
   if (rect) {
-    spawnDamageNumber(rect.x + rect.w / 2, rect.y + rect.h - 10, `-${amount}`, color);
+    spawnDamageNumber(rect.x + rect.w / 2 + shiftX, rect.y + rect.h - 10, `-${amount}`, color);
   }
 }
 
@@ -28411,8 +30865,9 @@ function spawnDamageOnTarget(target, amount, color = Colors.RED) {
 // Color carries the meaning — label param kept for backwards compat but ignored.
 function spawnTokenOnTarget(target, amount, _label, color) {
   let rect;
+  let shiftX = 0;
   if (target === player) rect = getCharacterCardRect(true);
-  else if (target === enemy) rect = getCharacterCardRect(false);
+  else if (target === enemy) { rect = getCharacterCardRect(false); shiftX = _dragonVisualShiftX(); }
   else {
     const pi = player.creatures.indexOf(target);
     if (pi !== -1) rect = getPlayerCreatureRects()[pi];
@@ -28422,7 +30877,7 @@ function spawnTokenOnTarget(target, amount, _label, color) {
     }
   }
   if (!rect) return;
-  spawnDamageNumber(rect.x + rect.w / 2, rect.y + rect.h - 10, `+${amount}`, color);
+  spawnDamageNumber(rect.x + rect.w / 2 + shiftX, rect.y + rect.h - 10, `+${amount}`, color);
 }
 
 // Float-only colors that intentionally differ from icon palettes so distinct
@@ -28431,10 +30886,12 @@ const HEAL_GREEN = '#7cff9c';
 const BLOCK_BLUE = '#cfe8ff';
 function spawnHealOnTarget(target, amount) {
   let rect;
+  let shiftX = 0;
   if (target === player) {
     rect = getCharacterCardRect(true);
   } else if (target === enemy) {
     rect = getCharacterCardRect(false);
+    shiftX = _dragonVisualShiftX();
   } else {
     const pi = player.creatures.indexOf(target);
     if (pi !== -1) rect = getPlayerCreatureRects()[pi];
@@ -28444,7 +30901,7 @@ function spawnHealOnTarget(target, amount) {
     }
   }
   if (rect) {
-    spawnDamageNumber(rect.x + rect.w / 2, rect.y + rect.h - 10, `+${amount}`, HEAL_GREEN);
+    spawnDamageNumber(rect.x + rect.w / 2 + shiftX, rect.y + rect.h - 10, `+${amount}`, HEAL_GREEN);
   }
 }
 
@@ -28706,6 +31163,10 @@ function gameLoop(timestamp) {
   // Update title card
   updateTitleCard(dt);
 
+  // Update end credits scroll (slow upward crawl). Auto-returns to
+  // MENU when the scroll finishes.
+  if (state === GameState.END_CREDITS) updateEndCredits();
+
   // Update damage numbers
   updateDamageNumbers(dt);
 
@@ -28802,7 +31263,7 @@ const ALL_POWER_CREATORS = [
   createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam,
   createPiranhasSwarm, createFromTheDeep, createWolfPack,
   createMassiveOgreRam, createGoblinSapperSquad,
-  createLavaFloor,
+  createLavaFloor, createBlizzard, createAncientWhite,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower,
   createVanish, createBrute, createEthereal,
@@ -29267,8 +31728,8 @@ function drawCodexCardGrid(L) {
       // Pass the entry's side so the player/enemy frame tint matches the
       // side preview (blue for player summons, brown for enemy creatures).
       const isPlayerSide = entry.side === 'player';
-      if (codexShowFull) drawCreaturePreviewCard(entry.card, x, y, cardW, cardH);
-      else drawCreatureCard(entry.card, { x, y, w: cardW, h: cardH }, isPlayerSide);
+      if (codexShowFull) drawCreaturePreviewCard(entry.card, x, y, cardW, cardH, true);
+      else drawCreatureCard(entry.card, { x, y, w: cardW, h: cardH }, isPlayerSide, false, true);
       if (hovered && canHoverSet) hoveredCreaturePreview = entry.card;
     }
     codexClickAreas.push({ x, y, w: cardW, h: cardH, kind: 'select-card', entry });
@@ -30532,6 +32993,13 @@ function getCodexMonsterIds() {
     'ruga_slave_master',
     // Tomb of the Ancestor sarcophagus fight — three Founder spirits.
     'ancestor_spirits',
+    // Chapter 8 summit ridge boss — Overseer Gnikan, kobold frost
+    // shaman. Fight opens with three Ice Elementals already on the
+    // field (1/1, 2/2, 3/3).
+    'overseer_gnikan',
+    // Chapter 8 phase-3 dragon — Varimatras, ancient frost dragon
+    // that descends after Gnikan's second death.
+    'varimatras',
   ];
 }
 
@@ -30664,7 +33132,12 @@ function buildCodexSourceCache() {
     // Staff + enemy From the Deep) gets one entry per side and shows
     // up under the correct Summons filter.
     const side = creature._codexSide || 'enemy';
-    const key = `${creature.name}|${creature.attack}|${creature.maxHp}|${creature.sentinel ? 1 : 0}|${side}`;
+    // `_codexVariableStats` collapses size variants of the same
+    // creature (Ice Elemental 1/1, 2/2, 3/3) into a single codex
+    // entry — the renderer paints stats as X / X for the group.
+    const key = creature._codexVariableStats
+      ? `${creature.name}|XX|${creature.sentinel ? 1 : 0}|${side}`
+      : `${creature.name}|${creature.attack}|${creature.maxHp}|${creature.sentinel ? 1 : 0}|${side}`;
     if (!seenCreatures.has(key)) {
       seenCreatures.add(key);
       // Detach from any prior owner so codex rendering doesn't bleed combat
@@ -30680,7 +33153,12 @@ function buildCodexSourceCache() {
       const entry = _normSrc(src);
       // byCreatureName key intentionally drops the side suffix so the
       // stats panel can still aggregate sources across both sides.
-      const nameKey = `${creature.name}|${creature.attack}|${creature.maxHp}|${creature.sentinel ? 1 : 0}`;
+      // Variable-stats creatures collapse to the name-only key so all
+      // size variants (Ice Elemental 1/1, 2/2, 3/3) feed the same
+      // codex entry's source list.
+      const nameKey = creature._codexVariableStats
+        ? `${creature.name}|XX|${creature.sentinel ? 1 : 0}`
+        : `${creature.name}|${creature.attack}|${creature.maxHp}|${creature.sentinel ? 1 : 0}`;
       if (!cache.byCreatureName[nameKey]) cache.byCreatureName[nameKey] = [];
       if (!_hasText(cache.byCreatureName[nameKey], entry.text)) cache.byCreatureName[nameKey].push(entry);
     }
@@ -30896,7 +33374,7 @@ function buildCodexSourceCache() {
     'kobold_drake_rider','piranhas_swarm','general_zhost','general_zhost_boss',
     'wolf_pack','stone_giant','mimic','ruga_slave_master','zhost_revenge','ancestor_spirits',
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',
-    'magma_mephit',
+    'magma_mephit','overseer_gnikan','overseer_gnikan_phase_2','varimatras',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the
@@ -30998,7 +33476,11 @@ function getCardSources(sel) {
   // collected from a card's previewCreature field or an enemy's creature list).
   if (sel._isCreature) {
     const cache = buildCodexSourceCache();
-    const nameKey = `${sel.name}|${sel.attack}|${sel.maxHp}|${sel.sentinel ? 1 : 0}`;
+    // Variable-stats creatures (Ice Elemental) store sources under
+    // the collapsed `name|XX` key so all size variants pool here.
+    const nameKey = sel._codexVariableStats
+      ? `${sel.name}|XX|${sel.sentinel ? 1 : 0}`
+      : `${sel.name}|${sel.attack}|${sel.maxHp}|${sel.sentinel ? 1 : 0}`;
     out.push(...(cache.byCreatureName[nameKey] || []));
     return out;
   }
@@ -31066,7 +33548,7 @@ function drawCodexStatsPanel(L) {
   } else if (sel._isPower) {
     drawPowerPreviewCard(sel, thumbX, thumbY, thumbW, thumbH);
   } else if (sel._isCreature) {
-    drawCreaturePreviewCard(sel, thumbX, thumbY, thumbW, thumbH);
+    drawCreaturePreviewCard(sel, thumbX, thumbY, thumbW, thumbH, true);
   } else if (sel._isPerk) {
     drawCodexPerkDetails(sel, thumbX, thumbY, thumbW, thumbH);
   } else {
@@ -31373,6 +33855,7 @@ function drawCodexStatsPanel(L) {
     if (sel.poisonAttack)  lines.push('poisonAttack: true');
     if (sel.fireAttack)    lines.push(`fireAttack: ${sel.fireAttack}`);
     if (sel.iceAttack)     lines.push(`iceAttack: ${sel.iceAttack}`);
+    if (sel.iceAttackAll)  lines.push(`iceAttackAll: ${sel.iceAttackAll}`);
     if (sel.fireImmune)    lines.push('fireImmune: true');
     if (sel.attackAll)     lines.push('attackAll: true');
     if (sel.multiAttack)   lines.push(`multiAttack: ${sel.multiAttack}`);

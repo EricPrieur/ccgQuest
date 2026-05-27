@@ -50,6 +50,22 @@ export class EncounterPhaseData {
     triggersLevelUp = false,
     levelUpTier = 1,
     choicePrompt = '',
+    // Loot-pick mode (Varimatras + future drops): the player is
+    // offered `lootPickCards` (array of CARD_REGISTRY ids) and
+    // keeps exactly `lootPickCount` of them. When both are set on
+    // a LOOT phase, advanceEncounterPhase routes to the
+    // ENCOUNTER_LOOT_PICK screen instead of auto-rolling
+    // lootCards / lootGold.
+    lootPickCount = 0,
+    lootPickCards = [],
+    // Per-phase title override. When set, drawEncounterText shows
+    // this string instead of currentEncounter.name at the top of
+    // the TEXT screen. Lets a single encounter walk through
+    // multiple narrative beats with different banner labels (e.g.
+    // the Overseer Gnikan encounter shifts to "Varimatras" /
+    // "Aftermath" titles after the boss swap). Empty string
+    // suppresses the title entirely.
+    phaseTitle = null,
   }) {
     this.phaseType = phaseType;
     this.texts = texts;
@@ -62,6 +78,9 @@ export class EncounterPhaseData {
     this.triggersLevelUp = triggersLevelUp;
     this.levelUpTier = levelUpTier;
     this.choicePrompt = choicePrompt;
+    this.lootPickCount = lootPickCount;
+    this.lootPickCards = lootPickCards;
+    this.phaseTitle = phaseTitle;
   }
 }
 
@@ -1764,6 +1783,34 @@ export function createGuildHallEncounter() {
   ]);
 }
 
+// Guild Hall — Heroes of Qualibaf celebration. Fires once when the
+// party walks back into the guild hall after killing Varimatras
+// (gated on dragonSlain + !heroesOfQualibaf in the click handler).
+// Aldric Voss receives the party as heroes; the inn rest goes free
+// for life via the heroesOfQualibaf flag (see resolveInnRest in
+// main.js).
+export function createGuildHallVictoryEncounter() {
+  return new Encounter('guild_hall_victory', 'Heroes of Qualibaf', 'A hero\'s welcome at the Guild Hall.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You walk back into the Guild Hall with snow still in your cloaks and soot under your fingernails. Word has clearly outrun you — the clerks at the desk are on their feet, the corridor lined with apprentices craning to see, the air buzzing.'),
+        new EncounterText('Aldric Voss is already striding down the great hall to meet you, beard ringed in heavy silver, grin you would not have thought his face could hold.', '!'),
+        new EncounterText('They told me. They told me you actually DID it. The mountain, the kobold-witch, and — what does the dwarven runner keep saying — a WHITE DRAGON?', 'Aldric Voss'),
+        new EncounterText('"All of it, Guildmaster. And the volcano is singing again. The forge is lit. The valley\'s warming as we speak."', 'Raena'),
+        new EncounterText('"The cold that was killing our crops — done. The bridge can be rebuilt. The trade road can open. Qualibaf can BREATHE again."', 'Aldric Voss'),
+        new EncounterText('He turns to the hall. Hundreds of guildsfolk and onlookers have crowded in — merchants, smiths, the South Gate captain, half the city council.', '!'),
+        new EncounterText('By the authority of the Adventurer\'s Guild, and with every voice in this room behind me — you stand as Heroes of Qualibaf. From this day forward your name carries a warrant of the city.', 'Aldric Voss'),
+        new EncounterText('Cheers. Stamping boots. Someone starts a horn-song that gets the whole hall going. Thorb is hugged off his feet by a stranger.', '!'),
+        new EncounterText('"Practical matters, hero. The Greedy Goblin Inn — and every inn on the South Road — has been notified. You and yours rest under their roofs at no charge, for life. You earned a thousand warm beds."', 'Aldric Voss'),
+        new EncounterText('"…I might use ALL of them. Just so we\'re clear."', 'Thorb'),
+        new EncounterText('"There is more coming, of course. The Deep Roads stir. The Drow we cannot un-see. But not tonight. Tonight — eat, drink, sleep. Qualibaf owes you the rest."', 'Aldric Voss'),
+        new EncounterText('You leave the Guild Hall with the cheer of the city at your back and a long, warm night ahead. Whatever Part 2 brings can wait until morning.', '!'),
+      ],
+    }),
+  ]);
+}
+
 // North Gate exit cinema — once unlocked by the Guild Hall, walking the
 // node out plays the PY 3-beat departure dialog and the post-encounter
 // hook hops the party to the North Qualibaf map.
@@ -2543,6 +2590,206 @@ export function createGatePassageBackEncounter() {
   return e;
 }
 
+export function createObsidianTunnelsArrivalBackEncounter() {
+  const e = createObsidianTunnelsArrivalEncounter();
+  e.id = 'obsidian_tunnels_arrival_back';
+  return e;
+}
+
+// Overseer Gnikan — chapter 8 boss on the summit ridge. The party
+// reaches the lone figure beckoning the ice storm; Gnikan talks in
+// broken common about Zhost and the party's reputation, the rest
+// accuse him of being the source of the Qualibaf cold, and he
+// dismisses them before the fight starts. Combat opens with three
+// Ice Elementals (1/1, 2/2, 3/3) already on the field via
+// ENEMY_DECKS.overseer_gnikan.
+export function createOverseerGnikanEncounter() {
+  return new Encounter('overseer_gnikan', 'Overseer Gnikan', 'A kobold frost shaman beckons the ice storm.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The figure on the ledge turns. A kobold — taller than any you have seen, robed in pale hide and ice-rimmed iron, a glittering staff in one clawed hand. The wind dies as it looks at you.'),
+        new EncounterText("Zhost… tell me of you. He say you not stop. He say you come even when bridge fall. He say you… reh-len-tless.", 'Gnikan'),
+        new EncounterText("So… you the kobold doing all this? The cold, the storms, the dying crops down in the valley — that's YOU?", 'Thorb'),
+        new EncounterText('You\'re the reason Qualibaf is freezing in midsummer. The reason farmers are burying their children. The reason the mountains are wrong.', 'Raena'),
+        new EncounterText("You stand here at the heart of it and you don't even deny it. Answer for what you've done!", 'Valdrisa'),
+        new EncounterText("Fools. You see ice, you see cold, you cry like little babies. You have no idea of the POWER!", 'Gnikan'),
+        new EncounterText('The staff comes up. Ice cracks across the ridge. The storm answers.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'overseer_gnikan',
+    }),
+    // Phase 2 — Gnikan's dying call summons something larger. The
+    // storm overhead grows until a vast form emerges from the
+    // blizzard, and the fight resumes with the same kit + a player
+    // Blizzard buff (every turn-start ticks 1 Ice on the party).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Gnikan staggers, the staff falling from his claws. His scales blanch with frost as he drops to one knee — but his eyes go wide, not down to his wound, but UP, into the gathering storm.', '!'),
+        new EncounterText('No! It cannot be! Master! Master, where are you!', 'Gnikan'),
+        new EncounterText('The wind answers. The Ice Storm boiling on the horizon a moment ago drops on the ridge like a hammer — howling, blinding, every breath crystallizing in your lungs.', '!'),
+        new EncounterText('Through the white, a SHAPE. Vast. Hovering. Wings the width of the ridge unfurl in the heart of the blizzard. Something ancient is here, and it sees you.', '!'),
+        new EncounterText("By the forge-fires... that's not a kobold's master. That's something much, much older.", 'Thorb'),
+        new EncounterText("A wave of cold rolls off the dragon and washes over Gnikan. The kobold's wounds frost over and seal. His knees straighten. The staff leaps back into his outstretched claw as if pulled on a string.", '!'),
+        new EncounterText("Yes! YES! Master gives me his strength! See now — see what TRUE cold can do!", 'Gnikan'),
+        new EncounterText('Around him, the shattered Ice Elementals you cut down only moments ago drag themselves back together. Jagged shards rise out of the snowpack, lock into limbs, into torsos — three frozen sentinels reforming in a slow, deliberate breath.', '!'),
+        new EncounterText("He's getting back UP. They ALL are. Steady — here it comes!", 'Valdrisa'),
+        new EncounterText('The dragon draws breath. Frost crawls up its throat. Before you can move, it BREATHES — and the whole ridge disappears in a sheet of howling white.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'overseer_gnikan_phase_2',
+    }),
+    // Phase 3 — Gnikan dies screaming. Varimatras descends from the
+    // storm, breathes a contemptuous gout of frost over the corpse,
+    // and turns on the party himself. The dragon-monologue text
+    // block plays against the Varimatras backdrop (set in the P2
+    // death intercept in checkCombatEnd).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Varimatras',
+      texts: [
+        new EncounterText("Gnikan's scream tears across the ridge — a thin, broken sound, half kobold, half something the cold made of him. He drops into a drift of fresh snow, ice already growing over his face, his eyes wide and lost.", '!'),
+        new EncounterText('Master! I tried! I tried, I—', 'Gnikan'),
+        new EncounterText('The dragon descends. Each beat of its wings pushes the storm sideways. Talons longer than your arm settle around the dying kobold, almost gentle. Almost.', '!'),
+        new EncounterText('You failed me.', 'Varimatras'),
+        new EncounterText('A slow, deliberate breath. White vapor rolls over Gnikan. Where it touches, the snow rises — sealing him up to the shoulders, then to the throat, then over his face. His body locks into the drift like a fossil.', '!'),
+        new EncounterText('The Volcano is mine! Everything will freeze under my power!', 'Varimatras'),
+        new EncounterText('It turns to face you. The ridge feels smaller. The sky feels smaller.', '!'),
+      ],
+    }),
+    // Catch-breath beat — heal up to 8 from discard. One button so
+    // it reads as a single decisive moment rather than a real choice
+    // (the only meaningful action is "rest"). resolveCatchBreathRest
+    // in main.js handles the discard-pop heal + result-text.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      phaseTitle: 'Varimatras',
+      choicePrompt: 'The dragon takes a slow breath. There is one heartbeat to brace.',
+      choices: [
+        new EncounterChoice(
+          'Catch your breath',
+          'You force your lungs open and steady your grip on your weapon.',
+          'catch_breath_rest', 0,
+        ),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Varimatras',
+      texts: [
+        new EncounterText("That's a DRAGON. A white dragon. Of COURSE there's a white dragon at the top of the mountain.", 'Thorb'),
+        new EncounterText('Whatever Gnikan was, this is what was feeding him. The cold, the storms, the dying valley — all of it rolls down from THIS thing.', 'Raena'),
+        new EncounterText("Wait — the staff. Don't leave it.", 'Raena'),
+        new EncounterText("Raena darts forward, slips Gnikan's frost-rimmed staff out of the drift before the ice can take it, and tosses it across to you. The shaft is cold enough to burn.", '!'),
+        new EncounterText("Big lizard, small ridge. Stay loose, stay close. Don't let it pin you under that breath again.", 'Valdrisa'),
+        new EncounterText('Varimatras coils onto its haunches. Frost crawls back up its throat. The fight is not over.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'varimatras',
+    }),
+    // Varimatras LOOT — five tier-2 epic dragon-loot cards laid
+    // out for the party to pick two of. Each one leans into a
+    // different role / subtype so the choice carries real weight.
+    // Gnikan's Staff was already handed off during the rally TEXT
+    // phase, so this is purely Varimatras's drop.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      phaseTitle: "Dragon's Hoard",
+      lootTitle: "Dragon's Hoard",
+      lootPickCount: 2,
+      lootPickCards: [
+        'dragon_tooth_dagger',
+        'white_dragonscale_shield',
+        'white_dragonscale_armor',
+        'dragon_bone_bow',
+        'dragon_eye_mace',
+      ],
+    }),
+    // Post-Varimatras victory dialog. The background was already
+    // swapped to bg_volcano_ridge_awakening by the loot-pick
+    // handler in main.js, so every text in this phase + the egg
+    // LOOT phase + the running-away TEXT phase all play against
+    // the erupting-ridge backdrop.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Volcano Wakes',
+      texts: [
+        new EncounterText('Silence. For one held breath, only the wind. Then a low, grinding groan rolls up from the rock under your boots — and the storm splits, lit from below by a red-orange glow.', '!'),
+        new EncounterText("Bruised. Frozen. STILL STANDING. We did it. By the forge-fires, we ACTUALLY did it.", 'Thorb'),
+        new EncounterText("Look at the snow — it's melting. The whole ridge is melting. Whatever Gnikan and that dragon were holding back…", 'Raena'),
+        new EncounterText("…the mountain's done holding it. Years of it. All at once.", 'Valdrisa'),
+        new EncounterText('A second tremor — harder. Ice cracks across the cliff face, slides into smoke. Far below, the magma vents you climbed past on the way up start to spit fountains.', '!'),
+        new EncounterText("DOWN. We go down. Now. Move toward Tharnag and don't stop.", 'Valdrisa'),
+        new EncounterText('You scramble back along the ridge as the world behind you gives a long, splitting roar. Smoke. Heat. The wind reverses and starts shoving you onward.', '!'),
+        new EncounterText('Wait — wait. There. Tucked in the lee of that boulder, half-buried in snow. Is that—', 'Raena'),
+      ],
+    }),
+    // The egg drop. Standard fixed-loot LOOT phase — the player
+    // doesn't pick anything, the egg just lands in deck + hand.
+    // canRevisit isn't a concern: this whole encounter is one-shot.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['white_dragon_egg'],
+      lootTitle: "A Dragon's Egg!",
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Volcano Wakes',
+      texts: [
+        new EncounterText("Raena yanks the heavy pale egg out of the drift — it's warm against the snow, almost too warm to hold. Veins of soft white light pulse under the shell.", '!'),
+        new EncounterText("She left it. Or… he did. Whichever. We are NOT leaving it here.", 'Thorb'),
+        new EncounterText("Tuck it. Run. Now. Now NOW.", 'Valdrisa'),
+        new EncounterText('Behind you the ridge splits open in a final long howl. Magma fountains where ice once piled. The storm collapses into steam, and the whole peak begins to shake itself apart.', '!'),
+        new EncounterText('The Volcano is free. The Dragon is dead. And the party is hurtling down the stairs toward Tharnag with the white-pulsing egg cradled tight between them.', '!'),
+      ],
+    }),
+  ]);
+}
+
+// Stair Top arrival — fires once at summit_entry when the player
+// reaches the ridge above the volcano stairs. Sets up the chapter-8
+// boss area: an Ice Storm gathering, a lone figure beckoning at the
+// summit. Two exhausting choices: Take a break (heal up to 8 from
+// the discard pile) or Go in (continue without resting). Either
+// completes the encounter, and canRevisit=false on the node keeps
+// it from re-firing.
+export function createStairTopArrivalEncounter() {
+  return new Encounter('stair_top_arrival', 'Stair Top', 'The summit ridge opens before you.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You reach the top of the stairs. The sky clears overhead. Magma and ice melt together in an unnatural way, the heat of the volcano warring with a cold that has no business at this altitude.'),
+        new EncounterText('An Ice Storm gathers in the distance, dark clouds boiling against the open sky. On the ledge ahead stands a lone figure, robed and still, holding a staff aloft — gesturing at the storm as if beckoning it closer.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The storm is coming. What do you do?',
+      choices: [
+        new EncounterChoice(
+          'Take a break',
+          'You sit on the warm stone and catch your breath while you can.',
+          'stair_top_rest', 0,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          'Go in',
+          'No time. You move toward the figure on the ledge.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
 // Entry Corridor doubled-back dialog — fires once when the player
 // backtracks from corridor_ruins to corridor_entrance after first
 // entering Thorgazad. The way out is no longer safe; pushes the
@@ -3107,6 +3354,34 @@ export function createThroneAudienceEncounter() {
         new EncounterText("But Father — my King — it HAS to be related! The kobolds, this White Claw... they're messing with the Volcano, and it's lowering the temperature of the whole valley! The snow, the ice in the mountains — the signs are all there!", 'Thorb'),
         new EncounterText('Hmm... perhaps you are right. In any case, thanks in no small part to your efforts and your friends here, the siege is broken for now. But they will come back. And eventually they will attack the tunnels as well.', 'King Thorgrim'),
         new EncounterText('Thorb! My son! I commend you for bringing these tidings to me. Investigate the Volcano and this White Claw. I will ask the Artisans to assist you on your quest. May Moradin guide your hammer and see you home safe!', 'King Thorgrim'),
+      ],
+    }),
+  ]);
+}
+
+// Part 1 ending — fires after the Varimatras encounter completes
+// and the party is teleported back to the Tharnag throne room.
+// Wraps up the volcano arc and seeds the Part 2 conflict (goblin
+// armies + dark-elf scouts in the Deep Roads). The final beat
+// directs the player to go rest in their room — the quarters_rest
+// handler then fades to the main menu since dragonSlain is set.
+export function createTharnagPart1EndingEncounter() {
+  return new Encounter('tharnag_part1_ending', 'Return to Tharnag', 'A homecoming after the dragon.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Return to Tharnag',
+      texts: [
+        new EncounterText('The descent is a blur. Snow, then sleet, then the warm pulse of dwarven stone underfoot. You stumble through the Tharnag gate with soot in your hair, frost still melting from your cloaks, and the white-pulsing egg cradled tight between you.'),
+        new EncounterText('Word travels faster than tired feet. By the time the guards usher you up the staircase and into the throne room, half the city already knows.'),
+        new EncounterText('By the deeps. By the DEEPS. You walked up that mountain, killed the thing that was choking us, and walked back DOWN.', 'King Thorgrim'),
+        new EncounterText('The King is on his feet before you reach the dais — silver beard still braided with gold rings, but his eyes wet. He claps Thorb so hard on the shoulder you hear the armor ring.', '!'),
+        new EncounterText('The volcano sings again. The smiths felt it half an hour before you arrived — the flow is BACK. The Great Forge will be lit by midnight, first time in twenty years. Hammers will ring in this hall again.', 'King Thorgrim'),
+        new EncounterText('His gaze drops to the egg cradled in Raena\'s arms. Pause. He decides not to ask. Yet.', '!'),
+        new EncounterText('But it is not all good news. Word has come up the Deep Roads while you were on the mountain. Goblin warbands — three, maybe four — moving in columns I have not seen the shape of since my grandfather\'s day.', 'King Thorgrim'),
+        new EncounterText('And worse. Every column carries Drow scouts. Dark elves walking openly under torchlight, banners and all. Something old is moving in the deep places of the world.', 'King Thorgrim'),
+        new EncounterText('But that is a tale for another season. Tonight, you rest. The forge will burn. Your weapons will sing again. And the quarters Thorb\'s mother kept ready for him these forty years are open to you all.', 'King Thorgrim'),
+        new EncounterText('The hall erupts. Dwarves pour in with horns of dark ale, with bread and cheese the size of shields, with songs your party is too tired to follow.', '!'),
+        new EncounterText('When you are ready, go rest in your room.', '!'),
       ],
     }),
   ]);
@@ -3730,6 +4005,7 @@ export const ENCOUNTER_REGISTRY = {
   antiquity_shop: createAntiquityShopEncounter,
   antiquity_shop_cleared: createAntiquityShopClearedEncounter,
   guild_hall: createGuildHallEncounter,
+  guild_hall_victory: createGuildHallVictoryEncounter,
   city_north_gate: createCityNorthGateEncounter,
   // North Qualibaf
   north_crossroad: createNorthCrossroadEncounter,
@@ -3775,6 +4051,10 @@ export const ENCOUNTER_REGISTRY = {
   tunnel_to_bridge_entry_back: createTunnelToBridgeEntryBackEncounter,
   deeper_tunnels_entry_back: createDeeperTunnelsEntryBackEncounter,
   gate_passage_back: createGatePassageBackEncounter,
+  obsidian_tunnels_arrival_back: createObsidianTunnelsArrivalBackEncounter,
+  stair_top_arrival: createStairTopArrivalEncounter,
+  overseer_gnikan: createOverseerGnikanEncounter,
+  tharnag_part1_ending: createTharnagPart1EndingEncounter,
   obsidian_market_arrival: createObsidianMarketArrivalEncounter,
   market_stalls: createMarketStallsEncounter,
   deep_market_rest: createDeepMarketRestEncounter,
