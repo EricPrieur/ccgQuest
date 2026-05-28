@@ -622,8 +622,8 @@ export function createCharge() {
   return new Card({
     id: 'charge',
     name: 'Charge',
-    description: 'Recharge -> Deal 2 Damage. Draw 1 if first attack this turn.',
-    shortDesc: 'R->2 Dmg\nDraw 1 if 1st atk',
+    description: 'Recharge -> Deal 2 Damage. Draw if first attack this turn.',
+    shortDesc: 'R->2 Dmg\nDraw if 1st atk',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,

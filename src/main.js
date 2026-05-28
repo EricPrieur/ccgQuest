@@ -551,6 +551,20 @@ let _restBonusCat = null;
 let _levelUpBonusPending = false;
 // Hit rects for deck-limit +/- buttons (filled during draw, tested on click).
 let _deckLimitBtnRects = [];
+// Inventory layout positions, stashed each frame by drawInventoryCharacter
+// + the rest-button block so tutorial arrows can point at the actual
+// section headers / button / error box instead of guessing offsets.
+let _invDeckLimitsY = 0;
+let _invEquipTypesY = 0;
+let _invPerksY = 0;
+let _invRestBtnRect = null;
+let _invRestErrorRect = null;
+// Section "(i)" hover state: when the cursor is over an inventory
+// section's info badge, this stores { tutorialId, anchorX, anchorY }
+// so drawInventory's tail can pop a small tutorial tooltip on top.
+// Cleared each frame and re-set by drawSectionInfoBadge.
+let _sectionInfoHover = null;
+
 // Rest-mode validation error shown above the Apply Rest button.
 let _restErrorMsg = '';
 let _restErrorTimer = 0;
@@ -655,7 +669,12 @@ function saveOptions() {
 // Reset Tutorial (in Options) clears the seen-set so first-time
 // hints fire again. Disabling the tutorial suppresses every box
 // regardless of the seen-set; re-enabling re-evaluates.
-const TUTORIAL_LS_KEY = 'cq_tutorial_v1';
+// Bump this version any time the tutorial set gets a meaningful rewrite —
+// loadTutorialState reads the new key, finds nothing, and every player
+// starts fresh (existing v1 entry is orphaned harmlessly in localStorage).
+// v2: added hover_preview / inventory_button / help_button / any_card_in_hand
+// + the inventory rest tour. Wanted everyone to see the new boxes.
+const TUTORIAL_LS_KEY = 'cq_tutorial_v2';
 let _tutorialEnabled = true;
 let _tutorialSeen = new Set();        // ids of boxes already dismissed
 let _tutorialQueue = [];              // ids of boxes pending display
@@ -689,6 +708,10 @@ function resetTutorialProgress() {
   _tutorialSeen = new Set();
   _tutorialQueue = [];
   _tutorialActiveId = null;
+  // Re-enable tutorials if they were off — the user clicked Reset
+  // because they want to see the boxes again. Without flipping the
+  // toggle, every showTutorial() call would still early-out.
+  _tutorialEnabled = true;
   saveTutorialState();
 }
 // Registry of tutorial boxes. Each entry: { title, body, arrow? }.
@@ -729,6 +752,10 @@ const TUTORIAL_BOXES = {
     title: 'Your Turn',
     body: 'Click a card in your hand to play it. Weapon cards need a target — an arrow appears, click on the enemy you want to hit.',
   },
+  any_card_in_hand: {
+    title: 'Cards in Hand Always Work',
+    body: 'Any card sitting in your hand can be played, no matter your class or what your deck normally allows. The class restrictions only kick in later, during rest — you\'ll have to move unequippable cards into your backpack before you can finish rebalancing. More on rest and rebalancing when you level up.',
+  },
   powers_explained: {
     title: 'Heroic Powers',
     body: "Your hero has Powers — special abilities sitting next to their portrait. Using a Power costs a Recharge: pick a card from your hand and send it to the recharge pile. Recharged cards drop to the bottom of your deck at the end of your turn, ready to draw later.",
@@ -743,6 +770,110 @@ const TUTORIAL_BOXES = {
       }
       const r = getCharacterCardRect(true);
       return { x: r.x + r.w / 2, y: r.y };
+    },
+  },
+  hover_preview: {
+    title: 'Inspect Cards',
+    body: 'Hover any card to see a bigger version of it. Hold Shift (or click the middle mouse button) to pin the preview, then hover its keywords (Fire, Ice, Poison, Heroism, etc.) to read what each one does.',
+  },
+  inventory_button: {
+    title: 'Open Your Inventory',
+    body: 'Click the backpack icon (or press I) to open your inventory. From there you can check your currently equipped cards, cards in backpack, what your class can equip, your perks, deck limits, and HP. Deck rebalancing only opens during rest.',
+    arrow: () => {
+      const r = (typeof getCombatButtonRects === 'function') ? getCombatButtonRects() : null;
+      if (r && r.backpack) return { x: r.backpack.x + r.backpack.w / 2, y: r.backpack.y + r.backpack.h / 2 };
+      return { x: SCREEN_WIDTH - 80, y: 70 };
+    },
+  },
+  help_button: {
+    title: 'Help & Keyword Reference',
+    body: 'Click the help icon (or press H) anytime to open the Help screen — a reference of keywords, status effects, and shortcuts.',
+    arrow: () => {
+      const r = (typeof getCombatButtonRects === 'function') ? getCombatButtonRects() : null;
+      if (r && r.help) return { x: r.help.x + r.help.w / 2, y: r.help.y + r.help.h / 2 };
+      return { x: SCREEN_WIDTH - 30, y: 70 };
+    },
+  },
+  equipped_cards: {
+    title: 'Your Equipped Deck',
+    body: 'This is the deck you fight with — every card here is also 1 HP. Click a card to move it to your backpack. A red flashing card means your class can\'t equip it — move it out before leaving rest.',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.deck) return { x: 40, y: 200 };
+      return { x: s.deck.x + s.deck.w / 2, y: s.deck.y + 25 };
+    },
+  },
+  backpack_cards: {
+    title: 'Your Backpack',
+    body: 'Cards you own but aren\'t fighting with. They don\'t count as HP and stay safe between fights. Click any backpack card to equip it, or click an equipped card to send it here.',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.backpack) return { x: 600, y: 200 };
+      return { x: s.backpack.x + s.backpack.w / 2, y: s.backpack.y + 25 };
+    },
+  },
+  inventory_character: {
+    title: 'Your Character',
+    body: 'Your class, level, and current HP live here. Each card in your deck counts for 1 HP — heal by recovering cards from your discard pile.',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 200 };
+      return { x: s.character.x + s.character.w / 2, y: s.character.y + 60 };
+    },
+  },
+  inventory_deck_limits: {
+    title: 'Deck Limits',
+    body: 'Each gear category has a cap on how many copies you can equip. Blue numbers mean room, red means over, white means balanced. On level-up you also add +1 to one category (max +3 per category).',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 360 };
+      const y = _invDeckLimitsY || (s.character.y + Math.floor(s.character.h * 0.40));
+      return { x: s.character.x + s.character.w / 2, y };
+    },
+  },
+  inventory_can_equip: {
+    title: 'What You Can Equip',
+    body: 'Each class can only equip certain weapon and armor types. Stuff outside your kit sits in your backpack — useful for sell value or future runs.',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 480 };
+      const y = _invEquipTypesY || (s.character.y + Math.floor(s.character.h * 0.65));
+      return { x: s.character.x + s.character.w / 2, y };
+    },
+  },
+  inventory_perks_buffs: {
+    title: 'Perks & Buffs',
+    body: 'Perks are passive bonuses you pick on level-up — they stick around for the whole run. Buffs are temporary blessings from shrines, idols, and other relics you find along the way.',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 600 };
+      const y = _invPerksY || (s.character.y + s.character.h - 60);
+      return { x: s.character.x + s.character.w / 2, y };
+    },
+  },
+  inventory_rest_error: {
+    title: 'Current Problem',
+    body: 'This red banner shows the next problem you need to fix before you can rest — over the limit on a category, missing your +1 pick, an unequippable card in your deck, etc. It updates live as you move cards.',
+    arrow: () => {
+      if (_invRestErrorRect) {
+        return { x: _invRestErrorRect.x + _invRestErrorRect.w / 2, y: _invRestErrorRect.y + _invRestErrorRect.h / 2 };
+      }
+      // Banner only shows when there IS an error — fall back to the
+      // Apply Rest button so the arrow has somewhere sensible to land.
+      if (_invRestBtnRect) {
+        return { x: _invRestBtnRect.x + _invRestBtnRect.w / 2, y: _invRestBtnRect.y - 20 };
+      }
+      return { x: SCREEN_WIDTH - 200, y: 600 };
+    },
+  },
+  inventory_rest_button: {
+    title: 'Ready to Rest',
+    body: 'Once every error is cleared, your +1 is assigned, and your deck is balanced, click Apply Rest to heal up and head back to your adventure.',
+    arrow: () => {
+      if (_invRestBtnRect) {
+        return { x: _invRestBtnRect.x + _invRestBtnRect.w / 2, y: _invRestBtnRect.y + _invRestBtnRect.h / 2 };
+      }
+      return { x: SCREEN_WIDTH - 200, y: 700 };
     },
   },
 };
@@ -772,6 +903,87 @@ function dismissTutorial() {
 // continue" footer. Pulled by the gameLoop's draw tail so it
 // survives state-specific renderers (combat, map, encounter, etc.)
 // and by handleClick so a click anywhere dismisses it.
+// Tiny "(i)" hint glyph in the top-right corner of an inventory
+// section. No circle, just a small bold "i" tucked tight to the
+// gold section frame so it doesn't overlap any other UI. Hit area
+// is bumped to ~14×14 so the player can actually land the cursor
+// on it. On hover, stash tutorialId + anchor on `_sectionInfoHover`
+// so drawSectionInfoTooltip pops the matching TUTORIAL_BOXES entry.
+function drawSectionInfoBadge(rect, tutorialId, offsetY = 0) {
+  if (!rect || !TUTORIAL_BOXES[tutorialId]) return;
+  // Sit 3 px inset from the right edge / 2 px from the top edge so the
+  // glyph clears the 1-2 px gold border line. offsetY lets the caller
+  // bump down a touch if the band above is too narrow for the default.
+  const ix = rect.x + rect.w - 6;
+  const iy = rect.y + 8 + offsetY;
+  // Hit area is larger than the visible glyph so hover is easy.
+  const hitR = 8;
+  const hov = hitTest(mouseX, mouseY, {
+    x: ix - hitR, y: iy - hitR, w: hitR * 2, h: hitR * 2,
+  });
+  ctx.save();
+  ctx.fillStyle = hov ? Colors.GOLD : Colors.ALLY_BLUE;
+  ctx.font = 'bold 11px Georgia, serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  // Drop shadow so the unframed glyph stays legible against any panel.
+  ctx.shadowColor = 'rgba(0,0,0,0.95)';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+  ctx.fillText('i', ix, iy - 4);
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  if (hov) {
+    _sectionInfoHover = { tutorialId, anchorX: ix - 4, anchorY: iy + 10 };
+  }
+}
+
+// Render the small tutorial tooltip that pops when a section's "i"
+// badge is hovered. Re-uses the TUTORIAL_BOXES content but draws a
+// compact non-modal panel near the badge (no dim, no skip button) —
+// the player sees the same info without going through the queued
+// tutorial flow.
+function drawSectionInfoTooltip(hover) {
+  if (!hover) return;
+  const entry = TUTORIAL_BOXES[hover.tutorialId];
+  if (!entry) return;
+  const boxW = 320;
+  const padX = 14, padY = 12;
+  ctx.font = '13px Georgia, serif';
+  const bodyMaxW = boxW - padX * 2;
+  const bodyLines = wrapTextLong(entry.body || '', bodyMaxW, 13);
+  const titleH = 22;
+  const bodyLineH = 17;
+  const boxH = padY + titleH + 4 + bodyLines.length * bodyLineH + padY;
+  // Anchor below the badge; flip above when it'd overflow.
+  let bx = Math.round(hover.anchorX - boxW / 2);
+  let by = Math.round(hover.anchorY + 4);
+  bx = Math.max(8, Math.min(bx, SCREEN_WIDTH - boxW - 8));
+  if (by + boxH > SCREEN_HEIGHT - 8) by = Math.round(hover.anchorY - boxH - 28);
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 18, 28, 0.96)';
+  ctx.fillRect(bx, by, boxW, boxH);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, boxW, boxH);
+  // Title.
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 15px Georgia, serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(entry.title || '', bx + padX, by + padY + 14);
+  // Body.
+  ctx.fillStyle = '#f0e8d0';
+  ctx.font = '13px Georgia, serif';
+  let cy = by + padY + titleH + 4 + 12;
+  for (const line of bodyLines) {
+    ctx.fillText(line, bx + padX, cy);
+    cy += bodyLineH;
+  }
+  ctx.restore();
+}
+
 function drawTutorialBox() {
   if (!_tutorialEnabled || !_tutorialActiveId) return;
   const entry = TUTORIAL_BOXES[_tutorialActiveId];
@@ -943,6 +1155,14 @@ let characterSplashIsPlayer = false;
 
 // Hover preview state (cards/powers in combat)
 let hoveredCardPreview = null; // a Card to render large
+// Side-preview hand-off — when drawHoverPreview renders a sidecar
+// (e.g. Harvest perk's Goodberry mini, Goodberries ability's Goodberry
+// preview), it stashes the rect + the side card here. The next frame's
+// hover gate (`maintainSideHoverExpansion`) checks the mouse against
+// the stashed rect; if the mouse landed on it, we force hoveredCardPreview
+// onto the side card so drawHoverPreview pops the side card at full size.
+let _lastSidePreviewRect = null;
+let _lastSidePreviewCard = null;
 // Shift-to-freeze preview: while Shift is held, whichever preview is currently
 // shown (card, power, or creature) stays pinned on screen so the player can
 // mouse over its keyword icons (Scry, Heal, etc.) to read the tooltips without
@@ -1754,6 +1974,21 @@ function canvasPosFromEvent(e) {
 
 canvas.addEventListener('mousedown', (e) => {
   const { x, y } = canvasPosFromEvent(e);
+  // Middle mouse button = same as holding Shift for hover preview
+  // freeze. Lets the player pin a card / power / creature preview
+  // without needing the keyboard, then mouse over keyword icons to
+  // read tooltips. Released on the matching mouseup.
+  if (e.button === 1) {
+    e.preventDefault(); // suppress the browser's autoscroll cursor
+    if (!isShiftFrozen() && (hoveredCardPreview || hoveredPowerPreview || hoveredCreaturePreview)) {
+      shiftFreezeCard = hoveredCardPreview;
+      shiftFreezePower = hoveredPowerPreview;
+      shiftFreezeCreature = hoveredCreaturePreview;
+      shiftFreezeMouseX = mouseX;
+      shiftFreezeMouseY = mouseY;
+    }
+    return;
+  }
   // Codex scrollbar: thumb-drag start or track page-jump.
   if (state === GameState.CODEX && tryCodexScrollbarMouseDown(x, y)) {
     suppressNextClick = true; // don't let the mouseup translate into a select-card click
@@ -1873,6 +2108,14 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('mouseup', (e) => {
+  // Middle mouse button release — clear the shift-freeze pin (matches
+  // Shift keyup behavior).
+  if (e.button === 1) {
+    shiftFreezeCard = null;
+    shiftFreezePower = null;
+    shiftFreezeCreature = null;
+    return;
+  }
   // Always end any in-progress codex scrollbar drag, regardless of state.
   endCodexScrollbarDrag();
   const { x, y } = canvasPosFromEvent(e);
@@ -11067,6 +11310,7 @@ function drawEncounterLootPick() {
   // mini cards + the "I" badge tooltip on side-creature info hovers).
   // Without this call the badge hover sets _summonInfoHover but
   // nothing reads it, so the egg/wyrmling info tooltip never shows.
+  maintainSideHoverExpansion();
   drawHoverPreview();
 }
 
@@ -11287,6 +11531,7 @@ function drawEncounterLoot() {
   // Cursor-follow hover preview — same call combat/inventory use, so
   // the side-creature "I" badge on the loot's egg/wyrmling preview
   // can pop its description tooltip while Shift pins the main card.
+  maintainSideHoverExpansion();
   drawHoverPreview();
 }
 
@@ -13594,6 +13839,24 @@ function drawCombat() {
   ctx.textAlign = 'left';
 }
 
+// Side-preview hand-off. Call this BEFORE the hover-preview gate
+// each frame: if the mouse landed on a side preview mini drawn in
+// the previous frame, swap hoveredCardPreview onto the side card so
+// the gate passes and drawHoverPreview pops the side card at full
+// size. Returns true when an expansion was triggered (caller can
+// optionally suppress other hover state). Mainly so Harvest perk's
+// Goodberry mini (and any other previewCard sidecar) can be hovered
+// and expanded to full size without holding Shift.
+function maintainSideHoverExpansion() {
+  if (!_lastSidePreviewRect || !_lastSidePreviewCard) return false;
+  if (isShiftFrozen()) return false;
+  if (!hitTest(mouseX, mouseY, _lastSidePreviewRect)) return false;
+  hoveredCardPreview = _lastSidePreviewCard;
+  hoveredCreaturePreview = null;
+  hoveredPowerPreview = null;
+  return true;
+}
+
 // Draw a full-size preview card following the cursor (top-right of cursor by default).
 // While Shift-freeze is active, the preview pins to wherever the cursor was when
 // Shift was first pressed, so the player can mouse over its keyword icons.
@@ -13666,9 +13929,16 @@ function drawHoverPreview() {
         // Center the side preview vertically against the main preview
         const sy = y + Math.floor((previewH - sideH) / 2);
         drawCard(hoveredCardPreview.previewCard, sx, sy, sideW, sideH, false, false);
+        // Stash for next frame so hovering the mini swaps it to the
+        // main preview slot (Harvest perk → Goodberry expand on hover).
+        _lastSidePreviewRect = { x: sx, y: sy, w: sideW, h: sideH };
+        _lastSidePreviewCard = hoveredCardPreview.previewCard;
       } else if (sideHoverCreatures.length) {
         drawSideCreatureStack(sideHoverCreatures, hoveredCardPreview, sx, y, previewH, sideW, sideH);
       }
+    } else {
+      _lastSidePreviewRect = null;
+      _lastSidePreviewCard = null;
     }
   } else if (hoveredPowerPreview) {
     drawPowerPreviewCard(hoveredPowerPreview, x, y, previewW, previewH);
@@ -15653,7 +15923,11 @@ function handleCombatClick(x, y) {
     showTutorial('hp_explained');
     showTutorial('enemy_hp_explained');
     showTutorial('first_turn');
+    showTutorial('any_card_in_hand');
     showTutorial('powers_explained');
+    showTutorial('hover_preview');
+    showTutorial('inventory_button');
+    showTutorial('help_button');
     return;
   }
 
@@ -25401,6 +25675,8 @@ function drawPerkSelect() {
   // adapter the codex uses) so the art, frame, and description badge
   // all display consistently.
   const rects = getPerkRects();
+  let hoveredPseudo = null;
+  let hoveredRect = null;
   for (let i = 0; i < perkChoices.length; i++) {
     const perk = perkChoices[i];
     const r = rects[i];
@@ -25423,9 +25699,35 @@ function drawPerkSelect() {
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Click to select', r.x + r.w / 2, r.y + r.h + (stacks > 0 ? 36 : 18));
+      hoveredPseudo = pseudoCard;
+      hoveredRect = r;
     }
   }
   ctx.textAlign = 'left';
+
+  // If the hovered perk has a previewCard (Harvest → Goodberry), pop a
+  // small side preview next to it AND stash its rect so
+  // maintainSideHoverExpansion can expand the goodberry to full size
+  // when the player moves the mouse onto the mini.
+  _lastSidePreviewRect = null;
+  _lastSidePreviewCard = null;
+  if (hoveredPseudo && hoveredPseudo.previewCard && hoveredRect) {
+    const sideW = COMBAT_POWER_W;
+    const sideH = COMBAT_POWER_H;
+    const gap = 10;
+    let sx = hoveredRect.x + hoveredRect.w + gap;
+    if (sx + sideW > SCREEN_WIDTH - 10) sx = hoveredRect.x - sideW - gap;
+    const sy = hoveredRect.y + Math.floor((hoveredRect.h - sideH) / 2);
+    drawCard(hoveredPseudo.previewCard, sx, sy, sideW, sideH, false, false);
+    _lastSidePreviewRect = { x: sx, y: sy, w: sideW, h: sideH };
+    _lastSidePreviewCard = hoveredPseudo.previewCard;
+  }
+  // Run the hand-off + render any expanded hover. Mirrors what the
+  // gameLoop does for combat / codex / inventory states.
+  maintainSideHoverExpansion();
+  if (hoveredCardPreview || hoveredPowerPreview || hoveredCreaturePreview) {
+    drawHoverPreview();
+  }
 }
 
 // ============================================================
@@ -27487,6 +27789,24 @@ function handleFilterTabClick(section, filters, x, y, hasEquipFilter = false) {
 
 function drawInventory() {
   _deckLimitBtnRects = []; // cleared each frame, rebuilt by drawInventoryCharacter
+  _sectionInfoHover = null; // re-stamped each frame by drawSectionInfoBadge
+  // First-rest inventory tour. Queues a guided sequence of one-shot
+  // tutorial popups covering each major panel: equipped cards, then
+  // backpack, then the character column (HP / level), deck limits,
+  // gear restrictions, and finally perks/buffs. Each one fires once
+  // per profile via the tutorial seen-set; the queue auto-advances
+  // as the player dismisses each box. Skipped silently in shop or
+  // when tutorials are disabled.
+  if (restMode && !shopMode) {
+    showTutorial('equipped_cards');
+    showTutorial('backpack_cards');
+    showTutorial('inventory_character');
+    showTutorial('inventory_deck_limits');
+    showTutorial('inventory_can_equip');
+    showTutorial('inventory_perks_buffs');
+    showTutorial('inventory_rest_error');
+    showTutorial('inventory_rest_button');
+  }
   // While the buy/sell confirm modal is open, virtually park the cursor
   // off-screen for the underlying render so every hover effect (card
   // glows, filter pill highlights, button brightening, cursor card
@@ -27569,6 +27889,13 @@ function drawInventory() {
   ctx.textAlign = 'center';
   ctx.fillText(`Equipped Cards (${player.deck.masterDeck.length})`, sections.deck.x + sections.deck.w / 2, sections.deck.y + 25);
   ctx.fillText(`Cards in Backpack (${backpack.length})`, sections.backpack.x + sections.backpack.w / 2, sections.backpack.y + 25);
+  // (i) hover badges on each panel header — quick reference popups
+  // that mirror the queued tutorial popups but fire only on hover.
+  // Skipped during shopMode (no character column / different layout).
+  if (!shopMode) {
+    drawSectionInfoBadge(sections.deck, 'equipped_cards');
+    drawSectionInfoBadge(sections.backpack, 'backpack_cards');
+  }
   if (shopMode) {
     ctx.fillText(`For Sale (${shopCards.length})`, sections.shop.x + sections.shop.w / 2, sections.shop.y + 25);
     // Green Equip? pill on the right side of the shop title row —
@@ -27648,13 +27975,28 @@ function drawInventory() {
       if (r.y + r.h < clipY || r.y > clipY + clipH) continue;
       const hov = allowHover && hitTest(mouseX, mouseY, r);
       drawCard(r.group.card, r.x, r.y, r.w, r.h, false, hov);
-      // Red border on cards that can't be equipped by the current class
-      // (only shown in rest mode so the player knows what to unequip).
+      // Red flashing glow + tint on cards that can't be equipped by
+      // the current class (only in rest mode so the player knows what
+      // to unequip). Faster pulse (140ms period) + red overlay washing
+      // the whole card on top of the bordered glow so a glance across
+      // the equipped column catches it. User-requested: needs to flash
+      // more, not just the border.
       if (restMode && label === 'deck' && !canClassEquip(r.group.card)) {
+        const pulse = (Math.sin(performance.now() / 140) + 1) / 2; // 0..1
+        const tintAlpha = 0.15 + 0.30 * pulse;
+        const glowAlpha = 0.65 + 0.35 * pulse;
+        const strokeAlpha = 0.85 + 0.15 * pulse;
         ctx.save();
-        ctx.strokeStyle = '#ff3333';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+        // Red wash across the card body so it visibly pulses, not just
+        // the outline. blend the card art behind a red film.
+        ctx.fillStyle = `rgba(255, 50, 50, ${tintAlpha})`;
+        ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
+        // Pulsing red glow + thick stroke.
+        ctx.shadowColor = `rgba(255, 60, 60, ${glowAlpha})`;
+        ctx.shadowBlur = 22 + 8 * pulse;
+        ctx.strokeStyle = `rgba(255, 60, 60, ${strokeAlpha})`;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4);
         ctx.restore();
       }
       // Stack count badge
@@ -27727,31 +28069,57 @@ function drawInventory() {
     const doneBtnH = 50;
     const doneBtnX = sections.character.x + 20;
     const doneBtnY = sections.character.y + sections.character.h - doneBtnH - 12;
-    // Error message above button (fades out after 4 seconds).
-    if (_restErrorMsg && _restErrorTimer > 0) {
-      const alpha = Math.min(1, _restErrorTimer / 400);
-      // Red background strip for visibility
-      ctx.fillStyle = `rgba(80, 20, 20, ${alpha * 0.85})`;
+    // Live rest-deck validation — always show the top error if there is
+    // one (was previously only flashed after the player clicked Apply
+    // Rest and validation failed). User-requested: surface the current
+    // blocker at all times so they know what to fix without having to
+    // click and get rejected. The toast-style timer fade still kicks in
+    // when the player tries to apply with an error, layering brighter on
+    // top of the live banner for one beat.
+    const liveError = debugMode ? null : validateRestDeck();
+    const showErr = liveError || (_restErrorMsg && _restErrorTimer > 0);
+    if (showErr) {
+      // Brighter alpha when the click-to-apply timer is active so the
+      // recent rejection still flashes. Otherwise the live banner sits
+      // at a steady, calmer red.
+      const flashAlpha = (_restErrorMsg && _restErrorTimer > 0)
+        ? Math.min(1, _restErrorTimer / 400)
+        : 0.85;
+      const msg = liveError || _restErrorMsg;
+      ctx.fillStyle = `rgba(80, 20, 20, ${flashAlpha * 0.85})`;
       const errBoxY = doneBtnY - 40;
       ctx.fillRect(doneBtnX, errBoxY, doneBtnW, 34);
-      ctx.strokeStyle = `rgba(255, 80, 80, ${alpha})`;
+      ctx.strokeStyle = `rgba(255, 80, 80, ${flashAlpha})`;
       ctx.lineWidth = 1;
       ctx.strokeRect(doneBtnX, errBoxY, doneBtnW, 34);
-      ctx.fillStyle = `rgba(255, 100, 100, ${alpha})`;
+      ctx.fillStyle = `rgba(255, 100, 100, ${flashAlpha})`;
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const lines = wrapTextLong(_restErrorMsg, doneBtnW - 12, 11);
+      const lines = wrapTextLong(msg, doneBtnW - 12, 11);
       let ey = errBoxY + 17 - (lines.length - 1) * 7;
       for (const l of lines) { ctx.fillText(l, doneBtnX + doneBtnW / 2, ey); ey += 14; }
       ctx.textBaseline = 'alphabetic';
+      _invRestErrorRect = { x: doneBtnX, y: errBoxY, w: doneBtnW, h: 34 };
     } else {
-      // "Click Cards to equip/unequip" hint
-      ctx.fillStyle = '#bbb';
-      ctx.font = '12px sans-serif';
+      // No blocking errors — paint a green "All Clear" banner in
+      // the same slot the red error usually occupies, so the player
+      // sees a positive confirmation that they're ready to rest.
+      const okBoxY = doneBtnY - 40;
+      ctx.fillStyle = 'rgba(20, 70, 30, 0.85)';
+      ctx.fillRect(doneBtnX, okBoxY, doneBtnW, 34);
+      ctx.strokeStyle = 'rgba(120, 220, 130, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(doneBtnX, okBoxY, doneBtnW, 34);
+      ctx.fillStyle = 'rgba(160, 240, 170, 1)';
+      ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Click cards to equip / unequip', doneBtnX + doneBtnW / 2, doneBtnY - 10);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('All Clear — ready to rest!', doneBtnX + doneBtnW / 2, okBoxY + 17);
+      ctx.textBaseline = 'alphabetic';
+      _invRestErrorRect = null;
     }
+    _invRestBtnRect = { x: doneBtnX, y: doneBtnY, w: doneBtnW, h: doneBtnH };
     ctx.textAlign = 'left';
     // Gentle pulsing glow so the button is impossible to miss during rest.
     const pulse = 0.15 + 0.12 * Math.sin(performance.now() / 400);
@@ -27816,7 +28184,16 @@ function drawInventory() {
   }
 
   // Full card hover preview (follows cursor, same as combat)
+  maintainSideHoverExpansion();
   drawHoverPreview();
+
+  // Section "(i)" tooltip — pops the matching TUTORIAL_BOXES entry as
+  // a small panel near the badge. Drawn AFTER the cursor card preview
+  // so it sits on top, and AFTER the hover preview's own _summonInfoHover
+  // handling so neither tooltip gets clipped by the other.
+  if (_sectionInfoHover) {
+    drawSectionInfoTooltip(_sectionInfoHover);
+  }
 
   // Character splash overlay (click portrait to show)
   if (characterSplashCharacter) drawCharacterSplash();
@@ -28058,6 +28435,9 @@ function drawInventoryCharacter(rect) {
   ctx.font = 'bold 16px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.fillText(`${selectedClass} (${player.level || 1})`, cardX + cardW / 2, cardY + 26);
+  // (i) badge for the character column header — popup mirrors the
+  // inventory_character tutorial.
+  drawSectionInfoBadge({ x: rect.x, y: rect.y, w: rect.w, h: 30 }, 'inventory_character', 0);
 
   // Card counts (+4 down, relative offsets preserved)
   const infoTop = cardY + 48;
@@ -28149,6 +28529,12 @@ function drawInventoryCharacter(rect) {
   ctx.font = 'bold 12px Georgia, serif';
   ctx.textAlign = 'left';
   ctx.fillText('Deck Limits', limitsBaseX + 2, nextY);
+  _invDeckLimitsY = nextY - 4; // stash for tutorial arrow
+  // (i) badge mirroring the inventory_deck_limits tutorial. Anchors
+  // to the full character column right edge (rect.x + rect.w) so the
+  // glyph lines up vertically with the character section's badge
+  // instead of sitting 8 px inboard.
+  drawSectionInfoBadge({ x: rect.x, y: nextY - 14, w: rect.w, h: 16 }, 'inventory_deck_limits', 0);
 
   // Debug-only: "Rest Mode" button next to the header (enters deck
   // rebalancing mode so the developer can move cards freely).
@@ -28241,6 +28627,10 @@ function drawInventoryCharacter(rect) {
   nextY += 4;
 
   // ── Equip Types section ──
+  _invEquipTypesY = nextY; // stash for tutorial arrow
+  // (i) badge mirroring the inventory_can_equip tutorial — same
+  // right-edge anchor as the Deck Limits / Perks badges.
+  drawSectionInfoBadge({ x: rect.x, y: nextY - 12, w: rect.w, h: 16 }, 'inventory_can_equip', 0);
   ctx.fillStyle = '#bbb';
   ctx.font = '11px sans-serif';
   // Armor types
@@ -28279,6 +28669,10 @@ function drawInventoryCharacter(rect) {
   ctx.font = 'bold 12px Georgia, serif';
   ctx.textAlign = 'left';
   ctx.fillText('Perks', limitsBaseX + 2, nextY);
+  _invPerksY = nextY - 4; // stash for tutorial arrow
+  // (i) badge mirroring the inventory_perks_buffs tutorial — same
+  // right-edge anchor as the other inner-section badges.
+  drawSectionInfoBadge({ x: rect.x, y: nextY - 14, w: rect.w, h: 16 }, 'inventory_perks_buffs', 0);
   // Hint that perk names are hoverable for details.
   if (player.perks && player.perks.length > 0) {
     const perksW = ctx.measureText('Perks').width;
@@ -29557,16 +29951,15 @@ const HELP_CONTENT = [
     { text: 'Ignite: your next damaging attack also applies Fire equal to stacks. Consumed on attack.', color: '#ff8c40' },
   ]},
   { title: 'Status Effects', items: [
-    { text: 'Fire: deals damage equal to stacks at start of turn, decays by 1.', color: '#dc8c28' },
-    { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn.', color: '#78c8ff' },
-    { text: 'Poison: deals damage equal to stacks each turn. Only removed by healing.', color: '#3cc83c' },
+    { text: 'Fire: deals damage equal to stacks at start of turn, decays by 1. Applying Fire to a target with Ice cancels the Ice instead (1-for-1).', color: '#dc8c28' },
+    { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn. Applying Ice to a target with Fire cancels the Fire instead (1-for-1).', color: '#78c8ff' },
+    { text: 'Poison: deals damage equal to stacks each turn. Removed by healing — each point of Heal cancels 1 Poison stack before any actual healing lands (1-for-1).', color: '#3cc83c' },
     { text: 'Shock: -1 damage dealt and +1 damage taken per stack, decays by 1.', color: '#ffe650' },
   ]},
   { title: 'Allies & Summons', items: [
     { text: 'Summoned creatures and allies are exhausted the turn they come into play and can attack on the next turn.' },
     { text: 'Call: brings a Companion onto the battlefield. The card uses the Play destination — see Card Destinations.', color: '#ffb878' },
     { text: 'Summon: creates a temporary ally creature. The card itself follows its cost (Recharge / Discard); the creature lives on its own and is gone when it dies.', color: '#c898ff' },
-    { text: 'Revivify (Paladin): pick one ally card from your discard pile and play it again — works on both companions and summons.', color: '#7cff9c' },
     { text: 'Sentinel: attacks must target this creature first while it is alive.', color: '#c8a060' },
   ]},
   { title: 'Controls', items: [
@@ -29576,7 +29969,8 @@ const HELP_CONTENT = [
     { text: 'S: save game (on map).' },
     { text: 'L: load game (on map).' },
     { text: 'I: open or close inventory.' },
-    { text: '` (backtick): toggle debug mode.' },
+    { text: 'Shift (held): pin the hover preview so you can mouse over its keyword icons.' },
+    { text: 'Middle mouse (held): same as Shift — pin the hover preview.' },
     { text: 'Mouse wheel: scroll in shop / inventory / help.' },
   ]},
 ];
@@ -31632,8 +32026,26 @@ function gameLoop(timestamp) {
     updateEnemyTurn(dt);
   }
 
-  // Update combat intro timer
-  if (combatIntroTimer > 0) combatIntroTimer = Math.max(0, combatIntroTimer - dt);
+  // Update combat intro timer. When the splash auto-dismisses (timer
+  // hits 0 without a click), fire the welcome tutorial queue here too
+  // — the click handler at handleCombatClick fires the same set, but
+  // it never ran for players who waited for the splash to fade.
+  // showTutorial is idempotent: already-seen ids are no-ops.
+  if (combatIntroTimer > 0) {
+    const before = combatIntroTimer;
+    combatIntroTimer = Math.max(0, combatIntroTimer - dt);
+    if (before > 0 && combatIntroTimer <= 0) {
+      showTutorial('welcome');
+      showTutorial('hp_explained');
+      showTutorial('enemy_hp_explained');
+      showTutorial('first_turn');
+      showTutorial('any_card_in_hand');
+      showTutorial('powers_explained');
+      showTutorial('hover_preview');
+      showTutorial('inventory_button');
+      showTutorial('help_button');
+    }
+  }
 
   // Tick the card showcase every frame regardless of state — used
   // for both the enemy-played-a-card flash AND the Whirlpool /
@@ -31728,6 +32140,7 @@ function gameLoop(timestamp) {
     state === GameState.MULTI_TARGETING || state === GameState.SCRY_SELECT ||
     state === GameState.SWIMMING;
   if (isCombatCluster && combatIntroTimer <= 0 && !characterSplashCharacter) {
+    maintainSideHoverExpansion();
     drawHoverPreview();
   }
 
@@ -32024,6 +32437,7 @@ function drawCodex() {
   drawCodexStatsPanel(L);
 
   // Hover preview piggybacks on the existing system
+  maintainSideHoverExpansion();
   if (hoveredCardPreview || hoveredPowerPreview || hoveredCreaturePreview) drawHoverPreview();
 
   ctx.textAlign = 'left';
