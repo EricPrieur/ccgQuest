@@ -41,7 +41,13 @@ export class Power {
   }
 
   use() {
-    if (!this.canUse()) return false;
+    // Cost has already been paid by the caller (handlePowerRechargeClick
+    // moved cards out of hand BEFORE executePower fires), so re-running
+    // canUse() here would reject the use whenever the payment dropped the
+    // hand below rechargeCost — the power would resolve its effects but
+    // never get marked exhausted, letting the player fire it again the
+    // same turn. Just exhaust unconditionally; pre-payment activation
+    // gates on canUse via the click handler.
     this.exhausted = true;
     return true;
   }
