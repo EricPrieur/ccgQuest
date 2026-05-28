@@ -15,6 +15,7 @@ export class Power {
     shortDesc = '',
     choices = null,
     costIsDiscard = false,
+    maxUsesPerTurn = 1,
   }) {
     this.id = id;
     this.name = name;
@@ -27,6 +28,11 @@ export class Power {
     this.shortDesc = shortDesc;
     this.choices = choices;
     this.costIsDiscard = costIsDiscard;
+    // Most powers fire once per turn; Aimed Shot bumps to 2 so the
+    // Ranger can stack heroism faster. use() exhausts when the
+    // counter hits the cap; ready() resets it at turn start.
+    this.maxUsesPerTurn = maxUsesPerTurn;
+    this.usesThisTurn = 0;
   }
 
   get fullDescription() {
@@ -46,14 +52,18 @@ export class Power {
     // canUse() here would reject the use whenever the payment dropped the
     // hand below rechargeCost — the power would resolve its effects but
     // never get marked exhausted, letting the player fire it again the
-    // same turn. Just exhaust unconditionally; pre-payment activation
-    // gates on canUse via the click handler.
-    this.exhausted = true;
+    // same turn. Bump the per-turn counter and exhaust only when the
+    // cap is reached (default maxUsesPerTurn=1, Aimed Shot=2).
+    this.usesThisTurn = (this.usesThisTurn || 0) + 1;
+    if (this.usesThisTurn >= (this.maxUsesPerTurn || 1)) {
+      this.exhausted = true;
+    }
     return true;
   }
 
   ready() {
     this.exhausted = false;
+    this.usesThisTurn = 0;
   }
 
   toString() {
@@ -79,9 +89,9 @@ export function createAimedShot() {
     id: 'aimed_shot',
     name: 'Aimed Shot',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Gain 1 Heroism, Draw 1.',
+    effectDescription: 'Gain 1 Heroism, Draw.',
     rechargeCost: 1,
-    shortDesc: 'R1->+1 Heroism\nDraw 1',
+    shortDesc: 'R1->+1 Heroism\nDraw',
   });
 }
 
@@ -102,9 +112,9 @@ export function createQuickStrike() {
     id: 'quick_strike',
     name: 'Quick Strike',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Deal 1 Damage, Draw 1.',
+    effectDescription: 'Deal 1 Damage, Draw.',
     rechargeCost: 1,
-    shortDesc: 'R1->1 Dmg\nDraw 1',
+    shortDesc: 'R1->1 Dmg\nDraw',
   });
 }
 
@@ -125,7 +135,7 @@ export function createFeralForm() {
     id: 'feral_form',
     name: 'Feral Form',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Gain 1 Heroism or 1 Shield. Draw 1.',
+    effectDescription: 'Gain 1 Heroism or 1 Shield. Draw.',
     rechargeCost: 1,
     // Uses keyword names ("Heroism", "Shield", "Draw") so the inline icon
     // tokenizer substitutes them with their icons on the small power card.

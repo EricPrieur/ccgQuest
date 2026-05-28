@@ -726,14 +726,13 @@ export function createCarefulStrike() {
   return new Card({
     id: 'careful_strike',
     name: 'Careful Strike',
-    description: 'Recharge -> Deal 2 Damage, Gain Shield.',
-    shortDesc: 'R->2 Dmg, Shield',
+    description: 'Recharge -> Deal 1 Damage, Gain Shield equal to Damage dealt.',
+    shortDesc: 'R->1 Dmg\n+Shield = Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
-      new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('careful_strike', 1, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
@@ -759,12 +758,17 @@ export function createGoodberry() {
   return new Card({
     id: 'goodberry',
     name: 'Goodberry',
-    description: 'Banish -> Heal 1.',
-    shortDesc: 'B->Heal 1',
+    description: 'Banish -> Heal 1 and some sustenance.',
+    shortDesc: 'B->Heal 1\n+ Sustenance',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
-    effects: [new CardEffect('heal', 1, TargetType.SELF)],
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      // Sustenance — 50% chance to grant one random buff (Shield /
+      // Heroism / Draw / Heal). Resolves in resolveEffect:goodberry_sustenance.
+      new CardEffect('goodberry_sustenance', 1, TargetType.SELF),
+    ],
     isToken: true,
   });
 }
@@ -852,12 +856,15 @@ export function createGoodberries() {
   return new Card({
     id: 'goodberries',
     name: 'Goodberries',
-    description: 'Recharge -> Create 2 Goodberries.',
-    shortDesc: 'R->2 Goodberries',
+    description: 'Recharge -> Create some Goodberries.',
+    shortDesc: 'R->Some\nGoodberries',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('create_goodberries', 2, TargetType.SELF)],
+    // eff.value is the cap on the random roll (1..N). Handler at
+    // resolveEffect:create_goodberries rolls 1+rand(value) tokens
+    // and adds them to hand (capped by MAX_HAND_SIZE).
+    effects: [new CardEffect('create_goodberries', 3, TargetType.SELF)],
     characterClass: ['ranger'],
     tier: 1,
     previewCard: createGoodberry(),
@@ -1063,19 +1070,36 @@ function createTamedRatCreature() {
   });
 }
 
+// Player-summoned Dire Rat (Ranger ally). Distinct from the enemy
+// Dire Rat fight (a Character) — this is the spawned creature.
+// Bloodfrenzy mirrors Shark: +1 Rage per swing, so the rat grows
+// teeth the longer it stays alive.
+function createDireRatCreature() {
+  return new Creature({
+    name: 'Dire Rat',
+    attack: 2,
+    maxHp: 2,
+    armor: 1,
+    bloodfrenzy: 1,
+    description: 'Bloodfrenzy: +1 Rage after attacking.',
+  });
+}
+
 export function createTamedRat() {
   return new Card({
     id: 'tamed_rat',
-    name: 'Tamed Rat',
-    description: 'Recharge -> Summon 1-2 Tamed Rats.',
-    shortDesc: 'R->Summon 1-2 Rats',
+    name: 'Rat Taming',
+    description: 'Recharge -> Summon Rats.',
+    shortDesc: 'R->Summon Rats',
     subtype: 'ability',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_tamed_rat', 1, TargetType.SUMMON)],
     characterClass: ['ranger'],
     tier: 1,
-    previewCreature: createTamedRatCreature(),
+    // Both possible summons render in the hover side-preview
+    // (50/50: 1-3 Tamed Rats vs 1 Dire Rat).
+    previewCreatures: [createTamedRatCreature(), createDireRatCreature()],
   });
 }
 
@@ -1147,8 +1171,8 @@ function createHufferCreature() {
 export function createHuntersMark() {
   return new Card({
     id: 'hunters_mark', name: "Hunter's Mark",
-    description: 'Recharge -> Mark an enemy.\nDraw 1. +1 dmg per Mark.',
-    shortDesc: 'R->Mark, Draw 1', subtype: 'ability',
+    description: 'Recharge -> Mark an enemy.\nDraw. +1 dmg per Mark.',
+    shortDesc: 'R->Mark, Draw', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
@@ -1161,10 +1185,15 @@ export function createHuntersMark() {
 export function createAnimalCompanion() {
   return new Card({
     id: 'animal_companion', name: 'Animal Companion',
-    description: 'Recharge -> Summon:\nMisha (4/4 Sentinel)\nOR Huffer (4/2 Haste)',
-    shortDesc: 'R->Summon\nMisha or Huffer', subtype: 'ability',
+    description: 'Recharge +1 Card -> Summon:\nMisha (4/4 Sentinel)\nOR Huffer (4/2 Haste)',
+    shortDesc: 'R+1->Summon\nMisha or Huffer', subtype: 'ability',
     cardType: CardType.CREATURE, costType: CostType.RECHARGE,
-    effects: [],
+    // +1 recharge cost on top of the base play. Mode picks resolve
+    // their own summon effect; the recharge_extra effect just sets
+    // the cost the play handler reads via getCardRechargeExtra.
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
     modes: [
       new CardMode('Summon Misha (4/4 Sentinel)',
         [new CardEffect('summon_misha', 1, TargetType.SUMMON)]),

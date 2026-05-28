@@ -13788,14 +13788,28 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   } else if (creature.unpreventable) {
     descLines = countWrappedLines('Deals Unpreventable Damage', descBoxW - 12, dFont);
   }
-  // Add a 1-line buffer for descriptions that include inline pill
+  // Add a line buffer for descriptions that include inline pill
   // badges (WHEN ATTACKED, CALLED, etc.) — countWrappedLines can
   // undercount when a badge unit lands at a line break, leaving the
   // tail of the description clipped by the box. The buffer guarantees
   // the actual rendered text always fits.
+  //
+  // Descriptions that lead with a SEPARATE clause before the badge
+  // (e.g. White Dragon Egg: "Cannot attack. When Attacked: Attacker
+  // gains 1 Ice.") need a +2 cushion because the leading sentence
+  // takes a line, the badge pill pushes the rider onto its own line,
+  // and the tail wraps to a third — the single-line buffer was a row
+  // short and clipped "1 Ice." off the bottom in the loot preview.
   const hasInlineBadge = creature.description
     && /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called)\b/.test(creature.description);
-  if (hasInlineBadge) descLines += 1;
+  if (hasInlineBadge) {
+    // If the badge clause is preceded by a separate sentence, add an
+    // extra row so the badge can sit on its own line with the rider
+    // still visible beneath it.
+    const hasLeadingClause = /\.\s+\S/.test(creature.description) ||
+      /\b(Cannot|Can't|Will not|Won't)\b/i.test(creature.description);
+    descLines += hasLeadingClause ? 2 : 1;
+  }
   const descContentH = descLines * lineH;
   const baseBoxH = Math.floor(h / 5);
   // Padding budget: small buffer above description + ~4 px gap between
@@ -15852,6 +15866,21 @@ function handleCombatClick(x, y) {
         showToast(`${card.name} only triggers when discarded.`);
         return;
       }
+      // Wolf Fang and any other on-recharge-only relic — same idea:
+      // the active card play does nothing, the bonus fires only when
+      // the card lands in the recharge pile (paid as cost or rolled
+      // at end-of-turn). Block the proactive play so the player
+      // doesn't burn the card slot.
+      if ((card.effects || []).some(e => e && e.effectType === 'on_recharge_heroism')
+          && !(card.effects || []).some(e => e && (
+            e.effectType === 'damage' || e.effectType === 'apply_poison' ||
+            e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
+            e.effectType === 'heal' || e.effectType === 'gain_shield' ||
+            e.effectType === 'block' || e.effectType === 'draw'
+          ))) {
+        showToast(`${card.name} only triggers when recharged (use as a cost).`);
+        return;
+      }
       if (selectedCardIndex !== i) {
         selectedCardIndex = i;
         playSound('click');
@@ -16805,7 +16834,8 @@ function needsTarget(card) {
      e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
      e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
      e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
-     e.effectType === 'split_damage' || e.effectType === 'apply_mark')
+     e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
+     e.effectType === 'careful_strike')
   );
 }
 
@@ -17070,6 +17100,60 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'careful_strike': {
+      // Ranger / Rogue tier-1: Deal eff.value damage, then gain Shield
+      // equal to damage that actually LANDED (post block/shield/armor).
+      // A blocked swing grants no shield — careful, not lucky.
+      const heroism = caster.heroism;
+      if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg = applyMarkBonus(target, dmg);
+      const unpreventable = consumeUnpreventableBuff(caster);
+      let landed = 0;
+      if (target instanceof Creature) {
+        if (unpreventable) {
+          target.takeUnpreventableDamage(dmg);
+          if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+          landed = dmg;
+        } else {
+          const shieldBefore = target.shield || 0;
+          const actual = target.takeDamage(dmg);
+          if (actual > 0) spawnDamageOnTarget(target, actual);
+          playAttackHitSfx(dmg, actual);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+          landed = actual;
+        }
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (unpreventable) {
+          target.takeDamageFromDeck(dmg);
+          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+          landed = dmg;
+        } else {
+          if (target === enemy) enemyAutoPlayDefenses(dmg);
+          const [blocked, taken] = target.takeDamageWithDefense(dmg);
+          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          playAttackHitSfx(dmg, taken);
+          const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
+          landed = taken;
+        }
+      }
+      if (landed > 0) {
+        caster.shield = (caster.shield || 0) + landed;
+        addLog(`  +${landed} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(caster, landed, 'Shield', Colors.ALLY_BLUE);
+      }
+      consumePoisonBuff(caster, target, landed);
+      consumeIgniteOnAttack(caster, target, dmg);
+      attacksThisTurn++;
+      break;
+    }
     case 'unpreventable_damage': {
       // Unpreventable swings (Dwarven Crossbow, Spectral Hand, etc.)
       // previously fired at raw eff.value — the user's persistent
@@ -17088,12 +17172,19 @@ function resolveEffect(eff, caster, target) {
         target.takeUnpreventableDamage(dmg);
         spawnDamageOnTarget(target, dmg, Colors.ORANGE);
         addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
+        // On-attacked triggers (Obsidian Slime body armor peel + slime
+        // split, Vanish, Brute, on_attacked_split) fire on true damage
+        // too — the attack DID hit, the defense layers just couldn't
+        // soak it. Was missing here, so Dwarven Crossbow / Spectral
+        // Hand bypassed every on-hit reaction.
+        triggerSplitPower(target, dmg > 0);
         consumePoisonBuff(caster, target, dmg);
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
       } else {
         target.takeDamageFromDeck(dmg);
         spawnDamageOnTarget(target, dmg, Colors.ORANGE);
         addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
+        triggerSplitPower(target, dmg > 0);
         consumePoisonBuff(caster, target, dmg);
         if (caster === player && target === enemy) onPlayerHitEnemy(dmg);
       }
@@ -17162,6 +17253,7 @@ function resolveEffect(eff, caster, target) {
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
@@ -17211,6 +17303,7 @@ function resolveEffect(eff, caster, target) {
           playAttackHitSfx(dmg, taken);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
@@ -17264,6 +17357,7 @@ function resolveEffect(eff, caster, target) {
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
@@ -17319,6 +17413,7 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
           playAttackHitSfx(dmg, taken, hits * SFX_STAGGER_MS);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
         hits++;
       }
@@ -17392,6 +17487,7 @@ function resolveEffect(eff, caster, target) {
           triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
           playAttackHitSfx(dmg, taken, delay);
           addLog(`  ${t.name}: ${taken} dmg`, Colors.RED);
+          if (caster === player && t === enemy) onPlayerHitEnemy(taken);
         }
         hitIdx++;
       };
@@ -18188,6 +18284,12 @@ function resolveEffect(eff, caster, target) {
     case 'draw': {
       const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+      // Same staggered card-draw cue end-of-turn refill uses, so any
+      // mid-combat draw rider (Mimic Tongue, Bow, Hunter's Mark, etc.)
+      // audibly reads as cards moving from deck → hand instead of
+      // just popping in silently. Caps internally at 6 to avoid
+      // sound spam on big draws.
+      if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
       break;
     }
     case 'on_discard_draw': {
@@ -18447,22 +18549,43 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_tamed_rat': {
-      const want = Math.floor(Math.random() * 2) + 1;
-      let summoned = 0;
-      let lastRat;
-      for (let i = 0; i < want; i++) {
-        const rat = new Creature({ name: 'Tamed Rat', attack: 1, maxHp: 1 });
-        if (!player.addCreature(rat)) break; // hit the 12-ally cap
-        lastRat = rat;
-        summoned++;
-      }
-      if (summoned === 0) {
-        addLog(`  No room for a Tamed Rat (field is full).`, Colors.GRAY);
-      } else {
-        addLog(`  ${summoned} Tamed Rat${summoned > 1 ? 's' : ''} summoned${summoned < want ? ` (${want - summoned} blocked — field full)` : ''}`, Colors.ORANGE);
-        if (lastRat) {
+      // Rat Taming: 50% chance summon 1 Dire Rat (2/2, armor 1,
+      // Bloodfrenzy), otherwise summon 1-3 Tamed Rats. Both branches
+      // route through the shared field-full / lastEntry plumbing so
+      // the codex preview-card hover still works.
+      const summonDire = Math.random() < 0.5;
+      if (summonDire) {
+        const dire = new Creature({
+          name: 'Dire Rat', attack: 2, maxHp: 2, armor: 1,
+          bloodfrenzy: 1,
+          description: 'Bloodfrenzy: +1 Rage after attacking.',
+        });
+        if (player.addCreature(dire)) {
+          playCreaturePlaySfx(dire);
+          addLog(`  A Dire Rat answers the call!`, Colors.ORANGE);
           const lastEntry = combatLog[combatLog.length - 1];
-          if (lastEntry) lastEntry.creature = lastRat;
+          if (lastEntry) lastEntry.creature = dire;
+        } else {
+          addLog(`  No room for a Dire Rat (field is full).`, Colors.GRAY);
+        }
+      } else {
+        const want = 1 + Math.floor(Math.random() * 3); // 1..3
+        let summoned = 0;
+        let lastRat;
+        for (let i = 0; i < want; i++) {
+          const rat = new Creature({ name: 'Tamed Rat', attack: 1, maxHp: 1 });
+          if (!player.addCreature(rat)) break; // hit the 12-ally cap
+          lastRat = rat;
+          summoned++;
+        }
+        if (summoned === 0) {
+          addLog(`  No room for a Tamed Rat (field is full).`, Colors.GRAY);
+        } else {
+          addLog(`  ${summoned} Tamed Rat${summoned > 1 ? 's' : ''} summoned${summoned < want ? ` (${want - summoned} blocked — field full)` : ''}`, Colors.ORANGE);
+          if (lastRat) {
+            const lastEntry = combatLog[combatLog.length - 1];
+            if (lastEntry) lastEntry.creature = lastRat;
+          }
         }
       }
       break;
@@ -18687,17 +18810,50 @@ function resolveEffect(eff, caster, target) {
       state = GameState.REVIVE_SELECT;
       break;
     }
+    case 'goodberry_sustenance': {
+      // 50% chance to grant one random buff: Shield / Heroism / Draw / Heal.
+      // Fires AFTER the base heal so the player feels the always-on
+      // heal first; the rider lands as a "lucky bite" on top.
+      if (Math.random() >= 0.5) {
+        addLog(`  Sustenance: nothing extra this time.`, Colors.GRAY);
+        break;
+      }
+      const roll = Math.floor(Math.random() * 4); // 0..3
+      if (roll === 0) {
+        player.shield = (player.shield || 0) + 1;
+        addLog(`  Sustenance: +1 Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
+      } else if (roll === 1) {
+        player.heroism = (player.heroism || 0) + 1;
+        addLog(`  Sustenance: +1 Heroism (H:${player.heroism})`, Colors.GOLD);
+        spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
+      } else if (roll === 2) {
+        const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Sustenance: Draw ${d.name}`, Colors.BLUE, d);
+        if (drawn.length === 0) addLog(`  Sustenance: (no cards to draw)`, Colors.GRAY);
+      } else {
+        // Extra heal
+        healPlayer(1);
+        addLog(`  Sustenance: Heal 1 more`, Colors.GREEN);
+      }
+      break;
+    }
     case 'create_goodberries': {
-      // Create N Goodberry token cards directly into the player's hand (capped by MAX_HAND_SIZE)
-      const count = eff.value;
+      // Roll 1..eff.value Goodberry tokens (Ranger ability text:
+      // "Create some Goodberries"). Tokens go straight to hand
+      // capped at MAX_HAND_SIZE; the rolled count is shown so the
+      // player knows whether the harvest was lucky or thin.
+      const cap = Math.max(1, eff.value || 1);
+      const rolled = 1 + Math.floor(Math.random() * cap);
       let added = 0;
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < rolled; i++) {
         if (player.deck.hand.length >= MAX_HAND_SIZE) break;
         const berry = createGoodberry();
         player.deck.hand.push(berry);
         added++;
       }
-      addLog(`  ${added} Goodberry created in hand`, Colors.GREEN);
+      const blocked = rolled - added;
+      addLog(`  ${added} Goodberry${added === 1 ? '' : ' tokens'} created in hand${blocked > 0 ? ` (${blocked} blocked — hand full)` : ''}`, Colors.GREEN);
       break;
     }
     case 'recharge_extra':
@@ -19970,6 +20126,15 @@ function resolveMultiTargeting() {
   player.deck.hand.splice(multiCardIndex, 1);
   addLog(`You play ${card.name}`, Colors.GREEN, card);
 
+  // Ambient cast cue (Multi Shot's 3-bow staggered volley, etc.). Was
+  // never fired on this path — single-target play routes through
+  // playCardOnEnemy which calls it, and Feral Swipe stamps it in
+  // enterFeralSwipeTargeting; Wooden Axe / Steel Greataxe / Multi Shot
+  // went straight from picker → resolve with no ambient hook, so any
+  // `play` / `playMulti` SFX override silently dropped. Skip in
+  // feralSwipeMode since enterFeralSwipeTargeting already fired it.
+  if (!feralSwipeMode) playCardAmbient(card);
+
   // Player-side arrow batch — Wooden Axe, Feral Swipe, multi_damage
   // cards. Source = card's hand rect (single-target style).
   if (targets.length > 1) {
@@ -19987,7 +20152,10 @@ function resolveMultiTargeting() {
       player.heroism = 0;
       addLog(`  Heroism! +${heroismBonus} damage per hit`, Colors.GOLD);
     }
-    const hitDmg = 1 + heroismBonus;
+    let hitDmg = 1 + heroismBonus;
+    // Ice on the player reduces the swing once + burns 1 stack
+    // (same one-attack semantics as Cleave / single-target damage).
+    hitDmg = consumeIceForAttack(player, hitDmg);
     const SFX_STAGGER_MS = 120;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
@@ -19998,6 +20166,7 @@ function resolveMultiTargeting() {
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
+        onPlayerHitEnemy(taken);
         dmgLanded = taken;
       } else {
         const shieldBefore = t.shield || 0;
@@ -20047,6 +20216,17 @@ function resolveMultiTargeting() {
         break;
       }
     }
+    // Ice reduction: the player's chilled, so the whole swing gets -N
+    // dmg and burns 1 Ice stack (one attack = one consumption, mirrors
+    // single-target damage). Compute the cut from the primary value
+    // and apply the same numerical cut to secondaries so split-damage
+    // cards stay consistent. Was missing entirely on this path —
+    // Wooden Axe / Steel Greataxe fired at full damage even when the
+    // player was iced down to 0 by Cold Breath etc.
+    const dmgBeforeIce = primaryDmg;
+    primaryDmg = consumeIceForAttack(player, primaryDmg);
+    const iceCut = dmgBeforeIce - primaryDmg;
+    if (iceCut > 0) secondaryDmg = Math.max(0, secondaryDmg - iceCut);
     // Snapshot ignite ONCE so every target in the chain gets the full
     // Fire rider (same rule as Cleave / heroism).
     const multiIgnite = consumePlayerIgnite();
@@ -20062,6 +20242,7 @@ function resolveMultiTargeting() {
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
         playAttackHitSfx(dmg, taken, delay);
+        onPlayerHitEnemy(taken);
       } else {
         const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(dmg);
@@ -20699,6 +20880,7 @@ function executePower(power) {
       spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+      if (drawn.length > 0) playDrawSounds(drawn.length);
       break;
     }
     case 'elemental_infusion': {
@@ -21433,6 +21615,8 @@ function processPlayerAllyAttacks() {
         playAttackHitSfx(edmg, taken);
         maybeApplyAttackPoison(ally, enemy, taken);
         maybeApplyAttackIce(ally, enemy);
+        // Ally swings also trigger Ruga's Brute draw + Slyblade's Vanish.
+        onPlayerHitEnemy(taken);
       }
     }
     _activeAttacker = null;
@@ -23707,8 +23891,9 @@ function updateEnemyTurn(dt) {
     _activePlayCard = null;
   } else if (action.action === 'ability') {
     // ABILITY cards (Defensive Formation, etc.) — utility plays. Mirrors PY's
-    // enemy ABILITY-card handler at game.py:13823.
-    _enemyCardsThisTurn++;
+    // enemy ABILITY-card handler at game.py:13823. Does NOT bump
+    // _enemyCardsThisTurn — that counter feeds Sneak Attack damage and
+    // utility plays (Sprint, Defensive Formation) shouldn't scale it.
     addLog(`${enemy.name} plays ${card.name}`, Colors.RED, card);
     playCardAmbient(card);
     for (const eff of card.currentEffects) {
@@ -23855,7 +24040,9 @@ function updateEnemyTurn(dt) {
       }
     }
   } else if (action.action === 'summon') {
-    _enemyCardsThisTurn++;
+    // Summons (Pet Spider, Blood in the Water sharks, Bone Storm
+    // wave) don't count toward Sneak Attack's damage — they're not
+    // attacks. Only ATTACK cards bump _enemyCardsThisTurn.
     addLog(`${enemy.name} plays ${card.name}`, Colors.RED, card);
     // Stamp the played card so the SFX classifier sees rat-screech /
     // future enemy summon cards. Cleared at the bottom of the branch.
@@ -24771,6 +24958,10 @@ function getCreaturePlaySfxKey(c) {
   if (name === 'pet spider') return 'spider_scuttle';
   if (name === 'pet slime') return 'ooze_attack';
   if (name === 'tamed rat') return 'rat_screech';
+  // Dire Rat (Rat Taming summon) — same squeak as the enemy Dire
+  // Rat, fires on summon (here) + death (getDeathSfxKey, existing
+  // dire rat branch) + each swing (getWeaponSfxKeys creature branch).
+  if (name === 'dire rat') return 'rat_screech';
   if (name === 'treant') return 'leaf_fall';
   // Ice Elemental — ice-blast cue plays on summon (both player-side
   // staff summon and the enemy-side Gnikan's Staff burst route
@@ -24877,6 +25068,9 @@ function getDeathSfxKey(c) {
   if (name === 'durin stoneheart')    return 'monster_scream_01';
   if (name === 'balgrim ironvein')    return 'monster_alien_scream_01';
   if (name === 'thordak ashmantle')   return 'monster_demon_screech_01';
+  // Mimic — same alien shriek bookends entry (getFightStartSfxKey)
+  // and death.
+  if (name === 'mimic')               return 'monster_alien_scream_01';
   // Overseer Gnikan + Ice Elemental — chapter 8 summit fight.
   // Gnikan's death replays the boss hiss; the elementals shatter
   // with the same ice-blast they spawned in with.
@@ -24933,6 +25127,9 @@ function getFightStartSfxKey(rawName) {
   if (name === 'piranhas swarm') return 'piranha_swarm';
   if (name === 'deathjump spiders') return 'spider_scuttle';
   if (name === 'siege ogre') return 'ogre_growl';
+  // Mimic — antiquity shop ambush. The alien shriek doubles as the
+  // fight-start splash and the death cue (see getDeathSfxKey).
+  if (name === 'mimic') return 'monster_alien_scream_01';
   if (name === 'kobold drake rider') return 'drake_rider_hiss';
   if (name === 'kobold slyblade') return 'slyblade_hiss';
   if (name === 'ruga the slave master') return 'ruga_chuff';
@@ -25786,14 +25983,23 @@ function syncMapKnowledgePersistentBuff() {
 // skips startCombat — needs its own re-projection so the buff resets
 // to the full turnsRemaining each phase).
 //
-// VOLCANO_BUFF_MAPS covers the lava-side volcano dungeon AND the
-// chapter-8 ascent (volcano stairs + summit ridge where the Gnikan
-// + Varimatras fights play out). User requested the blessing carry
-// all the way up the stairs through the boss chain.
+// VOLCANO_BUFF_MAPS covers every area inside the Qualibaf Volcano
+// region — surface volcano + lava dungeon, the obsidian city above
+// and around it, the bridges connecting them, and the chapter-8 ascent
+// up to Gnikan + Varimatras. User-requested: blessing should be active
+// in ALL volcano-themed combats, not just the inner lava maps.
 const VOLCANO_BUFF_MAPS = new Set([
+  // Surface volcano + lava-side dungeon (lower path).
   'volcano',
   'lower_caverns', 'lava_chamber',
+  // Obsidian forge + temple chain (lava-side mid-game maps).
   'obsidian_tunnels', 'obsidian_forge', 'temple_district',
+  // Obsidian city (upper path): cathedral / plaza / streets / market.
+  'obsidian_cathedral', 'obsidian_plaza', 'obsidian_streets', 'obsidian_market',
+  // Bridges connecting the lava dungeon to the upper city + summit.
+  'tunnel_to_bridge', 'upper_bridge',
+  // Wastes — between Tharnag and the volcano, volcano-themed combats.
+  'obsidian_wastes',
   // Chapter 8 ascent — stairs from the bridge up to Gnikan + the
   // summit ridge where the p1 / p2 / p3 boss chain plays out.
   'volcano_stairs_1', 'volcano_stairs_2', 'volcano_stairs_3',
@@ -26464,7 +26670,13 @@ function canSellAtShop(card) {
   if (!shopMode || !shopCards.length) return false;
   if (card.isUnique) return false;
   if (Array.isArray(card.characterClass) && card.characterClass.length > 0) return false;
-  if (card.previewCreature && card.previewCreature.isCompanion) return false;
+  // Dwarven Scout exception — the Dwarven Tavern recruits scouts back,
+  // so the companion lock is waived there only. Any other shop still
+  // rejects companion summon cards (Thorb, Raena, Valdrisa, etc.).
+  const isDwarvenScoutAtTavern = (
+    card.id === 'dwarven_scout' && shopMode.id === 'dwarven_tavern'
+  );
+  if (card.previewCreature && card.previewCreature.isCompanion && !isDwarvenScoutAtTavern) return false;
   if (shopMode.id === 'antiquity_shop') {
     // Grimbold takes anything (tokens included; tokens just sell for 0).
     return true;
@@ -30777,6 +30989,11 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'rat' || name === 'tamed rat') {
       return { flesh: 'rat_bite_flesh', blocked: 'rat_bite_flesh' };
     }
+    // Dire Rat — angry squeak on every swing (no chew variant —
+    // user requested rodent_squeak_01 across summon/death/attack).
+    if (name === 'dire rat') {
+      return { flesh: 'rat_screech', blocked: 'rat_screech' };
+    }
     // Restless Bone (enemy creature spawned by Loose Bone) — 1H blunt.
     if (name === 'restless bone') {
       return { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' };
@@ -33287,6 +33504,9 @@ function getCodexMonsterIds() {
     'forest_spiders', 'obsidian_golem', 'obsidian_slime',
     'kobold_drake_rider', 'general_zhost', 'wolf_pack',
     'piranhas_swarm', 'stone_giant', 'bone_amalgam',
+    // Qualibaf antiquity shop one-time fight — the chest reveals
+    // a Mimic with an Overwhelm + Dire Fury kit.
+    'mimic',
     // Chapter 7 volcano random encounter — kill-count fight against
     // a swarm of fire-immune mephits.
     'magma_mephit',
@@ -33548,6 +33768,10 @@ function buildCodexSourceCache() {
   thorbCreature._sourceRarity = 'rare'; // thorb_card is rare
   thorbCreature._sourceSubtype = 'allies';
   addCreature(thorbCreature, 'Summoned by: Thorb (recruit)');
+
+  // Rat Taming now uses previewCreatures: [Tamed Rat, Dire Rat] —
+  // both are auto-picked up by the previewCreatures scan above, so
+  // no explicit addCreature needed here.
 
   // Elf Warriors — five spawn at the General Zhost army fight, plus the
   // Elf Reinforcements buff summons one each turn during that fight.
