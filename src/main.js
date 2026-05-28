@@ -794,6 +794,15 @@ const TUTORIAL_BOXES = {
       return { x: SCREEN_WIDTH - 30, y: 70 };
     },
   },
+  menu_button: {
+    title: 'In-Game Menu',
+    body: 'Click the menu icon (or press M, or press ESC when nothing else is open) to bring up the in-game menu — save your game, load an earlier save, change options, or quit back to the main menu.',
+    arrow: () => {
+      const r = (typeof getCombatButtonRects === 'function') ? getCombatButtonRects() : null;
+      if (r && r.menu) return { x: r.menu.x + r.menu.w / 2, y: r.menu.y + r.menu.h / 2 };
+      return { x: SCREEN_WIDTH - 30, y: 70 };
+    },
+  },
   equipped_cards: {
     title: 'Your Equipped Deck',
     body: 'This is the deck you fight with — every card here is also 1 HP. Click a card to move it to your backpack. A red flashing card means your class can\'t equip it — move it out before leaving rest.',
@@ -2760,6 +2769,18 @@ function handleKeyDown(key, event) {
       previousState = state;
       helpScrollY = 0;
       state = GameState.HELP_SCREEN;
+    }
+  }
+  // M: open the in-game menu (save / load / options / quit). Mirrors
+  // the menu icon button in combat. Skipped when already in the
+  // menu cluster so it doesn't toggle weirdly.
+  if (key === 'm' || key === 'M') {
+    if (state === GameState.INGAME_MENU) {
+      state = previousState || GameState.MAP;
+    } else if (state === GameState.COMBAT || state === GameState.MAP) {
+      playSound('click');
+      previousState = state;
+      state = GameState.INGAME_MENU;
     }
   }
   // Codex (debug-only): browse every card / power / character at any size.
@@ -15590,14 +15611,17 @@ function drawCombatLog() {
 function getCombatButtonRects() {
   const padding = 8;
   const iconSize = 40;
+  const iconGap = 8;
   const rowH = 50; // taller row to give I Win banner some height
   const iconY = COMBAT_BTN_AREA.y + padding + (rowH - iconSize) / 2;
-  // Icons aligned to the left
+  // Three icons aligned to the left: Backpack, Help, Menu (in-game menu).
   const backpackX = COMBAT_BTN_AREA.x + padding;
-  const helpX = backpackX + iconSize + 8;
+  const helpX = backpackX + iconSize + iconGap;
+  const menuX = helpX + iconSize + iconGap;
   // I Win banner on the right (debug only) — fits inside the button area
-  const iconsRightEdge = helpX + iconSize;
-  const iWinW = COMBAT_BTN_AREA.w - (iconsRightEdge - COMBAT_BTN_AREA.x) - padding * 2 - 10;
+  // alongside the three icons. Shrunk to make room for the third icon.
+  const iconsRightEdge = menuX + iconSize;
+  const iWinW = Math.max(40, COMBAT_BTN_AREA.w - (iconsRightEdge - COMBAT_BTN_AREA.x) - padding * 2 - 10);
   const iWinX = COMBAT_BTN_AREA.x + COMBAT_BTN_AREA.w - iWinW - padding;
   // End Turn button below the icons
   const endTurnW = COMBAT_BTN_AREA.w - padding * 2;
@@ -15605,6 +15629,7 @@ function getCombatButtonRects() {
   return {
     backpack: { x: backpackX, y: iconY, w: iconSize, h: iconSize },
     help: { x: helpX, y: iconY, w: iconSize, h: iconSize },
+    menu: { x: menuX, y: iconY, w: iconSize, h: iconSize },
     iWin: { x: iWinX, y: COMBAT_BTN_AREA.y + padding, w: iWinW, h: rowH },
     endTurn: {
       x: COMBAT_BTN_AREA.x + padding,
@@ -15641,6 +15666,34 @@ function drawIconButton(rect, iconKey, action, label = '') {
   if (action) menuButtons.push({ ...rect, action });
 }
 
+// Hamburger-style menu icon — same footprint as drawIconButton's
+// rendered art so the combat top-row stays visually balanced. Three
+// gold bars on a dark slab, gold hover glow + bar tint flip.
+function drawCombatMenuButton(rect, action) {
+  const hovered = hitTest(mouseX, mouseY, rect);
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  ctx.save();
+  if (hovered) {
+    ctx.shadowColor = Colors.GOLD;
+    ctx.shadowBlur = 8;
+  }
+  // Bars: ~62% of rect width, 3 stacked horizontal bars centered.
+  const barW = Math.round(rect.w * 0.62);
+  const barH = Math.max(3, Math.round(rect.h * 0.10));
+  const gap = Math.round(rect.h * 0.14);
+  const totalH = barH * 3 + gap * 2;
+  const bx = cx - barW / 2;
+  let by = cy - totalH / 2;
+  ctx.fillStyle = hovered ? Colors.GOLD : '#e8d59a';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(bx, by, barW, barH);
+    by += barH + gap;
+  }
+  ctx.restore();
+  if (action) menuButtons.push({ ...rect, action });
+}
+
 function drawCombatButtons() {
   const rects = getCombatButtonRects();
   const enabled = isPlayerTurn && !powerRechargeMode && combatIntroTimer <= 0;
@@ -15668,6 +15721,15 @@ function drawCombatButtons() {
     helpScrollY = 0;
     state = GameState.HELP_SCREEN;
   }, '?');
+
+  // Menu icon — opens the in-game menu (save / load / options / quit).
+  // No asset, so render a custom hamburger-style icon at the same size
+  // as the backpack / help icons. Same hover glow treatment.
+  drawCombatMenuButton(rects.menu, () => {
+    playSound('click');
+    previousState = state;
+    state = GameState.INGAME_MENU;
+  });
 
   // I Win banner (debug only, right of icons) — uses the wooden plank sprite
   if (debugMode) {
@@ -15928,6 +15990,7 @@ function handleCombatClick(x, y) {
     showTutorial('hover_preview');
     showTutorial('inventory_button');
     showTutorial('help_button');
+    showTutorial('menu_button');
     return;
   }
 
@@ -16350,6 +16413,23 @@ function handleCardRechargeClick(x, y) {
         // Done paying cost — proceed to targeting (or self-play)
         cardRechargeMode = false;
         const selectedCard = player.deck.hand[selectedCardIndex];
+        // Modal cards with a recharge cost (Animal Companion: recharge_extra
+        // + Misha/Huffer modes) open the mode picker AFTER the cost is
+        // paid. Without this branch, the post-cost flow falls through to
+        // canPlayWithoutTarget → playCardSelf, which iterates only the
+        // top-level effects (just recharge_extra → no-op) and never
+        // shows the picker.
+        if (selectedCard && selectedCard.isModal && Array.isArray(selectedCard.modes) && selectedCard.modes.length > 0) {
+          modalCard = selectedCard;
+          modalTarget = null;
+          state = GameState.MODAL_SELECT;
+          hideToast();
+          for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+          pendingRechargeNames = [];
+          cardRechargedCards = [];
+          _handOrderSnapshot = null;
+          return;
+        }
         if (cardNeedsAllyTarget(selectedCard)) {
           // Heal-target after extra recharge cost paid (Healing Touch).
           healTargetMode = true;
@@ -29964,11 +30044,12 @@ const HELP_CONTENT = [
   ]},
   { title: 'Controls', items: [
     { text: 'Click cards to play them, click enemies to target.' },
-    { text: 'ESC: cancel targeting / open menu.' },
+    { text: 'ESC: cancel current action — or open the in-game menu when nothing else is in progress.' },
     { text: 'H: toggle help screen.' },
     { text: 'S: save game (on map).' },
     { text: 'L: load game (on map).' },
     { text: 'I: open or close inventory.' },
+    { text: 'M: open the in-game menu (save / load / options / quit).' },
     { text: 'Shift (held): pin the hover preview so you can mouse over its keyword icons.' },
     { text: 'Middle mouse (held): same as Shift — pin the hover preview.' },
     { text: 'Mouse wheel: scroll in shop / inventory / help.' },
@@ -32044,6 +32125,7 @@ function gameLoop(timestamp) {
       showTutorial('hover_preview');
       showTutorial('inventory_button');
       showTutorial('help_button');
+      showTutorial('menu_button');
     }
   }
 
