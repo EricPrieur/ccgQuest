@@ -445,6 +445,10 @@ export const SOUND_MAP = {
   // Kobold Warden — louder hiss for fight start / death + the warden's
   // Guards! / Hide in the Corner card plays.
   warden_hiss:    'Monster/reptilian_hiss_01',
+  // Kobold Cook (Prison Kitchen) — short reptilian shriek when the
+  // party lunges at him. Pairs with the hero pain cue on the
+  // attack-the-cook choice.
+  cook_hiss:      'Monster/reptilian_hiss_01',
   // Generic Kobold creature swing — Guard / Slinger / Dragonshield etc.
   kobold_attack:  'Monster/reptilian_hiss_02',
   // General Zhost — beefier reptilian hiss for the army + boss fights.
@@ -617,6 +621,9 @@ export const SOUND_MAP = {
   level_up_screen: 'Magic/buff_powerup_02',
   perk_pick:       'Magic/buff_powerup_01',
   splash_dive:     'Misc/water_bodyfall_01',
+  // Water splash — lighter swirl/whirl than the body-fall. Wired as
+  // the cast cue for the Sahuagin Priest's Whirlpool spell.
+  water_splash:    'Misc/water_splash_01',
   door_unlock:     'Misc/door_unlock_01',
   // Hero pain cries — class gender → file, damage tier → variant.
   // 1–2 dmg = low, 3–5 = mid, 6+ = high. Male grunts cover low/mid;

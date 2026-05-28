@@ -498,12 +498,12 @@ const CLASS_ITEMS = {
 // against these (blue = room, red = over, white = balanced).
 // Level-up bonuses add to these (max +3 per category per run).
 const CLASS_DECK_LIMITS = {
-  Paladin: { weapon: 6, armor: 5, ability: 3, item: 1, allies: 1, relic: 1 },
-  Ranger:  { weapon: 7, armor: 3, ability: 3, item: 2, allies: 1, relic: 1 },
-  Wizard:  { weapon: 3, armor: 2, ability: 7, item: 3, allies: 1, relic: 1 },
-  Rogue:   { weapon: 6, armor: 3, ability: 3, item: 3, allies: 1, relic: 1 },
-  Warrior: { weapon: 7, armor: 4, ability: 3, item: 1, allies: 1, relic: 1 },
-  Druid:   { weapon: 4, armor: 4, ability: 4, item: 3, allies: 1, relic: 1 },
+  Paladin: { weapon: 6, armor: 5, ability: 3, item: 1, allies: 2, relic: 1 },
+  Ranger:  { weapon: 7, armor: 3, ability: 3, item: 2, allies: 2, relic: 1 },
+  Wizard:  { weapon: 3, armor: 2, ability: 7, item: 3, allies: 2, relic: 1 },
+  Rogue:   { weapon: 6, armor: 3, ability: 3, item: 3, allies: 2, relic: 1 },
+  Warrior: { weapon: 7, armor: 4, ability: 3, item: 1, allies: 2, relic: 1 },
+  Druid:   { weapon: 4, armor: 4, ability: 4, item: 3, allies: 2, relic: 1 },
 };
 
 // Maps category labels to the subtypes they count (used by the inventory
@@ -1566,7 +1566,7 @@ async function loadAssets() {
     loadImage('menu_bg', `${BASE}assets/Backgrounds/MainScreen.jpg`),
     loadImage('char_select_bg', `${BASE}assets/Backgrounds/CharacterSelection.jpg`),
     loadImage('combat_bg', `${BASE}assets/Backgrounds/PrisonBackground.jpg`),
-    loadImage('game_end_bg', `${BASE}assets/Backgrounds/GameEnd.png`),
+    loadImage('game_end_bg', `${BASE}assets/Backgrounds/GameEnd.jpg`),
     loadImage('map_prison_cell', `${BASE}assets/Maps/PrisonCellMap.jpg`),
     loadImage('map_sewers', `${BASE}assets/Maps/SewerMap.jpg`),
     loadImage('map_upper_prison', `${BASE}assets/Maps/KoboldCastlePrisonMap.jpg`),
@@ -1594,10 +1594,10 @@ async function loadAssets() {
     loadImage('map_obsidian_streets', `${BASE}assets/Maps/ObsidianStreets.jpg`),
     loadImage('map_obsidian_market', `${BASE}assets/Maps/ObsidianMarket.jpg`),
     loadImage('map_upper_bridge', `${BASE}assets/Maps/UpperBridgeMap.jpg`),
-    loadImage('map_volcano_stairs_1', `${BASE}assets/Maps/VolcanoStairs1.png`),
-    loadImage('map_volcano_stairs_2', `${BASE}assets/Maps/VolcanoStairs2.png`),
-    loadImage('map_volcano_stairs_3', `${BASE}assets/Maps/VolcanoStairs3.png`),
-    loadImage('map_volcano_summit_ridge', `${BASE}assets/Maps/Volcano_SummitRidge.png`),
+    loadImage('map_volcano_stairs_1', `${BASE}assets/Maps/VolcanoStairs1.jpg`),
+    loadImage('map_volcano_stairs_2', `${BASE}assets/Maps/VolcanoStairs2.jpg`),
+    loadImage('map_volcano_stairs_3', `${BASE}assets/Maps/VolcanoStairs3.jpg`),
+    loadImage('map_volcano_summit_ridge', `${BASE}assets/Maps/Volcano_SummitRidge.jpg`),
     loadImage('map_obsidian_wastes', `${BASE}assets/Maps/ObsidianWastesMap.jpg`),
     loadImage('map_grand_hall', `${BASE}assets/Maps/TharnagGrandHall.jpg`),
     loadImage('map_grand_staircase', `${BASE}assets/Maps/TharnagGrandStairCase.jpg`),
@@ -1680,11 +1680,11 @@ async function loadAssets() {
     // Chapter 8 — Overseer Gnikan (summit ridge boss) + Ice Elemental
     // creature art. Preload so the splash + summons render with art
     // on the very first frame.
-    loadImage('overseer_gnikan',             `${BASE}assets/Cards/OverseerGnikan.png`),
-    loadImage('creature_ice_elemental',      `${BASE}assets/Cards/IceElemental.png`),
-    // Varimatras — phase-3 dragon. VarimatrasBG.png doubles as the
+    loadImage('overseer_gnikan',             `${BASE}assets/Cards/OverseerGnikan.jpg`),
+    loadImage('creature_ice_elemental',      `${BASE}assets/Cards/IceElemental.jpg`),
+    // Varimatras — phase-3 dragon. VarimatrasBG.jpg doubles as the
     // monster portrait and the encounter backdrop for the fight.
-    loadImage('varimatras',                  `${BASE}assets/Backgrounds/VarimatrasBG.png`),
+    loadImage('varimatras',                  `${BASE}assets/Backgrounds/VarimatrasBG.jpg`),
     // All power art (eager preload — eliminates lazy-load quality flicker on hover)
     ...Object.entries(POWER_ART_MAP).map(([id, file]) =>
       loadImage(`power_${id}`, `${BASE}assets/Cards/${file}`)
@@ -1703,8 +1703,8 @@ async function loadAssets() {
     loadImage('armored_perk',         `${BASE}assets/Cards/ArmoredPerk.jpg`),
     loadImage('power_surge_perk',     `${BASE}assets/Cards/PowerSurgePerk.jpg`),
     loadImage('balanced_perk',        `${BASE}assets/Cards/BalanceDruidPerk.jpg`),
-    loadImage('lucky_find_perk',      `${BASE}assets/Cards/LuckyFindPerk.png`),
-    loadImage('harvest_perk',         `${BASE}assets/Cards/HarvestDruidSpec.png`),
+    loadImage('lucky_find_perk',      `${BASE}assets/Cards/LuckyFindPerk.jpg`),
+    loadImage('harvest_perk',         `${BASE}assets/Cards/HarvestDruidSpec.jpg`),
   ]);
   // Block on the 6 class-select portraits so they're guaranteed in the
   // card-art cache before the menu becomes interactive. Otherwise the
@@ -6177,7 +6177,7 @@ const ENCOUNTER_BG_MAP = {
   quarters_rest: 'bg_personal_quarters', quarters_chest: 'bg_personal_quarters',
   valdrisa_encounter: 'bg_personal_quarters',
   upper_stairs_return: 'bg_grand_hall',
-  tharnag_exit: 'bg_tharnag_siege',
+  tharnag_exit: 'bg_tharnag_exterior',
   dwarven_tavern: 'bg_dwarven_tavern',
   dwarven_smithy: 'bg_dwarven_smithy',
   // Volcano / Wastes. Mirrors PY game.py:15021-15023 — volcano_arrival /
@@ -6278,6 +6278,10 @@ const ENCOUNTER_BG_FILES = {
   bg_guild_hall: 'GuildHallBackground.jpg', bg_north_crossroad: 'NorthCrossRoadBG.jpg',
   bg_filibaf_entrance: 'FilibafEntranceBackground.jpg',
   bg_tharnag_siege: 'TharnagSiegeBackground.jpg', bg_tharnag_quarters: 'TharnagPersonalQuartersBG.jpg',
+  // Post-siege exterior — same art the tharnag map shows once the siege
+  // is broken. Used for the Leaving Tharnag dialog so the backdrop matches
+  // the cleaned-up gates the party walks out through.
+  bg_tharnag_exterior: 'Maps/TharnagMap.jpg',
   // Grand Hall bg shares its art with the map view — pulled from the
   // Maps/ folder via the `Maps/...` prefix that the loader recognizes.
   bg_grand_hall: 'Maps/TharnagGrandHall.jpg',
@@ -6328,19 +6332,19 @@ const ENCOUNTER_BG_FILES = {
   bg_volcano_heart: 'HeartOfTheVolcanoBG.jpg',
   // Chapter 8 stairs — reuse the map art so random kobold encounters
   // on the climb stay tied to the right backdrop.
-  bg_volcano_stairs_1: 'Maps/VolcanoStairs1.png',
-  bg_volcano_stairs_2: 'Maps/VolcanoStairs2.png',
-  bg_volcano_stairs_3: 'Maps/VolcanoStairs3.png',
+  bg_volcano_stairs_1: 'Maps/VolcanoStairs1.jpg',
+  bg_volcano_stairs_2: 'Maps/VolcanoStairs2.jpg',
+  bg_volcano_stairs_3: 'Maps/VolcanoStairs3.jpg',
   // Chapter 8 summit ridge — backdrop for the stair_top_arrival dialog.
-  bg_volcano_summit_ridge: 'Maps/Volcano_SummitRidge.png',
-  // Chapter 8 — Varimatras phase-3 fight. Same VarimatrasBG.png is
+  bg_volcano_summit_ridge: 'Maps/Volcano_SummitRidge.jpg',
+  // Chapter 8 — Varimatras phase-3 fight. Same VarimatrasBG.jpg is
   // loaded as the dragon's portrait so the boss panel matches the
   // sky-filling silhouette in the background.
-  bg_varimatras: 'VarimatrasBG.png',
+  bg_varimatras: 'VarimatrasBG.jpg',
   // Chapter 8 — post-Varimatras victory dialog. Volcano starts
   // erupting in the background of the same ridge as the party
   // celebrates their narrow win and bolts down the mountain.
-  bg_volcano_ridge_awakening: 'VolcanoRidgeAwakeningBG.png',
+  bg_volcano_ridge_awakening: 'VolcanoRidgeAwakeningBG.jpg',
 };
 
 function getEncounterBgImage(bgKey) {
@@ -8073,7 +8077,7 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     for (let i = 0; i < 25; i++) enemy.deck.addCard(createPullingBackTheRam());
     // Massive Ogre Ram (active R4 → 5 dmg ALL, +Heroism) + Goblin
-    // Sapper Squad (passive: summons 1-3 sappers each turn).
+    // Sapper Squad (passive: summons 1-2 sappers each turn).
     enemy.addPower(createMassiveOgreRam());
     enemy.addPower(createGoblinSapperSquad());
     // Custom draw rule: starts with 1 card and draws 1 per turn. Each
@@ -8085,8 +8089,8 @@ function setupEnemyForCombat(enemyId) {
     // Start the fight with one sapper already onscreen.
     const seed = new Creature({
       name: 'Goblin Sapper', attack: 1, maxHp: 2,
-      selfDestruct: true, onDeathDamage: 3,
-      description: 'On Attack: Self-Destruct. On Death: Deal 1-3 damage to a random enemy.',
+      selfDestruct: true, onDeathDamage: 2,
+      description: 'On Attack: Self-Destruct. On Death: Deal 1-2 damage to a random enemy.',
     });
     seed.exhausted = false;
     enemy.addCreature(seed);
@@ -9248,12 +9252,16 @@ function handleEncounterChoiceClick(x, y) {
           // scroll plays over it, leaning into the "fade-to-credits"
           // beat of the Part 1 finale.
           try { crossfadeMusic('Music/music_alter_hero_01', 1800, 2500); _lastMusicArea = null; _lastMusicNodeId = null; } catch (_) {}
-          // Snapshot the run into a dedicated "End of Part 1" slot
-          // — won't get overwritten by autosaves, shows in the Load
-          // Game list with that label, and Part 2 (when it ships)
-          // can look for this slot first to carry the player state
-          // forward (deck, level, dragonSlain, dragonEggDamage, etc.).
+          // Snapshot the run into a dedicated "End of Part 1" slot,
+          // keyed by class so replaying with a different class doesn't
+          // overwrite the previous class's snapshot. Each class can
+          // hold one canonical end-of-Part-1 state; replaying with the
+          // SAME class will overwrite (use a regular manual save to
+          // preserve an old same-class run). Part 2, when it ships,
+          // can look for any `part1_complete_<class>` slot to offer
+          // "Continue as <class>" options.
           try {
+            const classKey = (selectedClass || 'unknown').toLowerCase();
             saveToSlot({
               selectedClass, gold, player, currentMap, visitedNodes, backpack,
               kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
@@ -9270,7 +9278,7 @@ function handleEncounterChoiceClick(x, y) {
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
               mapTableRested, caveEntranceDoubledBack,
               mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize,
-            }, 'part1_complete', 'End of Part 1');
+            }, `part1_complete_${classKey}`, `End of Part 1 — ${selectedClass}`);
           } catch (err) {
             console.warn('Part 1 save failed:', err);
           }
@@ -10030,6 +10038,13 @@ function resolveKitchenTalk(choice) {
 function resolveKitchenAttack(choice) {
   kitchenChoiceMade = 'attack';
   player.takeDamageFromDeck(1);
+  // Cook's hiss first, then the player's pain grunt with a small
+  // delay so the two cues read as cause-then-effect rather than
+  // a single mashed-up noise. Same hero pain helper the locked
+  // door / squeeze damage choices use, so the "ouch" is consistent.
+  playSound('cook_hiss', 0.75);
+  setTimeout(() => playHeroPainSound(1), 280);
+  showDamageToast('-1 HP!', 3000);
   markKitchenDone();
 }
 
@@ -11330,93 +11345,7 @@ function startCombat() {
   addLog(`${player.name} vs ${enemy.name}`, Colors.WHITE);
   addLog(`${enemy.name} draws ${enemy.deck.hand.length} cards`, Colors.GRAY);
 
-  // Apply perk effects at combat start
-  applyPerksCombatStart();
-
-  // Persistent (character-sheet) buffs project into combat as
-  // fresh CombatBuffs when their condition matches the enemy.
-  // Old God's Blessing only activates against Sahuagin, etc.
-  // Idempotent: skip if a CombatBuff with the same id is already
-  // present (level-up flow re-fires combat-start logic on retry).
-  for (const pb of (player.persistentBuffs || [])) {
-    const enemyId = enemy && enemy._enemyId || '';
-    if (!pb.matches(enemy, enemyId)) continue;
-    if ((player.combatBuffs || []).some(b => b.id === pb.id)) continue;
-    const projected = new CombatBuff({
-      id: pb.id,
-      name: pb.name,
-      description: pb.description,
-      imageId: pb.imageId,
-      effectType: pb.effectType,
-      effectValue: pb.effectValue,
-      trigger: pb.trigger,
-      combatsRemaining: 99, // effectively persistent — survives this fight
-    });
-    // Mark this CombatBuff as a projection of a persistent buff so
-    // consumers (consumeEyeBuff, etc.) don't splice it after firing.
-    // Whatever the trigger is, the buff fires every time its
-    // condition is met — never spent.
-    projected._persistent = true;
-    player.addCombatBuff(projected);
-    addLog(`  ${pb.name} activates!`, Colors.GOLD);
-  }
-
-  // Volcano's Blessing — projected into every volcano-area combat
-  // after the player has sacrificed gear at the Heart of the Volcano.
-  // Effect type + duration are picked at sacrifice time. Mirrors PY
-  // game.py:5185-5200, but unlike PY (which adds the buff to every
-  // combat regardless of map) we gate to the volcano family so the
-  // flavor text matches the actual scope.
-  const VOLCANO_BUFF_MAPS = new Set([
-    'volcano',
-    'lower_caverns', 'lava_chamber',
-    'obsidian_tunnels', 'obsidian_forge', 'temple_district',
-  ]);
-  if (volcanoHeartSacrificed && volcanoBuffType && volcanoBuffTurns > 0
-      && currentMap && VOLCANO_BUFF_MAPS.has(currentMap.id)) {
-    // Replace any existing volcano_blessing on the player so a retry
-    // resets the duration cleanly.
-    player.combatBuffs = (player.combatBuffs || []).filter(b => b.id !== 'volcano_blessing');
-    const effectMap = { heroism: 'gain_heroism', shield: 'gain_shield', heal: 'heal', draw: 'draw_card' };
-    const buffLabels = {
-      heroism: '+1 Heroism/turn',
-      shield: '+1 Shield/turn',
-      heal: 'Heal 1/turn',
-      draw: 'Draw 1/turn',
-    };
-    const label = buffLabels[volcanoBuffType] || '';
-    player.addCombatBuff(new CombatBuff({
-      id: 'volcano_blessing',
-      name: "Volcano's Blessing",
-      description: `${label}. Lasts ${volcanoBuffTurns} turns. Volcano combats only.`,
-      imageId: 'buff_volcano_blessing',
-      effectType: effectMap[volcanoBuffType] || 'gain_heroism',
-      effectValue: 1,
-      trigger: 'start_of_turn',
-      combatsRemaining: 1,
-      turnsRemaining: volcanoBuffTurns,
-    }));
-    addLog(`  Volcano's Blessing activates! ${label} for ${volcanoBuffTurns} turns.`, Colors.GOLD);
-  }
-
-  // Encounter-specific player buffs (e.g. Elf Reinforcements during the
-  // General Zhost army fight — start of turn summon 1 Elf Warrior). Only
-  // add once — re-entering combat (retry) shouldn't stack copies.
-  if (currentEncounter && currentEncounter.id === 'general_zhost' && enemy && enemy._killTarget) {
-    const hasBuff = (player.combatBuffs || []).some(b => b.id === 'elf_reinforcements');
-    if (!hasBuff) {
-      player.addCombatBuff(new CombatBuff({
-        id: 'elf_reinforcements',
-        name: 'Elf Reinforcements',
-        description: 'Start of Turn: Summon 1 Elf Warrior.',
-        imageId: 'buff_elf_reinforcements',
-        effectType: 'summon_elf_warrior',
-        effectValue: 1,
-        trigger: 'start_of_turn',
-        combatsRemaining: 1,
-      }));
-    }
-  }
+  applyStartOfCombatBuffs();
 
   // Process start_of_turn combat buffs for turn 1 so Blizzard ticks Ice
   // immediately (PY parity), Elf Reinforcements summons its first elf, and
@@ -11615,6 +11544,22 @@ function continueCombatPhase2() {
 
   addLog('--- Phase 2: The Storm Awakens ---', Colors.ICE_BLUE);
   addLog(`${enemy.name} draws ${enemy.deck.hand.length} cards`, Colors.GRAY);
+  // Re-apply EVERY start-of-combat buff for the new phase. Phase 2
+  // keeps the player's board (no startCombat reset), so without this
+  // the player would carry whatever was left of their phase-1 buffs
+  // instead of getting a fresh boost. User-requested: fresh perks,
+  // fresh persistent projections, fresh Volcano's Blessing — every
+  // phase break treats the upcoming combat like a new fight.
+  applyStartOfCombatBuffs();
+  // Tick start_of_turn buffs once so the freshly-projected ones (e.g.
+  // Volcano's Blessing draw / heroism / shield) fire on the first turn
+  // of phase 2 — matches the turn-1 behavior in startCombat below.
+  const phase2BuffLogs = player.processCombatBuffs();
+  for (const log of phase2BuffLogs) {
+    addLog(log.text, log.color, log.card || null, log.buff || null);
+    if (log.healed) spawnHealOnTarget(player, log.healed);
+    if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
+  }
 
   // Boss-music swap to the "one last battle" theme.
   crossfadeMusic('Music/music_one_last_battle_01', 1500, 2500);
@@ -11824,7 +11769,13 @@ function applyPerksStartOfTurn() {
     const hasWeapon = hand.some(c => c.subtype && (c.subtype.includes('martial') || c.subtype === 'ranged' || c.subtype === 'weapon' || c.subtype === 'simple' || c.subtype === 'wand'));
     if (!hasWeapon) {
       const drawn = player.deck.draw(arsenalStacks, MAX_HAND_SIZE);
-      for (const d of drawn) addLog(`  Arsenal: Draw ${d.name}`, Colors.BLUE, d);
+      // Header line carries the perk pseudo-card so hovering "Arsenal
+      // triggers!" shows the Arsenal perk; the per-draw sub-lines
+      // still show the drawn card on hover.
+      if (drawn.length > 0) {
+        addLog(`  Arsenal triggers!`, Colors.GOLD, perkToCardLike(createArsenalPerk()));
+      }
+      for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     }
   }
   // Talented: draw if no ability in hand
@@ -12905,7 +12856,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     // description doesn't fit its base height (e.g. Magic Missiles at 4 lines).
     const descFontSize = Math.max(11, Math.floor(w * 0.058));
     let descText = card.description || card.shortDesc || '';
-    if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) descText = descText.replace(/X/g, String(attacksThisTurn + 1));
+    if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
+      descText = descText.replace(/X/g, String(sneakX));
+    }
     const tokenizeOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
     const iconSize = Math.floor(descFontSize * 1.3);
     const lineH = Math.max(descFontSize + 4, iconSize + 2);
@@ -12931,7 +12885,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     // Small size: auto-sized box that sits flush against the frame's inner
     // bottom edge — no visible gap between the box and the frame border.
     let descText = card.shortDesc || card.description;
-    if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) descText = descText.replace(/X/g, String(attacksThisTurn + 1));
+    if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
+      descText = descText.replace(/X/g, String(sneakX));
+    }
     const smallOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
     const descFontSize = Math.max(8, Math.floor(w * 0.085));
     const sideInset = 6;
@@ -16245,6 +16202,14 @@ function handleDefendingClick(x, y) {
         player.ignite = (player.ignite || 0) + eff.value;
         addLog(`  +${eff.value} Ignite (Ignite:${player.ignite})`, Colors.ORANGE);
         spawnTokenOnTarget(player, eff.value, 'Ignite', Colors.ORANGE);
+      } else if (eff.effectType === 'apply_fire_random') {
+        // Molten Scale Armor (defense): on block, fling N Fire at a
+        // random alive enemy creature, falling back to the boss when
+        // there are none. Was silently dropped because the defense
+        // play loop hard-codes effect types — route to the shared
+        // resolveEffect handler so the cancel-Ice + spawn-token +
+        // PowerSurge logic stays in one place.
+        resolveEffect(eff, player, enemy);
       } else if (eff.effectType === 'create_barnacle') {
         // Barnacle Encrusted Plate (Sahuagin Baron drop): every
         // recharge spawns N Barnacle banish-heal tokens. PY adds
@@ -16817,6 +16782,22 @@ function cardNeedsAllyTarget(card) {
   return (card.effects || []).some(e => e.target === TargetType.SINGLE_ALLY);
 }
 
+// Format the absorption suffix for a swing on a Creature target.
+// "blocked" used to be the catch-all suffix on creature swings, but
+// it collided with the character-level Block defense (e.g. boss plays
+// a Block card). Creatures only have shield + armor, so split those
+// out explicitly so the log reads " (1 shield)", " (2 armor)" or
+// " (1 shield, 1 armor)" — making it obvious the absorption came
+// from the creature's own buffs, not from a leaked defense card.
+function creatureAbsorbSuffix(dmg, actual, shieldBefore, shieldAfter) {
+  const shieldAbs = Math.max(0, shieldBefore - shieldAfter);
+  const armorAbs = Math.max(0, dmg - shieldAbs - actual);
+  const parts = [];
+  if (shieldAbs > 0) parts.push(`${shieldAbs} shield`);
+  if (armorAbs > 0) parts.push(`${armorAbs} armor`);
+  return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
 function needsTarget(card) {
   return card.effects.some(e =>
     e.target === TargetType.SINGLE_ENEMY &&
@@ -16992,12 +16973,12 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(target, actual);
           playAttackHitSfx(dmg, actual);
-          const blocked = Math.max(0, dmg - actual);
-          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-          addLog(`  ${target.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
@@ -17020,18 +17001,7 @@ function resolveEffect(eff, caster, target) {
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
-      // Player Ignite: every attack that attempts damage consumes the
-      // full ignite stack as bonus Fire on the target. Mirrors PY
-      // game.py:12518-12525. Skipped if the target died this swing.
-      if (caster === player && (caster.ignite || 0) > 0 && dmg > 0) {
-        const stacks = caster.ignite;
-        caster.ignite = 0;
-        const alive = target instanceof Creature ? target.isAlive : (target && target.isAlive);
-        if (alive) {
-          applyFireToTarget(target, stacks);
-          addLog(`  Ignite! +${stacks} Fire (consumed)`, Colors.ORANGE);
-        }
-      }
+      consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       break;
     }
@@ -17063,12 +17033,12 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(target, actual);
           playAttackHitSfx(dmg, actual);
-          const blocked = Math.max(0, dmg - actual);
-          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-          addLog(`  ${target.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
@@ -17088,6 +17058,7 @@ function resolveEffect(eff, caster, target) {
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
+      consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       // Conditional card-advantage kicker: draw 1 if this opened the turn.
       if (wasFirstAttack) {
@@ -17100,12 +17071,18 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'unpreventable_damage': {
-      const dmg = applyMarkBonus(target, eff.value);
       // Unpreventable swings (Dwarven Crossbow, Spectral Hand, etc.)
-      // weren't running playAttackHitSfx — the codex Sound tab lists
-      // these cards under their flesh keys, but in-combat the bolt
-      // / hand was silent because the dispatcher skipped the SFX
-      // call. Fire it here so the cast actually thuds.
+      // previously fired at raw eff.value — the user's persistent
+      // buffs were silently wasted. Run the same source-side stack
+      // the regular `damage` case uses: heroism (consumed), rage
+      // (persistent), damage-modifier perks, then Ice consumption
+      // on the caster. Defense layers (block/shield/armor) are still
+      // bypassed on the target side — that's the "unpreventable" part.
+      const heroism = caster.heroism;
+      if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg = applyMarkBonus(target, dmg);
       playAttackHitSfx(dmg, dmg);
       if (target instanceof Creature) {
         target.takeUnpreventableDamage(dmg);
@@ -17120,6 +17097,7 @@ function resolveEffect(eff, caster, target) {
         consumePoisonBuff(caster, target, dmg);
         if (caster === player && target === enemy) onPlayerHitEnemy(dmg);
       }
+      consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       break;
     }
@@ -17161,12 +17139,12 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(target, actual);
           playAttackHitSfx(dmg, actual);
-          const absorbed = dmg - actual;
-          const bs = absorbed > 0 ? ` (${absorbed} absorbed)` : '';
-          addLog(`  ${target.name}: ${actual} dmg${bs}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
@@ -17181,11 +17159,12 @@ function resolveEffect(eff, caster, target) {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
           triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
-          const bs = blocked > 0 ? ` (${blocked} absorbed)` : '';
+          const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
         }
       }
+      consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       break;
     }
@@ -17211,10 +17190,12 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(target, actual);
           playAttackHitSfx(dmg, actual);
-          addLog(`  ${actual} dmg to ${target.name}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
@@ -17232,6 +17213,7 @@ function resolveEffect(eff, caster, target) {
           consumePoisonBuff(caster, target, taken);
         }
       }
+      consumeIgniteOnAttack(caster, target, dmg);
       break;
     }
     case 'shield_bash': {
@@ -17260,10 +17242,12 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(target, actual);
           playAttackHitSfx(dmg, actual);
-          addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
@@ -17282,6 +17266,7 @@ function resolveEffect(eff, caster, target) {
           consumePoisonBuff(caster, target, taken);
         }
       }
+      consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       break;
     }
@@ -17313,8 +17298,10 @@ function resolveEffect(eff, caster, target) {
           consumePoisonBuff(caster, target, dmg);
           playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
         } else {
+          const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
-          addLog(`  ${actual} dmg to ${target.name}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
           playAttackHitSfx(dmg, actual, hits * SFX_STAGGER_MS);
         }
@@ -17344,8 +17331,10 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${dmg} true dmg to ${c.name}`, Colors.ORANGE);
           playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
         } else {
+          const shieldBefore = c.shield || 0;
           const actual = c.takeDamage(dmg);
-          addLog(`  ${actual} dmg to ${c.name}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+          addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
           playAttackHitSfx(dmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -17363,6 +17352,18 @@ function resolveEffect(eff, caster, target) {
         }
       }
       countAndRemoveDeadCreatures();
+      // Ignite rider — snapshot once, apply to every target the
+      // chain landed on. Mirrors the picker-driven multi_damage path
+      // for cards like Wooden Axe routed through the click flow.
+      const mdIgnite = (caster === player) ? consumePlayerIgnite() : 0;
+      if (mdIgnite > 0) {
+        applyIgniteRider(target, mdIgnite);
+        for (const c of (enemy.creatures || [])) {
+          if (c === target) continue;
+          if (c.isAlive) applyIgniteRider(c, mdIgnite);
+        }
+        if (target !== enemy && enemy.isAlive) applyIgniteRider(enemy, mdIgnite);
+      }
       attacksThisTurn++;
       break;
     }
@@ -17378,10 +17379,12 @@ function resolveEffect(eff, caster, target) {
       const hitOne = (t, dmg) => {
         const delay = hitIdx * SFX_STAGGER_MS;
         if (t instanceof Creature) {
+          const shieldBefore = t.shield || 0;
           const actual = t.takeDamage(dmg);
           if (actual > 0) spawnDamageOnTarget(t, actual);
           playAttackHitSfx(dmg, actual, delay);
-          addLog(`  ${actual} dmg to ${t.name}`, Colors.RED);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
+          addLog(`  ${actual} dmg to ${t.name}${absSuffix}`, Colors.RED);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         } else {
           if (t === enemy) enemyAutoPlayDefenses(dmg);
@@ -17407,6 +17410,16 @@ function resolveEffect(eff, caster, target) {
         hitOne(enemy, secondary);
       }
       countAndRemoveDeadCreatures();
+      // Snapshot ignite once, apply to every target the split chain hit.
+      const splitIgnite = (caster === player) ? consumePlayerIgnite() : 0;
+      if (splitIgnite > 0) {
+        if (primary > 0) applyIgniteRider(target, splitIgnite);
+        for (const c of (enemy.creatures || [])) {
+          if (c === target) continue;
+          if (c.isAlive && secondary > 0) applyIgniteRider(c, splitIgnite);
+        }
+        if (target !== enemy && enemy.isAlive && secondary > 0) applyIgniteRider(enemy, splitIgnite);
+      }
       attacksThisTurn++;
       break;
     }
@@ -17418,6 +17431,22 @@ function resolveEffect(eff, caster, target) {
         target.applyStatus('POISON', eff.value);
         addLog(`  +${eff.value} Poison on ${target.name}`, Colors.GREEN);
       }
+      spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
+      firePowerSurgeIfArmed(caster, 'poison');
+      break;
+    }
+    case 'apply_poison_vs_armor': {
+      // Bone Mace rider — only applies poison when the target has
+      // Armor or Shield (the bone splinters wedge into the cracks).
+      // Silent no-op against soft targets; the base damage still landed.
+      const hasArmor = (target.armor || 0) > 0 || (target.shield || 0) > 0;
+      if (!hasArmor) break;
+      if (target instanceof Creature) {
+        target.poisonStacks += eff.value;
+      } else {
+        target.applyStatus('POISON', eff.value);
+      }
+      addLog(`  Bone splinters! +${eff.value} Poison on ${target.name}`, Colors.GREEN);
       spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
       firePowerSurgeIfArmed(caster, 'poison');
       break;
@@ -18012,11 +18041,17 @@ function resolveEffect(eff, caster, target) {
       addLog(`  +${eff.value} Block`, Colors.BLUE);
       spawnTokenOnTarget(caster, eff.value, 'Block', BLOCK_BLUE);
       break;
-    case 'gain_shield':
-      caster.shield += eff.value;
-      addLog(`  +${eff.value} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
-      spawnTokenOnTarget(caster, eff.value, 'Shield', Colors.ALLY_BLUE);
+    case 'gain_shield': {
+      // SINGLE_ALLY (Shield of Faith): caster picks an ally to shield —
+      // self, or any living player creature. Otherwise the shield goes
+      // to the caster (enemy buffs, self-cast classics).
+      const shieldTarget = (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
+      shieldTarget.shield = (shieldTarget.shield || 0) + eff.value;
+      const shieldName = (shieldTarget === player) ? 'You' : shieldTarget.name;
+      addLog(`  ${shieldName} +${eff.value} Shield (S:${shieldTarget.shield})`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(shieldTarget, eff.value, 'Shield', Colors.ALLY_BLUE);
       break;
+    }
     case 'heal':
       // Resolves on the picked target when the effect targets
       // SINGLE_ALLY (Flash Heal / Holy Light / Healing Touch — the
@@ -18452,6 +18487,14 @@ function resolveEffect(eff, caster, target) {
         addLog(`  ${summoned} Shark${summoned > 1 ? 's' : ''} summoned!`, Colors.ORANGE);
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry && lastShark) lastEntry.creature = lastShark;
+        // One body-fall splash per shark, lightly staggered so a
+        // double summon (Blood in the Water) audibly reads as two
+        // splashes hitting the pool — not a single mushed thud.
+        for (let i = 0; i < summoned; i++) {
+          const delay = i * 90;
+          if (delay > 0) setTimeout(() => playSound('shark_splash', 0.75), delay);
+          else playSound('shark_splash', 0.8);
+        }
       } else {
         addLog(`  No room for a Shark (field is full).`, Colors.GRAY);
       }
@@ -18780,9 +18823,11 @@ function resolveEffect(eff, caster, target) {
       }
       for (const c of [...enemy.creatures]) {
         if (c._invulnerable) continue;
+        const shieldBefore = c.shield || 0;
         const actual = c.takeDamage(dmg);
         if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
-        addLog(`  ${actual} dmg to ${c.name}`, Colors.RED);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+        addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         triggerSplitPower(c, actual > 0);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
@@ -19663,12 +19708,16 @@ function enterFeralSwipeTargeting(handIndex) {
 
 // === Multi-target attacks (Wooden Axe etc.) ===
 function cardIsMultiTarget(card) {
-  return (card.currentEffects || []).some(e => e.effectType === 'multi_damage');
+  return (card.currentEffects || []).some(e =>
+    e.effectType === 'multi_damage' || e.effectType === 'split_damage'
+  );
 }
 
 function getMultiTargetMax(card) {
   for (const e of card.currentEffects || []) {
-    if (e.effectType === 'multi_damage') return e.maxTargets || 2;
+    if (e.effectType === 'multi_damage' || e.effectType === 'split_damage') {
+      return e.maxTargets || 2;
+    }
   }
   return 2;
 }
@@ -19951,10 +20000,11 @@ function resolveMultiTargeting() {
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
         dmgLanded = taken;
       } else {
+        const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(hitDmg);
         if (actual > 0) spawnDamageOnTarget(t, actual);
-        const bs = Math.max(0, hitDmg - actual) > 0 ? ` (blocked ${hitDmg - actual})` : '';
-        addLog(`  -> Feral Swipe: ${t.name} takes ${actual} dmg${bs}`, Colors.WHITE);
+        const absSuffix = creatureAbsorbSuffix(hitDmg, actual, shieldBefore, t.shield || 0);
+        addLog(`  -> Feral Swipe: ${t.name} takes ${actual} dmg${absSuffix}`, Colors.WHITE);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = actual;
       }
@@ -19966,14 +20016,30 @@ function resolveMultiTargeting() {
     feralSwipeShieldGranted = 0;
     _activePlayCard = null;
   } else {
-    // Normal multi_damage (Wooden Axe etc.). _activePlayCard lets the
-    // weapon SFX classifier route per-card (axe → axe sounds etc.).
+    // Normal multi_damage (Wooden Axe etc.) AND split_damage (Steel
+    // Greataxe). _activePlayCard lets the weapon SFX classifier route
+    // per-card (axe → axe sounds etc.).
     _activePlayCard = card;
     const SFX_STAGGER_MS = 120;
-    let dmg = 0;
+    // Split-damage cards encode primary*10 + secondary in eff.value
+    // (Steel Greataxe = 43 → first picked target takes 4, rest take 3).
+    // multi_damage just deals flat eff.value to every picked target.
+    let primaryDmg = 0;
+    let secondaryDmg = 0;
+    let isSplit = false;
     for (const eff of card.currentEffects) {
       if (eff.effectType === 'multi_damage') {
-        dmg = eff.value + player.heroism;
+        primaryDmg = secondaryDmg = eff.value + player.heroism;
+        if (player.heroism > 0) {
+          addLog(`  (Heroism +${player.heroism})`, Colors.GOLD);
+          player.heroism = 0;
+        }
+        break;
+      }
+      if (eff.effectType === 'split_damage') {
+        isSplit = true;
+        primaryDmg = Math.floor(eff.value / 10) + player.heroism;
+        secondaryDmg = (eff.value % 10) + player.heroism;
         if (player.heroism > 0) {
           addLog(`  (Heroism +${player.heroism})`, Colors.GOLD);
           player.heroism = 0;
@@ -19981,10 +20047,14 @@ function resolveMultiTargeting() {
         break;
       }
     }
+    // Snapshot ignite ONCE so every target in the chain gets the full
+    // Fire rider (same rule as Cleave / heroism).
+    const multiIgnite = consumePlayerIgnite();
     let hitEnemy = false;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       const delay = i * SFX_STAGGER_MS;
+      const dmg = (i === 0) ? primaryDmg : secondaryDmg;
       if (t === enemy) {
         if (!hitEnemy) { enemyAutoPlayDefenses(dmg); hitEnemy = true; }
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
@@ -19993,13 +20063,15 @@ function resolveMultiTargeting() {
         addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
         playAttackHitSfx(dmg, taken, delay);
       } else {
+        const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(dmg);
         if (actual > 0) spawnDamageOnTarget(t, actual);
-        const bs = Math.max(0, dmg - actual) > 0 ? ` (blocked ${dmg - actual})` : '';
-        addLog(`  ${t.name}: ${actual} dmg${bs}`, Colors.RED);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
+        addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         playAttackHitSfx(dmg, actual, delay);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
       }
+      if (dmg > 0) applyIgniteRider(t, multiIgnite);
     }
     attacksThisTurn++;
     _activePlayCard = null;
@@ -20180,11 +20252,11 @@ function resolveAllyAttack(ally, target) {
         maybeApplyAttackPoison(ally, t, tdmg);
         maybeApplyAttackIce(ally, t);
       } else {
+        const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(tdmg);
         if (actual > 0) spawnDamageOnTarget(t, actual);
-        const blocked = Math.max(0, tdmg - actual);
-        const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-        addLog(`  ${t.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
+        const absSuffix = creatureAbsorbSuffix(tdmg, actual, shieldBefore, t.shield || 0);
+        addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         playAttackHitSfx(tdmg, actual, delay);
         maybeApplyAttackPoison(ally, t, actual);
         maybeApplyAttackIce(ally, t);
@@ -20391,6 +20463,10 @@ function resolvePowerTargeting() {
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
     const unpreventable = consumeUnpreventableBuff(player);
+    // Snapshot ignite ONCE before the chain so every cleave swing
+    // gets the full Fire rider (matches how heroism is baked into
+    // dmg once and applies to both hits).
+    const cleaveIgnite = consumePlayerIgnite();
     // Sahuagin Eye buff: consume on any attack including this multi-
     // hit. Only the first target decides whether the +1 lands.
     const cvFirst = targets[0];
@@ -20429,11 +20505,21 @@ function resolvePowerTargeting() {
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
           dmgLanded = dmg;
         } else {
+          // Capture pre-hit shield to split absorption between shield
+          // and armor in the log — "blocked" conflated with the boss's
+          // Defense-card Block was misleading on summon swings (the
+          // boss's block never leaks to creatures, but a Bone Storm
+          // buff parks +1 shield on every minion).
+          const shieldBefore = t.shield || 0;
           const actual = t.takeDamage(dmg);
           triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
-          const blocked = Math.max(0, dmg - actual);
-          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-          addLog(`  ${t.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
+          const shieldAbs = shieldBefore - (t.shield || 0);
+          const armorAbs = Math.max(0, dmg - shieldAbs - actual);
+          const parts = [];
+          if (shieldAbs > 0) parts.push(`${shieldAbs} shield`);
+          if (armorAbs > 0) parts.push(`${armorAbs} armor`);
+          const absSuffix = parts.length ? ` (${parts.join(', ')})` : '';
+          addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
           dmgLanded = actual;
         }
@@ -20442,8 +20528,20 @@ function resolvePowerTargeting() {
       // multi-target swing audibly chains.
       playAttackHitSfx(dmg, dmgLanded, delay);
       if (!poisonApplied) { consumePoisonBuff(player, t, dmgLanded); poisonApplied = true; }
+      // Each swing that landed any damage triggers the full Ignite
+      // rider on its target (snapshot consumed once above the loop).
+      if (dmg > 0) applyIgniteRider(t, cleaveIgnite);
     }
     countAndRemoveDeadCreatures();
+    // Conditional draw rider: only fires when both swings landed on
+    // distinct targets. Keeps Cleave from being strictly better than
+    // the Rogue's Quick Strike (which always draws), and rewards
+    // committing the second swing instead of single-targeting.
+    if (targets.length >= 2) {
+      const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+      for (const d of drawn) addLog(`  Cleave! Draw: ${d.name}`, Colors.BLUE, d);
+      if (drawn.length === 0) addLog(`  Cleave! (no cards to draw)`, Colors.GRAY);
+    }
   } else if (power.id === 'elemental_infusion') {
     // Apply Fire or Ice based on the picked choice. Status is tweaked
     // directly here (not via case 'apply_*'), so play the apply cue
@@ -20536,11 +20634,11 @@ function resolvePowerTargeting() {
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = dmg;
       } else {
+        const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(dmg);
         triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
-        const blocked = Math.max(0, dmg - actual);
-        const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-        addLog(`  ${t.name}: ${actual} dmg${blockedSuffix}`, Colors.RED);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
+        addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         consumePoisonBuff(player, t, actual);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = actual;
@@ -20548,6 +20646,7 @@ function resolvePowerTargeting() {
     }
     // Dagger swing — quick_strike id override routes to dagger sounds.
     playAttackHitSfx(dmg, dmgLanded);
+    consumeIgniteOnAttack(player, t, dmg);
     countAndRemoveDeadCreatures();
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
@@ -20574,16 +20673,24 @@ function executePower(power) {
       let hits = 0;
       for (const c of [...enemy.creatures]) {
         if (hits >= 2) break;
+        const shieldBefore = c.shield || 0;
         const actual = c.takeDamage(dmg);
-        addLog(`  ${actual} dmg to ${c.name}`, Colors.RED);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+        addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         if (!c.isAlive) { addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
         hits++;
       }
+      let totalHits = hits;
       if (hits < 2 && enemy.isAlive) {
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
         addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+        totalHits++;
       }
       countAndRemoveDeadCreatures();
+      if (totalHits >= 2) {
+        const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Cleave! Draw: ${d.name}`, Colors.BLUE, d);
+      }
       break;
     }
     case 'aimed_shot': {
@@ -21040,10 +21147,10 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
     if (targets.length > 0) {
       const tgt = targets[Math.floor(Math.random() * targets.length)];
       const dmg = ally.endTurnDamage;
+      const shieldBefore = tgt.shield || 0;
       const actual = tgt.takeDamage(dmg);
       if (actual > 0) spawnDamageOnTarget(tgt, actual);
-      const blocked = Math.max(0, dmg - actual);
-      const bs = blocked > 0 ? ` (${blocked} absorbed)` : '';
+      const bs = creatureAbsorbSuffix(dmg, actual, shieldBefore, tgt.shield || 0);
       addLog(`  ${ally.name} hits ${tgt.name} for ${actual} damage${bs}`, Colors.ALLY_BLUE);
       if (!tgt.isAlive) { addLog(`  ${tgt.name} destroyed!`, Colors.RED, null, null, tgt); countAndRemoveDeadCreatures(); }
     } else if (enemy.isAlive) {
@@ -21298,9 +21405,11 @@ function processPlayerAllyAttacks() {
         maybeApplyAttackPoison(ally, target, tdmg);
         maybeApplyAttackIce(ally, target);
       } else {
+        const shieldBefore = target.shield || 0;
         const actual = target.takeDamage(tdmg);
         triggerSplitPower(target, actual > 0); if (actual > 0) spawnDamageOnTarget(target, actual);
-        addLog(`  ${ally.name} attacks ${target.name} for ${actual}!`, Colors.GREEN);
+        const absSuffix = creatureAbsorbSuffix(tdmg, actual, shieldBefore, target.shield || 0);
+        addLog(`  ${ally.name} attacks ${target.name} for ${actual}!${absSuffix}`, Colors.GREEN);
         playAttackHitSfx(tdmg, actual);
         maybeApplyAttackPoison(ally, target, actual);
         maybeApplyAttackIce(ally, target);
@@ -21424,6 +21533,26 @@ function showcasePlayerCard(card, durationMs) {
   showcaseCard = card;
   showcaseTimer = durationMs || (SHOWCASE_DURATION * getEnemySpeedMul());
   showcaseFadeIn = 0;
+  stampShowcaseDynamicValues(card, attacksThisTurn);
+}
+
+// Some cards display a dynamic X computed from live state
+// (Sneak Attack: X = attacks-this-turn + 1, counting itself). The
+// showcase persists for ~1s while subsequent actions can mutate that
+// counter, which makes the displayed X drift past the value used at
+// resolve time. Snapshot the projected X on the card so drawCard
+// prefers the stamp.
+//
+// IMPORTANT: player-side Sneak Attack scales off `attacksThisTurn`
+// (resolveEffect case 'sneak_attack'), but the slyblade's enemy-side
+// path scales off `_enemyCardsThisTurn` (processEnemyAction's attack
+// branch). Different counters → caller passes whichever applies so the
+// stamp captures the same value the resolve uses.
+function stampShowcaseDynamicValues(card, sourceCount) {
+  if (!card) return;
+  if (card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') {
+    card._showcaseSneakX = (sourceCount || 0) + 1;
+  }
 }
 
 // Append/spawn a player arrow batch from `sourceRect` (with x/y
@@ -21530,7 +21659,7 @@ function getTargetCenter(target) {
 
 // Cinematic boss mode (Varimatras phase 3): the enemy "card rect"
 // covers the entire enemy area, but the dragon's body in
-// VarimatrasBG.png sits slightly right of center. This offset
+// VarimatrasBG.jpg sits slightly right of center. This offset
 // nudges arrow origins + floating damage / token numbers ~25 px
 // to the right so they anchor on the dragon's silhouette instead
 // of empty sky on the left. Hitbox stays full-area; only the
@@ -21599,11 +21728,11 @@ function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
     handleWhiteDragonEggHit(ally, dmg, attacker || enemy);
   }
   const hpBefore = ally.currentHp;
+  const shieldBefore = ally.shield || 0;
   const actual = ally.takeDamage(dmg);
   if (actual > 0) spawnDamageOnTarget(ally, actual);
-  const blocked = Math.max(0, dmg - actual);
-  const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-  addLog(`  ${ally.name}: ${actual} damage${blockedSuffix}`, Colors.RED);
+  const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, ally.shield || 0);
+  addLog(`  ${ally.name}: ${actual} damage${absSuffix}`, Colors.RED);
   // Overwhelm passive: any overkill damage beyond the ally's HP
   // rolls onto the player. Queue it on the enemy-damage
   // accumulator so it joins this turn's defense phase like any
@@ -22011,6 +22140,7 @@ function startEnemyTurn() {
             spawnTokenOnTarget(c, 1, 'Atk', Colors.RED);
           }
           addLog(`  Amalgam grows! Bone Amalgam allies +1 Atk / +1 HP.`, Colors.ORANGE);
+          playSound('bones_clatter', 0.7);
         } else {
           const fresh = new Creature({
             name: 'Bone Amalgam', attack: 3, maxHp: 3,
@@ -22018,6 +22148,7 @@ function startEnemyTurn() {
           });
           enemy.addCreature(fresh);
           addLog(`  Bone Amalgam rises! (3/3)`, Colors.ORANGE);
+          playSound('bones_clatter', 0.85);
         }
       } else if (power.id === 'dark_vision') {
         // Obsidian Oracle passive. Peek the top 3 of the player's
@@ -22194,14 +22325,16 @@ function startEnemyTurn() {
         }
         addLog(`  Piranhas Swarm! ${num} piranhas emerge from the water!`, Colors.ORANGE);
       } else if (power.id === 'goblin_sapper_squad') {
-        // PY parity: each enemy turn the Siege Ogre's squad summons
-        // 1-3 Goblin Sappers (self-destruct, on-death-damage 1-3).
-        const num = 1 + Math.floor(Math.random() * 3); // 1..3
+        // Each enemy turn the Siege Ogre's squad summons 1-2 Goblin
+        // Sappers (self-destruct, on-death-damage 1-2). Was 1-3 / 1-3
+        // and the gauntlet felt overtuned — sappers compound geometrically
+        // and the on-death explosion bypasses player block via allies.
+        const num = 1 + Math.floor(Math.random() * 2); // 1..2
         for (let i = 0; i < num; i++) {
           enemy.addCreature(new Creature({
             name: 'Goblin Sapper', attack: 1, maxHp: 2,
-            selfDestruct: true, onDeathDamage: 3,
-            description: 'On Attack: Self-Destruct. On Death: Deal 1-3 damage to a random enemy.',
+            selfDestruct: true, onDeathDamage: 2,
+            description: 'On Attack: Self-Destruct. On Death: Deal 1-2 damage to a random enemy.',
           }));
         }
         // Sapper signature SFX — the goblin_explosion cue (their on-death
@@ -22790,6 +22923,9 @@ function updateEnemyTurn(dt) {
   showcaseCard = card;
   showcaseTimer = SHOWCASE_DURATION * getEnemySpeedMul();
   showcaseFadeIn = 0;
+  // Enemy-side Sneak Attack scales off _enemyCardsThisTurn (not the
+  // shared attacksThisTurn counter the player path uses).
+  stampShowcaseDynamicValues(card, _enemyCardsThisTurn);
 
   // Stays-in-hand cards (Pulling Back the Ram, etc.) — mirror the
   // player side: exhaust the card so it can't replay this turn, but
@@ -23560,6 +23696,11 @@ function updateEnemyTurn(dt) {
           addLog(`  ${summoned} Shark${summoned > 1 ? 's' : ''} surface!`, Colors.ORANGE);
           const lastEntry = combatLog[combatLog.length - 1];
           if (lastEntry && lastShark) lastEntry.creature = lastShark;
+          for (let i = 0; i < summoned; i++) {
+            const delay = i * 90;
+            if (delay > 0) setTimeout(() => playSound('shark_splash', 0.75), delay);
+            else playSound('shark_splash', 0.8);
+          }
         }
       }
     }
@@ -23670,6 +23811,12 @@ function updateEnemyTurn(dt) {
         // Bone Storm: strip shields from the player + every player ally,
         // then deal `eff.value` damage to all of them, then buff every
         // enemy creature with +1 atk / +1 maxHp / +1 shield. Mirrors PY.
+        // Cascade 4 bone-rattles with slight stagger so the storm reads
+        // as a wave of clattering bones, not a single dry click.
+        playSound('bones_clatter', 0.85);
+        setTimeout(() => playSound('bones_clatter', 0.75), 70);
+        setTimeout(() => playSound('bones_clatter', 0.9),  150);
+        setTimeout(() => playSound('bones_clatter', 0.7),  240);
         if (player.shield > 0) {
           addLog(`  Player loses ${player.shield} Shield`, Colors.ALLY_BLUE);
           player.shield = 0;
@@ -23812,6 +23959,11 @@ function updateEnemyTurn(dt) {
           addLog(`  ${summoned} Shark${summoned > 1 ? 's' : ''} surface!`, Colors.ORANGE);
           const lastEntry = combatLog[combatLog.length - 1];
           if (lastEntry && lastShark) lastEntry.creature = lastShark;
+          for (let i = 0; i < summoned; i++) {
+            const delay = i * 90;
+            if (delay > 0) setTimeout(() => playSound('shark_splash', 0.75), delay);
+            else playSound('shark_splash', 0.8);
+          }
         }
       }
     }
@@ -23876,15 +24028,19 @@ function completePlayerTurnTransition() {
     for (const c of aliveAllies) {
       if ((c.endTurnHealAllies || 0) > 0) {
         const amt = c.endTurnHealAllies;
-        let totalHealed = 0;
+        let anyHealed = false;
         for (const a of aliveAllies) {
           if (a.currentHp >= a.maxHp) continue;
           const healed = Math.min(amt, a.maxHp - a.currentHp);
           a.currentHp += healed;
-          totalHealed += healed;
+          if (healed > 0) anyHealed = true;
         }
-        if (totalHealed > 0) {
-          addLog(`  ${c.name} heals all allies for ${totalHealed} HP.`, Colors.GREEN);
+        if (anyHealed) {
+          // Log the per-ally heal amount, matching the creature's
+          // description ("Heal N to all allies") — was summing the
+          // total HP restored across allies, which read as a single
+          // big number that contradicted Durin's "Heal 2" tooltip.
+          addLog(`  ${c.name} heals all allies for ${amt} HP.`, Colors.GREEN);
         }
       }
       if ((c.endTurnShieldAllies || 0) > 0) {
@@ -24423,6 +24579,37 @@ function consumeUnpreventableBuff(caster) {
 // Old God's Blessing projection sat first in the array and ate every
 // consumption, so the Sahuagin Eye relic buff never fired and never
 // spliced for the rest of the fight.
+// Player Ignite — consumed ONCE per attack action, applied as bonus
+// Fire to every target that actually got swung at (mirrors how
+// heroism folds into dmg once and is then applied to every swing of
+// a multi-target attack like Cleave). Was previously a single-target
+// helper that consumed inline on the first hit and silently skipped
+// the rest of the chain.
+function consumePlayerIgnite() {
+  if (!player || !(player.ignite > 0)) return 0;
+  const stacks = player.ignite;
+  player.ignite = 0;
+  return stacks;
+}
+
+function applyIgniteRider(target, stacks) {
+  if (!(stacks > 0)) return;
+  const alive = target instanceof Creature ? target.isAlive : (target && target.isAlive);
+  if (!alive) return;
+  applyFireToTarget(target, stacks);
+  addLog(`  Ignite! +${stacks} Fire on ${target.name}`, Colors.ORANGE);
+}
+
+// Single-target convenience wrapper — used by the bulk of attack
+// effects in resolveEffect. Multi-target attacks (Cleave, Wooden Axe,
+// Steel Greataxe) consume once via consumePlayerIgnite() and then
+// call applyIgniteRider per target instead.
+function consumeIgniteOnAttack(caster, target, attempted) {
+  if (caster !== player) return;
+  if (!(attempted > 0)) return;
+  applyIgniteRider(target, consumePlayerIgnite());
+}
+
 function consumeEyeBuff(caster, targetDamaged) {
   if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
   // Snapshot then walk in reverse so splicing as we go doesn't skip
@@ -24812,11 +24999,11 @@ function countAndRemoveDeadCreatures() {
     const allies = (player.creatures || []).filter(a => a.isAlive);
     if (allies.length > 0) {
       const t = allies[Math.floor(Math.random() * allies.length)];
+      const shieldBefore = t.shield || 0;
       const actual = t.takeDamage(explosion);
       if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
-      const blocked = Math.max(0, explosion - actual);
-      const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-      addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!${blockedSuffix}`, Colors.ORANGE);
+      const absSuffix = creatureAbsorbSuffix(explosion, actual, shieldBefore, t.shield || 0);
+      addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!${absSuffix}`, Colors.ORANGE);
     } else if (player) {
       const [absorbed, taken] = player.takeDamageWithDefense(explosion);
       if (taken > 0) spawnDamageOnTarget(player, taken, Colors.ORANGE);
@@ -25592,6 +25779,112 @@ function syncMapKnowledgePersistentBuff() {
 // below (start_of_turn ticks with the right turnsRemaining duration).
 // Idempotent — safe to call after sacrifice, after load, or on new
 // game (which wipes the buff with the globals).
+// Project the Volcano's Blessing CombatBuff onto the player at the
+// start of a volcano-area combat. Called from startCombat (handles
+// regular volcano fights + Gnikan p1 + Varimatras p3) AND from
+// continueCombatPhase2 (Gnikan p2 keeps the player's board so it
+// skips startCombat — needs its own re-projection so the buff resets
+// to the full turnsRemaining each phase).
+//
+// VOLCANO_BUFF_MAPS covers the lava-side volcano dungeon AND the
+// chapter-8 ascent (volcano stairs + summit ridge where the Gnikan
+// + Varimatras fights play out). User requested the blessing carry
+// all the way up the stairs through the boss chain.
+const VOLCANO_BUFF_MAPS = new Set([
+  'volcano',
+  'lower_caverns', 'lava_chamber',
+  'obsidian_tunnels', 'obsidian_forge', 'temple_district',
+  // Chapter 8 ascent — stairs from the bridge up to Gnikan + the
+  // summit ridge where the p1 / p2 / p3 boss chain plays out.
+  'volcano_stairs_1', 'volcano_stairs_2', 'volcano_stairs_3',
+  'volcano_summit_ridge',
+]);
+
+// Run every start-of-combat buff hook in one place: perks (Tough,
+// Prepared, First Strike, Power Surge re-arm), persistent-buff
+// projection (Old God's Blessing, etc.), Volcano's Blessing, and
+// encounter-scoped buffs (Elf Reinforcements). Called by startCombat
+// for every fresh fight AND by continueCombatPhase2 so multi-phase
+// boss fights (Gnikan p1 → p2) get a fresh dose of buffs at each
+// phase break instead of having to live with whatever survived p1.
+function applyStartOfCombatBuffs() {
+  applyPerksCombatStart();
+
+  // Persistent (character-sheet) buffs project into combat as
+  // fresh CombatBuffs when their condition matches the enemy.
+  // Old God's Blessing only activates against Sahuagin, etc.
+  // Idempotent: skip if a CombatBuff with the same id is already
+  // present (level-up flow re-fires combat-start logic on retry).
+  for (const pb of (player.persistentBuffs || [])) {
+    const enemyId = enemy && enemy._enemyId || '';
+    if (!pb.matches(enemy, enemyId)) continue;
+    if ((player.combatBuffs || []).some(b => b.id === pb.id)) continue;
+    const projected = new CombatBuff({
+      id: pb.id,
+      name: pb.name,
+      description: pb.description,
+      imageId: pb.imageId,
+      effectType: pb.effectType,
+      effectValue: pb.effectValue,
+      trigger: pb.trigger,
+      combatsRemaining: 1,
+    });
+    projected._persistent = true;
+    player.addCombatBuff(projected);
+    addLog(`  ${pb.name} activates!`, Colors.GOLD);
+  }
+
+  projectVolcanoBlessing();
+
+  // Encounter-specific player buffs (e.g. Elf Reinforcements during
+  // the General Zhost army fight). Only add once — re-entering
+  // combat (retry / phase transition) shouldn't stack copies.
+  if (currentEncounter && currentEncounter.id === 'general_zhost' && enemy && enemy._killTarget) {
+    const hasBuff = (player.combatBuffs || []).some(b => b.id === 'elf_reinforcements');
+    if (!hasBuff) {
+      player.addCombatBuff(new CombatBuff({
+        id: 'elf_reinforcements',
+        name: 'Elf Reinforcements',
+        description: 'Start of Turn: Summon 1 Elf Warrior.',
+        imageId: 'buff_elf_reinforcements',
+        effectType: 'summon_elf_warrior',
+        effectValue: 1,
+        trigger: 'start_of_turn',
+        combatsRemaining: 1,
+      }));
+    }
+  }
+}
+
+function projectVolcanoBlessing() {
+  if (!player) return;
+  if (!volcanoHeartSacrificed || !volcanoBuffType || volcanoBuffTurns <= 0) return;
+  if (!currentMap || !VOLCANO_BUFF_MAPS.has(currentMap.id)) return;
+  // Replace any existing volcano_blessing on the player so a phase
+  // transition or combat retry resets the duration cleanly.
+  player.combatBuffs = (player.combatBuffs || []).filter(b => b.id !== 'volcano_blessing');
+  const effectMap = { heroism: 'gain_heroism', shield: 'gain_shield', heal: 'heal', draw: 'draw_card' };
+  const buffLabels = {
+    heroism: '+1 Heroism/turn',
+    shield: '+1 Shield/turn',
+    heal: 'Heal 1/turn',
+    draw: 'Draw 1/turn',
+  };
+  const label = buffLabels[volcanoBuffType] || '';
+  player.addCombatBuff(new CombatBuff({
+    id: 'volcano_blessing',
+    name: "Volcano's Blessing",
+    description: `${label}. Lasts ${volcanoBuffTurns} turns. Volcano combats only.`,
+    imageId: 'buff_volcano_blessing',
+    effectType: effectMap[volcanoBuffType] || 'gain_heroism',
+    effectValue: 1,
+    trigger: 'start_of_turn',
+    combatsRemaining: 1,
+    turnsRemaining: volcanoBuffTurns,
+  }));
+  addLog(`  Volcano's Blessing activates! ${label} for ${volcanoBuffTurns} turns.`, Colors.GOLD);
+}
+
 function syncVolcanoBlessingPersistentBuff() {
   if (!player) return;
   if (!Array.isArray(player.persistentBuffs)) player.persistentBuffs = [];
@@ -26829,6 +27122,9 @@ function handleInventoryClick(x, y) {
         backpack.splice(idx, 1);
         player.deck.addCard(target);
         addLog(`Equipped: ${target.name}`, Colors.GREEN);
+        // Click cue matches in-combat card pickup so the
+        // rebalance flow feels responsive.
+        playSound('card_play', 0.6);
       }
       return;
     }
@@ -26846,6 +27142,7 @@ function handleInventoryClick(x, y) {
           player.deck.masterDeck.splice(idx, 1);
           backpack.push(target);
           addLog(`Unequipped: ${target.name}`, Colors.GRAY);
+          playSound('card_play', 0.6);
         }
       }
       return;
@@ -30178,6 +30475,15 @@ const CARD_SFX_OVERRIDES = {
   trident_thrust:           { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
   trident_throw:            { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
   sahuagin_trident:         { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
+  // Sahuagin Priest's Whirlpool — light water-splash on cast so the
+  // forced-swim debuff has audio weight when it lands on the player.
+  whirlpool:                { play: 'water_splash' },
+  // Mimic Tongue (relic) — wet gore squelch on cast so the licking
+  // tongue reads as a flesh-y attack, distinct from arrow / blade SFX.
+  mimic_tongue:             { play: 'ooze_attack' },
+  // Obsidian Core (relic) — heavy rock debris on cast, matching the
+  // boulder/rubble sfx family the obsidian biome already uses.
+  obsidian_core:            { play: 'boulder_flesh' },
   shield_bash:              { flesh: 'shield_flesh', blocked: 'shield_blocked' },
   cleave:                   { flesh: 'axe_2h_flesh',  blocked: 'axe_blocked' },
   quick_strike:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
@@ -31126,7 +31432,11 @@ function gameLoop(timestamp) {
     } else {
       showcaseTimer -= dt;
       showcaseFadeIn += dt;
-      if (showcaseTimer <= 0) { showcaseCard = null; showcaseTimer = 0; }
+      if (showcaseTimer <= 0) {
+        if (showcaseCard && showcaseCard._showcaseSneakX != null) delete showcaseCard._showcaseSneakX;
+        showcaseCard = null;
+        showcaseTimer = 0;
+      }
     }
   }
 

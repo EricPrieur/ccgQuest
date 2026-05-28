@@ -116,3 +116,44 @@ case of `handleCodexClick`.
    enemy, etc.).
 5. If it's a deck or loot member, follow the blue link in Sources to
    confirm the navigation lands on the right section.
+
+## Image assets — JPG by default, PNG only for transparency
+
+Card art, backgrounds, and map art are stored as **JPG** (quality 4 via
+`ffmpeg-static`). Source PNGs from Midjourney drop into `public/assets/`
+and get bulk-converted in place by:
+
+```
+npm run png-to-jpg                           # whole public/assets tree
+npm run png-to-jpg -- --keep                 # don't unlink originals
+npm run png-to-jpg -- --quality 3            # higher quality, larger
+npm run png-to-jpg public/assets/Cards       # subtree
+```
+
+The script (`scripts/convert-png-to-jpg.mjs`) **skips any path whose
+directory chain contains a segment in `SKIP_DIR_SEGMENTS`** — currently
+just `Icons`. Icons (status icons, frames, inline pills, banners,
+buttons) must stay PNG because their alpha channel is composited over
+card art; JPG would flatten transparency to a solid black box.
+
+If you add a new directory whose images need alpha (UI overlays, etc.),
+add its directory name to `SKIP_DIR_SEGMENTS` in the script **before**
+running it. Anything outside the skip list is fair game.
+
+When you wire a new image into code, reference it as `.jpg` unless it
+lives under `assets/Icons/` (then `.png`). After running the script,
+`git status` will show the `.png` deletions next to the matching `.jpg`
+adds — commit both in the same commit so the working tree stays in sync.
+
+## Versioning
+
+`GAME_VERSION` in `src/constants.js` is bumped manually before every push.
+
+- Currently in the **2.x** range (Part 1 polish + post-launch fixes after
+  the chapter-1 JS conversion finished at 2.0).
+- Bump by **+0.01** per push (e.g. `2.01 → 2.02 → 2.03 → ... → 2.99`).
+- Jump to **3.0** for the next major beat — Part 2 launch, or any other
+  big content drop that justifies a clean version bump.
+- Always bump before `git push`. The version appears on the title screen
+  and in `trackEvent('game_start', { version })` analytics; stale
+  versions in the wild make it hard to correlate user reports.

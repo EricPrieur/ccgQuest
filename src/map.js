@@ -753,7 +753,7 @@ const _STAIRS_DEFAULT_POSITIONS = [
 export function createVolcanoStairs1Map() {
   return buildVolcanoStairsMap(
     'volcano_stairs_1', 'Volcano Stairs - Lower',
-    'volcano_stairs_1', 'Maps/VolcanoStairs1.png',
+    'volcano_stairs_1', 'Maps/VolcanoStairs1.jpg',
     'stairs1_entry', ['stairs1_a', 'stairs1_b', 'stairs1_c'], 'stairs1_exit',
     'Stair Foot', 'Upward Bend',
     // User-tuned via the debug node-position editor.
@@ -770,7 +770,7 @@ export function createVolcanoStairs1Map() {
 export function createVolcanoStairs2Map() {
   return buildVolcanoStairsMap(
     'volcano_stairs_2', 'Volcano Stairs - Middle',
-    'volcano_stairs_2', 'Maps/VolcanoStairs2.png',
+    'volcano_stairs_2', 'Maps/VolcanoStairs2.jpg',
     'stairs2_entry', ['stairs2_a', 'stairs2_b', 'stairs2_c'], 'stairs2_exit',
     'Mid-Stair Landing', 'Higher Path',
     // User-tuned via the debug node-position editor.
@@ -787,7 +787,7 @@ export function createVolcanoStairs2Map() {
 export function createVolcanoStairs3Map() {
   return buildVolcanoStairsMap(
     'volcano_stairs_3', 'Volcano Stairs - Upper',
-    'volcano_stairs_3', 'Maps/VolcanoStairs3.png',
+    'volcano_stairs_3', 'Maps/VolcanoStairs3.jpg',
     'stairs3_entry', ['stairs3_a', 'stairs3_b', 'stairs3_c'], 'stairs3_exit',
     'Upper Stair Landing', 'To Summit Ridge',
     // User-tuned via the debug node-position editor.
@@ -807,13 +807,13 @@ export function createVolcanoStairs3Map() {
 // 1 ridge encounter node. Encounter TBD.
 export function createVolcanoSummitRidgeMap() {
   const map = new GameMap('volcano_summit_ridge', 'Volcano Summit Ridge');
-  map.mapImages = { volcano_summit_ridge: 'Maps/Volcano_SummitRidge.png' };
+  map.mapImages = { volcano_summit_ridge: 'Maps/Volcano_SummitRidge.jpg' };
   // Fully open plateau — every node unlocked from the start (NO_FOG_MAPS
   // already removes the fog overlay, and now there's nothing keeping
   // the player from clicking forward as soon as they arrive). Click
   // adjacency still forces them along the chain entry → a → b → ridge.
   const nodes = [
-    // Entry — drops in from the stairs (PNG's stair landing at the
+    // Entry — drops in from the stairs (image's stair landing at the
     // bottom-right). Click-on-self back-teleports to stairs3_exit.
     { id: 'summit_entry',     name: 'Stair Top',     description: 'The stair levels out onto a wind-swept ridge.', encounterId: 'stair_top_arrival', connections: ['summit_path_a'], unlocks: ['summit_path_a'], canRevisit: false, position: [1160, 750], mapArea: 'volcano_summit_ridge' },
     { id: 'summit_path_a',    name: 'Ridge Stairs',  description: 'Rough-cut steps lead upward along the clifftop.', encounterId: '', connections: ['summit_entry', 'summit_path_b'], unlocks: ['summit_path_b'], canRevisit: true, position: [900, 430], mapArea: 'volcano_summit_ridge' },

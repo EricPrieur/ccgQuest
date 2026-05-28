@@ -62,9 +62,9 @@ export function createCleave() {
     id: 'cleave',
     name: 'Cleave',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Deal 1 Damage to up to 2 Creatures.',
+    effectDescription: 'Deal 1 Damage to up to 2 Creatures. Hit 2: Draw.',
     rechargeCost: 1,
-    shortDesc: 'R1->1 Dmg x2',
+    shortDesc: 'R1->1 Dmg\nto 2 targets\nHit 2: Draw',
   });
 }
 

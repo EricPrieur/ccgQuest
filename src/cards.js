@@ -710,7 +710,7 @@ export function createShieldOfFaith() {
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('gain_shield', 1, TargetType.SINGLE_ALLY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['paladin'],
@@ -1858,13 +1858,16 @@ export function createBoneClub() {
   return new Card({
     id: 'bone_club',
     name: 'Bone Club',
-    description: 'Recharge +1 Card -> Deal 4 damage (+2 vs Armor/Shield).',
-    shortDesc: 'R+1->4 Dmg\n(+2 vs Armor/Shield)',
+    description: 'Recharge +1 Card -> Deal 4 damage. +1 Poison vs Armor/Shield.',
+    shortDesc: 'R+1->4 Dmg\n+1 Poison vs\nArmor/Shield',
     subtype: 'martial_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
+    // Poison rider resolves BEFORE damage so it reads pre-hit
+    // armor/shield (see Bone Mace for the rationale).
     effects: [
-      new CardEffect('armor_bonus_damage', 46, TargetType.SINGLE_ENEMY), // 4 base, 6 vs armor/shield
+      new CardEffect('apply_poison_vs_armor', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
   });
@@ -1874,13 +1877,18 @@ export function createBoneMace() {
   return new Card({
     id: 'bone_mace',
     name: 'Bone Mace',
-    description: 'Recharge -> Deal 3 damage (+2 vs Armor/Shield).',
-    shortDesc: 'R->3 Dmg\n(+2 vs Armor/Shield)',
+    description: 'Recharge -> Deal 3 damage. +1 Poison vs Armor/Shield.',
+    shortDesc: 'R->3 Dmg\n+1 Poison vs\nArmor/Shield',
     subtype: 'martial',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
+    // Poison rider resolves BEFORE damage so it reads the target's
+    // pre-hit armor/shield. Otherwise on-hit armor-peel powers like
+    // Obsidian Construct strip the armor down to 0 before the poison
+    // check, swallowing the rider against an armored target.
     effects: [
-      new CardEffect('armor_bonus_damage', 35, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison_vs_armor', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'uncommon',
   });
@@ -2498,7 +2506,7 @@ export function createRingMail() {
   return new Card({
     id: 'ring_mail',
     name: 'Ring Mail',
-    description: 'Recharge -> Block 4 Damage.',
+    description: 'Recharge -> Block 4.',
     shortDesc: 'R->Block 4',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
@@ -3301,7 +3309,7 @@ export function createFrostDrakeScale() {
   return new Card({
     id: 'frost_drake_scale',
     name: 'Frost Drake Scale',
-    description: 'Recharge -> Deal 1 Ice to a random enemy. Draw.',
+    description: 'Recharge -> Deal Ice to a random enemy. Draw.',
     shortDesc: 'R->Ice random\nDraw',
     subtype: 'relic',
     cardType: CardType.ABILITY,
