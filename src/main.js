@@ -2679,6 +2679,13 @@ function handleKeyDown(key, event) {
     } else if (state === GameState.HELP_SCREEN) {
       state = previousState || GameState.MAP;
     } else if (state === GameState.INGAME_MENU) {
+      // If the Quit-to-main Yes/No modal is up, ESC dismisses the
+      // modal instead of the whole menu.
+      if (_ingameMenuConfirmQuit) {
+        _ingameMenuConfirmQuit = false;
+        playSound('click');
+        return;
+      }
       playSound('book_close');
       state = previousState || GameState.MAP;
     } else if (state === GameState.OPTIONS_SCREEN) {
@@ -6176,6 +6183,32 @@ function updateMapMoveAnim(dt) {
 function handleMapClick(x, y) {
   if (mapMoveAnim) return; // block clicks while animating
 
+  // Bottom-right action icons (Inventory / Help / Menu) — checked
+  // BEFORE node rects so a click on an icon doesn't accidentally
+  // trigger node movement when a node sits underneath. Mirrors the
+  // combat top-row icon behavior. Each click plays its own SFX and
+  // routes to the matching screen.
+  const ar = getMapActionButtonRects();
+  if (hitTest(x, y, ar.backpack)) {
+    playSound('book_open');
+    previousState = state;
+    state = GameState.INVENTORY;
+    return;
+  }
+  if (hitTest(x, y, ar.help)) {
+    playSound('book_open');
+    previousState = state;
+    helpScrollY = 0;
+    state = GameState.HELP_SCREEN;
+    return;
+  }
+  if (hitTest(x, y, ar.menu)) {
+    playSound('click');
+    previousState = state;
+    state = GameState.INGAME_MENU;
+    return;
+  }
+
   const rects = getMapNodeRects();
 
   // Debug: ctrl-click on a node selects it for arrow-key nudging.
@@ -9072,7 +9105,51 @@ function drawMap() {
   // the Filibaf Forest maze state; easy to add more zones later.
   if (debugMode) drawMapDebugOverlay();
 
+  // Bottom-right action icons — Inventory, Help, Menu. Same layout
+  // and click cues as the combat top-row icons so the player has a
+  // consistent way to hit those screens from the map (especially on
+  // touchscreen / mobile where keyboard shortcuts aren't available).
+  drawMapActionButtons();
+
   ctx.textAlign = 'left';
+}
+
+function getMapActionButtonRects() {
+  const iconSize = 40;
+  const gap = 8;
+  const padRight = 16;
+  const padBottom = 16;
+  const y = SCREEN_HEIGHT - padBottom - iconSize;
+  const totalW = iconSize * 3 + gap * 2;
+  const baseX = SCREEN_WIDTH - padRight - totalW;
+  return {
+    backpack: { x: baseX, y, w: iconSize, h: iconSize },
+    help: { x: baseX + iconSize + gap, y, w: iconSize, h: iconSize },
+    menu: { x: baseX + (iconSize + gap) * 2, y, w: iconSize, h: iconSize },
+  };
+}
+
+function drawMapActionButtons() {
+  const rects = getMapActionButtonRects();
+  // Inventory (backpack icon).
+  drawIconButton(rects.backpack, 'icon_backpack', () => {
+    playSound('book_open');
+    previousState = state;
+    state = GameState.INVENTORY;
+  }, 'Bag');
+  // Help (book icon).
+  drawIconButton(rects.help, 'icon_help', () => {
+    playSound('book_open');
+    previousState = state;
+    helpScrollY = 0;
+    state = GameState.HELP_SCREEN;
+  }, '?');
+  // Menu (hamburger render — no asset).
+  drawCombatMenuButton(rects.menu, () => {
+    playSound('click');
+    previousState = state;
+    state = GameState.INGAME_MENU;
+  });
 }
 
 function drawMapDebugOverlay() {
@@ -27653,13 +27730,20 @@ function handleInventoryClick(x, y) {
     return;
   }
 
-  // Apply Rest / Done button (bottom of character panel)
-  if (restMode) {
-    const doneBtnW = sections.character.w - 40;
-    const doneBtnH = 50;
-    const doneBtnX = sections.character.x + 20;
-    const doneBtnY = sections.character.y + sections.character.h - doneBtnH - 12;
-    if (hitTest(x, y, { x: doneBtnX, y: doneBtnY, w: doneBtnW, h: doneBtnH })) {
+  // Apply Rest / Done button (rest mode) or < Back button (browse mode).
+  // The inventory click handler doesn't iterate the global menuButtons
+  // queue, so drawStyledButton's auto-registered click won't fire here
+  // — both buttons share the same rect, so a single explicit hit test
+  // covers them both (the action is just exitInventory either way).
+  // Click plays the same book SFX the I-key open/close uses so the
+  // back button feels consistent with the keyboard shortcut.
+  if (!shopMode) {
+    const btnW = sections.character.w - 40;
+    const btnH = 50;
+    const btnX = sections.character.x + 20;
+    const btnY = sections.character.y + sections.character.h - btnH - 12;
+    if (hitTest(x, y, { x: btnX, y: btnY, w: btnW, h: btnH })) {
+      playSound('book_open');
       exitInventory();
       return;
     }
@@ -28215,11 +28299,21 @@ function drawInventory() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
   } else {
+    // Non-rest / non-shop inventory view (browsing your deck). Bottom
+    // of the character column gets a "Press I or ESC to Close" hint
+    // above a "< Back" button so mobile / touchscreen players can
+    // close the panel without a keyboard. Button size + position
+    // match the Apply Rest button in rest mode for layout consistency.
+    const backBtnW = sections.character.w - 40;
+    const backBtnH = 50;
+    const backBtnX = sections.character.x + 20;
+    const backBtnY = sections.character.y + sections.character.h - backBtnH - 12;
     ctx.fillStyle = Colors.GOLD;
     ctx.font = '14px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Press I or ESC to Close', sections.character.x + sections.character.w / 2, sections.character.y + sections.character.h - 18);
+    ctx.fillText('Press I or ESC to Close', backBtnX + backBtnW / 2, backBtnY - 10);
     ctx.textAlign = 'left';
+    drawStyledButton(backBtnX, backBtnY, backBtnW, backBtnH, '< Back', exitInventory, 'large', 22);
   }
 
   // Debug-only +1000 gold button — drawn after the stats line so it sits on top.
@@ -30057,11 +30151,12 @@ const HELP_CONTENT = [
 ];
 
 function handleHelpClick(x, y) {
-  // Close button positioned at bottom-right of the help panel
+  // < Back button positioned at bottom-right of the help panel —
+  // rect must match drawHelpScreen's render so the click lands.
   const pw = 900, ph = 620;
   const px = (SCREEN_WIDTH - pw) / 2;
   const py = (SCREEN_HEIGHT - ph) / 2;
-  const btnW = 160, btnH = 40;
+  const btnW = 200, btnH = 50;
   const btnX = px + pw - btnW - 16;
   const btnY = py + ph - btnH - 12;
   if (hitTest(x, y, { x: btnX, y: btnY, w: btnW, h: btnH })) {
@@ -30162,23 +30257,12 @@ function drawHelpScreen() {
     ctx.strokeRect(sbX, thumbY, sbW, thumbH);
   }
 
-  // Close button (bottom-right of panel)
-  const btnW = 160, btnH = 40;
+  // < Back button (bottom-right of panel) — same wooden-plank style
+  // as the inventory back button, sized to fit the help panel.
+  const btnW = 200, btnH = 50;
   const btnX = px + pw - btnW - 16;
   const btnY = py + ph - btnH - 12;
-  const hov = hitTest(mouseX, mouseY, { x: btnX, y: btnY, w: btnW, h: btnH });
-  ctx.fillStyle = hov ? '#504638' : '#3c3228';
-  ctx.fillRect(btnX, btnY, btnW, btnH);
-  ctx.strokeStyle = '#b4a078';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(btnX, btnY, btnW, btnH);
-  ctx.fillStyle = Colors.WHITE;
-  ctx.font = 'bold 16px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Close (H)', btnX + btnW / 2, btnY + btnH / 2);
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
+  drawStyledButton(btnX, btnY, btnW, btnH, '< Back', null, 'large', 20);
 }
 
 // ============================================================
@@ -30442,6 +30526,28 @@ function getIngameMenuBtnRects() {
 }
 
 function handleIngameMenuClick(x, y) {
+  // Quit-to-main confirm dialog — if it's open, eat all other
+  // clicks and route to the Yes/No buttons.
+  if (_ingameMenuConfirmQuit) {
+    const m = getQuitConfirmRects();
+    if (hitTest(x, y, m.yes)) {
+      playSound('click');
+      _ingameMenuConfirmQuit = false;
+      state = GameState.MENU;
+      player = null;
+      currentMap = null;
+      currentEncounter = null;
+      return;
+    }
+    if (hitTest(x, y, m.no) || !hitTest(x, y, m.panel)) {
+      // No, or click outside the panel — dismiss.
+      playSound('click');
+      _ingameMenuConfirmQuit = false;
+      return;
+    }
+    // Click inside the panel but not on a button — ignore.
+    return;
+  }
   for (const btn of getIngameMenuBtnRects()) {
     if (!hitTest(x, y, btn)) continue;
     if (btn.action === 'resume') {
@@ -30467,13 +30573,67 @@ function handleIngameMenuClick(x, y) {
       helpScrollY = 0;
       state = GameState.HELP_SCREEN;
     } else if (btn.action === 'quit') {
-      state = GameState.MENU;
-      player = null;
-      currentMap = null;
-      currentEncounter = null;
+      // Defer to a Yes/No confirm — quitting drops the player back
+      // to the main menu and wipes the in-memory run. Autosaves are
+      // still safe, but mid-encounter / mid-combat state would be
+      // lost (the autosave reload would put them at the last node).
+      _ingameMenuConfirmQuit = true;
     }
     return;
   }
+}
+
+// Quit-to-main confirm modal — module-scoped flag so drawIngameMenu
+// can layer the dialog on top of the regular menu buttons, and the
+// click handler knows when to intercept.
+let _ingameMenuConfirmQuit = false;
+
+function getQuitConfirmRects() {
+  const panelW = 480;
+  const panelH = 220;
+  const px = Math.round((SCREEN_WIDTH - panelW) / 2);
+  const py = Math.round((SCREEN_HEIGHT - panelH) / 2);
+  const btnW = 160;
+  const btnH = 50;
+  const btnGap = 24;
+  const btnY = py + panelH - btnH - 24;
+  const yesX = px + Math.round((panelW - btnW * 2 - btnGap) / 2);
+  const noX = yesX + btnW + btnGap;
+  return {
+    panel: { x: px, y: py, w: panelW, h: panelH },
+    yes: { x: yesX, y: btnY, w: btnW, h: btnH },
+    no: { x: noX, y: btnY, w: btnW, h: btnH },
+  };
+}
+
+function drawQuitConfirmDialog() {
+  if (!_ingameMenuConfirmQuit) return;
+  const r = getQuitConfirmRects();
+  // Extra dim over the existing in-game menu dim.
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  // Panel.
+  ctx.fillStyle = 'rgba(28, 26, 36, 0.97)';
+  ctx.fillRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  // Title.
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 22px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Quit to Main Menu?', r.panel.x + r.panel.w / 2, r.panel.y + 50);
+  // Body.
+  ctx.fillStyle = '#e8d59a';
+  ctx.font = '15px Georgia, serif';
+  ctx.fillText('Unsaved progress in this run will be lost.', r.panel.x + r.panel.w / 2, r.panel.y + 90);
+  ctx.fillStyle = '#bdb59a';
+  ctx.font = 'italic 13px Georgia, serif';
+  ctx.fillText('Save first from the menu if you want to keep it.', r.panel.x + r.panel.w / 2, r.panel.y + 115);
+  ctx.textAlign = 'left';
+  // Buttons — same wooden-plank style as the other menus.
+  drawStyledButton(r.yes.x, r.yes.y, r.yes.w, r.yes.h, 'Yes', null, 'large', 20);
+  drawStyledButton(r.no.x, r.no.y, r.no.w, r.no.h, 'No', null, 'large', 20);
 }
 
 function drawIngameMenu() {
@@ -30535,6 +30695,9 @@ function drawIngameMenu() {
     // Click is handled by handleIngameMenuClick using getIngameMenuBtnRects directly
     menuButtons.pop();
   }
+
+  // Quit-to-main Yes/No confirm on top of the menu buttons.
+  drawQuitConfirmDialog();
 
   ctx.textAlign = 'left';
 }
