@@ -3508,7 +3508,12 @@ function selectClass(className) {
   playSound('click');
   selectedClass = className;
   trackEvent('character_selected', { class: className });
-  abilityChoices = getAbilityChoices(className, 3);
+  // Show every tier-1 ability for the class on the initial character-
+  // creation pick — the player can back out and pick a different
+  // class anyway, so there's no reason to gate the choice down to 3
+  // random ones at the start. Mid-run picks (shrine, church, level-
+  // up) keep the 3-random sampling so the choice still feels rolled.
+  abilityChoices = getAbilityChoices(className, 10);
   state = GameState.ABILITY_SELECT;
 }
 

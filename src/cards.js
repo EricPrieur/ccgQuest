@@ -1641,8 +1641,17 @@ export function getAbilityChoices(className, count = 3, tier = 1) {
   };
   const all = (choiceFns[className] || getPaladinAbilityChoices)();
   const tierMatch = all.filter(c => c.tier === tier);
+  // Show-all calls (count >= tier pool size) sort alphabetically by
+  // name so the lineup is stable / predictable. Subset calls (mid-run
+  // picks at shrines, churches, level-ups) still shuffle + slice so
+  // the choice feels rolled.
+  if (count >= tierMatch.length) {
+    return tierMatch
+      .slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }
   const shuffled = tierMatch.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+  return shuffled.slice(0, count);
 }
 
 // ============================================================
