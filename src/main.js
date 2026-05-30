@@ -617,8 +617,13 @@ let _ctrlClickActive = false;
 let runFast = false; // doubles map movement speed
 // Enemy animation speed: 'slow' (2x), 'medium' (1x), 'fast' (0.5x).
 // Multiplies every enemy-turn timer (showcase hold, arrow flight, gap
-// between actions). Persisted with the rest of the options.
-let enemySpeed = 'medium';
+// between actions). Persisted with the rest of the options. Default is
+// 'fast' — players who explicitly picked another setting in Options
+// keep their pick (tracked via enemySpeedExplicit on the saved blob);
+// players who never touched it (or are loading a save that predates
+// this default change) get the new fast default.
+let enemySpeed = 'fast';
+let enemySpeedExplicit = false;
 function getEnemySpeedMul() {
   if (enemySpeed === 'slow') return 2;
   if (enemySpeed === 'fast') return 0.5;
@@ -636,8 +641,17 @@ function loadOptionsFromStorage() {
     if (!raw) return;
     const parsed = JSON.parse(raw) || {};
     if (typeof parsed.runFast === 'boolean') runFast = parsed.runFast;
-    if (parsed.enemySpeed === 'slow' || parsed.enemySpeed === 'medium' || parsed.enemySpeed === 'fast') {
+    // Only honor the saved enemySpeed when the player explicitly
+    // picked one in Options (enemySpeedExplicit flag). Older saves
+    // and untouched-options saves fall through to the new 'fast'
+    // default. Without this guard, every existing user — even ones
+    // who never opened Options — would be locked into the old
+    // 'medium' default that saveOptions() always wrote into the
+    // serialized blob.
+    if (parsed.enemySpeedExplicit === true &&
+        (parsed.enemySpeed === 'slow' || parsed.enemySpeed === 'medium' || parsed.enemySpeed === 'fast')) {
       enemySpeed = parsed.enemySpeed;
+      enemySpeedExplicit = true;
     }
     if (typeof parsed.soundEnabled === 'boolean' && parsed.soundEnabled !== isSoundEnabled()) {
       toggleSound();
@@ -654,6 +668,7 @@ function saveOptions() {
     localStorage.setItem(OPTIONS_LS_KEY, JSON.stringify({
       runFast,
       enemySpeed,
+      enemySpeedExplicit,
       soundEnabled: isSoundEnabled(),
       musicEnabled: isMusicEnabled(),
       soundVolume: getSoundVolume(),
@@ -3467,12 +3482,14 @@ function handleCharSelectClick(x, y) {
   // Back button
   const backBtn = { x: 40, y: SCREEN_HEIGHT - 100, w: 200, h: 70 };
   if (hitTest(x, y, backBtn)) {
+    playSound('click');
     state = GameState.MENU;
     return;
   }
   // Help icon button (bottom-right)
   const helpBtn = { x: SCREEN_WIDTH - 52, y: SCREEN_HEIGHT - 52, w: 36, h: 36 };
   if (hitTest(x, y, helpBtn)) {
+    playSound('book_open');
     previousState = state;
     helpScrollY = 0;
     state = GameState.HELP_SCREEN;
@@ -3697,7 +3714,10 @@ function getAbilityCardRects() {
   const count = abilityChoices.length;
   const totalW = count * cardW + (count - 1) * gap;
   const startX = (SCREEN_WIDTH - totalW) / 2;
-  const y = 180;
+  // Cards moved up from y=180 → 140 so there's less air between the
+  // title/subtitle and the choices, leaving more room below for the
+  // Class Power + Starting Hand Size sections.
+  const y = 140;
   return abilityChoices.map((_, i) => ({
     x: startX + i * (cardW + gap), y, w: cardW, h: cardH,
   }));
@@ -3710,6 +3730,7 @@ function handleAbilitySelectClick(x, y) {
   if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !pendingChapter2Transition) {
     const backBtn = { x: 40, y: SCREEN_HEIGHT - 100, w: 200, h: 70 };
     if (hitTest(x, y, backBtn)) {
+      playSound('click');
       state = GameState.CHARACTER_SELECT;
       return;
     }
@@ -3982,6 +4003,56 @@ function drawAbilitySelect() {
         drawSideCreatureStack(sideCreatures, card, sx, r.y, r.h, sideW, sideH);
       }
     }
+  }
+
+  // Initial character-creation pick: surface the class's static power
+  // and starting hand size below the ability cards so the player can
+  // weigh the full starting kit (ability + power + hand) before
+  // committing. Level-up / shrine / church flows skip this — the
+  // class is already locked in.
+  if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !pendingChapter2Transition && !levelUpAbilityMode) {
+    // 3 / 2 pyramid: 3 ability cards on top, 2 supporting panels
+    // (Class Power + Starting Hand Size) side-by-side below. The two
+    // bottom items center under the abilities so the shape reads as
+    // a triangle / pyramid. Bottom row sits a touch lower than the
+    // tight 510 baseline to leave breathing room between rows, and
+    // panels shrink slightly so the row still clears the Back button.
+    const headerY = 540;
+    const panelW = 240, panelH = 300;
+    const gap = 40;
+    const totalW = panelW * 2 + gap;
+    const leftX = Math.round((SCREEN_WIDTH - totalW) / 2);
+    const rightX = leftX + panelW + gap;
+    const contentY = headerY + 10;
+
+    // — Left panel: Class Power (full preview size, same renderer as
+    //   the hover preview).
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Class Power', leftX + panelW / 2, headerY);
+    try {
+      const power = getClassPower(selectedClass);
+      if (power) {
+        power.exhausted = false;
+        drawPowerPreviewCard(power, leftX, contentY, panelW, panelH);
+      }
+    } catch (e) { /* defensive — should always resolve to a power */ }
+
+    // — Right panel: Starting Hand Size. Just the gold header and a
+    //   normal-sized 'N cards' line below — no slab / frame. The big
+    //   block-letter treatment felt like overkill for a single
+    //   numeric stat next to the power card.
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Starting Hand Size', rightX + panelW / 2, headerY);
+    const handSize = (typeof getPlayerHandSize === 'function')
+      ? (CLASS_HAND_SIZE[selectedClass] || 4)
+      : 4;
+    ctx.fillStyle = Colors.WHITE;
+    ctx.font = 'bold 26px Georgia, serif';
+    ctx.fillText(`${handSize} cards`, rightX + panelW / 2, headerY + 36);
   }
 
   // Back button (matches character select style) — only on the initial
@@ -30328,6 +30399,7 @@ function handleOptionsClick(x, y) {
     const px = btnX + i * (pillW + 4);
     if (hitTest(x, y, { x: px, y: espY, w: pillW, h: espH })) {
       enemySpeed = speeds[i];
+      enemySpeedExplicit = true; // lock the player's choice
       playSound('click');
       saveOptions();
       return;
@@ -30537,6 +30609,21 @@ function handleIngameMenuClick(x, y) {
       player = null;
       currentMap = null;
       currentEncounter = null;
+      // Reset the menu music so the heroic title theme actually
+      // starts playing again on quit. pauseMusic muted the gameplay
+      // track when the in-game menu opened; without these flag
+      // resets, resumeMusic just unmutes the combat music (which is
+      // still cued up) under the title screen instead of switching
+      // back to the menu theme. stopMusic kills the cued combat
+      // track outright; startMenuMusicIfNeeded re-arms the heroic
+      // loop. Mirrors what startNewGame does on the way IN to the
+      // run, just in reverse.
+      try { stopMusic(); } catch (_) {}
+      _menuMusicStarted = false;
+      _hasEnteredCombat = false;
+      _lastMusicArea = null;
+      _lastMusicNodeId = null;
+      startMenuMusicIfNeeded();
       return;
     }
     if (hitTest(x, y, m.no) || !hitTest(x, y, m.panel)) {
