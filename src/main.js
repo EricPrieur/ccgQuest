@@ -618,11 +618,11 @@ let runFast = false; // doubles map movement speed
 // Enemy animation speed: 'slow' (2x), 'medium' (1x), 'fast' (0.5x).
 // Multiplies every enemy-turn timer (showcase hold, arrow flight, gap
 // between actions). Persisted with the rest of the options. Default is
-// 'fast' — players who explicitly picked another setting in Options
+// 'slow' — players who explicitly picked another setting in Options
 // keep their pick (tracked via enemySpeedExplicit on the saved blob);
 // players who never touched it (or are loading a save that predates
-// this default change) get the new fast default.
-let enemySpeed = 'fast';
+// this default change) get the new slow default.
+let enemySpeed = 'slow';
 let enemySpeedExplicit = false;
 function getEnemySpeedMul() {
   if (enemySpeed === 'slow') return 2;
