@@ -78,16 +78,17 @@ export function createCleave() {
     id: 'cleave',
     name: 'Cleave',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Deal 1 Damage to up to 2 Creatures. Hit 2: Draw.',
+    effectDescription: 'Deal 1 Damage to up to 2 Creatures. 2 Targets: Draw.',
     rechargeCost: 1,
-    shortDesc: 'R1->1 Dmg\nto 2 targets\nHit 2: Draw',
+    shortDesc: 'R1->1 Dmg\nto 2 targets\n2 Targets: Draw',
   });
 }
 
 export function createAimedShot() {
   return new Power({
+    // id stays 'aimed_shot' for save compatibility — display name only renamed.
     id: 'aimed_shot',
-    name: 'Aimed Shot',
+    name: 'Take Aim',
     costDescription: 'Recharge 1 Card',
     effectDescription: 'Gain 1 Heroism, Draw.',
     rechargeCost: 1,

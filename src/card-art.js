@@ -44,6 +44,7 @@ export const CARD_ART_MAP = {
   goodberries: 'GoodberriesAbility.jpg',
   goodberry: 'Goodberryitem.jpg',
   multi_shot: 'MultiShotAbility.jpg',
+  aimed_shot_card: 'AimedShot2.jpg',
   careful_strike: 'CarefulStrikeAbility.jpg',
   hunters_mark: 'HunterMark.jpg',
   animal_companion: 'AnimalCompanion.jpg',

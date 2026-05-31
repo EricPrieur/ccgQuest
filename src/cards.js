@@ -529,12 +529,18 @@ export function createArcaneShield() {
   return new Card({
     id: 'arcane_shield',
     name: 'Arcane Shield',
-    description: 'Recharge -> Gain 2 Shield.',
-    shortDesc: 'R->Shield 2',
+    description: 'Recharge -> Block 3. Draw.',
+    shortDesc: 'R->Block 3, Draw',
+    // Subtype stays 'ability' so it groups with other Wizard abilities,
+    // but cardType is DEFENSE so the DEFENDING phase recognizes it as
+    // playable like armor.
     subtype: 'ability',
-    cardType: CardType.ABILITY,
+    cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('gain_shield', 2, TargetType.SELF)],
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     characterClass: ['wizard'],
     tier: 1,
   });
@@ -587,15 +593,19 @@ export function createPetSpider() {
   return new Card({
     id: 'pet_spider',
     name: 'Pet Spider',
-    description: 'Recharge -> Summon a 0/1 Spider (Poison Attack).',
-    shortDesc: 'R->Summon Spider',
+    description: 'Recharge -> Summon a Pet Spider.\nCreate 1 Vial of Poison.',
+    shortDesc: 'R->Summon Spider\n+Vial of Poison',
     subtype: 'ability',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('summon_small_spider', 1, TargetType.SUMMON)],
+    effects: [
+      new CardEffect('summon_small_spider', 1, TargetType.SUMMON),
+      new CardEffect('create_vial_of_poison', 1, TargetType.SELF),
+    ],
     characterClass: ['rogue'],
     tier: 1,
     previewCreature: createSmallSpiderCreature(),
+    previewCard: createVialOfPoison(),
   });
 }
 
@@ -673,7 +683,7 @@ export function createShieldBash() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('shield_bash', 1, TargetType.SINGLE_ENEMY)],
-    characterClass: ['warrior'],
+    characterClass: ['warrior', 'paladin'],
     tier: 1,
   });
 }
@@ -750,6 +760,32 @@ export function createMultiShot() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('multi_damage', 1, TargetType.SINGLE_ENEMY, 3)],
     characterClass: ['ranger'],
+    tier: 1,
+  });
+}
+
+// Aimed Shot — Ranger + Rogue tier-1 attack. Pays an extra Recharge
+// card on top of the base recharge cost; in return the attack scales
+// twice as hard with stockpiled Heroism (e.g. 4 Heroism + 3 base = 11
+// damage instead of 7), plus draws a card. Replaces Multi Shot in the
+// Ranger pool and Vial of Poison in the Rogue pool — Rogue still gets
+// vials via Pet Spider's play token.
+export function createAimedShotCard() {
+  return new Card({
+    id: 'aimed_shot_card',
+    name: 'Aimed Shot',
+    description: 'Recharge +1 Card -> Deal 3 Damage.\nHeroism is added twice.\nDraw.',
+    shortDesc: 'R+1->3 Dmg\nHeroism x2\nDraw',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('heroism_double', 1, TargetType.SELF),
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    characterClass: ['ranger', 'rogue'],
     tier: 1,
   });
 }
@@ -1601,12 +1637,16 @@ export function createHealingTouch() {
 // ============================================================
 
 export function getPaladinAbilityChoices() {
-  return [createHeroicStrike(), createHolyLight(), createShieldOfFaith(), createFlashHeal(),
+  // Holy Light was swapped out for Shield Bash at tier 1 — Holy Light's
+  // creator stays in CARD_REGISTRY so older saves that already had it
+  // still deserialize, but it's no longer offered on level-up / pick
+  // screens. If/when we want it back, just put it back in this list.
+  return [createHeroicStrike(), createShieldBash(), createShieldOfFaith(), createFlashHeal(),
           createConsecration(), createHammerOfWrath(), createHolySword(), createRevivify()];
 }
 
 export function getRangerAbilityChoices() {
-  return [createTamedRat(), createGoodberries(), createMultiShot(), createCarefulStrike(),
+  return [createTamedRat(), createGoodberries(), createAimedShotCard(), createCarefulStrike(),
           createHuntersMark(), createAnimalCompanion(), createPiercingShot(), createExplosiveShot()];
 }
 
@@ -1616,7 +1656,7 @@ export function getWizardAbilityChoices() {
 }
 
 export function getRogueAbilityChoices() {
-  return [createVialOfPoison(), createSneakAttack(), createPetSpider(), createCarefulStrike(),
+  return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createCarefulStrike(),
           createFanOfBlades(), createBackstab(), createPoisonedDagger(), createSprint()];
 }
 
@@ -1972,20 +2012,21 @@ export function createSturdyBoots() {
   return new Card({
     id: 'sturdy_boots',
     name: 'Sturdy Boots',
-    // Dual-type per Python: top-level effects fire on player turn (1 Dmg + Draw);
-    // the block mode is offered during the defending phase (Block 1 + Draw).
-    description: 'Attack: 1 Dmg + Draw\nDefense: Block 1 + Draw',
-    shortDesc: 'R->1 Dmg/Block,\nDraw',
+    // Dual-mode: top-level (attack) fires on player turn; modes[0] (defense)
+    // fires during the defending phase. Defense mode is the meatier line —
+    // block + counter + draw — so the card rewards a save for incoming hits.
+    description: 'Attack: 2 Dmg\nDefense: Block 2,\n2 Dmg random, Draw',
+    shortDesc: 'R->2 Dmg / Def:\nBlock 2 +2 rand\nDraw',
     subtype: 'light_armor',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
     ],
     modes: [
-      new CardMode('Block 1, Draw', [
-        new CardEffect('block', 1, TargetType.SELF),
+      new CardMode('Block 2, 2 Dmg random, Draw', [
+        new CardEffect('block', 2, TargetType.SELF),
+        new CardEffect('damage_random', 2, TargetType.RANDOM_ENEMY),
         new CardEffect('draw', 1, TargetType.SELF),
       ]),
     ],
@@ -2049,14 +2090,13 @@ export function createSharpRock() {
   return new Card({
     id: 'sharp_rock',
     name: 'Sharp Rock',
-    description: 'Recharge -> Deal 1 Damage, Draw.',
-    shortDesc: 'R->1 Dmg, Draw',
+    description: 'Recharge -> Deal 1 Damage. Hit: Draw.',
+    shortDesc: 'R->1 Dmg\nHit: Draw',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('damage_draw_on_hit', 1, TargetType.SINGLE_ENEMY),
     ],
   });
 }
@@ -3197,15 +3237,15 @@ export function createGoblinRocketBoots() {
   return new Card({
     id: 'goblin_rocket_boots',
     name: 'Goblin Rocket Boots',
-    description: 'Recharge -> Block 1, Draw and deal Fire to a random enemy.',
-    shortDesc: 'R->Block 1, Draw\nFire random',
+    description: 'Recharge -> Block 1.\nApply 1 Fire to all enemies. Draw.',
+    shortDesc: 'R->Block 1, Draw\nFire ALL',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
-      new CardEffect('apply_fire_random', 1, TargetType.RANDOM_ENEMY),
     ],
     rarity: 'common',
     tier: 2,
@@ -3671,15 +3711,15 @@ export function createDwarvenTowerShield() {
   return new Card({
     id: 'dwarven_tower_shield',
     name: 'Dwarven Tower Shield',
-    description: 'Recharge -> Gain 4 Shields.',
-    shortDesc: 'R->4 Shields',
+    description: 'Recharge -> Gain 3 Shields.',
+    shortDesc: 'R->3 Shields',
     subtype: 'heavy_armor',
     // ABILITY (not DEFENSE) so it can only be played proactively on the
     // player's turn, not reactively during the defending phase.
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('gain_shield', 4, TargetType.SELF),
+      new CardEffect('gain_shield', 3, TargetType.SELF),
     ],
     tier: 2,
   });
@@ -3961,12 +4001,15 @@ export function createObsidianConstructCreature() {
 export function createObsidianRock() {
   return new Card({
     id: 'obsidian_rock', name: 'Obsidian Rock',
-    description: 'Recharge -> Deal 1 Damage (+2 vs Armor/Shield). Draw a card.',
-    shortDesc: 'R->1 Dmg (+2 vs\nArmor), Draw 1',
+    description: 'Recharge -> Deal 2 Damage (+2 and Draw vs Armor/Shield).',
+    shortDesc: 'R->2 Dmg\n+2 & Draw vs\nArmor/Shield',
     subtype: 'simple', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    // Draw rider sits BEFORE the damage effect so it reads pre-hit
+    // armor/shield (matches the apply_poison_vs_armor pattern on
+    // Bone Mace / Bone Club).
     effects: [
-      new CardEffect('armor_bonus_damage', 13, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('draw_vs_armor', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('armor_bonus_damage', 24, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'common', tier: 2,
   });
@@ -4291,16 +4334,16 @@ export function createFishScaleBoots() {
   return new Card({
     id: 'fish_scale_boots',
     name: 'Fish Scale Boots',
-    // Two-line layout: line 1 = recharge / block / draw, line 2 = swim pill.
-    // \n is honored by the small + full card renderers, and the
-    // "On Swim" prefix renders as a pill thanks to inlineBadgeRe.
-    description: 'Recharge -> Block 1, Draw.\nOn Swim: Draw 2.',
-    shortDesc: 'R->Block 1, Draw\nOn Swim: Draw 2',
+    // Line 1 = recharge / block / ice spread / draw, line 2 = swim pill.
+    // The "On Swim" prefix renders as a pill thanks to inlineBadgeRe.
+    description: 'Recharge -> Block 1.\nApply 1 Ice to all enemies. Draw.\nOn Swim: Draw 2.',
+    shortDesc: 'R->Block 1, Draw\nIce ALL\nOn Swim: Draw 2',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],

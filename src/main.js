@@ -46,7 +46,7 @@ import {
   createFireBurst, createIceBolt, createMagicMissiles, createArcaneShield,
   createVialOfPoison, createSneakAttack, createPetSpider, createCarefulStrike,
   createGreaterCleave, createCharge, createRecklessStrike, createShieldBash,
-  createMultiShot, createGoodberries, createGoodberry, createTamedRat,
+  createMultiShot, createAimedShotCard, createGoodberries, createGoodberry, createTamedRat,
   createFireToken, createIceToken, createCatFormToken, createBearFormToken,
   createWrath, createRegrowth, createFeralSwipe,
   createSpearThrow, createIcyBreath, createShieldBashEnemy, createZhostsBuckler,
@@ -1341,6 +1341,7 @@ const CARD_REGISTRY = {
   pet_spider: createPetSpider, careful_strike: createCarefulStrike,
   greater_cleave: createGreaterCleave, charge: createCharge, reckless_strike: createRecklessStrike,
   shield_bash: createShieldBash, multi_shot: createMultiShot,
+  aimed_shot_card: createAimedShotCard,
   goodberries: createGoodberries, tamed_rat: createTamedRat,
   wrath: createWrath, regrowth: createRegrowth, feral_swipe: createFeralSwipe,
   // Tier 2 abilities (Tharnag arrival level-up + Cathedral Shrine)
@@ -1434,7 +1435,12 @@ const CARD_REGISTRY = {
   sahuagin_priest_staff: createSahuaginPriestStaffLoot,
   gnikans_staff: createGnikansStaff,
   barnacle_encrusted_plate: createBarnacleEncrustedPlate, barnacle: createBarnacle,
-  mimic_bite: createMimicBite, mimic_tongue: createMimicTongue,
+  // mimic_bite intentionally NOT in CARD_REGISTRY — the Mimic's Bite!
+  // card is an enemy-only attack, fired straight from setupEnemyForCombat
+  // (createMimicBite() function call, not a registry lookup). Leaving it
+  // out routes it under the codex's Enemy Cards tab via the enemy-deck
+  // sandbox scan, same pattern Loose Bone / Pulling Back the Ram use.
+  mimic_tongue: createMimicTongue,
   // Web spider is the enemy ABILITY card that adds Web tokens to the
   // player deck — never enters the player's masterDeck, so it stays
   // out of CARD_REGISTRY (which is what the codex's Player tab walks).
@@ -3988,25 +3994,17 @@ function drawAbilitySelect() {
   if (hoveredAbilityIdx >= 0) {
     const card = abilityChoices[hoveredAbilityIdx];
     const r = rects[hoveredAbilityIdx];
-    const sideCreatures = getSideCreaturePreviews(card);
-    if (card.previewCard || sideCreatures.length) {
+    if (hasAnySidePreview(card)) {
       const sideW = COMBAT_POWER_W;
       const sideH = COMBAT_POWER_H;
       const gap = 10;
-      const panelW = sideCreatures.length
-        ? getSideCreaturePanelWidth(sideCreatures.length, sideW)
-        : sideW;
+      const panelW = getCombinedSidePreviewWidth(card, sideW);
       let sx = r.x + r.w + gap;
       // Flip to the left if it would go off-screen
       if (sx + panelW > SCREEN_WIDTH - 10) {
         sx = r.x - panelW - gap;
       }
-      if (card.previewCard) {
-        const sy = r.y + Math.floor((r.h - sideH) / 2);
-        drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
-      } else {
-        drawSideCreatureStack(sideCreatures, card, sx, r.y, r.h, sideW, sideH);
-      }
+      drawCombinedSidePreview(card, sx, r.y, r.h, sideW, sideH);
     }
   }
 
@@ -11652,10 +11650,8 @@ function drawEncounterLoot() {
     // Calculate total width including side previews so the row stays centered
     let totalW = 0;
     for (const c of lootedCards) {
-      const sc = getSideCreaturePreviews(c);
-      if (c.previewCard) totalW += cardW + sideGap + sideW;
-      else if (sc.length) totalW += cardW + sideGap + getSideCreaturePanelWidth(sc.length, sideW);
-      else totalW += cardW;
+      const sideW2 = getCombinedSidePreviewWidth(c, sideW);
+      totalW += cardW + (sideW2 ? sideGap + sideW2 : 0);
     }
     const groupGap = 24;
     totalW += (lootedCards.length - 1) * groupGap;
@@ -11669,16 +11665,11 @@ function drawEncounterLoot() {
       // which drawCreatureCard stamps directly into _summonInfoHover
       // and drawHoverPreview pops at the end of the frame.
       cx += cardW;
-      const sideCreatures = getSideCreaturePreviews(card);
-      if (card.previewCard) {
+      const sidePanelW = getCombinedSidePreviewWidth(card, sideW);
+      if (sidePanelW) {
         const sx = cx + sideGap;
-        const sy = y + Math.floor((cardH - sideH) / 2);
-        drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
-        cx += sideGap + sideW;
-      } else if (sideCreatures.length) {
-        const sx = cx + sideGap;
-        drawSideCreatureStack(sideCreatures, card, sx, y, cardH, sideW, sideH);
-        cx += sideGap + getSideCreaturePanelWidth(sideCreatures.length, sideW);
+        drawCombinedSidePreview(card, sx, y, cardH, sideW, sideH);
+        cx += sideGap + sidePanelW;
       }
       cx += groupGap;
     }
@@ -12420,7 +12411,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -12503,6 +12494,20 @@ function tokenizeKeywordText(text, opts = {}) {
         // keyword so it pairs visually with other recharge mechanics.
         badge = { type: 'badge', label: 'WHEN RECHARGED',
           bg: 'rgba(40,70,110,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Hit') {
+        // Conditional rider fired only when the swing actually landed
+        // damage on the target (Sharp Rock: "Hit: Draw"). Hot orange
+        // palette so the trigger reads as a damage-time consequence,
+        // distinct from "On Attack" (fires regardless of landing) and
+        // "Damaged" gating.
+        badge = { type: 'badge', label: 'HIT',
+          bg: 'rgba(130,50,30,0.92)', border: '#ff9866', fg: '#ffe0c8' };
+      } else if (phrase === '2 Targets') {
+        // Cleave-style condition — fires when the player picks 2
+        // distinct targets, regardless of whether damage actually
+        // connected. Gold palette mirrors Heroism / targeting cues.
+        badge = { type: 'badge', label: '2 TARGETS',
+          bg: 'rgba(90,70,20,0.92)', border: '#f0c860', fg: '#ffe8a8' };
       } else {
         badge = { type: 'badge', label: 'ON RECHARGE',
           bg: 'rgba(80,90,140,0.92)', border: '#a0b0ff', fg: '#dde4ff' };
@@ -12743,6 +12748,11 @@ function drawIconText(text, centerX, startY, maxWidth, fontSize, color = '#eee',
         // 1 px above the neighboring text's middle — visually aligned
         // without looking sunken.
         ctx.fillText(u.label, pillX + padX, cy - 1);
+        // Register the pill as a hover hit area so drawBadgeTooltip can
+        // pop a description (HIT / 2 TARGETS / etc. — see PILL_DESCRIPTIONS).
+        cardBadgeHitAreas.push({
+          x: pillX, y: pillY, w: pillW, h: pillH, label: u.label,
+        });
         // Reset font + color for subsequent units on this line.
         ctx.font = `${fontSize}px sans-serif`;
         ctx.fillStyle = color;
@@ -12939,10 +12949,66 @@ function drawIconTextLeft(text, startX, startY, maxWidth, fontSize, color = '#ee
   return lines.length * lineH;
 }
 
+// Descriptions for inline pill badges. Mapped by the badge label
+// (the all-caps text rendered inside the pill). Labels without an
+// entry here fall back to the "just show the label" tooltip — which
+// is fine for the obvious ones (TURN END, ON DEATH, etc.) where the
+// pill text itself is self-explanatory. Add an entry whenever a pill
+// needs spelled-out semantics (HIT, 2 TARGETS, etc.).
+const PILL_DESCRIPTIONS = {
+  'HIT': 'Triggers only when this swing actually deals damage (not fully absorbed by block/shield/armor).',
+  '2 TARGETS': 'Triggers when you pick 2 distinct targets — no damage needed, just the second pick.',
+  'ON RECHARGE': 'Fires when the card is sent to the recharge pile (paid as a cost or end-of-turn).',
+  'WHEN RECHARGED': 'Fires when this card itself is recharged (Workbench enchant, etc.).',
+  'NEXT ATTACK': 'Applies once to your next attack and is then consumed.',
+  'ON SWIM': 'Triggers each time you recharge a card during a forced swim.',
+  'BURNING': 'Only fires while the holder has at least one Fire stack.',
+  'ICED': 'Only fires while the target has at least one Ice stack.',
+  'CALLED': 'Fires once when the ally first enters the field.',
+  'VS SAHUAGIN': 'Active only against enemies in the Sahuagin family.',
+  'WHEN ATTACKED': 'Fires whenever the holder is the target of an attack — even if the hit is fully absorbed.',
+  'WHEN HIT': 'Fires whenever the creature is targeted by an attack.',
+};
+
 function drawBadgeTooltip() {
   for (const area of cardBadgeHitAreas) {
     if (!hitTest(mouseX, mouseY, area)) continue;
-    // Draw small tooltip above the badge
+    const desc = PILL_DESCRIPTIONS[area.label];
+    // Two layouts: compact (just the label, for obvious pills) and
+    // expanded (label header + wrapped description for pills like HIT
+    // and 2 TARGETS that need spelled-out semantics).
+    if (desc) {
+      const boxW = 280;
+      const padX = 10, padY = 8;
+      const titleH = 18;
+      ctx.font = '13px sans-serif';
+      const lines = wrapTextLong(desc, boxW - padX * 2, 13);
+      const lineH = 16;
+      const boxH = padY + titleH + 4 + lines.length * lineH + padY;
+      let bx = area.x + area.w / 2 - boxW / 2;
+      let by = area.y - boxH - 6;
+      if (bx + boxW > SCREEN_WIDTH - 4) bx = SCREEN_WIDTH - boxW - 4;
+      if (bx < 4) bx = 4;
+      if (by < 4) by = area.y + area.h + 6;
+      ctx.fillStyle = 'rgba(10,10,30,0.96)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.strokeStyle = Colors.GOLD;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, boxW, boxH);
+      ctx.fillStyle = Colors.GOLD;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(area.label, bx + padX, by + padY);
+      ctx.fillStyle = '#e8e0c8';
+      ctx.font = '13px sans-serif';
+      let ly = by + padY + titleH + 2;
+      for (const l of lines) { ctx.fillText(l, bx + padX, ly); ly += lineH; }
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      return;
+    }
+    // Compact fallback (Rarity / Tier badges + any unmapped pill).
     ctx.font = 'bold 13px sans-serif';
     const tw = ctx.measureText(area.label).width;
     const padX = 8, padY = 4;
@@ -12953,7 +13019,6 @@ function drawBadgeTooltip() {
     if (bx + boxW > SCREEN_WIDTH) bx = SCREEN_WIDTH - boxW - 4;
     if (bx < 4) bx = 4;
     if (by < 4) by = area.y + area.h + 4;
-
     ctx.fillStyle = 'rgba(10,10,30,0.95)';
     ctx.fillRect(bx, by, boxW, boxH);
     ctx.strokeStyle = Colors.GOLD;
@@ -12965,7 +13030,7 @@ function drawBadgeTooltip() {
     ctx.fillText(area.label, bx + boxW / 2, by + boxH / 2 + 1);
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
-    return; // only show one tooltip
+    return;
   }
 }
 
@@ -14056,17 +14121,11 @@ function drawHoverPreview() {
 
   // Side preview (smaller — used when a card has a previewCard or previewCreature(s)
   // that shows the summon/produced card next to the main hover preview)
-  const sideHoverCreatures = hoveredCardPreview ? getSideCreaturePreviews(hoveredCardPreview) : [];
-  const sidePreview = hoveredCardPreview && (
-    hoveredCardPreview.previewCard ||
-    sideHoverCreatures.length > 0
-  );
+  const sidePreview = hasAnySidePreview(hoveredCardPreview);
   const sideW = COMBAT_POWER_W;   // small mini-card size matches in-combat layout
   const sideH = COMBAT_POWER_H;
   const sideGap = 10;
-  const sidePanelW = sideHoverCreatures.length
-    ? getSideCreaturePanelWidth(sideHoverCreatures.length, sideW)
-    : sideW;
+  const sidePanelW = sidePreview ? getCombinedSidePreviewWidth(hoveredCardPreview, sideW) : 0;
   const totalW = previewW + (sidePreview ? sideGap + sidePanelW : 0);
 
   // Anchor mouse (frozen if shift-lock, live otherwise).
@@ -14099,16 +14158,26 @@ function drawHoverPreview() {
     // the in-combat mini cards, to the right of the main preview.
     if (sidePreview) {
       const sx = x + previewW + sideGap;
+      drawCombinedSidePreview(hoveredCardPreview, sx, y, previewH, sideW, sideH);
       if (hoveredCardPreview.previewCard) {
-        // Center the side preview vertically against the main preview
-        const sy = y + Math.floor((previewH - sideH) / 2);
-        drawCard(hoveredCardPreview.previewCard, sx, sy, sideW, sideH, false, false);
-        // Stash for next frame so hovering the mini swaps it to the
-        // main preview slot (Harvest perk → Goodberry expand on hover).
+        // Stash the previewCard mini's rect so hovering it swaps it to
+        // the main preview slot (Harvest → Goodberry expand on hover).
+        // With combined preview, the previewCard sits at the TOP of the
+        // stack; without creatures it's centered.
+        const creatures = getSideCreaturePreviews(hoveredCardPreview);
+        let sy;
+        if (creatures.length) {
+          const stackGap = 8;
+          const totalH = sideH + (creatures.length * (sideH + stackGap));
+          sy = y + Math.floor((previewH - totalH) / 2);
+        } else {
+          sy = y + Math.floor((previewH - sideH) / 2);
+        }
         _lastSidePreviewRect = { x: sx, y: sy, w: sideW, h: sideH };
         _lastSidePreviewCard = hoveredCardPreview.previewCard;
-      } else if (sideHoverCreatures.length) {
-        drawSideCreatureStack(sideHoverCreatures, hoveredCardPreview, sx, y, previewH, sideW, sideH);
+      } else {
+        _lastSidePreviewRect = null;
+        _lastSidePreviewCard = null;
       }
     } else {
       _lastSidePreviewRect = null;
@@ -15646,6 +15715,67 @@ function getSideCreaturePanelWidth(count, sideW) {
 // Render the creature mini-card grid next to a host card, centered
 // vertically against the host's height. Stamps each creature with
 // the source card's rarity + subtype so frame asset/tint match.
+// Composite side preview: handles a card that has BOTH a previewCard
+// (e.g. a token the play creates) AND previewCreature(s) (e.g. allies
+// the play summons). Pet Spider is the first user — it summons a Pet
+// Spider creature AND drops a Vial of Poison token in hand, so the
+// player sees both side-by-side / stacked next to the main preview.
+function hasAnySidePreview(card) {
+  if (!card) return false;
+  if (card.previewCard) return true;
+  const cr = getSideCreaturePreviews(card);
+  return cr.length > 0;
+}
+
+// Returns the width of the combined side preview panel for layout
+// (the host call site needs to know how wide to reserve before
+// rendering the main card + side area).
+function getCombinedSidePreviewWidth(card, sideW) {
+  if (!card) return 0;
+  const creatures = getSideCreaturePreviews(card);
+  const hasCard = !!card.previewCard;
+  if (hasCard && creatures.length) {
+    // Card + creatures stack in a single column at sideW.
+    return sideW;
+  }
+  if (hasCard) return sideW;
+  if (creatures.length) return getSideCreaturePanelWidth(creatures.length, sideW);
+  return 0;
+}
+
+function drawCombinedSidePreview(card, sx, hostY, hostH, sideW, sideH) {
+  if (!card) return;
+  const creatures = getSideCreaturePreviews(card);
+  const hasCard = !!card.previewCard;
+  if (hasCard && creatures.length) {
+    // Vertical stack: card on top, then each creature below. Single
+    // column, total height summed so we can vertically center against
+    // the main preview area.
+    const stackGap = 8;
+    const totalH = sideH + (creatures.length * (sideH + stackGap));
+    const sy0 = hostY + Math.floor((hostH - totalH) / 2);
+    // Top: the previewCard token (e.g. Vial of Poison).
+    drawCard(card.previewCard, sx, sy0, sideW, sideH, false, false);
+    // Below: the creatures, single-column stacked.
+    let y = sy0 + sideH + stackGap;
+    for (const cr of creatures) {
+      cr._sourceRarity = card.rarity || 'common';
+      cr._sourceSubtype = card.subtype || '';
+      drawCreatureMiniCard(cr, { x: sx, y, w: sideW, h: sideH }, true);
+      y += sideH + stackGap;
+    }
+    return;
+  }
+  if (hasCard) {
+    const sy = hostY + Math.floor((hostH - sideH) / 2);
+    drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
+    return;
+  }
+  if (creatures.length) {
+    drawSideCreatureStack(creatures, card, sx, hostY, hostH, sideW, sideH);
+  }
+}
+
 function drawSideCreatureStack(creatures, sourceCard, sx, hostY, hostH, sideW, sideH) {
   if (!creatures.length) return;
   const stackGap = 8;
@@ -16642,6 +16772,16 @@ function handleDefendingClick(x, y) {
     else if (defSub === 'light_armor' || defSub === 'armor') playSound('block_light');
     else if (defSub === 'clothing') playSound('block_clothing');
     else playSound('click');
+    // Snapshot the card's hand rect BEFORE we lift it so AoE / random
+    // retaliation arrows (apply_fire_all, apply_ice_all, damage_random)
+    // fly out of THIS card's slot in hand instead of the player
+    // character. Mirrors the playCardSelf / playCardOnEnemy path.
+    const defHandRects = getHandCardRects(player.deck.hand);
+    if (defHandRects[i]) {
+      const dr = defHandRects[i];
+      card._handRect = { x: dr.x, y: dr.y, w: dr.w, h: dr.h };
+    }
+    _activePlayCard = card;
     player.deck.playCard(card);
     addLog(`You play ${card.name}`, Colors.GREEN, card);
     // Recharge-cost defense cards self-recharge when played, so any
@@ -16738,13 +16878,17 @@ function handleDefendingClick(x, y) {
         player.ignite = (player.ignite || 0) + eff.value;
         addLog(`  +${eff.value} Ignite (Ignite:${player.ignite})`, Colors.ORANGE);
         spawnTokenOnTarget(player, eff.value, 'Ignite', Colors.ORANGE);
-      } else if (eff.effectType === 'apply_fire_random') {
-        // Molten Scale Armor (defense): on block, fling N Fire at a
-        // random alive enemy creature, falling back to the boss when
-        // there are none. Was silently dropped because the defense
-        // play loop hard-codes effect types — route to the shared
-        // resolveEffect handler so the cancel-Ice + spawn-token +
-        // PowerSurge logic stays in one place.
+      } else if (eff.effectType === 'apply_fire_random'
+                 || eff.effectType === 'apply_fire_all'
+                 || eff.effectType === 'apply_ice_all'
+                 || eff.effectType === 'damage_random') {
+        // Effects that retaliate on block (Molten Scale Armor →
+        // apply_fire_random; Goblin Rocket Boots → apply_fire_all;
+        // Fish Scale Boots → apply_ice_all; Sturdy Boots defense
+        // mode → damage_random). All were silently dropped because
+        // the defense play loop hard-codes effect types — route to
+        // resolveEffect so the cancel-Ice + spawn-token + arrow
+        // logic stays in one place.
         resolveEffect(eff, player, enemy);
       } else if (eff.effectType === 'create_barnacle') {
         // Barnacle Encrusted Plate (Sahuagin Baron drop): every
@@ -16764,6 +16908,7 @@ function handleDefendingClick(x, y) {
         }
       }
     }
+    _activePlayCard = null;
     // Re-apply auto-mitigation against the pending damage
     pendingIncomingDamage = autoMitigateDamage(pendingIncomingDamage);
     if (pendingIncomingDamage <= 0) {
@@ -17342,7 +17487,7 @@ function needsTarget(card) {
      e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
      e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
-     e.effectType === 'careful_strike')
+     e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit')
   );
 }
 
@@ -17436,14 +17581,25 @@ function resolveEffect(eff, caster, target) {
   switch (eff.effectType) {
     case 'damage': {
       const heroism = caster.heroism;
-      if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
+      // heroism_double rider (Aimed Shot card): heroism counts an extra
+      // `value` times on this attack. value=1 means doubled (1 base + 1
+      // bonus = 2x). The bonus stacks are still consumed normally.
+      const heroismExtra = (_activePlayCard && Array.isArray(_activePlayCard.currentEffects))
+        ? _activePlayCard.currentEffects.filter(e => e.effectType === 'heroism_double').reduce((s, e) => s + e.value, 0)
+        : 0;
+      const heroismTotal = heroism * (1 + heroismExtra);
+      if (heroism > 0) {
+        const suffix = heroismExtra > 0 ? ` x${1 + heroismExtra}` : '';
+        addLog(`  (Heroism +${heroismTotal}${suffix})`, Colors.GOLD);
+        caster.heroism = 0;
+      }
       // Arcane Beam: pre-charged bonus damage from cards recharged
       // during beamMode targeting. Stamped on the active card by
       // prepareBeamFire just before play; cleared after read so the
       // recharged-back copy starts fresh next turn.
       const beamBonus = (_activePlayCard && _activePlayCard._beamBonusDamage) || 0;
       if (_activePlayCard && _activePlayCard._beamBonusDamage) delete _activePlayCard._beamBonusDamage;
-      let dmg = Math.max(0, eff.value + beamBonus + heroism + caster.rage + getDamageModifier(caster));
+      let dmg = Math.max(0, eff.value + beamBonus + heroismTotal + caster.rage + getDamageModifier(caster));
       // Ice on the attacker reduces this attack and consumes 1 stack.
       dmg = consumeIceForAttack(caster, dmg);
       // Sahuagin Trident: damaged_bonus_damage on the same card adds
@@ -18054,6 +18210,75 @@ function resolveEffect(eff, caster, target) {
       firePowerSurgeIfArmed(caster, 'poison');
       break;
     }
+    case 'draw_vs_armor': {
+      // Obsidian Rock rider — draw eff.value if target has Armor or
+      // Shield. Placed BEFORE the armor_bonus_damage in the effects
+      // list so the check reads pre-hit state (same pattern as
+      // apply_poison_vs_armor).
+      const hasArmor = (target.armor || 0) > 0 || (target.shield || 0) > 0;
+      if (!hasArmor) break;
+      if (caster !== player) break;
+      const drawn = player.deck.draw(eff.value, MAX_HAND_SIZE);
+      for (const d of drawn) addLog(`  Obsidian splinters! Draw: ${d.name}`, Colors.BLUE, d);
+      if (drawn.length > 0) playDrawSounds(drawn.length);
+      break;
+    }
+    case 'damage_draw_on_hit': {
+      // Sharp Rock — deal eff.value damage, draw 1 if the swing
+      // actually landed (post block/shield/armor). Honors the same
+      // heroism / rage / ice / mark / unpreventable stack as the
+      // regular `damage` case so every modifier flows through.
+      const heroism = caster.heroism;
+      if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg = applyMarkBonus(target, dmg);
+      const unpreventable = consumeUnpreventableBuff(caster);
+      let landed = 0;
+      if (target instanceof Creature) {
+        if (unpreventable) {
+          target.takeUnpreventableDamage(dmg);
+          if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+          landed = dmg;
+        } else {
+          const shieldBefore = target.shield || 0;
+          const actual = target.takeDamage(dmg);
+          if (actual > 0) spawnDamageOnTarget(target, actual);
+          playAttackHitSfx(dmg, actual);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+          landed = actual;
+        }
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (unpreventable) {
+          target.takeDamageFromDeck(dmg);
+          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+          landed = dmg;
+        } else {
+          if (target === enemy) enemyAutoPlayDefenses(dmg);
+          const [blocked, taken] = target.takeDamageWithDefense(dmg);
+          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          playAttackHitSfx(dmg, taken);
+          const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
+          landed = taken;
+        }
+      }
+      consumePoisonBuff(caster, target, landed);
+      consumeIgniteOnAttack(caster, target, dmg);
+      // Draw rider — only on a swing that actually landed damage.
+      if (landed > 0 && caster === player) {
+        const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Hit! Draw: ${d.name}`, Colors.BLUE, d);
+        if (drawn.length > 0) playDrawSounds(drawn.length);
+      }
+      attacksThisTurn++;
+      break;
+    }
     case 'apply_mark': {
       // Hunter's Mark — +N stacks on the target. Persistent debuff:
       // every subsequent attack on this target deals +mark_stacks damage.
@@ -18346,6 +18571,48 @@ function resolveEffect(eff, caster, target) {
         turnsRemaining: eff.value,
       }));
       addLog(`  Magma Tablet: +1 Ignite/turn for ${eff.value} turns`, Colors.ORANGE);
+      break;
+    }
+    case 'damage_random': {
+      // Sturdy Boots defense mode counter — pick a random alive enemy
+      // creature, or the enemy character if none are alive, and deal N
+      // damage there. Invulnerable / vanished creatures are skipped so
+      // the hit doesn't waste on a no-soak target. Heroism is added to
+      // the hit and consumed (matches the standard damage handler), and
+      // rage adds its flat bonus too — so stockpiled buffs still pay
+      // off on the counter swing.
+      const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
+      const t = candidates.length > 0
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
+      if (!t) break;
+      const heroism = caster.heroism || 0;
+      if (heroism > 0) {
+        addLog(`  (Heroism +${heroism})`, Colors.GOLD);
+        caster.heroism = 0;
+      }
+      const dmg = Math.max(0, eff.value + heroism + (caster.rage || 0));
+      const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      spawnPlayerArrowBatch(src, [t], 550, Colors.RED);
+      if (t instanceof Creature) {
+        const shieldBefore = t.shield || 0;
+        const actual = t.takeDamage(dmg);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
+        addLog(`  ${actual} dmg to ${t.name}${absSuffix}`, Colors.RED);
+        playAttackHitSfx(dmg, actual, 0);
+        triggerSplitPower(t, actual > 0);
+        if (!t.isAlive) {
+          spawnDeathAnimation(t);
+          addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t);
+          countAndRemoveDeadCreatures();
+        }
+      } else {
+        t.takeDamageFromDeck(dmg);
+        triggerSplitPower(t, dmg > 0);
+        spawnDamageOnTarget(t, dmg, Colors.RED);
+        addLog(`  ${dmg} dmg to ${t.name}`, Colors.RED);
+        playAttackHitSfx(dmg, dmg, 0);
+      }
       break;
     }
     case 'apply_fire_random': {
@@ -19345,6 +19612,18 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'create_vial_of_poison': {
+      // Pet Spider summons a spider AND drops a Vial of Poison token
+      // in hand. Single token, capped at MAX_HAND_SIZE — if hand is
+      // full the vial is lost (logged).
+      if (player.deck.hand.length >= MAX_HAND_SIZE) {
+        addLog('  Vial of Poison lost — hand full!', Colors.GRAY);
+      } else {
+        player.deck.hand.push(createVialOfPoison());
+        addLog('  Vial of Poison created in hand!', Colors.GREEN);
+      }
+      break;
+    }
     case 'create_goodberries': {
       // Roll 1..eff.value Goodberry tokens (Ranger ability text:
       // "Create some Goodberries"). Tokens go straight to hand
@@ -19365,6 +19644,10 @@ function resolveEffect(eff, caster, target) {
     }
     case 'recharge_extra':
       // Cost is paid via the card recharge phase before targeting; nothing to do here.
+      break;
+    case 'heroism_double':
+      // Rider read by the 'damage' case off _activePlayCard.currentEffects;
+      // nothing to resolve standalone.
       break;
     case 'enemy_gain_armor':
       // Obsidian Shard token on banish — the Oracle (or whichever
@@ -31411,6 +31694,10 @@ const CARD_SFX_OVERRIDES = {
   sturdy_boots:             { flesh: 'boots_flesh', defense: 'boots_flesh' },
   goblin_rocket_boots:      { flesh: 'goblin_explosion', blocked: 'goblin_explosion',
                               defense: 'goblin_explosion' },
+  // Fish Scale Boots — wet body-fall on the block (the boots squelch
+  // into the stance). The Ice spread that follows brings its own
+  // cold_whoosh via the apply_ice_all handler's status SFX.
+  fish_scale_boots:         { flesh: 'boots_flesh', defense: 'water_bodyfall_01' },
   zhosts_buckler:           { flesh: 'shield_flesh', blocked: 'shield_blocked' },
   kobold_shield:            { flesh: 'shield_flesh', blocked: 'shield_flesh' },
   kobold_spear:             { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
@@ -31430,6 +31717,11 @@ const CARD_SFX_OVERRIDES = {
   cleave:                   { flesh: 'axe_2h_flesh',  blocked: 'axe_blocked' },
   quick_strike:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   aimed_shot:               { flesh: 'bow_flesh',     blocked: 'bow_blocked',
+                              play:  'aimed_shot' },
+  // Aimed Shot card (Ranger + Rogue tier-1) — same bow family as
+  // Short Bow / Multi Shot / Piercing Shot: draw cue on cast, bow
+  // thwack on flesh, bow blocked on shield.
+  aimed_shot_card:          { flesh: 'bow_flesh',     blocked: 'bow_blocked',
                               play:  'aimed_shot' },
   hunters_mark:             { play: 'bow_flesh' },
   crush:                    { playMulti: { key: 'rocks_impact_small', count: 2, stagger: 260 } },
@@ -31496,7 +31788,7 @@ const CARD_SFX_OVERRIDES = {
   ice_token:                { play: 'ice_flesh' },
   feral_swipe:              { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
                               play:  'bear_form_attack' },
-  arcane_shield:            { play: 'arcane_shield' },
+  arcane_shield:            { play: 'arcane_shield', defense: 'arcane_shield' },
   pet_slime:                { play: 'ooze_attack' },
   tamed_rat:                { play: 'rat_screech' },
   // Gnikan's Staff cast — ice-blast cue on play so the summoned
@@ -32719,6 +33011,15 @@ function getCodexLayout() {
 function drawCodex() {
   codexClickAreas = [];
   codexHScrollbarBounds = [];
+  // Reset per-frame hit-area registries so the hover preview's keyword
+  // icons + inline pill tooltips register cleanly while the player is
+  // in the codex. Without this clear, hit areas stamped by previous
+  // states bleed through and the codex's own preview-keyword hovers
+  // never fire (Shift-freeze pinned a preview but mousing over the
+  // pinned card's icons did nothing).
+  logCardHitAreas.length = 0;
+  iconHitAreas.length = 0;
+  cardBadgeHitAreas.length = 0;
   // Hover previews: while Shift is held, pin whichever preview was active so
   // the player can mouse over keyword icons (Sentinel, Heroism, Shield, …)
   // to read tooltips. Without Shift, reset each frame so previews only
@@ -34738,7 +35039,7 @@ function buildCodexSourceCache() {
 
   // Class powers
   const classPowers = [
-    ['Paladin', 'Cleave'], ['Ranger', 'Aimed Shot'], ['Wizard', 'Elemental Infusion'],
+    ['Paladin', 'Cleave'], ['Ranger', 'Take Aim'], ['Wizard', 'Elemental Infusion'],
     ['Rogue', 'Quick Strike'], ['Warrior', 'Battle Fury'], ['Druid', 'Feral Form'],
   ];
   const classPowerIds = { cleave: 'Paladin', aimed_shot: 'Ranger', elemental_infusion: 'Wizard',

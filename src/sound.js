@@ -621,6 +621,10 @@ export const SOUND_MAP = {
   level_up_screen: 'Magic/buff_powerup_02',
   perk_pick:       'Magic/buff_powerup_01',
   splash_dive:     'Misc/water_bodyfall_01',
+  // Direct alias used by Fish Scale Boots' defense cue — same sample as
+  // splash_dive, kept under the file's own name so the CARD_SFX_OVERRIDES
+  // entry reads as the filename a designer would expect.
+  water_bodyfall_01: 'Misc/water_bodyfall_01',
   // Water splash — lighter swirl/whirl than the body-fall. Wired as
   // the cast cue for the Sahuagin Priest's Whirlpool spell.
   water_splash:    'Misc/water_splash_01',
