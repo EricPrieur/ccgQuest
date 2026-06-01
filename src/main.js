@@ -12,7 +12,7 @@ import {
 } from './character.js';
 import { Deck } from './deck.js';
 import { Creature } from './creature.js';
-import { CardEffect } from './card.js';
+import { Card, CardEffect } from './card.js';
 import {
   getPaladinStarterDeck, getRangerStarterDeck, getWizardStarterDeck,
   getRogueStarterDeck, getWarriorStarterDeck, getDruidStarterDeck,
@@ -389,6 +389,15 @@ let _encounterBgOverride = null;
 // the burning state BEFORE their own if_burning_heal_fire could clear
 // the stacks. Mirrors PY game.py's self._was_burning.
 let _wasBurningAtCardStart = false;
+// Shield count snapshot, taken at card-play start so draw_if_no_shield
+// can check the pre-play value even if a sibling gain_shield earlier
+// in the effects array has already pushed shield above 0.
+let _shieldAtCardStart = 0;
+// Flag set when a defense card's scry_pick fired BUT the incoming
+// damage was already fully absorbed. We delay finishIncomingDamage
+// until the scry overlay is dismissed (handleScrySelectClick), so
+// the SCRY_SELECT state doesn't get clobbered back to COMBAT.
+let _deferredFinishAfterScry = false;
 // Set while buildCodexSourceCache iterates enemy setups in a sandbox.
 // Enemy setup branches with audible side effects (magma_mephit's
 // staggered spawn whoosh, etc.) check this so the codex cache build
@@ -1298,6 +1307,18 @@ let barrageShotsFired = 0;        // how many shots already fired (for cancel ch
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
 
+// Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
+// element shots, each picks its own target — same enemy or different).
+// No pre-pay phase, no draw on finish; the card stays in hand because it
+// carries stays_in_hand. `fireBarrageEffectType` is the effect each shot
+// resolves ('apply_fire_multi' or 'apply_ice_multi') so the same flow
+// handles both elements.
+let fireBarrageMode = false;
+let fireBarrageShotsLeft = 0;
+let fireBarrageShotsFired = 0;
+let fireBarrageCardIndex = -1;
+let fireBarrageEffectType = 'apply_fire_multi';
+
 // Arcane Beam state (click cards in hand to charge up bonus damage, click
 // enemy to fire). Mirrors the barrage UX: card index is held, snapshots
 // the hand for cancel/refund, and the fire path reads the count of
@@ -1401,6 +1422,8 @@ const CARD_REGISTRY = {
   greatclub: createGreatclub, quarterstaff: createQuarterstaff, ale: createAle,
   thorb_card: createThorbCard, thorb_card_2: createThorbUpgradedCard,
   dwarven_crossbow: createDwarvenCrossbow, dwarven_tower_shield: createDwarvenTowerShield,
+  runeforged_buckler: createRuneforgedBuckler,
+  chain_shirt: createChainShirt, ironforge_chainmail: createIronforgeChainmail,
   dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew,
   dwarven_warhammer: createDwarvenWarhammer, miners_pickaxe: createMinersPickaxe,
   dwarven_scout: createDwarvenScoutCard,
@@ -2658,6 +2681,9 @@ function handleKeyDown(key, event) {
       }
       if (barrageMode) {
         cancelBarrage();
+      }
+      if (fireBarrageMode) {
+        cancelFireBarrage();
       }
       if (beamMode) {
         cancelBeamMode();
@@ -4194,6 +4220,23 @@ const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_
 let _wellRestedDeckSize = -1;
 function setWellRested() {
   if (player && player.deck) _wellRestedDeckSize = player.deck.masterDeck.length;
+  // Rest also clears any active Provisions (Ale, future food/drink
+  // buffs). The buff was "until next rest" so this is the trigger.
+  clearActiveProvisions();
+}
+
+// Strip every Provision-flavored PersistentBuff (the food/drink slot
+// system). Beverage and Meal slots each hold at most one provision;
+// both clear on rest. Logs each removal so the player sees what
+// expired. Idempotent.
+function clearActiveProvisions() {
+  if (!player || !Array.isArray(player.persistentBuffs)) return;
+  const expired = player.persistentBuffs.filter(b => b._provisionSlot);
+  if (expired.length === 0) return;
+  player.persistentBuffs = player.persistentBuffs.filter(b => !b._provisionSlot);
+  for (const b of expired) {
+    addLog(`${b.name} fades after your rest.`, Colors.GRAY);
+  }
 }
 function isWellRested() {
   if (_wellRestedDeckSize < 0 || !player || !player.deck) return false;
@@ -9011,6 +9054,16 @@ function setupEnemyForCombat(enemyId) {
 }
 
 function drawMap() {
+  // Reset hover-preview channels each frame so the provision icon
+  // tooltip (set by drawMapProvisionIcons) clears the moment the
+  // cursor leaves the icon — without this the popped buff card
+  // would persist forever once shown. Mirrors the same pattern
+  // inventory / codex use at the top of their draw functions.
+  if (!isShiftFrozen()) {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
   const currentNode = currentMap.getCurrentNode();
   const currentArea = currentNode?.mapArea || '';
   const mapImg = images[`map_${currentArea}`];
@@ -9184,8 +9237,124 @@ function drawMap() {
   // consistent way to hit those screens from the map (especially on
   // touchscreen / mobile where keyboard shortcuts aren't available).
   drawMapActionButtons();
+  // Bottom-left provision indicators — Beverage slot + Meal slot.
+  // Shows the active provision's art (or a grey placeholder when
+  // empty). Hover surfaces the full buff card / a "No X" tooltip.
+  drawMapProvisionIcons();
+
+  // Hover preview — the provision icons stash a synthesized buff card
+  // into hoveredCardPreview when an active slot is hovered. Without
+  // this call, the map state has no preview renderer wired up.
+  if (hoveredCardPreview || hoveredPowerPreview || hoveredCreaturePreview) drawHoverPreview();
 
   ctx.textAlign = 'left';
+}
+
+// === Map Provision Icons ===================================================
+// Two persistent slot indicators (Beverage + Meal) in the bottom-left so
+// the player can see at a glance whether they have an active food/drink
+// buff between combats. Hover the icon to pop the buff card (or a "No
+// Beverage" / "No Meal" tooltip when the slot is empty).
+function getMapProvisionIconRects() {
+  const iconSize = 40;
+  const gap = 8;
+  const padLeft = 16;
+  const padBottom = 16;
+  const y = SCREEN_HEIGHT - padBottom - iconSize;
+  return {
+    beverage: { x: padLeft, y, w: iconSize, h: iconSize, slot: 'beverage' },
+    meal: { x: padLeft + iconSize + gap, y, w: iconSize, h: iconSize, slot: 'meal' },
+  };
+}
+
+function getActiveProvision(slot) {
+  if (!player || !Array.isArray(player.persistentBuffs)) return null;
+  return player.persistentBuffs.find(b => b._provisionSlot === slot) || null;
+}
+
+function drawMapProvisionIcons() {
+  const rects = getMapProvisionIconRects();
+  for (const key of ['beverage', 'meal']) {
+    const r = rects[key];
+    const pb = getActiveProvision(key);
+    const slotLabel = key === 'beverage' ? 'Beverage' : 'Meal';
+    if (pb) {
+      // Active slot: show the source card art (Ale.jpg etc.).
+      const img = images[pb.imageId] || getCardArt(pb.imageId);
+      if (img) {
+        ctx.drawImage(img, r.x, r.y, r.w, r.h);
+      } else {
+        ctx.fillStyle = '#3a6a3a';
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+      }
+      // Slot-colored border so the player can tell the two icons apart
+      // at a glance: amber for Beverage, green for Meal — matches the
+      // BEVERAGE / MEAL pills on the card descriptions.
+      ctx.strokeStyle = key === 'beverage' ? '#f0b060' : '#88d088';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+    } else {
+      // Empty slot: muted grey square with a single-letter glyph + a
+      // dashed border so it visually reads as "open slot, fill me".
+      ctx.fillStyle = 'rgba(40,40,50,0.85)';
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeStyle = key === 'beverage' ? 'rgba(240,176,96,0.6)' : 'rgba(136,208,136,0.6)';
+      ctx.lineWidth = 1;
+      if (typeof ctx.setLineDash === 'function') ctx.setLineDash([3, 3]);
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+      if (typeof ctx.setLineDash === 'function') ctx.setLineDash([]);
+      ctx.fillStyle = key === 'beverage' ? '#f0b060' : '#88d088';
+      ctx.font = 'bold 20px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(key === 'beverage' ? 'B' : 'M', r.x + r.w / 2, r.y + r.h / 2 + 1);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+    }
+    // Hover: route to the same hoveredCardPreview channel the
+    // persistent-buff section uses (so the full card pops at the
+    // cursor). Empty slot → small inline tooltip drawn this frame
+    // (using showToast would persist past hover-end).
+    if (hitTest(mouseX, mouseY, r) && !isShiftFrozen()) {
+      if (pb) {
+        hoveredCardPreview = new Card({
+          id: pb.imageId || `buff_${pb.id}`,
+          name: pb.name,
+          description: pb.description || `${slotLabel} buff — active until you rest.`,
+          shortDesc: pb.description || '',
+          subtype: 'buff',
+          cardType: CardType.ABILITY,
+          costType: CostType.FREE,
+          effects: [],
+          rarity: 'uncommon',
+        });
+      } else {
+        // Frame-scoped inline tooltip above the icon — drawn now,
+        // gone next frame when hover ends. No timer to outlast the
+        // mouse.
+        const label = `No ${slotLabel} active`;
+        ctx.font = '13px sans-serif';
+        const tw = ctx.measureText(label).width;
+        const padX = 8;
+        const padY = 5;
+        const tipW = tw + padX * 2;
+        const tipH = 22;
+        const tipX = r.x + r.w / 2 - tipW / 2;
+        const tipY = r.y - tipH - 6;
+        ctx.fillStyle = 'rgba(0,0,0,0.88)';
+        ctx.fillRect(tipX, tipY, tipW, tipH);
+        ctx.strokeStyle = key === 'beverage' ? '#f0b060' : '#88d088';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tipX, tipY, tipW, tipH);
+        ctx.fillStyle = '#e8e8e8';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, tipX + tipW / 2, tipY + tipH / 2);
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'left';
+      }
+    }
+  }
 }
 
 function getMapActionButtonRects() {
@@ -12310,6 +12479,10 @@ const KEYWORD_ICONS = {
   sentinel: { isTextKeyword: true, color: '#c8a060', label: 'Sentinel', desc: 'Attacks must target this creature first while it is alive.' },
   haste: { isTextKeyword: true, color: '#9cf07c', label: 'Haste', desc: 'Ready to attack the turn it enters play.' },
   block: { isTextKeyword: true, color: '#a8d8ff', label: 'Block N', desc: 'Mitigates up to N damage from an incoming attack. Played reactively in the defending phase when an enemy attacks you.' },
+  strip: { isTextKeyword: true, color: '#ffb070', label: 'Strip N',
+           desc: 'Remove up to N Shields from the target before the rest of the effects resolve. With "randomly", picks distinct shielded enemies and strips 1 each (total = N).' },
+  douse: { isTextKeyword: true, color: '#7cc8ff', label: 'Douse N',
+           desc: 'Remove N Fire stacks from yourself. "Douse Fire" (no number) removes all of them.' },
   // True (unpreventable) damage — bypasses Shield, Armor, Block,
   // and the defense-phase accumulator entirely. Goes straight to
   // the deck. Status effects like Fire / Poison ticks also count as
@@ -12336,7 +12509,7 @@ const KEYWORD_ICONS = {
              desc: 'Card destination: the card goes to the bottom of your draw pile after play — you\'ll see it again later in this combat.' },
   discard: { isTextKeyword: true, color: '#e89870', label: 'Discard',
              desc: 'Card destination: the card goes to the discard pile — that\'s the HP cost (your HP equals deck size). Healing can move cards back from discard into your deck.' },
-  banish:  { isTextKeyword: true, color: '#b878d8', label: 'Banish',
+  consume: { isTextKeyword: true, color: '#b878d8', label: 'Consume',
              desc: 'Card destination: the card is permanently removed from your deck for the rest of the run.' },
 };
 
@@ -12411,7 +12584,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -12434,6 +12607,15 @@ function tokenizeKeywordText(text, opts = {}) {
       } else if (phrase === 'Next Attack') {
         badge = { type: 'badge', label: 'NEXT ATTACK',
           bg: 'rgba(70,30,80,0.92)', border: '#d090e8', fg: '#f0d8ff' };
+      } else if (phrase === 'On Kill') {
+        // Triggers when this card's swing kills (drops to 0 HP) a
+        // creature. Works on both sides — player killing an enemy
+        // creature, or enemy killing a player ally. Dark crimson
+        // palette so it reads as a kill-time consequence, distinct
+        // from the orange HIT (damage-landed) and the red ON ATTACK
+        // (any swing) pills.
+        badge = { type: 'badge', label: 'ON KILL',
+          bg: 'rgba(90,20,30,0.92)', border: '#e06070', fg: '#ffc0c8' };
       } else if (phrase === 'On Attack') {
         // Triggers when the creature actually swings (Goblin Sapper
         // self-destruct rider). Reddish palette so it reads as
@@ -12502,6 +12684,34 @@ function tokenizeKeywordText(text, opts = {}) {
         // "Damaged" gating.
         badge = { type: 'badge', label: 'HIT',
           bg: 'rgba(130,50,30,0.92)', border: '#ff9866', fg: '#ffe0c8' };
+      } else if (phrase === 'First Shield') {
+        // Shield-stack payoff used on Buckler family — fires only when
+        // the caster started the card with 0 Shield (snapshot read by
+        // draw_if_no_shield). Block-blue palette so the pill reads as
+        // a defensive trigger and visually pairs with the Shield icon
+        // on the same line.
+        badge = { type: 'badge', label: 'FIRST SHIELD',
+          bg: 'rgba(40,80,130,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Beverage') {
+        // Beverage slot — drinks (Ale, Dwarven Brew) leave a lingering
+        // buff that re-fires every combat for N turns until the player
+        // rests. Amber palette evokes ale / mead.
+        badge = { type: 'badge', label: 'BEVERAGE',
+          bg: 'rgba(110,70,20,0.92)', border: '#f0b060', fg: '#ffdcb0' };
+      } else if (phrase === 'Meal') {
+        // Meal slot — food (Chicken Leg, Lambas Bread, future meals)
+        // leave a lingering buff like beverages but in a separate slot,
+        // so the player can stack one meal + one drink. Green palette
+        // for wholesome food.
+        badge = { type: 'badge', label: 'MEAL',
+          bg: 'rgba(40,90,40,0.92)', border: '#88d088', fg: '#d4f0d4' };
+      } else if (phrase === 'Stays in hand') {
+        // Persistent / passive cue — the card never leaves the hand.
+        // Muted slate palette so it reads as meta information rather
+        // than a triggered effect (it doesn't fire on a moment, it's
+        // an always-on property of the card).
+        badge = { type: 'badge', label: 'STAYS IN HAND',
+          bg: 'rgba(70,75,85,0.92)', border: '#b0b8c4', fg: '#dde2ec' };
       } else if (phrase === '2 Targets') {
         // Cleave-style condition — fires when the player picks 2
         // distinct targets, regardless of whether damage actually
@@ -12527,10 +12737,10 @@ function tokenizeKeywordText(text, opts = {}) {
   // keyword. In perk mode we drop "Armor" from the list so the word
   // stays as literal text (refers to card category).
   const isPerk = !!opts.asPerk;
-  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Block\\s+\\d+', 'Heroism', 'Shields', 'Shield',
+  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire', 'Ice', 'Poison', 'Shock', 'Rage', 'Ignite', 'Sentinel', 'Haste',
-    'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Banish'];
+    'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
   let lastIdx = 0;
   let match;
@@ -12958,6 +13168,11 @@ function drawIconTextLeft(text, startX, startY, maxWidth, fontSize, color = '#ee
 const PILL_DESCRIPTIONS = {
   'HIT': 'Triggers only when this swing actually deals damage (not fully absorbed by block/shield/armor).',
   '2 TARGETS': 'Triggers when you pick 2 distinct targets — no damage needed, just the second pick.',
+  'FIRST SHIELD': 'Triggers only when you had 0 Shield BEFORE playing this card — the first shield card in a sequence pays off, follow-ups do not.',
+  'STAYS IN HAND': 'The card never leaves your hand — no recharge or discard pile. You can keep using it every turn at its normal cost.',
+  'ON KILL': 'Fires when this swing drops a creature to 0 HP. Works on both sides — if an enemy plays a kill-rider card and slays one of your allies, they get the benefit too.',
+  'BEVERAGE': 'The drink slot. Buff stays active across every combat until you rest. You can only have one Beverage at a time — consuming another replaces it.',
+  'MEAL': 'The food slot. Buff stays active across every combat until you rest. You can only have one Meal at a time — consuming another replaces it. Independent of the Beverage slot.',
   'ON RECHARGE': 'Fires when the card is sent to the recharge pile (paid as a cost or end-of-turn).',
   'WHEN RECHARGED': 'Fires when this card itself is recharged (Workbench enchant, etc.).',
   'NEXT ATTACK': 'Applies once to your next attack and is then consumed.',
@@ -13378,7 +13593,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     const sideInset = 6;
     const bottomInset = 4; // tight to the frame; was 10 (too high, left a gap)
     const lines = countWrappedLines(descText, w - sideInset * 2 - 4, descFontSize, smallOpts);
-    const linesToShow = Math.min(2, lines);
+    // Cap at 3 so cards with denser shortDesc (Mephit Skin Gloves /
+    // Sandals, Zhost's Buckler, Sturdy Boots) can render all their
+    // lines without the third one falling outside the box.
+    const linesToShow = Math.min(3, lines);
     const iconSize = Math.floor(descFontSize * 1.3);
     const lineH = Math.max(descFontSize + 2, iconSize + 1);
     // +7 (was +4) so the box is 3 px taller — top moves up by 3 px while
@@ -13879,6 +14097,26 @@ function drawCombat() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(`Done (${barrageShotsFired}/3)`, doneR.x + doneR.w / 2, doneR.y + doneR.h / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+    } else if (fireBarrageMode && fireBarrageShotsLeft > 0 && fireBarrageCardIndex >= 0 && fireBarrageCardIndex < player.deck.hand.length) {
+      // Fire barrage: arrow from Wand card in hand to cursor (orange).
+      const handRects = getHandCardRects(player.deck.hand);
+      const r = handRects[fireBarrageCardIndex];
+      drawTargetingArrow(r.x + r.w / 2, r.y + r.h / 2 - 20, mouseX, mouseY, Colors.ORANGE);
+      const totalShots = fireBarrageShotsLeft + fireBarrageShotsFired;
+      const doneR = { x: COMBAT_LEFT_W / 2 - 80, y: COMBAT_DIVIDER_Y + 35, w: 160, h: 40 };
+      const doneHov = hitTest(mouseX, mouseY, doneR);
+      ctx.fillStyle = doneHov ? '#3a8a3a' : '#1c5a1c';
+      ctx.fillRect(doneR.x, doneR.y, doneR.w, doneR.h);
+      ctx.strokeStyle = Colors.GREEN;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(doneR.x, doneR.y, doneR.w, doneR.h);
+      ctx.fillStyle = Colors.WHITE;
+      ctx.font = 'bold 16px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`Done (${fireBarrageShotsFired}/${totalShots})`, doneR.x + doneR.w / 2, doneR.y + doneR.h / 2);
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'left';
     } else if (selectedCardIndex >= 0 && selectedCardIndex < player.deck.hand.length) {
@@ -14962,7 +15200,7 @@ function getSummonPreview(card) {
     guards: { name: 'Kobold Guard', atk: 2, hp: 1 },
     thorb_card: { name: 'Thorb', atk: 2, hp: 4, abilities: 'Companion' },
     thorb_card_2: { name: 'Thorb', atk: 2, hp: 5, abilities: 'Sentinel, Companion' },
-    summon_treants: { name: 'Treant', atk: 2, hp: 3 },
+    summon_treants: { name: 'Treant', atk: 2, hp: 1, abilities: 'Haste' },
     magma_mephit_summon: { name: 'Magma Mephit', atk: 2, hp: 5, abilities: 'Fire Immune' },
     large_boulder: { name: 'Large Boulder', atk: 6, hp: 4, abilities: '1 Armor, Self-Destruct' },
   };
@@ -16532,6 +16770,20 @@ function handleCombatClick(x, y) {
           showStyledToast(`Recharge: Click another card to recharge as cost (${rechargeNeeded} more, ESC to cancel)`, 'recharge');
           return;
         }
+        // Wand of Fire / Gravechill Shard — elemental-barrage flow.
+        // Click card, then pick N targets one at a time (same enemy
+        // stacks, different enemies spread). No pre-pay; card stays
+        // in hand.
+        const fireBarrageEff = (card.effects || []).find(e => e.effectType === 'apply_fire_multi');
+        if (fireBarrageEff && needsTarget(card)) {
+          enterFireBarrage(i, fireBarrageEff.value || 1, 'apply_fire_multi');
+          return;
+        }
+        const iceBarrageEff = (card.effects || []).find(e => e.effectType === 'apply_ice_multi');
+        if (iceBarrageEff && needsTarget(card)) {
+          enterFireBarrage(i, iceBarrageEff.value || 1, 'apply_ice_multi');
+          return;
+        }
         // Check for barrage (Magic Missiles optional extra recharge)
         const hasBarrage = (card.effects || []).some(e => e.effectType === 'barrage');
         if (hasBarrage && needsTarget(card)) {
@@ -16796,6 +17048,7 @@ function handleDefendingClick(x, y) {
     // an if_burning_heal_fire sibling sees on the way in. Matches the
     // play-from-hand path (playCardSelf / playCardOnEnemy).
     _wasBurningAtCardStart = (player.getStatus('FIRE') || 0) > 0;
+    _shieldAtCardStart = player.shield || 0;
     for (const eff of effectsToApply) {
       if (eff.effectType === 'block') {
         player.addBlock(eff.value);
@@ -16849,14 +17102,15 @@ function handleDefendingClick(x, y) {
         // with the play-from-hand path in resolveEffect.
         healPlayer(eff.value);
       } else if (eff.effectType === 'if_burning_heal_fire') {
-        // Mephit Skin Sandals / Gloves on recharge. Burn off up to N
+        // Mephit Skin Sandals / Gloves on recharge. Strip up to N
         // FIRE stacks using the LIVE state (so the snapshot below sees
-        // burning_at_start, not the post-heal value).
+        // burning_at_start, not the post-douse value). Logged as
+        // "Douse" to match the in-game Douse keyword.
         const fire = player.getStatus('FIRE') || 0;
         if (fire > 0) {
-          const heal = Math.min(eff.value, fire);
-          player.removeStatus('FIRE', heal);
-          addLog(`  Burning! Heal ${heal} Fire (Fire:${player.getStatus('FIRE') || 0})`, Colors.ORANGE);
+          const cleared = Math.min(eff.value, fire);
+          player.removeStatus('FIRE', cleared);
+          addLog(`  Burning! Douse ${cleared} Fire (Fire:${player.getStatus('FIRE') || 0})`, Colors.ORANGE);
         }
       } else if (eff.effectType === 'if_burning_draw') {
         // Mephit Skin Sandals on recharge. Reads _wasBurningAtCardStart
@@ -16878,10 +17132,35 @@ function handleDefendingClick(x, y) {
         player.ignite = (player.ignite || 0) + eff.value;
         addLog(`  +${eff.value} Ignite (Ignite:${player.ignite})`, Colors.ORANGE);
         spawnTokenOnTarget(player, eff.value, 'Ignite', Colors.ORANGE);
+      } else if (eff.effectType === 'dodge_chance_all') {
+        // Shadow Cloak — roll eff.value% to negate every point of the
+        // pending incoming damage on this swing. On success, the
+        // autoMitigate / finishIncomingDamage path below sees 0
+        // remaining and exits DEFENDING cleanly. On failure the swing
+        // lands at full force (no fallback block — this is a gamble).
+        const chance = Math.max(0, Math.min(100, eff.value));
+        const roll = Math.random() * 100;
+        if (roll < chance) {
+          addLog(`  ${card.name}: Dodged! (${Math.round(chance)}%)`, Colors.GOLD);
+          pendingIncomingDamage = 0;
+          // Visual: same gold sparkle the heroism cue uses, so the
+          // dodge reads as "blessed luck" not "block".
+          spawnTokenOnTarget(player, 1, 'Dodge!', Colors.GOLD);
+        } else {
+          addLog(`  ${card.name}: Failed to dodge (${Math.round(chance)}%)`, Colors.GRAY);
+        }
       } else if (eff.effectType === 'apply_fire_random'
+                 || eff.effectType === 'apply_ice_random'
                  || eff.effectType === 'apply_fire_all'
                  || eff.effectType === 'apply_ice_all'
-                 || eff.effectType === 'damage_random') {
+                 || eff.effectType === 'damage_random'
+                 || eff.effectType === 'destroy_shield_random'
+                 || eff.effectType === 'draw_if_no_shield'
+                 || eff.effectType === 'scry_pick'
+                 || eff.effectType === 'clear_fire'
+                 || eff.effectType === 'heal_random'
+                 || eff.effectType === 'block_random'
+                 || eff.effectType === 'gain_shield_random') {
         // Effects that retaliate on block (Molten Scale Armor →
         // apply_fire_random; Goblin Rocket Boots → apply_fire_all;
         // Fish Scale Boots → apply_ice_all; Sturdy Boots defense
@@ -16892,10 +17171,12 @@ function handleDefendingClick(x, y) {
         resolveEffect(eff, player, enemy);
       } else if (eff.effectType === 'create_barnacle') {
         // Barnacle Encrusted Plate (Sahuagin Baron drop): every
-        // recharge spawns N Barnacle banish-heal tokens. PY adds
-        // them to hand if there's room, otherwise to the recharge
-        // pile so they land naturally next turn.
-        for (let n = 0; n < eff.value; n++) {
+        // recharge spawns 1..eff.value Barnacle banish-heal tokens
+        // (randomized). PY adds them to hand if there's room,
+        // otherwise to the recharge pile so they land naturally
+        // next turn. eff.value is the MAX roll, not a fixed count.
+        const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+        for (let n = 0; n < rolled; n++) {
           const barnacle = createBarnacle();
           player.deck.masterDeck.push(barnacle);
           if (player.deck.hand.length < MAX_HAND_SIZE) {
@@ -16913,7 +17194,15 @@ function handleDefendingClick(x, y) {
     pendingIncomingDamage = autoMitigateDamage(pendingIncomingDamage);
     if (pendingIncomingDamage <= 0) {
       addLog(`  All damage absorbed!`);
-      finishIncomingDamage();
+      // If a scry_pick on this card opened the SCRY overlay, defer
+      // finishIncomingDamage until the player dismisses scry — calling
+      // it now would clobber state back to COMBAT and silently drop
+      // the overlay.
+      if (state === GameState.SCRY_SELECT) {
+        _deferredFinishAfterScry = true;
+      } else {
+        finishIncomingDamage();
+      }
     } else {
       // Update toast with new remaining
       showStyledToast(`Incoming ${pendingIncomingDamage} damage. Play defense cards or pass.`, 'damage');
@@ -17031,6 +17320,22 @@ function handleTargetingClick(x, y) {
       return;
     }
     return; // ignore other clicks during barrage
+  }
+
+  // Fire-barrage (Wand of Fire) — same per-click resolve as Magic
+  // Missiles' barrage but each shot applies 1 Fire instead of damage.
+  if (fireBarrageMode && fireBarrageShotsLeft > 0) {
+    const doneR = { x: COMBAT_LEFT_W / 2 - 80, y: COMBAT_DIVIDER_Y + 35, w: 160, h: 40 };
+    if (hitTest(x, y, doneR)) {
+      finishFireBarrage();
+      return;
+    }
+    const target = getClickedEnemyTarget(x, y);
+    if (target) {
+      resolveFireBarrageShot(target);
+      return;
+    }
+    return;
   }
 
   // Heal-targeting (Flash Heal, Holy Light, Healing Touch, ...): click
@@ -17187,6 +17492,7 @@ function handleTargetingClick(x, y) {
     cancelCardRecharge();
   }
   cancelBarrage();
+  if (fireBarrageMode) cancelFireBarrage();
   if (beamMode) cancelBeamMode();
   healTargetMode = false;
   // Restore hand order (snapshot taken when targeting started) so the
@@ -17293,12 +17599,16 @@ function resolveBarrageShot(target) {
   if (barrageCardIndex >= 0 && barrageCardIndex < player.deck.hand.length) {
     _activePlayCard = player.deck.hand[barrageCardIndex];
   }
-  let dmg = 1 + player.heroism + getDamageModifier(player);
+  let dmg = 1 + player.heroism + (player.rage || 0) + getDamageModifier(player);
   if (player.heroism > 0) {
     addLog(`  (Heroism +${player.heroism})`, Colors.GOLD);
     player.heroism = 0;
   }
+  dmg = Math.max(0, dmg);
   dmg = consumeIceForAttack(player, dmg);
+  dmg += getIncomingDamageModifier(target);
+  dmg = Math.max(0, dmg);
+  dmg = applyMarkBonus(target, dmg);
   addLog(`  Shot ${barrageShotsFired}:`, Colors.GRAY);
   if (target === enemy) {
     enemyAutoPlayDefenses(dmg);
@@ -17370,6 +17680,98 @@ function cancelBarrage() {
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
   barrageCardIndex = -1;
+}
+
+// === Fire Barrage (Wand of Fire) ============================================
+// Stays-in-hand wand that fires N apply-fire shots; each shot picks its own
+// target (same enemy twice = double-stack, two different enemies = spread).
+// Mirrors Magic Missiles' barrage UX but without the pre-pay phase or
+// finish-time draw — the card never leaves the hand because it carries
+// stays_in_hand.
+function enterFireBarrage(handIndex, shots, effectType = 'apply_fire_multi') {
+  const card = player.deck.hand[handIndex];
+  if (!card) return;
+  fireBarrageMode = true;
+  fireBarrageShotsLeft = shots;
+  fireBarrageShotsFired = 0;
+  fireBarrageCardIndex = handIndex;
+  fireBarrageEffectType = effectType;
+  selectedCardIndex = handIndex;
+  _handOrderSnapshot = [...player.deck.hand];
+  state = GameState.TARGETING;
+  // Snapshot the hand rect so the per-shot arrow flies from the card.
+  const handRects = getHandCardRects(player.deck.hand);
+  if (handRects[handIndex]) {
+    const r = handRects[handIndex];
+    card._handRect = { x: r.x, y: r.y, w: r.w, h: r.h };
+  }
+  addLog(`You play ${card.name}`, Colors.GREEN, card);
+  showStyledToast(`${card.name}: ${shots} shot${shots > 1 ? 's' : ''} left — click a target`, 'multi');
+}
+
+function resolveFireBarrageShot(target) {
+  fireBarrageShotsLeft--;
+  fireBarrageShotsFired++;
+  // Re-stamp the active card so the per-shot arrow + SFX in
+  // apply_fire_multi / apply_ice_multi can read _activePlayCard._handRect
+  // for the source.
+  if (fireBarrageCardIndex >= 0 && fireBarrageCardIndex < player.deck.hand.length) {
+    _activePlayCard = player.deck.hand[fireBarrageCardIndex];
+  }
+  addLog(`  Shot ${fireBarrageShotsFired}:`, Colors.GRAY);
+  // Single shot = 1 Fire or 1 Ice depending on the card. The handler
+  // keeps the colored arrow + status SFX + Fire/Ice-cancel logic in
+  // one place per element.
+  resolveEffect(
+    new CardEffect(fireBarrageEffectType, 1, TargetType.SINGLE_ENEMY),
+    player, target,
+  );
+  _activePlayCard = null;
+  countAndRemoveDeadCreatures();
+  if (fireBarrageShotsLeft <= 0 || checkCombatEnd()) {
+    finishFireBarrage();
+  } else {
+    const card = player.deck.hand[fireBarrageCardIndex];
+    showStyledToast(`${card.name}: ${fireBarrageShotsLeft} shot${fireBarrageShotsLeft > 1 ? 's' : ''} left — click a target or Done`, 'multi');
+  }
+}
+
+function finishFireBarrage() {
+  // Card stays in hand (stays_in_hand) — just mark exhausted so it
+  // can't be replayed until the next turn refresh, matching how the
+  // normal stays-in-hand play flow handles bone_dagger / kobold_shield.
+  if (fireBarrageCardIndex >= 0 && fireBarrageCardIndex < player.deck.hand.length) {
+    const card = player.deck.hand[fireBarrageCardIndex];
+    card.exhausted = true;
+  }
+  fireBarrageMode = false;
+  fireBarrageShotsLeft = 0;
+  fireBarrageShotsFired = 0;
+  fireBarrageCardIndex = -1;
+  selectedCardIndex = -1;
+  _handOrderSnapshot = null;
+  state = GameState.COMBAT;
+  hideToast();
+  checkCombatEnd();
+}
+
+function cancelFireBarrage() {
+  // No shots fired = clean cancel; mid-barrage = finalize what landed.
+  if (fireBarrageShotsFired > 0) {
+    finishFireBarrage();
+    return;
+  }
+  if (_handOrderSnapshot) {
+    player.deck.hand = _handOrderSnapshot;
+    _handOrderSnapshot = null;
+  }
+  fireBarrageMode = false;
+  fireBarrageShotsLeft = 0;
+  fireBarrageShotsFired = 0;
+  fireBarrageCardIndex = -1;
+  selectedCardIndex = -1;
+  state = GameState.COMBAT;
+  hideToast();
 }
 
 // Stamp the bonus damage on the beam card and play the scaled sound just
@@ -17487,7 +17889,9 @@ function needsTarget(card) {
      e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
      e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
-     e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit')
+     e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
+     e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
+     e.effectType === 'apply_fire' || e.effectType === 'apply_ice')
   );
 }
 
@@ -17536,6 +17940,15 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         if (drawn.length > 0 && debugMode) {
           for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
         }
+      } else if (eff.effectType === 'heal'
+                 || eff.effectType === 'heal_random'
+                 || eff.effectType === 'clear_fire') {
+        // Route richer defensive riders (Barnacle Plate heal, Varimatras
+        // Scale fire-purge) through resolveEffect so the enemy uses the
+        // same logic the player would. resolveEffect treats `caster` as
+        // the holder — passing `enemy` here heals the enemy's deck and
+        // clears Fire off the enemy character.
+        resolveEffect(eff, enemy, player);
       }
     }
     // Loose Bone: spawn a Restless Bone when it blocks
@@ -17696,6 +18109,12 @@ function resolveEffect(eff, caster, target) {
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
+      // On Kill rider — if the swing dropped the target, the card
+      // reads `draw_on_kill` off its own currentEffects and the caster
+      // draws. Works for both sides: player killing an enemy creature,
+      // or enemy killing a player ally creature, both route through
+      // this `case 'damage'`.
+      maybeFireDrawOnKill(caster, target);
       break;
     }
     case 'charge_attack': {
@@ -17829,6 +18248,8 @@ function resolveEffect(eff, caster, target) {
       if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
       let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
       dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       playAttackHitSfx(dmg, dmg);
       if (target instanceof Creature) {
@@ -17872,18 +18293,21 @@ function resolveEffect(eff, caster, target) {
       const heroism = caster.heroism;
       if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
       const hasArmor = target.armor > 0 || target.shield > 0;
-      let dmg = base + heroism;
+      let dmg = base + heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (hasArmor) {
-        dmg = bonus + heroism;
+        dmg = bonus + heroism + (caster.rage || 0) + getDamageModifier(caster);
         addLog(`  Armor bonus: ${bonus} dmg (target has armor/shield)`, Colors.GOLD);
       } else {
         addLog(`  Base: ${base} dmg`, Colors.GRAY);
       }
+      dmg = Math.max(0, dmg);
       // Ice on the player (caster) reduces this attack and consumes 1
       // stack — same rule as the regular `damage` case. Was missing
       // from armor_bonus_damage so chilled Obsidian Edge / Greatclub /
       // similar weapons swung at full damage instead of being chilled.
       dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       const unpreventable = consumeUnpreventableBuff(caster);
       if (target instanceof Creature) {
@@ -17925,7 +18349,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'sneak_attack': {
       attacksThisTurn++; // count itself first
-      let dmg = attacksThisTurn + caster.heroism;
+      let dmg = attacksThisTurn + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
       addLog(`  Sneak Attack x${attacksThisTurn}!`, Colors.GOLD);
       // Sahuagin Eye buff consumes on any attack; +1 if target damaged.
@@ -17936,6 +18360,10 @@ function resolveEffect(eff, caster, target) {
       if (sneakEye > 0) dmg += sneakEye;
       const sneakObs = consumeObsidianBuff(caster, target);
       if (sneakObs > 0) dmg += sneakObs;
+      dmg = Math.max(0, dmg);
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       const unpreventable = consumeUnpreventableBuff(caster);
       if (target instanceof Creature) {
@@ -17977,7 +18405,7 @@ function resolveEffect(eff, caster, target) {
       caster.shield += eff.value;
       addLog(`  +${eff.value} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
       spawnTokenOnTarget(caster, eff.value, 'Shield', Colors.ALLY_BLUE);
-      let dmg = caster.shield + caster.heroism;
+      let dmg = caster.shield + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
       const sbTargetDamaged = target instanceof Creature
         ? (target.currentHp || 0) < (target.maxHp || 0)
@@ -17986,6 +18414,10 @@ function resolveEffect(eff, caster, target) {
       if (sbEye > 0) dmg += sbEye;
       const sbObs = consumeObsidianBuff(caster, target);
       if (sbObs > 0) dmg += sbObs;
+      dmg = Math.max(0, dmg);
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       const unpreventable = consumeUnpreventableBuff(caster);
       if (!unpreventable && !(target instanceof Creature) && target === enemy) {
@@ -18028,8 +18460,12 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'multi_damage': {
-      // Deal damage to up to maxTargets enemies (simplified: hit enemy + creatures)
-      let dmg = eff.value + caster.heroism;
+      // Deal damage to up to maxTargets enemies (simplified: hit enemy + creatures).
+      // Caster-side stack mirrors the standard 'damage' handler:
+      //   base + heroism (consumed) + rage + shock-on-caster modifier
+      // Ice on the caster is consumed once for the swing (not per target).
+      // Per target: +shock incoming, +mark.
+      let dmg = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
       // Sahuagin Eye buff: consumed on any attack, including multi-hits.
       // Only the first target of the chain decides the +1 bonus.
@@ -18040,6 +18476,11 @@ function resolveEffect(eff, caster, target) {
       if (mdEye > 0) dmg += mdEye;
       const mdObs = consumeObsidianBuff(caster, target);
       if (mdObs > 0) dmg += mdObs;
+      dmg = Math.max(0, dmg);
+      const mdBaseDmg = consumeIceForAttack(caster, dmg);
+      // Per-target damage helper: applies Shock-on-target + Mark on
+      // top of the shared base damage. Used for every chain hit.
+      const mdPerTarget = (t) => applyMarkBonus(t, Math.max(0, mdBaseDmg + getIncomingDamageModifier(t)));
       let hits = 0;
       const maxT = eff.maxTargets || 2;
       const unpreventable = consumeUnpreventableBuff(caster);
@@ -18048,34 +18489,36 @@ function resolveEffect(eff, caster, target) {
       const SFX_STAGGER_MS = 120;
       // Hit the clicked target first
       if (target instanceof Creature) {
+        const tDmg = mdPerTarget(target);
         if (unpreventable) {
-          target.takeUnpreventableDamage(dmg);
-          if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
-          addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, dmg);
-          playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
+          target.takeUnpreventableDamage(tDmg);
+          if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
+          addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
+          consumePoisonBuff(caster, target, tDmg);
+          playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = target.shield || 0;
-          const actual = target.takeDamage(dmg);
-          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          const actual = target.takeDamage(tDmg);
+          const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, target.shield || 0);
           addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
           consumePoisonBuff(caster, target, actual);
-          playAttackHitSfx(dmg, actual, hits * SFX_STAGGER_MS);
+          playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!target.isAlive) addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target);
         hits++;
       } else {
+        const tDmg = mdPerTarget(target);
         if (unpreventable) {
-          target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
-          addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, dmg);
-          playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
+          target.takeDamageFromDeck(tDmg);
+          triggerSplitPower(target, tDmg > 0); if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
+          addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
+          consumePoisonBuff(caster, target, tDmg);
+          playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
-          const [blocked, taken] = target.takeDamageWithDefense(dmg);
+          const [blocked, taken] = target.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
-          playAttackHitSfx(dmg, taken, hits * SFX_STAGGER_MS);
+          playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
         hits++;
@@ -18084,29 +18527,31 @@ function resolveEffect(eff, caster, target) {
       const others = [...enemy.creatures.filter(c => c.isAlive && c !== target)];
       for (const c of others) {
         if (hits >= maxT) break;
+        const tDmg = mdPerTarget(c);
         if (unpreventable) {
-          c.takeUnpreventableDamage(dmg);
-          addLog(`  ${dmg} true dmg to ${c.name}`, Colors.ORANGE);
-          playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
+          c.takeUnpreventableDamage(tDmg);
+          addLog(`  ${tDmg} true dmg to ${c.name}`, Colors.ORANGE);
+          playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = c.shield || 0;
-          const actual = c.takeDamage(dmg);
-          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+          const actual = c.takeDamage(tDmg);
+          const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
-          playAttackHitSfx(dmg, actual, hits * SFX_STAGGER_MS);
+          playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
         hits++;
       }
       if (hits < maxT && !(target === enemy)) {
+        const tDmg = mdPerTarget(enemy);
         if (unpreventable) {
-          enemy.takeDamageFromDeck(dmg);
-          addLog(`  ${dmg} true dmg to ${enemy.name}`, Colors.ORANGE);
-          playAttackHitSfx(dmg, dmg, hits * SFX_STAGGER_MS);
+          enemy.takeDamageFromDeck(tDmg);
+          addLog(`  ${tDmg} true dmg to ${enemy.name}`, Colors.ORANGE);
+          playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
-          const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
+          const [blocked, taken] = enemy.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
-          playAttackHitSfx(dmg, taken, hits * SFX_STAGGER_MS);
+          playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
         }
       }
       countAndRemoveDeadCreatures();
@@ -18128,13 +18573,29 @@ function resolveEffect(eff, caster, target) {
     case 'split_damage': {
       // Encoded value: primary*10 + secondary (e.g. 43 = 4 to chosen target,
       // 3 to up to (maxTargets-1) others). Used by Steel Greataxe.
-      const primary = Math.floor(eff.value / 10) + caster.heroism;
-      const secondary = (eff.value % 10) + caster.heroism;
+      // Caster-side stack: heroism (consumed) + rage + shock-on-caster
+      // applies to BOTH primary and secondary values. Ice on the caster
+      // is consumed ONCE for the swing (against the primary number, the
+      // bigger one — mirrors what the standard damage handler does for
+      // a single hit). Per target: +shock incoming, +mark.
+      let primary = Math.floor(eff.value / 10) + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      let secondary = (eff.value % 10) + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
+      primary = Math.max(0, primary);
+      secondary = Math.max(0, secondary);
+      // Ice burn — applied to primary, then the same fractional delta
+      // is subtracted from secondary so the chill effect feels uniform
+      // across the swing. consumeIceForAttack returns the post-Ice value.
+      const primaryAfterIce = consumeIceForAttack(caster, primary);
+      const iceDelta = primary - primaryAfterIce;
+      primary = primaryAfterIce;
+      secondary = Math.max(0, secondary - iceDelta);
+      const spPerTarget = (t, baseDmg) => applyMarkBonus(t, Math.max(0, baseDmg + getIncomingDamageModifier(t)));
       const maxT = eff.maxTargets || 3;
       const SFX_STAGGER_MS = 120;
       let hitIdx = 0;
-      const hitOne = (t, dmg) => {
+      const hitOne = (t, dmgIn) => {
+        const dmg = spPerTarget(t, dmgIn);
         const delay = hitIdx * SFX_STAGGER_MS;
         if (t instanceof Creature) {
           const shieldBefore = t.shield || 0;
@@ -18232,6 +18693,8 @@ function resolveEffect(eff, caster, target) {
       if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
       let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
       dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       const unpreventable = consumeUnpreventableBuff(caster);
       let landed = 0;
@@ -18372,7 +18835,8 @@ function resolveEffect(eff, caster, target) {
         const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
         buff.stacks = eff.value;
       }
-      addLog(`  ${caster.name}: next attack is Unpreventable`, Colors.ORANGE);
+      const stkLog = existing ? (existing.stacks || 1) : eff.value;
+      addLog(`  ${caster.name}: next ${stkLog > 1 ? stkLog + ' attacks are' : 'attack is'} Unpreventable`, Colors.ORANGE);
       break;
     }
     case 'transform_ice_to_shield_self': {
@@ -18492,12 +18956,126 @@ function resolveEffect(eff, caster, target) {
       if (appliedFire > 0) firePowerSurgeIfArmed(caster, 'fire');
       break;
     }
+    case 'apply_fire_multi': {
+      // Wand of Fire — fires N magic-missile-style fire bolts at the
+      // chosen target. Visually: N staggered orange arrows from the
+      // card's hand position, each with a fire-spell crackle.
+      // Mechanically: applies N total Fire stacks (with the standard
+      // Ice cancel), batched in one log line.
+      const shots = Math.max(1, eff.value);
+      const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      for (let i = 0; i < shots; i++) {
+        const delay = i * 180;
+        const fire = () => {
+          spawnPlayerArrowBatch(src, [target], 350, Colors.ORANGE);
+          playSound('fire_spell_01', 0.55);
+        };
+        if (delay > 0) setTimeout(fire, delay);
+        else fire();
+      }
+      // Apply stacks (Ice cancel first, remainder lands as Fire).
+      let appliedFire = 0;
+      if (target instanceof Creature) {
+        const cancel = Math.min(target.iceStacks || 0, shots);
+        if (cancel > 0) {
+          target.iceStacks -= cancel;
+          addLog(`  Fire cancels ${cancel} Ice on ${target.name}`, Colors.ORANGE);
+        }
+        const remaining = shots - cancel;
+        if (remaining > 0) {
+          target.fireStacks = (target.fireStacks || 0) + remaining;
+          addLog(`  +${remaining} Fire on ${target.name}`, Colors.RED);
+          appliedFire = remaining;
+        }
+      } else {
+        const ice = target.getStatus ? (target.getStatus('ICE') || 0) : 0;
+        const cancel = Math.min(ice, shots);
+        if (cancel > 0) {
+          target.removeStatus('ICE', cancel);
+          addLog(`  Fire cancels ${cancel} Ice on ${target.name}`, Colors.ORANGE);
+        }
+        const remaining = shots - cancel;
+        if (remaining > 0) {
+          target.applyStatus('FIRE', remaining);
+          addLog(`  +${remaining} Fire on ${target.name}`, Colors.RED);
+          appliedFire = remaining;
+        }
+      }
+      if (appliedFire > 0) {
+        spawnTokenOnTarget(target, appliedFire, 'Fire', Colors.ORANGE);
+        firePowerSurgeIfArmed(caster, 'fire');
+      }
+      break;
+    }
     case 'apply_fire_self': {
       // Magma Rock / future fire-themed self-burn cards. Stacks Fire
       // on the caster (no ice cancellation since the caster's own ice
       // isn't tracked the same way). Used as a downside rider on
       // strong fire attacks.
       applyFireToTarget(caster, eff.value);
+      break;
+    }
+    case 'apply_ice_multi': {
+      // Gravechill Shard — fires N magic-missile-style ice bolts at
+      // the chosen target. Visually: N staggered ice-blue arrows from
+      // the card's hand position, each with a cold-whoosh crackle.
+      // Mechanically: applies N total Ice stacks (with the standard
+      // Fire cancel), batched in one log line. Mirrors apply_fire_multi
+      // for the Wand of Fire family.
+      const shots = Math.max(1, eff.value);
+      const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      for (let i = 0; i < shots; i++) {
+        const delay = i * 180;
+        const fire = () => {
+          spawnPlayerArrowBatch(src, [target], 350, Colors.ICE_BLUE);
+          playSound('cold_whoosh_01', 0.55);
+        };
+        if (delay > 0) setTimeout(fire, delay);
+        else fire();
+      }
+      // Apply stacks (Fire cancel first, remainder lands as Ice).
+      let appliedIce = 0;
+      if (target instanceof Creature) {
+        const cancel = Math.min(target.fireStacks || 0, shots);
+        if (cancel > 0) {
+          target.fireStacks -= cancel;
+          addLog(`  Ice cancels ${cancel} Fire on ${target.name}`, Colors.ICE_BLUE);
+        }
+        const remaining = shots - cancel;
+        if (remaining > 0) {
+          target.iceStacks = (target.iceStacks || 0) + remaining;
+          addLog(`  +${remaining} Ice on ${target.name}`, Colors.ICE_BLUE);
+          appliedIce = remaining;
+        }
+      } else {
+        const fire = target.getStatus ? (target.getStatus('FIRE') || 0) : 0;
+        const cancel = Math.min(fire, shots);
+        if (cancel > 0) {
+          target.removeStatus('FIRE', cancel);
+          addLog(`  Ice cancels ${cancel} Fire on ${target.name}`, Colors.ICE_BLUE);
+        }
+        const remaining = shots - cancel;
+        if (remaining > 0) {
+          target.applyStatus('ICE', remaining);
+          addLog(`  +${remaining} Ice on ${target.name}`, Colors.ICE_BLUE);
+          appliedIce = remaining;
+        }
+      }
+      if (appliedIce > 0) {
+        spawnTokenOnTarget(target, appliedIce, 'Ice', Colors.ICE_BLUE);
+      }
+      break;
+    }
+    case 'apply_poison_self': {
+      // Bone Wand — necromantic backlash. Stacks Poison on the caster
+      // as a downside rider (mirrors apply_fire_self for the fire
+      // family). Poison only clears via healing, so it's a meaningful
+      // cost on a stays-in-hand wand.
+      if (caster && typeof caster.applyStatus === 'function') {
+        caster.applyStatus('POISON', eff.value);
+        addLog(`  +${eff.value} Poison on yourself`, Colors.GREEN);
+        spawnTokenOnTarget(caster, eff.value, 'Poison', Colors.GREEN);
+      }
       break;
     }
     case 'gain_ignite': {
@@ -18511,15 +19089,15 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'if_burning_heal_fire': {
-      // Mephit Skin gear. If the player has FIRE stacks, remove up
-      // to N (heal that much). PY uses the live state for this — the
-      // healing fires before if_burning_draw / if_burning_gain_ignite
-      // would read the snapshot. Mirrors PY game.py:10876-10881.
+      // Mephit Skin gear. If the caster has FIRE stacks, strip up to
+      // N. Uses the live state for this — the douse fires before
+      // if_burning_draw / if_burning_gain_ignite would read the
+      // snapshot. Logged as "Douse" to match the in-game keyword.
       const fire = caster.getStatus ? (caster.getStatus('FIRE') || 0) : 0;
       if (fire > 0) {
-        const heal = Math.min(eff.value, fire);
-        caster.removeStatus('FIRE', heal);
-        addLog(`  Burning! Heal ${heal} Fire (Fire:${caster.getStatus('FIRE') || 0})`, Colors.ORANGE);
+        const cleared = Math.min(eff.value, fire);
+        caster.removeStatus('FIRE', cleared);
+        addLog(`  Burning! Douse ${cleared} Fire (Fire:${caster.getStatus('FIRE') || 0})`, Colors.ORANGE);
       }
       break;
     }
@@ -18530,6 +19108,19 @@ function resolveEffect(eff, caster, target) {
       if (_wasBurningAtCardStart) {
         const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
         for (const d of drawn) addLog(`  Burning! Draw ${d.name}`, Colors.BLUE, d);
+      }
+      break;
+    }
+    case 'draw_if_no_shield': {
+      // Shield-family payoff that rewards the FIRST shield card you
+      // play in a sequence: if the caster started this card with 0
+      // Shield (reads the _shieldAtCardStart snapshot, not live state),
+      // draw 1. A sibling gain_shield earlier in the effects array
+      // doesn't trip the gate — the snapshot freezes pre-play state.
+      if (_shieldAtCardStart === 0) {
+        const drawn = caster.deck.draw(1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Shield up! Draw: ${d.name}`, Colors.BLUE, d);
+        if (drawn.length > 0) playDrawSounds(drawn.length);
       }
       break;
     }
@@ -18580,7 +19171,9 @@ function resolveEffect(eff, caster, target) {
       // the hit doesn't waste on a no-soak target. Heroism is added to
       // the hit and consumed (matches the standard damage handler), and
       // rage adds its flat bonus too — so stockpiled buffs still pay
-      // off on the counter swing.
+      // off on the counter swing. Shock-on-target (+1/stack incoming)
+      // and Hunter's Mark (+1/stack to target) also apply, so a primed
+      // enemy still eats the bonus on the random counter.
       const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
       const t = candidates.length > 0
         ? candidates[Math.floor(Math.random() * candidates.length)]
@@ -18591,7 +19184,11 @@ function resolveEffect(eff, caster, target) {
         addLog(`  (Heroism +${heroism})`, Colors.GOLD);
         caster.heroism = 0;
       }
-      const dmg = Math.max(0, eff.value + heroism + (caster.rage || 0));
+      let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(t);
+      dmg = Math.max(0, dmg);
+      dmg = applyMarkBonus(t, dmg);
       const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
       spawnPlayerArrowBatch(src, [t], 550, Colors.RED);
       if (t instanceof Creature) {
@@ -18612,6 +19209,99 @@ function resolveEffect(eff, caster, target) {
         spawnDamageOnTarget(t, dmg, Colors.RED);
         addLog(`  ${dmg} dmg to ${t.name}`, Colors.RED);
         playAttackHitSfx(dmg, dmg, 0);
+      }
+      break;
+    }
+    case 'apply_ice_random': {
+      // Scale Armor (defense) — pick a random alive enemy creature,
+      // or the enemy character if none are alive, and apply N Ice
+      // there. Invulnerable / vanished creatures are filtered out.
+      // Mirrors apply_fire_random with the Fire/Ice swap (and uses
+      // the Fire-cancel branch in reverse: Ice cancels Fire 1:1).
+      const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
+      const t = candidates.length > 0
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
+      if (!t) break;
+      if (t instanceof Creature) {
+        const cancel = Math.min(t.fireStacks || 0, eff.value);
+        if (cancel > 0) { t.fireStacks -= cancel; addLog(`  Ice cancels ${cancel} Fire on ${t.name}`, Colors.ICE_BLUE); }
+        const remaining = eff.value - cancel;
+        if (remaining > 0) {
+          t.iceStacks = (t.iceStacks || 0) + remaining;
+          addLog(`  +${remaining} Ice on ${t.name}`, Colors.ICE_BLUE);
+          spawnTokenOnTarget(t, remaining, 'Ice', Colors.ICE_BLUE);
+        }
+      } else if (t) {
+        const fire = t.getStatus ? (t.getStatus('FIRE') || 0) : 0;
+        const cancel = Math.min(fire, eff.value);
+        if (cancel > 0) { t.removeStatus('FIRE', cancel); addLog(`  Ice cancels ${cancel} Fire on ${t.name}`, Colors.ICE_BLUE); }
+        const remaining = eff.value - cancel;
+        if (remaining > 0) {
+          t.applyStatus('ICE', remaining);
+          addLog(`  +${remaining} Ice on ${t.name}`, Colors.ICE_BLUE);
+          spawnTokenOnTarget(t, remaining, 'Ice', Colors.ICE_BLUE);
+        }
+      }
+      break;
+    }
+    case 'clear_fire': {
+      // Mirrors clear_ice but for Fire on the CASTER. Used by
+      // Varimatras Scale ("Remove all Fire") so the dragon can purge
+      // stacked Fire/Ignite the player spent the prior turn building.
+      // eff.value caps the strip — pass a large number (e.g. 99) for
+      // "remove all".
+      const fire = caster.getStatus ? (caster.getStatus('FIRE') || 0) : (caster.fireStacks || 0);
+      if (fire > 0) {
+        const cleared = Math.min(fire, eff.value);
+        if (caster.removeStatus) caster.removeStatus('FIRE', cleared);
+        else caster.fireStacks = Math.max(0, (caster.fireStacks || 0) - cleared);
+        addLog(`  ${caster.name || 'You'}: Cleared ${cleared} Fire`, Colors.ORANGE);
+      }
+      break;
+    }
+    case 'block_random': {
+      // Block 1..eff.value (random). Used by Soul Ward so the
+      // defense card swings between weak and meaningful per play.
+      const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+      if (caster === player) {
+        player.addBlock(rolled);
+        addLog(`  +${rolled} Block`, Colors.BLUE);
+        spawnTokenOnTarget(player, rolled, 'Block', BLOCK_BLUE);
+      } else if (caster && typeof caster.addBlock === 'function') {
+        caster.addBlock(rolled);
+        addLog(`  ${caster.name}: +${rolled} Block`, Colors.BLUE);
+        spawnTokenOnTarget(caster, rolled, 'Block', BLOCK_BLUE);
+      }
+      break;
+    }
+    case 'gain_shield_random': {
+      // Shield 1..eff.value (random). Sibling to block_random.
+      const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+      caster.shield = (caster.shield || 0) + rolled;
+      addLog(`  +${rolled} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(caster, rolled, 'Shield', Colors.ALLY_BLUE);
+      break;
+    }
+    case 'heal_random': {
+      // Heal 1..eff.value (random). Used by Barnacle Plate enemy
+      // card so the priest/baron can grind out a fight with a soft
+      // randomized heal. Routes through the same caster-aware heal
+      // path as case 'heal' below.
+      const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+      if (caster === player) {
+        healPlayer(rolled);
+      } else if (caster && caster.deck) {
+        let healed = 0;
+        for (let i = 0; i < rolled && caster.deck.discardPile.length > 0; i++) {
+          const card = caster.deck.discardPile.pop();
+          caster.deck.addToRechargePile(card);
+          healed++;
+        }
+        if (healed > 0) {
+          addLog(`  ${caster.name}: Healed ${healed} card${healed > 1 ? 's' : ''}`, Colors.GREEN);
+          spawnHealOnTarget(caster, healed);
+        }
       }
       break;
     }
@@ -18656,14 +19346,27 @@ function resolveEffect(eff, caster, target) {
       // random alive enemy and lands 1-3 damage + 1 Fire on them.
       // Plays the goblin explosion sample per round, staggered, so
       // each charge bursts audibly like the on-death sapper trigger.
+      // Ice on the caster reduces the FIRST charge and burns 1 stack;
+      // subsequent charges inherit the same modifier. Mark + Shock are
+      // applied per target per charge (each charge is a separate hit).
       const rounds = Math.max(1, eff.value || 3);
+      let iceConsumed = false;
       for (let r = 0; r < rounds; r++) {
         const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
         const t = candidates.length > 0
           ? candidates[Math.floor(Math.random() * candidates.length)]
           : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
         if (!t) break;
-        const dmg = 1 + Math.floor(Math.random() * 3); // 1..3
+        let dmg = 1 + Math.floor(Math.random() * 3); // 1..3
+        // First charge eats the Ice stack; remaining charges run unmodified
+        // (mirrors how a multi-hit swing only consumes Ice once).
+        if (!iceConsumed) {
+          dmg = consumeIceForAttack(caster, dmg);
+          iceConsumed = true;
+        }
+        dmg += getIncomingDamageModifier(t);
+        dmg = Math.max(0, dmg);
+        dmg = applyMarkBonus(t, dmg);
         const delay = r * 220;
         if (delay > 0) setTimeout(() => playSound('goblin_explosion', 0.7), delay);
         else playSound('goblin_explosion', 0.7);
@@ -19039,6 +19742,76 @@ function resolveEffect(eff, caster, target) {
       addLog(`  Ale: +1 Heroism/turn for ${eff.value} turns`, Colors.GOLD);
       break;
     }
+    case 'grant_provision': {
+      // Provisions framework — Meals and Beverages. Reads the active
+      // card's `provision` metadata and adds it to player.persistentBuffs
+      // under a slot-keyed id ('provision_meal' or 'provision_beverage').
+      // One slot per type; consuming another provision of the same slot
+      // replaces the previous one.
+      const card = _activePlayCard;
+      if (!card || !card.provision) break;
+      const prov = card.provision;
+      const slot = prov.slot;
+      const buffId = `provision_${slot}`;
+      if (!Array.isArray(player.persistentBuffs)) player.persistentBuffs = [];
+      // Drop any prior provision in the same slot.
+      const prior = player.persistentBuffs.find(b => b.id === buffId);
+      if (prior) {
+        player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== buffId);
+        addLog(`  ${prior.name} replaced by ${prov.name}.`, Colors.GRAY);
+      }
+      // Multi-effect provisions (Bad Rations) supply an `effects` array;
+      // single-effect provisions (Ale) supply `effectType` + `value`.
+      // The PersistentBuff and projected CombatBuff carry both, and
+      // processCombatBuffs prefers the array when present. `options`
+      // is preserved for random_pick entries (Lambas Bread / Travel
+      // Rations: Heal or Heroism / Draw per tick).
+      const provEffects = Array.isArray(prov.effects) ? prov.effects.map(e => ({
+        effectType: e.effectType || e.type,
+        effectValue: e.value,
+        options: e.options || null,
+      })) : null;
+      const pb = new PersistentBuff({
+        id: buffId,
+        name: prov.name,
+        description: prov.description || `${prov.effectType} +${prov.value}/turn for ${prov.turnsPerCombat} turn(s) each combat`,
+        imageId: prov.imageId || card.id,
+        effectType: prov.effectType,
+        effectValue: prov.value,
+        trigger: 'start_of_turn',
+        condition: { type: 'always' },
+      });
+      pb._provisionSlot = slot;
+      pb._provisionTurnsPerCombat = prov.turnsPerCombat;
+      pb._provisionEffects = provEffects;
+      player.persistentBuffs.push(pb);
+      const label = slot === 'beverage' ? 'Beverage' : 'Meal';
+      addLog(`  ${label}: ${prov.name} active until you rest.`, Colors.GOLD);
+      // If we're mid-combat, applyStartOfCombatBuffs already ran for
+      // this fight, so the projection won't fire on its own. Drop the
+      // CombatBuff now so the player sees the icon + gets the ticks
+      // this same combat. Drop any prior projection in the same slot
+      // first (replacement flow).
+      if (state === GameState.COMBAT || state === GameState.TARGETING
+          || state === GameState.MULTI_TARGETING || state === GameState.DEFENDING) {
+        player.combatBuffs = (player.combatBuffs || []).filter(b => b.id !== buffId);
+        const projected = new CombatBuff({
+          id: buffId,
+          name: pb.name,
+          description: pb.description,
+          imageId: pb.imageId,
+          effectType: pb.effectType,
+          effectValue: pb.effectValue,
+          trigger: pb.trigger,
+          combatsRemaining: 1,
+          turnsRemaining: prov.turnsPerCombat,
+          effects: provEffects,
+        });
+        projected._persistent = true;
+        player.addCombatBuff(projected);
+      }
+      break;
+    }
     case 'dwarven_brew_buff': {
       // Dwarven Brew: +1 Shield at start of turn for N turns.
       caster.addCombatBuff(new CombatBuff({
@@ -19257,14 +20030,14 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_treants': {
-      // Druid Tier 2 — Summon 3-4 Treants (1/1 Haste). Summons, not
+      // Druid Tier 2 — Summon 2-4 Treants (2/1 Haste). Summons, not
       // companions: card discards normally and each treant is its own
       // throwaway creature.
-      const count = 3 + Math.floor(Math.random() * 2);
+      const count = 2 + Math.floor(Math.random() * 3);
       let summoned = 0;
       for (let i = 0; i < count; i++) {
         const treant = new Creature({
-          name: 'Treant', attack: 1, maxHp: 1, haste: true,
+          name: 'Treant', attack: 2, maxHp: 1, haste: true,
           description: 'Haste',
         });
         if (!player.addCreature(treant)) break;
@@ -19649,6 +20422,10 @@ function resolveEffect(eff, caster, target) {
       // Rider read by the 'damage' case off _activePlayCard.currentEffects;
       // nothing to resolve standalone.
       break;
+    case 'draw_on_kill':
+      // Rider read by maybeFireDrawOnKill after each damage resolves;
+      // nothing to resolve standalone.
+      break;
     case 'enemy_gain_armor':
       // Obsidian Shard token on banish — the Oracle (or whichever
       // enemy is in front of you) gains N base armor. Mirrors PY
@@ -19659,6 +20436,41 @@ function resolveEffect(eff, caster, target) {
         spawnTokenOnTarget(enemy, eff.value, 'Armor', '#cccccc');
       }
       break;
+    case 'destroy_shield_random': {
+      // Dwarven Greaves — strip 1 Shield from each of up to eff.value
+      // distinct random alive enemies that currently have Shield.
+      // Total shields destroyed = min(eff.value, # enemies with shield).
+      // Enemies without shield are skipped entirely (no wasted picks),
+      // so the cap is "up to N shields total, one per target".
+      const allTargets = [];
+      for (const c of (enemy.creatures || [])) {
+        if (c.isAlive && !c._invulnerable && (c.shield || 0) > 0) allTargets.push(c);
+      }
+      if (enemy && enemy.isAlive && !enemy._invulnerable && (enemy.shield || 0) > 0) {
+        allTargets.push(enemy);
+      }
+      if (allTargets.length === 0) {
+        addLog(`  No shielded enemies to break.`, Colors.GRAY);
+        break;
+      }
+      // Fisher-Yates shuffle so the random pick distribution is even.
+      for (let i = allTargets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allTargets[i], allTargets[j]] = [allTargets[j], allTargets[i]];
+      }
+      const picks = allTargets.slice(0, Math.max(1, eff.value));
+      const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      spawnPlayerArrowBatch(src, picks, 550, '#cccccc');
+      for (const t of picks) {
+        t.shield = Math.max(0, (t.shield || 0) - 1);
+        addLog(`  Destroyed 1 Shield on ${t.name} (S:${t.shield})`, Colors.ORANGE);
+      }
+      // One shield-clang per strike, lightly staggered for chained picks.
+      for (let k = 0; k < picks.length; k++) {
+        setTimeout(() => playSound('shield_blocked', 0.55), k * 110);
+      }
+      break;
+    }
     case 'destroy_shield': {
       // Dwarven Warhammer / Miner's Pickaxe — strip N shields off the
       // target before the damage step. Caps at the target's current
@@ -19734,14 +20546,21 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'damage_all': {
-      let dmg = eff.value + caster.heroism;
+      // Full caster-side stack: heroism (consumed) + rage + shock-on-caster.
+      let dmg = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { caster.heroism = 0; }
+      dmg = Math.max(0, dmg);
       // Ice on the caster reduces this AoE swing and burns 1 stack
       // (mirrors the single-target damage path's consumeIceForAttack).
       // Without this, Burning Hands / Ice Nova / Consecration fired
       // at full strength even when the player was frozen, ignoring
       // the chill the dragon's Blizzard / Cold Breath had piled on.
       dmg = consumeIceForAttack(caster, dmg);
+      const aoeBaseDmg = dmg;
+      // Per-target damage helper: applies Shock-on-target + Mark on
+      // top of the shared base damage so a primed enemy still eats
+      // the bonus on an AoE swing.
+      const aoePerTarget = (t) => applyMarkBonus(t, Math.max(0, aoeBaseDmg + getIncomingDamageModifier(t)));
       // Shoot one red arrow per legal target from the played card's
       // hand rect — mirrors the single-target attack flow where the
       // arrow comes out of the lifted card. Invulnerable boss shells
@@ -19755,8 +20574,11 @@ function resolveEffect(eff, caster, target) {
       spawnPlayerArrowBatch(aoeSrc, aoeTargets, 550);
       screenFlashTimer = 200;
       let anyLanded = false;
+      let taken = 0; // last-target taken, used by the SFX fallback below
       if (!enemy._invulnerable) {
-        const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
+        const tDmg = aoePerTarget(enemy);
+        const [, tk] = enemy.takeDamageWithDefense(tDmg);
+        taken = tk;
         if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
         addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
         // Split / on-attacked triggers fire per target — same as
@@ -19769,10 +20591,11 @@ function resolveEffect(eff, caster, target) {
       }
       for (const c of [...enemy.creatures]) {
         if (c._invulnerable) continue;
+        const tDmg = aoePerTarget(c);
         const shieldBefore = c.shield || 0;
-        const actual = c.takeDamage(dmg);
+        const actual = c.takeDamage(tDmg);
         if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
-        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+        const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
         addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         triggerSplitPower(c, actual > 0);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -19916,6 +20739,7 @@ function playCardSelf(handIndex) {
   // if_burning_* effects later in the loop don't see their own
   // if_burning_heal_fire mutation.
   _wasBurningAtCardStart = (player.getStatus('FIRE') || 0) > 0;
+  _shieldAtCardStart = player.shield || 0;
   playSound('card_play');
   playCardAmbient(card);
   if (stays) {
@@ -19986,6 +20810,7 @@ function playCardOnEnemy(handIndex) {
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
   _wasBurningAtCardStart = (player.getStatus('FIRE') || 0) > 0;
+  _shieldAtCardStart = player.shield || 0;
   // Snapshot the card's hand rect BEFORE we lift it — used as the
   // arrow source so the volley flies out of the card.
   const handRectsE = getHandCardRects(player.deck.hand);
@@ -22324,6 +23149,33 @@ function getMarkBonus(target) {
   if (target.getStatus) return target.getStatus('MARK') || 0;
   return 0;
 }
+// On Kill rider — if the active card carries `draw_on_kill` and the
+// just-resolved swing killed `target`, draw eff.value cards into the
+// caster's deck. Mirrors the symmetric setup so both player and enemy
+// casters draw when their creature target dies (Kobold Spear on either
+// side: spear thrust → kill → refill hand).
+function maybeFireDrawOnKill(caster, target) {
+  const card = _activePlayCard;
+  if (!card || !Array.isArray(card.currentEffects)) return;
+  const drawCount = card.currentEffects
+    .filter(e => e.effectType === 'draw_on_kill')
+    .reduce((s, e) => s + (e.value || 1), 0);
+  if (drawCount <= 0) return;
+  // Currently only fires on creature kills — enemy/player characters
+  // dying ends the combat itself, so a draw rider on them is moot.
+  const killed = target instanceof Creature && !target.isAlive;
+  if (!killed) return;
+  if (caster === player) {
+    const drawn = player.deck.draw(drawCount, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  On Kill! Draw: ${d.name}`, Colors.BLUE, d);
+    if (drawn.length > 0) playDrawSounds(drawn.length);
+  } else if (caster && caster.deck) {
+    const cap = caster._uncappedHand ? 999 : (caster._handSize || 10);
+    const drawn = caster.deck.draw(drawCount, cap);
+    if (drawn.length > 0) addLog(`  ${caster.name}: On Kill, draws ${drawn.length}`, Colors.GRAY);
+  }
+}
+
 function applyMarkBonus(target, dmg) {
   if (dmg <= 0) return dmg;
   const bonus = getMarkBonus(target);
@@ -26843,6 +27695,13 @@ function applyStartOfCombatBuffs() {
     const enemyId = enemy && enemy._enemyId || '';
     if (!pb.matches(enemy, enemyId)) continue;
     if ((player.combatBuffs || []).some(b => b.id === pb.id)) continue;
+    // Provisions (Beverage / Meal) carry a per-combat turn cap on
+    // the underlying CombatBuff so the buff fades mid-combat after
+    // its window expires (e.g. Ale = 2 turns of +1 Heroism each
+    // combat). All other PersistentBuffs run unlimited (turnsRemaining
+    // 0 = no decrement). Multi-effect provisions (Bad Rations) also
+    // forward their effects array so each tick resolves both halves.
+    const turnsCap = pb._provisionTurnsPerCombat || 0;
     const projected = new CombatBuff({
       id: pb.id,
       name: pb.name,
@@ -26852,6 +27711,8 @@ function applyStartOfCombatBuffs() {
       effectValue: pb.effectValue,
       trigger: pb.trigger,
       combatsRemaining: 1,
+      turnsRemaining: turnsCap,
+      effects: pb._provisionEffects || null,
     });
     projected._persistent = true;
     player.addCombatBuff(projected);
@@ -27007,7 +27868,7 @@ function drawSacrificeOverlay() {
 
   ctx.fillStyle = Colors.WHITE;
   ctx.font = '16px sans-serif';
-  ctx.fillText('The chosen card is permanently banished from your run.', SCREEN_WIDTH / 2, 100);
+  ctx.fillText('The chosen card is permanently consumed from your run.', SCREEN_WIDTH / 2, 100);
 
   if (sacrificePickerCards.length > FORGE_PICKER_COLS * FORGE_PICKER_ROWS_VISIBLE) {
     ctx.fillStyle = Colors.GRAY;
@@ -27061,6 +27922,9 @@ function handleScrySelectClick(x, y) {
   for (let i = 0; i < rects.length; i++) {
     if (hitTest(x, y, rects[i])) {
       const picked = scryCards[i];
+      // Audible click cue on the pick so the choice feels confirmed,
+      // matching the regular card-play tactile response.
+      playSound('card_play');
       player.deck.hand.push(picked);
       addLog(`  Draw: ${picked.name}`, Colors.BLUE, picked);
       // Recharge the rest
@@ -27072,7 +27936,16 @@ function handleScrySelectClick(x, y) {
       }
       scryCards = [];
       hideToast();
-      state = GameState.COMBAT;
+      // If the scry came from a defense card (Traveler's Clothing) and
+      // damage was already fully absorbed mid-flow, finalize the
+      // damage event now so the player goes back to COMBAT cleanly
+      // instead of getting stuck in DEFENDING.
+      if (_deferredFinishAfterScry) {
+        _deferredFinishAfterScry = false;
+        finishIncomingDamage();
+      } else {
+        state = GameState.COMBAT;
+      }
       return;
     }
   }
@@ -29328,6 +30201,27 @@ function drawInventoryCharacter(rect) {
             card.shortDesc = pb.description;
           }
           hoveredCardPreview = card;
+        } else {
+          // Fallback for PersistentBuffs that don't have a codex
+          // pseudo-card (Provisions: Ale / future Meals). Synthesize a
+          // minimal card from the PersistentBuff itself so the hover
+          // preview still surfaces the name + description + art.
+          const slotLabel = pb._provisionSlot === 'beverage' ? 'Beverage'
+            : pb._provisionSlot === 'meal' ? 'Meal' : '';
+          hoveredCardPreview = new Card({
+            id: `buff_${pb.id}`,
+            name: pb.name,
+            description: pb.description || (slotLabel ? `${slotLabel} buff — active until you rest.` : ''),
+            shortDesc: pb.description || '',
+            subtype: 'buff',
+            cardType: CardType.ABILITY,
+            costType: CostType.FREE,
+            effects: [],
+            rarity: 'uncommon',
+          });
+          // Stamp imageId on the synthetic card so drawCard's art
+          // lookup hits the same asset the persistent-buff icon used.
+          hoveredCardPreview.id = pb.imageId || hoveredCardPreview.id;
         }
       }
       bx += buffSize + buffGap;
@@ -30468,7 +31362,7 @@ const HELP_CONTENT = [
   { title: 'Card Destinations', items: [
     { text: 'Recharge: card goes to the bottom of the draw pile — you\'ll see it again later in this combat.', color: '#9cd6ff' },
     { text: 'Discard: card goes to the discard pile — that\'s the HP cost (your HP equals deck size). Healing can move cards back from discard into your deck.', color: '#e89870' },
-    { text: 'Banish: card is permanently removed from your deck for the rest of the run.', color: '#b878d8' },
+    { text: 'Consume: card is permanently removed from your deck for the rest of the run.', color: '#b878d8' },
     { text: 'Play: card goes to the Play area while its linked Companion is alive. At end of combat it recharges (companion survived) or moves to the discard pile (companion died).', color: '#e8d59a' },
     { text: 'Some cards Exhaust for a turn (Zzz overlay) and can be used next turn.' },
   ]},
@@ -31714,6 +32608,10 @@ const CARD_SFX_OVERRIDES = {
   // boulder/rubble sfx family the obsidian biome already uses.
   obsidian_core:            { play: 'boulder_flesh' },
   shield_bash:              { flesh: 'shield_flesh', blocked: 'shield_blocked' },
+  // White Dragonscale Shield — now a shield-bash attack (gain shields,
+  // then swing for total shield). Shares the Shield Bash sample family
+  // so the swing audibly reads as a shield-on-flesh slam.
+  white_dragonscale_shield: { flesh: 'shield_flesh', blocked: 'shield_blocked' },
   cleave:                   { flesh: 'axe_2h_flesh',  blocked: 'axe_blocked' },
   quick_strike:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   aimed_shot:               { flesh: 'bow_flesh',     blocked: 'bow_blocked',
@@ -31835,13 +32733,21 @@ const CARD_SFX_OVERRIDES = {
   pet_spider:               { play: 'spider_scuttle' },
   queens_locket:            { play: 'queens_gift_cast' },
   cracked_buckler:          { play: 'shield_grab' },
+  // Buckler shares Cracked Buckler's metal-grab cue — same family,
+  // same hand motion, just a bigger pad.
+  buckler:                  { play: 'shield_grab' },
+  // Dwarven Tower Shield — slams down with a heavy plate impact.
+  dwarven_tower_shield:     { play: 'impactPlate_heavy_000' },
   runeforged_buckler:       { play: 'shield_grab' },
   web_spider:               { play: 'spider_scuttle' },
   poisoned_bite:            { flesh: 'spider_scuttle', blocked: 'spider_scuttle' },
   kobold_backup:            { play: 'kobold_attack' },
   kobold_army:              { play: 'kobold_attack' },
   split:                    { play: 'ooze_attack' },
-  bone_wand:                { flesh: 'bone_wand_cast', blocked: 'bone_wand_cast' },
+  // Bone Wand fires on cast (no damage, just Poison) — `play` key
+  // triggers regardless of whether anything was hit. flesh/blocked
+  // are kept for any future damage variant but are unused right now.
+  bone_wand:                { play: 'bone_wand_cast' },
   skreeeeeeeek:             { flesh: 'rat_screech', blocked: 'rat_screech' },
   dire_rat_screech:         { flesh: 'rat_screech', blocked: 'rat_screech' },
   guards:                   { flesh: 'warden_hiss', blocked: 'warden_hiss' },

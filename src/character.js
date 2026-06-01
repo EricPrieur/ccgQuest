@@ -16,7 +16,7 @@ export class Buff {
  * Multi-combat buff persisting across encounters.
  */
 export class CombatBuff {
-  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0 }) {
+  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0, effects = null }) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -26,6 +26,11 @@ export class CombatBuff {
     this.trigger = trigger;
     this.combatsRemaining = combatsRemaining;
     this.turnsRemaining = turnsRemaining;
+    // Optional multi-effect array for buffs that fire several things per tick
+    // (Bad Rations: heal_random + discard_deck_random). When set, the
+    // processCombatBuffs loop iterates these instead of using the legacy
+    // single { effectType, effectValue } pair.
+    this.effects = effects;
   }
 }
 
@@ -375,93 +380,145 @@ export class Character {
     this.combatBuffs.push(buff);
   }
 
+  // Apply a single per-tick effect for a CombatBuff. Pulled out of the
+  // processCombatBuffs switch so multi-effect provisions (Bad Rations:
+  // heal_random + discard_deck_random) can call this once per entry in
+  // their effects array. `eff` shape:
+  //   { effectType, effectValue }                     — standard tick
+  //   { effectType: 'random_pick', options: [ ... ] } — pick one option
+  //                                                     uniformly each tick
+  _applyBuffTickEffect(buff, eff, logs) {
+    if (!eff) return;
+    const effectType = eff.effectType;
+    const effectValue = eff.effectValue;
+    if (effectType === 'random_pick' && Array.isArray(eff.options) && eff.options.length > 0) {
+      // Lambas Bread / Travel Rations Meal tick — pick one option
+      // uniformly per tick. Each pick is independent so a 3-turn run
+      // can mix-and-match (Heal/Heroism/Heal, Heroism/Heroism/Heal, ...).
+      const choice = eff.options[Math.floor(Math.random() * eff.options.length)];
+      this._applyBuffTickEffect(buff, {
+        effectType: choice.effectType || choice.type,
+        effectValue: choice.value != null ? choice.value : choice.effectValue,
+      }, logs);
+      return;
+    }
+    switch (effectType) {
+      case 'gain_heroism':
+        this.heroism += effectValue;
+        logs.push({ text: `  ${buff.name}: +${effectValue} Heroism`, color: '#ffd700', token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700', buff });
+        break;
+      case 'gain_shield':
+        this.shield += effectValue;
+        logs.push({ text: `  ${buff.name}: +${effectValue} Shield`, color: '#64b4dc', token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc', buff });
+        break;
+      case 'draw_card':
+        if (this.deck) {
+          const drawn = this.deck.draw(effectValue, 10);
+          for (const d of drawn) logs.push({ text: `  ${buff.name}: Draw ${d.name}`, color: '#3c3cc8', card: d, buff });
+        }
+        break;
+      case 'heal':
+        if (this.deck && this.deck.discardPile.length > 0) {
+          const card = this.deck.discardPile.pop();
+          this.deck.addToRechargePile(card);
+          logs.push({ text: `  ${buff.name}: Healed 1 (${card.name})`, color: '#3cc83c', card, healed: 1, buff });
+        }
+        break;
+      case 'heal_random': {
+        // Bad Rations Meal tick — heal 1..effectValue (random). Rolls
+        // each tick so a 2-turn buff with value=2 gives a 1-1, 1-2,
+        // 2-1, or 2-2 spread.
+        const rolled = 1 + Math.floor(Math.random() * Math.max(1, effectValue));
+        let healed = 0;
+        for (let i = 0; i < rolled && this.deck && this.deck.discardPile.length > 0; i++) {
+          const card = this.deck.discardPile.pop();
+          this.deck.addToRechargePile(card);
+          healed++;
+        }
+        if (healed > 0) {
+          logs.push({ text: `  ${buff.name}: Healed ${healed}`, color: '#3cc83c', healed, buff });
+        }
+        break;
+      }
+      case 'discard_deck_random': {
+        // Bad Rations Meal tick — roll 0..effectValue, discard that
+        // many cards from the deck (player.takeDamageFromDeck). Value
+        // = 1 → 50/50 between 0 and 1.
+        const rolled = Math.floor(Math.random() * (effectValue + 1));
+        if (rolled > 0) {
+          const before = this.deck ? this.deck.drawPile.length + this.deck.rechargePile.length : 0;
+          const taken = (typeof this.takeDamageFromDeck === 'function') ? this.takeDamageFromDeck(rolled) : 0;
+          if (taken > 0) logs.push({ text: `  ${buff.name}: Lost ${taken} card${taken > 1 ? 's' : ''} from deck`, color: '#c83c3c', buff });
+          else if (before === 0) logs.push({ text: `  ${buff.name}: (no cards in deck to discard)`, color: '#888', buff });
+        }
+        break;
+      }
+      case 'apply_ice': {
+        this.applyStatus('ICE', effectValue);
+        for (const ally of (this.creatures || [])) {
+          if (!ally.isAlive) continue;
+          ally.iceStacks = (ally.iceStacks || 0) + effectValue;
+        }
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Ice on you and all allies`,
+          color: '#7ec8e3',
+          token: 'Ice', tokenAmount: effectValue, tokenColor: '#7ec8e3',
+          buff,
+        });
+        break;
+      }
+      case 'summon_elf_warrior': {
+        const aliveAllies = (this.creatures || []).filter(c => c.isAlive).length;
+        if (aliveAllies < 6) {
+          const elf = new Creature({ name: 'Elf Warrior', attack: 2, maxHp: 2 });
+          if (this.addCreature(elf)) {
+            logs.push({ text: `  ${buff.name}: Elf Warrior reinforces!`, color: '#3cc83c', creature: elf, buff });
+          }
+        }
+        break;
+      }
+      case 'magma_tablet_tick': {
+        this.ignite = (this.ignite || 0) + effectValue;
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Ignite (Ignite:${this.ignite})`,
+          color: '#ff8c40',
+          token: 'Ignite', tokenAmount: effectValue, tokenColor: '#ff8c40',
+          buff,
+        });
+        const fire = (this.statusEffects && this.statusEffects.FIRE) || 0;
+        if (fire > 0) {
+          this.ignite += 1;
+          logs.push({
+            text: `    Burning! +1 Ignite (Ignite:${this.ignite})`,
+            color: '#ff8c40',
+            token: 'Ignite', tokenAmount: 1, tokenColor: '#ff8c40',
+            buff,
+          });
+          if (this.deck && typeof this.deck.draw === 'function') {
+            const drawn = this.deck.draw(1, this.maxHandSize || 10);
+            for (const d of drawn) {
+              logs.push({ text: `    Burning! Draw ${d.name}`, color: '#7ec8ff', card: d, buff });
+            }
+          }
+        }
+        break;
+      }
+    }
+  }
+
   processCombatBuffs() {
     const logs = [];
     for (const buff of this.combatBuffs) {
       if (buff.trigger === 'start_of_turn') {
-        switch (buff.effectType) {
-          case 'gain_heroism':
-            this.heroism += buff.effectValue;
-            logs.push({ text: `  ${buff.name}: +${buff.effectValue} Heroism`, color: '#ffd700', token: 'Heroism', tokenAmount: buff.effectValue, tokenColor: '#ffd700', buff });
-            break;
-          case 'gain_shield':
-            this.shield += buff.effectValue;
-            logs.push({ text: `  ${buff.name}: +${buff.effectValue} Shield`, color: '#64b4dc', token: 'Shield', tokenAmount: buff.effectValue, tokenColor: '#64b4dc', buff });
-            break;
-          case 'draw_card':
-            if (this.deck) {
-              const drawn = this.deck.draw(buff.effectValue, 10);
-              for (const d of drawn) logs.push({ text: `  ${buff.name}: Draw ${d.name}`, color: '#3c3cc8', card: d, buff });
-            }
-            break;
-          case 'heal':
-            if (this.deck && this.deck.discardPile.length > 0) {
-              const card = this.deck.discardPile.pop();
-              this.deck.addToRechargePile(card);
-              logs.push({ text: `  ${buff.name}: Healed 1 (${card.name})`, color: '#3cc83c', card, healed: 1, buff });
-            }
-            break;
-          case 'apply_ice': {
-            // Blizzard buff (Wolf Pack fight): every turn, the player
-            // and every alive ally takes one Ice stack. Mirrors PY's
-            // start_of_turn handler.
-            this.applyStatus('ICE', buff.effectValue);
-            for (const ally of (this.creatures || [])) {
-              if (!ally.isAlive) continue;
-              ally.iceStacks = (ally.iceStacks || 0) + buff.effectValue;
-            }
-            logs.push({
-              text: `  ${buff.name}: +${buff.effectValue} Ice on you and all allies`,
-              color: '#7ec8e3',
-              token: 'Ice', tokenAmount: buff.effectValue, tokenColor: '#7ec8e3',
-              buff,
-            });
-            break;
+        // Multi-effect provisions (Bad Rations Meal) carry an effects
+        // array and resolve each entry per tick. Single-effect buffs
+        // fall through to the legacy { effectType, effectValue } path.
+        if (Array.isArray(buff.effects) && buff.effects.length > 0) {
+          for (const e of buff.effects) {
+            this._applyBuffTickEffect(buff, e, logs);
           }
-          case 'summon_elf_warrior': {
-            // Elf Reinforcements buff (General Zhost army fight): summon 1
-            // Elf Warrior at start of turn, only when fewer than 6 living
-            // allies. Default summoning-sickness rule applies — the elf
-            // can't attack until next turn.
-            const aliveAllies = (this.creatures || []).filter(c => c.isAlive).length;
-            if (aliveAllies < 6) {
-              const elf = new Creature({ name: 'Elf Warrior', attack: 2, maxHp: 2 });
-              if (this.addCreature(elf)) {
-                logs.push({ text: `  ${buff.name}: Elf Warrior reinforces!`, color: '#3cc83c', creature: elf, buff });
-              }
-            }
-            break;
-          }
-          case 'magma_tablet_tick': {
-            // Magma Tablet buff — +1 Ignite each turn for N turns,
-            // PLUS the Burning rider: if the player has FIRE at tick
-            // time, +1 more Ignite and Draw 1. Was missing the burning
-            // half-pulse — matches PY game.py:14867-14876.
-            this.ignite = (this.ignite || 0) + buff.effectValue;
-            logs.push({
-              text: `  ${buff.name}: +${buff.effectValue} Ignite (Ignite:${this.ignite})`,
-              color: '#ff8c40',
-              token: 'Ignite', tokenAmount: buff.effectValue, tokenColor: '#ff8c40',
-              buff,
-            });
-            const fire = (this.statusEffects && this.statusEffects.FIRE) || 0;
-            if (fire > 0) {
-              this.ignite += 1;
-              logs.push({
-                text: `    Burning! +1 Ignite (Ignite:${this.ignite})`,
-                color: '#ff8c40',
-                token: 'Ignite', tokenAmount: 1, tokenColor: '#ff8c40',
-                buff,
-              });
-              if (this.deck && typeof this.deck.draw === 'function') {
-                const drawn = this.deck.draw(1, this.maxHandSize || 10);
-                for (const d of drawn) {
-                  logs.push({ text: `    Burning! Draw ${d.name}`, color: '#7ec8ff', card: d, buff });
-                }
-              }
-            }
-            break;
-          }
+        } else {
+          this._applyBuffTickEffect(buff, { effectType: buff.effectType, effectValue: buff.effectValue }, logs);
         }
         if (buff.turnsRemaining > 0) {
           buff.turnsRemaining--;

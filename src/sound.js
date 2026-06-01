@@ -419,6 +419,11 @@ export const SOUND_MAP = {
   // Plate-on-strap — picking up / equipping a shield for shields-only
   // play (Cracked Buckler etc.).
   shield_grab:    'ImpactAudio/impactPlate_medium_000',
+  // Direct alias for the heavy plate slam — used by Dwarven Tower
+  // Shield's play cue so the SFX override reads as the filename a
+  // designer would expect (rather than the semantic block_light
+  // alias which already maps to this same sample).
+  impactPlate_heavy_000: 'ImpactAudio/impactPlate_heavy_000',
   // Rat / vermin screech (Giant Rat + Dire Rat summon cards) — same
   // squeak fires when a rat fight kicks off (combat-intro splash).
   rat_screech:    'Monster/rodent_squeak_01',

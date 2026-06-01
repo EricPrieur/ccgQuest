@@ -60,6 +60,7 @@ export class Card {
     previewCreatures = [],
     isToken = false,
     isUnique = false,
+    provision = null,
   }) {
     this.id = id;
     this.name = name;
@@ -82,6 +83,7 @@ export class Card {
     this.previewCreatures = previewCreatures;
     this.isToken = isToken;
     this.isUnique = isUnique;
+    this.provision = provision;
     this.exhausted = false;
   }
 
@@ -122,6 +124,7 @@ export class Card {
       previewCreatures: [...this.previewCreatures],
       isToken: this.isToken,
       isUnique: this.isUnique,
+      provision: this.provision,
     });
     if (preserveUid) c.uid = this.uid;
     // Preserve the on-card enchant tags (Obsidian Forge, Dwarven
