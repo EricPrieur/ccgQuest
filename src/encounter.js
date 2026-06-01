@@ -2240,6 +2240,84 @@ export function createVolcanoChoiceEncounter() {
   ]);
 }
 
+// Ridge — post-dragon "leave?" offer. Fires when the player returns
+// to The Ridge (summit_ridge) after slaying Varimatras. Two choices:
+// head back to the Tharnag throne room (warm fade-out), or stay on
+// the summit a little longer.
+export function createRidgePostDragonOfferEncounter() {
+  return new Encounter('ridge_post_dragon_offer', 'The Ridge', 'The summit, after the dragon.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The wind has not stopped, but the storm has. Ice still clings to the obsidian under your boots and the dragon-corpse is already half-buried in snow drift.'),
+        new EncounterText('Below, the volcano is slowly awakening — not yet erupting, but stirring. The vents are smoking. The party stands a moment longer, breath fogging in the cold.'),
+        new EncounterText("Nothing more for us up here. The dwarves will be waiting. Tharnag should know we made it.", 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Will you head back?',
+      choices: [
+        new EncounterChoice(
+          'Return to Tharnag (Throne Room)',
+          'You turn from the ridge. The road home is long, but the dwarves will be waiting.',
+          'bridge_return_tharnag', 0,
+        ),
+        new EncounterChoice(
+          'Stay a moment longer',
+          '',
+          '', 0,
+          { completesEncounter: true, repeatable: true },
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Volcano Choice — revisit variant. Fired when the player returns to
+// the Point of No Return node after already picking a path once. The
+// dragon-arc story beat is over: simpler dialog, no level-up loot
+// phase, and a "Not yet" option that just closes the encounter so the
+// player can keep poking around the volcano area.
+export function createVolcanoChoiceRevisitEncounter() {
+  return new Encounter('volcano_choice_revisit', 'The Point of No Return', 'The volcano stirs in its sleep.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The mountain is awakening but has not erupted yet. Smoke curls from the upper vents and the lower tunnels breathe warm air. You still have time to choose.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          "Climb to the upper vents (Thorb's plan)",
+          'You scramble up the frozen slope, boots slipping on obsidian glass. The vents are narrow but passable.',
+          'volcano_upper', 1,
+        ),
+        new EncounterChoice(
+          "Enter the lower caves (Valdrisa's plan)",
+          "You slide through the collapsed opening, warm air washing over you. The kobolds won't follow you down here.",
+          'volcano_lower', 1,
+        ),
+        new EncounterChoice(
+          'Not yet — turn back for now',
+          'You step back from the mountain. There is still time.',
+          '', 0,
+          // Repeatable + completesEncounter → returns to the map without
+          // committing. The node stays revisitable for next time.
+          { completesEncounter: true, repeatable: true },
+        ),
+      ],
+    }),
+    // No LOOT phase on revisit — the level-up only fires the first
+    // time. Both volcano_upper / volcano_lower transitions still run
+    // in main.js via the `completedEncounterId === 'volcano_choice'`
+    // branch (it intentionally matches both encounter ids — see the
+    // revisit dispatch comment in main.js).
+  ]);
+}
+
 // Kobold Slyblade — random encounter on the dwarven city / upper path
 // movement nodes (entry_corridor's corridor_ruins for now). Mirrors PY
 // encounter.py:create_kobold_slyblade_encounter. Loot table
@@ -4026,6 +4104,8 @@ export const ENCOUNTER_REGISTRY = {
   // Volcano
   volcano_arrival: createVolcanoArrivalEncounter,
   volcano_choice: createVolcanoChoiceEncounter,
+  volcano_choice_revisit: createVolcanoChoiceRevisitEncounter,
+  ridge_post_dragon_offer: createRidgePostDragonOfferEncounter,
   lower_caverns_arrival: createLowerCavernsArrivalEncounter,
   lava_chamber_arrival: createLavaChamberArrivalEncounter,
   obsidian_tunnels_arrival: createObsidianTunnelsArrivalEncounter,

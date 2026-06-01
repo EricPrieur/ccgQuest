@@ -24,7 +24,7 @@ import {
   createSlimeAppendage, createPartiallyDigestedBone, createCorrodedArmor, createPetSlimeCard, createSlimeJar,
   createGuards, createHideInCorner,
   createDireRatBite, createDireRatScreech,
-  createSharpRock, createLargeBoulder, createLuckyPebble, createBoneWand, createBoneClub, createBoneMace, createBoneStaff, createTorch,
+  createSharpRock, createRockBarrage, createLargeBoulder, createLuckyPebble, createBoneWand, createBoneClub, createBoneMace, createBoneStaff, createTorch,
   createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread,
   createThorbCreature, createThorbUpgradedCreature, createRaenaCreature, createRaenaUpgradedCreature,
   createBuffRunning, createBuffHiding, createBuffCalculating,
@@ -313,6 +313,11 @@ let quartersRested = false;
 // straight into the end-of-game fade-to-menu instead of the normal
 // rebalance. Reset on startNewGame; saved via save.js below.
 let dragonSlain = false;
+// Latches once the player has completed the volcano_choice encounter
+// (Point of No Return) at least once. Subsequent visits use the
+// volcano_choice_revisit encounter — simpler dialog, no level-up, and
+// a "Not yet" option that closes the encounter without committing.
+let volcanoChoiceCompleted = false;
 // Set when the player walks back into the Guild Hall after slaying
 // Varimatras and triggers the Heroes of Qualibaf celebration. Grants
 // free rests at every inn in the city for life (resolveInnRest waives
@@ -373,6 +378,13 @@ let volcanoPath = null;
 // resets on encounter, +7% per dry step on flagged movement nodes
 // in lower_caverns / lava_chamber (and future obsidian maps).
 let undergroundEncounterChance = 0.07;
+// Latches the first time a Kobold Slyblade fight fires anywhere in
+// the chapter 8 stairs (volcano_stairs_1/2/3). Drives the
+// guarantee: if the player reaches the very last roll node
+// (stairs3_exit) without ever seeing a Slyblade, the random gate
+// is overridden and a Slyblade is forced so the chapter never ends
+// without at least one of these encounters.
+let chapter8SlybladeSeen = false;
 // Dwarven-city random encounter chance — used by the upper-path maps
 // (entry_corridor + the existing Thorgazad maps). Mirrors PY's
 // self.dwarven_city_encounter_chance (game.py:1268). Resets to the
@@ -1424,6 +1436,7 @@ const CARD_REGISTRY = {
   dwarven_crossbow: createDwarvenCrossbow, dwarven_tower_shield: createDwarvenTowerShield,
   runeforged_buckler: createRuneforgedBuckler,
   chain_shirt: createChainShirt, ironforge_chainmail: createIronforgeChainmail,
+  dwarven_throwing_axe: createDwarvenThrowingAxe,
   dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew,
   dwarven_warhammer: createDwarvenWarhammer, miners_pickaxe: createMinersPickaxe,
   dwarven_scout: createDwarvenScoutCard,
@@ -3149,6 +3162,7 @@ function startNewGame() {
   dragonSlain = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
+  volcanoChoiceCompleted = false;
   // Runtime-only backdrop overrides (Varimatras, volcano-awakening,
   // bridge-exploding, dwarven-city per-map) can leak across a New
   // Game from a previous Varimatras run since they're not saved.
@@ -3165,6 +3179,7 @@ function startNewGame() {
   wastesNorthRestDone = false;
   volcanoEncounterChance = 0.34;
   undergroundEncounterChance = 0.07;
+  chapter8SlybladeSeen = false;
   forgeUsed = false;
   forgeRested = false;
   volcanoHeartSacrificed = false;
@@ -5614,11 +5629,21 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       // Roll. Volcano-side maps include the mephit in the pool;
       // future obsidian-tunnel maps share the same 3-encounter pool
       // per PY game.py:4103-4110.
-      if (Math.random() < undergroundEncounterChance) {
+      // Chapter 8 Slyblade guarantee: if the player has reached the
+      // very last roll node (stairs3_exit) on the climb without ever
+      // seeing a Slyblade, force the roll to hit. The pool override
+      // for volcano_stairs_3 is ['kobold_slyblade'] so the pick below
+      // will land on Slyblade. Without this, an unlucky run could
+      // finish the entire climb with zero Slyblade encounters.
+      const slybladeGuarantee = currentMap.id === 'volcano_stairs_3'
+        && nodeId === 'stairs3_exit'
+        && !chapter8SlybladeSeen;
+      if (slybladeGuarantee || Math.random() < undergroundEncounterChance) {
         undergroundEncounterChance = undergroundEncounterStep();
         const pool = UNDERGROUND_POOL_OVERRIDES[currentMap.id]
           || ['obsidian_golem', 'obsidian_slime', 'magma_mephit'];
         const pick = pool[Math.floor(Math.random() * pool.length)];
+        if (pick === 'kobold_slyblade') chapter8SlybladeSeen = true;
         const factory = ENCOUNTER_REGISTRY[pick];
         if (factory) {
           // Inherit the current map's art as the combat backdrop.
@@ -5979,6 +6004,15 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   //    `repeatableUntil` lets a canRevisit encounter stop refiring
   //    once a sentinel node is itself isDone (e.g. Sentinel Patrol
   //    stops repeating after the Baron is killed).
+  // Post-dragon Ridge revisit: existing saves baked summit_ridge with
+  // canRevisit:false (its original spec), which makes canRunEncounter
+  // below false → the leave-offer dispatch in startNodeEncounter never
+  // gets a chance to run. Force the flag true at arrival time so old
+  // saves and fresh runs both surface the ridge_post_dragon_offer
+  // when the player walks back onto The Ridge.
+  if (dragonSlain && nodeId === 'summit_ridge' && currentMap.id === 'volcano_summit_ridge') {
+    node.canRevisit = true;
+  }
   let canRunEncounter = !skipEncounter && node.encounterId && (!node.isDone || node.canRevisit);
   if (canRunEncounter && node.repeatableUntil) {
     const stop = currentMap.getNode(node.repeatableUntil);
@@ -7385,6 +7419,71 @@ function startNodeEncounter(nodeId) {
     return;
   }
 
+  // Post-dragon volcano re-entry skip: once Varimatras is dead, the
+  // "first time stepping into the volcano" arrival dialogs (Ruined
+  // Lookout for the upper path / Lower Caverns Arrival for the lower
+  // path) shouldn't replay when the player loops back through the
+  // volcano_choice_revisit dialog. Same one-shot pattern as the
+  // less_deep_sewer skip above.
+  if (dragonSlain
+      && (node.encounterId === 'entry_corridor_arrival'
+          || node.encounterId === 'lower_caverns_arrival')) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+  // Gate Guardroom — one-shot dialog + loot. Skip on any revisit
+  // once it's in completedEncounters, even if the player Left without
+  // searching (would otherwise leave Search un-exhausted and re-fire
+  // the whole encounter). Node already has canRevisit:true so the
+  // player can navigate back through it; this just prevents the
+  // dialog/loot from playing again.
+  if (node.encounterId === 'gate_guardroom'
+      && completedEncounters && completedEncounters.has
+      && completedEncounters.has('gate_guardroom')) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+  // The Ridge — post-dragon "leave?" offer. After Varimatras drops
+  // (transitionToTharnagPart1Ending sets dragonSlain) the player can
+  // wander back to the summit. Walking onto summit_ridge a second
+  // time fires the new dialog asking if they want to head back to
+  // Tharnag's throne room. Original Gnikan encounter is one-shot via
+  // its own canRevisit flag, so this only ever surfaces post-dragon.
+  if (dragonSlain && node.encounterId === 'overseer_gnikan') {
+    currentMap.currentNodeId = nodeId;
+    node.isDone = true;
+    node.hiddenName = '';
+    node.hiddenDescription = '';
+    const factory = ENCOUNTER_REGISTRY.ridge_post_dragon_offer;
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // To Upper Volcano (bridge_to_volcano) — post-dragon revisit jumps
+  // straight to volcano_stairs_1. The "Blow the bridge" dialog +
+  // chapter-8 title card are first-time-only beats; on revisit the
+  // path is already destroyed and the player just wants to walk up
+  // the stairs. Marks the node done so its hiddenName reveals.
+  if (dragonSlain && node.encounterId === 'bridge_crossing') {
+    node.isDone = true;
+    node.hiddenName = '';
+    node.hiddenDescription = '';
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('volcano_stairs_1', createVolcanoStairs1Map);
+    visitedNodes = new Set(['stairs1_entry']);
+    currentMap.currentNodeId = 'stairs1_entry';
+    state = GameState.MAP;
+    arriveAtNode('stairs1_entry', null, true);
+    return;
+  }
+
   if (!node.encounterId || !ENCOUNTER_REGISTRY[node.encounterId]) {
     // No encounter defined — just mark done and stay on map
     currentMap.completeCurrentNode();
@@ -7428,6 +7527,22 @@ function startNodeEncounter(nodeId) {
     const fac = volcanoHeartSacrificed
       ? ENCOUNTER_REGISTRY.volcano_heart_revisit
       : ENCOUNTER_REGISTRY.volcano_heart;
+    currentEncounter = fac ? fac() : factory();
+  } else if (node.encounterId === 'volcano_choice') {
+    // The Point of No Return — second visit (after the player picked
+    // a branch the first time) swaps in the revisit encounter: simpler
+    // dialog, no level-up loot phase, and an extra "Not yet" option
+    // that just closes the encounter. Also fires when the in-memory
+    // completedEncounters set already contains volcano_choice (covers
+    // mid-session re-entry after an earlier completion) or when
+    // dragonSlain is set (the dragon is dead → player has definitely
+    // been through the original encounter).
+    const alreadyDone = volcanoChoiceCompleted
+      || (completedEncounters && completedEncounters.has && completedEncounters.has('volcano_choice'))
+      || dragonSlain;
+    const fac = alreadyDone
+      ? ENCOUNTER_REGISTRY.volcano_choice_revisit
+      : ENCOUNTER_REGISTRY.volcano_choice;
     currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'cathedral_shrine') {
     // Cathedral Shrine — once any choice has been used (pray OR rest),
@@ -7906,22 +8021,35 @@ function advanceEncounterPhase() {
       });
       return;
     }
-    if (completedEncounterId === 'volcano_choice') {
+    if (completedEncounterId === 'volcano_choice' || completedEncounterId === 'volcano_choice_revisit') {
       // Point of No Return → chapter 7. Player picked a branch
       // earlier in the encounter; `volcanoPath` holds 'upper' or
       // 'lower'. Mirrors PY game.py:4575-4609.
+      // Latch first-time completion so a return visit fires the
+      // revisit encounter (simpler dialog, no level-up, "Not yet"
+      // option). The transitions below ALSO fire on revisits, so the
+      // latch happens here unconditionally.
+      const isRevisit = completedEncounterId === 'volcano_choice_revisit';
+      volcanoChoiceCompleted = true;
       if (volcanoPath === 'lower') {
-        trackEvent('chapter_completed', { chapter: 6, class: selectedClass });
-        showTitleCard(
-          'Chapter 7: Enter the Volcano',
-          'Descend into the depths. Discover what lies beneath.',
-          () => {
-            if (currentMap) _mapCache[currentMap.id] = currentMap;
-            currentMap = getOrCreateMap('lower_caverns', createLowerCavernsMap);
-            visitedNodes = new Set(['cavern_entrance']);
-            startNodeEncounter('cavern_entrance');
-          }
-        );
+        const enterLower = () => {
+          if (currentMap) _mapCache[currentMap.id] = currentMap;
+          currentMap = getOrCreateMap('lower_caverns', createLowerCavernsMap);
+          visitedNodes = new Set(['cavern_entrance']);
+          startNodeEncounter('cavern_entrance');
+        };
+        // First-time entry shows the Chapter 7 title card; revisits
+        // skip the cinematic and drop straight into the cavern map.
+        if (isRevisit) {
+          enterLower();
+        } else {
+          trackEvent('chapter_completed', { chapter: 6, class: selectedClass });
+          showTitleCard(
+            'Chapter 7: Enter the Volcano',
+            'Descend into the depths. Discover what lies beneath.',
+            enterLower,
+          );
+        }
         volcanoPath = null;
         return;
       }
@@ -7930,17 +8058,22 @@ function advanceEncounterPhase() {
         // upper ruins (entry_corridor map). Same chapter banner as
         // the lower branch; subtitle changes to match PY's flavor.
         // Mirrors PY game.py:4593-4609.
-        trackEvent('chapter_completed', { chapter: 6, class: selectedClass });
-        showTitleCard(
-          'Chapter 7: Enter the Volcano',
-          'Climb into the ruins. Find a way into Thorgazad.',
-          () => {
-            if (currentMap) _mapCache[currentMap.id] = currentMap;
-            currentMap = getOrCreateMap('entry_corridor', createEntryCorridorMap);
-            visitedNodes = new Set(['corridor_entrance']);
-            startNodeEncounter('corridor_entrance');
-          }
-        );
+        const enterUpper = () => {
+          if (currentMap) _mapCache[currentMap.id] = currentMap;
+          currentMap = getOrCreateMap('entry_corridor', createEntryCorridorMap);
+          visitedNodes = new Set(['corridor_entrance']);
+          startNodeEncounter('corridor_entrance');
+        };
+        if (isRevisit) {
+          enterUpper();
+        } else {
+          trackEvent('chapter_completed', { chapter: 6, class: selectedClass });
+          showTitleCard(
+            'Chapter 7: Enter the Volcano',
+            'Climb into the ruins. Find a way into Thorgazad.',
+            enterUpper,
+          );
+        }
         volcanoPath = null;
         return;
       }
@@ -8712,9 +8845,12 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.stone_giant = () => {
     enemy = new Character('Stone Giant');
     enemy.deck = new Deck();
-    // Mirrors PY: 10 Sharp Rock + 10 Large Boulder summons. The giant summons
-    // fresh boulders to replace any the player destroys.
-    for (let i = 0; i < 10; i++) enemy.deck.addCard(createSharpRock());
+    // 10 Rock Barrage + 10 Large Boulder summons. The giant pelts the
+    // party with 3-shot rock volleys (replacing the old Sharp Rock
+    // pick that broke after damage_draw_on_hit got its modifier
+    // audit) and summons fresh boulders to replace any the player
+    // destroys.
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createRockBarrage());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createLargeBoulder());
     enemy._invulnerable = true;
     enemy._survivalRounds = 5;
@@ -8907,7 +9043,8 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.overseer_gnikan = () => {
     enemy = new Character('Overseer Gnikan');
     enemy.deck = new Deck();
-    for (let i = 0; i < 6; i++) {
+    // 4 Gravechill Shards (back-to-back 2-Ice barrage) + 8 Ice Bolts.
+    for (let i = 0; i < 4; i++) {
       const c = createGravechillShard();
       c.priority = 30;
       enemy.deck.addCard(c);
@@ -8918,7 +9055,7 @@ function setupEnemyForCombat(enemyId) {
       enemy.deck.addCard(c);
     }
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceNova());
-    for (let i = 0; i < 6; i++) enemy.deck.addCard(createIceBolt());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceBolt());
     for (let i = 0; i < 4; i++) {
       const c = createIceBlock();
       c.priority = 20;
@@ -8950,7 +9087,8 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.overseer_gnikan_phase_2 = () => {
     enemy = new Character('Overseer Gnikan');
     enemy.deck = new Deck();
-    for (let i = 0; i < 6; i++) {
+    // Mirrors phase 1: 4 Gravechill Shards + 8 Ice Bolts.
+    for (let i = 0; i < 4; i++) {
       const c = createGravechillShard();
       c.priority = 30;
       enemy.deck.addCard(c);
@@ -8961,7 +9099,7 @@ function setupEnemyForCombat(enemyId) {
       enemy.deck.addCard(c);
     }
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceNova());
-    for (let i = 0; i < 6; i++) enemy.deck.addCard(createIceBolt());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createIceBolt());
     for (let i = 0; i < 4; i++) {
       const c = createIceBlock();
       c.priority = 20;
@@ -9852,11 +9990,11 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, dragonEggDamage, heroesOfQualibaf,
+              dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
-              volcanoEncounterChance, undergroundEncounterChance, forgeUsed, forgeRested,
+              volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested,
               volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns,
               cathedralPrayed, cathedralRested, ancestorSpiritsDefeated,
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
@@ -10166,6 +10304,30 @@ function handleEncounterChoiceClick(x, y) {
         const fromNode = currentMap && currentMap.currentNodeId;
         currentMap.completeCurrentNode();
         transitionToObsidianWastes(fromNode);
+        return;
+      }
+      case 'bridge_return_tharnag': {
+        // Post-dragon bridge offer — fade back to Tharnag's throne room.
+        // Cache current map so the volcano-area exploration state is
+        // preserved if the player wants to come back out again later.
+        currentMap.completeCurrentNode();
+        if (currentMap) _mapCache[currentMap.id] = currentMap;
+        currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+        visitedNodes = new Set();
+        visitedNodes.add('throne');
+        currentMap.currentNodeId = 'throne';
+        const throneNode = currentMap.getNode('throne');
+        if (throneNode) {
+          throneNode.isLocked = false;
+          throneNode.hiddenName = '';
+          throneNode.hiddenDescription = '';
+        }
+        // Settle music back to the homecoming theme so the throne
+        // room reads as the calm-after-the-storm space.
+        try { crossfadeMusic('Music/music_alter_hero_01', 1500, 2500); _lastMusicArea = null; _lastMusicNodeId = null; } catch (_) {}
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
         return;
       }
 
@@ -10487,7 +10649,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
     addLog('  [Auto-saved]', Colors.GRAY);
   } catch (err) {
     console.warn('Autosave failed:', err);
@@ -14230,7 +14392,7 @@ function drawCombat() {
   if (enemyArrow) {
     const a = Math.min(1, enemyArrow.timer / (ENEMY_ARROW_DURATION * 0.3));
     ctx.globalAlpha = a;
-    drawTargetingArrow(enemyArrow.x1, enemyArrow.y1, enemyArrow.x2, enemyArrow.y2, Colors.RED);
+    drawTargetingArrow(enemyArrow.x1, enemyArrow.y1, enemyArrow.x2, enemyArrow.y2, enemyArrow.color || Colors.RED);
     ctx.globalAlpha = 1;
   }
   // --- Enemy AoE arrow batch (all segments share a timer) ---
@@ -18567,6 +18729,20 @@ function resolveEffect(eff, caster, target) {
         }
         if (target !== enemy && enemy.isAlive) applyIgniteRider(enemy, mdIgnite);
       }
+      // 2 Targets: Draw rider (Dwarven Throwing Axe). Reads the
+      // active card's currentEffects for a `draw_on_two_targets`
+      // entry; when the chain landed on >= 2 distinct targets, the
+      // caster draws eff.value cards. Mirrors the Cleave power's
+      // 2-targets bonus but for cards.
+      if (caster === player && _activePlayCard && hits >= 2) {
+        const mdDrawRider = (_activePlayCard.currentEffects || [])
+          .find(e => e.effectType === 'draw_on_two_targets');
+        if (mdDrawRider) {
+          const drawn = player.deck.draw(mdDrawRider.value || 1, MAX_HAND_SIZE);
+          for (const d of drawn) addLog(`  2 Targets! Draw: ${d.name}`, Colors.BLUE, d);
+          if (drawn.length > 0) playDrawSounds(drawn.length);
+        }
+      }
       attacksThisTurn++;
       break;
     }
@@ -20425,6 +20601,10 @@ function resolveEffect(eff, caster, target) {
     case 'draw_on_kill':
       // Rider read by maybeFireDrawOnKill after each damage resolves;
       // nothing to resolve standalone.
+      break;
+    case 'draw_on_two_targets':
+      // Rider read by the multi_damage case at end-of-chain — fires
+      // when hits >= 2. Nothing to resolve standalone.
       break;
     case 'enemy_gain_armor':
       // Obsidian Shard token on banish — the Oracle (or whichever
@@ -24840,6 +25020,29 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+      } else if (eff.effectType === 'enemy_damage_succession') {
+        // Rock Barrage (Stone Giant) — magic-missile-style barrage:
+        // maxTargets shots at eff.value damage each, each shot rolls
+        // a fresh target via pickEnemyAttackTarget so the barrage may
+        // hit the same enemy multiple times OR spread across allies.
+        // Ice on the caster is consumed PER shot — mirrors Magic
+        // Missile barrage. Each Ice stack chills one shot then the
+        // remaining shots fire at full damage. Heroism is consumed
+        // once on the first shot (matches the standard damage flow).
+        // Shock-on-target adds per shot since each shot is its own hit.
+        const shots = eff.maxTargets || 2;
+        let baseDmg = eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy);
+        baseDmg = Math.max(0, baseDmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        for (let s = 0; s < shots; s++) {
+          const t = pickEnemyAttackTarget();
+          if (!t) break;
+          let tDmg = consumeIceForAttack(enemy, baseDmg);
+          tDmg += getIncomingDamageModifier(t);
+          tDmg = Math.max(0, tDmg);
+          addLog(`  Rock ${s + 1}:`, Colors.GRAY);
+          routeEnemyDamageToTarget(t, tDmg, card.name);
+        }
       } else if (eff.effectType === 'poison_bonus_damage') {
         // Sly Blade (enemy side) — +N damage if the target is
         // Poisoned. Player Poison lives under statusEffects.POISON;
@@ -24924,6 +25127,40 @@ function updateEnemyTurn(dt) {
         }
       } else if (eff.effectType === 'apply_ice') {
         applyIceToTarget(cardTarget, eff.value);
+      } else if (eff.effectType === 'apply_ice_multi') {
+        // Enemy Gravechill Shard — N separate Ice attacks back-to-back.
+        // Each shot picks its OWN target via pickEnemyAttackTarget so
+        // sentinel-first rules apply per shot (two attacks against a
+        // sentinel both land on the sentinel; otherwise weighted spread
+        // across player + allies). Each shot spawns its own ICE-BLUE
+        // arrow + cold whoosh + applies 1 Ice. Stagger is wide enough
+        // (~700ms) that the previous arrow has time to fade out before
+        // the next replaces it, so two shots at the same target read
+        // as two visibly distinct attacks rather than a single flicker.
+        const shots = Math.max(1, eff.value);
+        const enemyCenter = getEnemyCenter();
+        const arrowTimer = 600 * getEnemySpeedMul();
+        const stagger = Math.max(700, arrowTimer + 100) * getEnemySpeedMul();
+        for (let s = 0; s < shots; s++) {
+          const delay = s * stagger;
+          const fire = () => {
+            const t = pickEnemyAttackTarget();
+            if (!t) return;
+            const dst = getTargetCenter(t);
+            enemyArrow = {
+              x1: enemyCenter.x, y1: enemyCenter.y,
+              x2: dst.x, y2: dst.y,
+              timer: arrowTimer,
+              sourceCreature: null,
+              color: Colors.ICE_BLUE,
+            };
+            playSound('cold_whoosh_01', 0.55);
+            addLog(`  Shard ${s + 1}:`, Colors.GRAY);
+            applyIceToTarget(t, 1);
+          };
+          if (delay > 0) setTimeout(fire, delay);
+          else fire();
+        }
       } else if (eff.effectType === 'apply_ice_self') {
         // Self-ice rider on enemy ATTACK cards (Gravechill Shard,
         // Gnikan's Staff). Stacks Ice on the casting enemy via the
@@ -30361,10 +30598,10 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf,
+    throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
-    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance,
+    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
     forgeUsed, forgeRested, volcanoHeartSacrificed,
     volcanoBuffType, volcanoBuffTurns,
     cathedralPrayed, cathedralRested,
@@ -30972,6 +31209,20 @@ function restoreFromSave(data) {
   dragonSlain = !!data.dragonSlain;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
+  // Back-compat: pre-fix saves don't have volcanoChoiceCompleted.
+  // Derive from completedEncounters (the encounter is always added
+  // there on first completion) so an existing save that's already past
+  // the Point of No Return correctly fires the revisit dialog on
+  // return. Falls back to dragonSlain — if the dragon's dead, the
+  // player has definitely been through volcano_choice.
+  volcanoChoiceCompleted = !!data.volcanoChoiceCompleted
+    || (Array.isArray(data.completedEncounters) && data.completedEncounters.includes('volcano_choice'))
+    || !!data.dragonSlain;
+  // Back-compat: pre-fix saves derive Slyblade-seen from
+  // completedEncounters (any kobold_slyblade entry means it happened
+  // at least once during the run).
+  chapter8SlybladeSeen = !!data.chapter8SlybladeSeen
+    || (Array.isArray(data.completedEncounters) && data.completedEncounters.includes('kobold_slyblade'));
   // Same defensive reset as startNewGame — _encounterBgOverride is
   // runtime-only and shouldn't survive a load.
   _encounterBgOverride = null;
@@ -31016,16 +31267,31 @@ function restoreFromSave(data) {
   // they're stored on the Character which gets rebuilt from scratch.
   if (Array.isArray(data.persistentBuffs)) {
     player.persistentBuffs = data.persistentBuffs
-      .map(b => b ? new PersistentBuff({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-        imageId: b.imageId,
-        effectType: b.effectType,
-        effectValue: b.effectValue,
-        trigger: b.trigger,
-        condition: b.condition,
-      }) : null)
+      .map(b => {
+        if (!b) return null;
+        const pb = new PersistentBuff({
+          id: b.id,
+          name: b.name,
+          description: b.description,
+          imageId: b.imageId,
+          effectType: b.effectType,
+          effectValue: b.effectValue,
+          trigger: b.trigger,
+          condition: b.condition,
+        });
+        // Re-attach Provision metadata so clearActiveProvisions /
+        // map slot indicator / per-combat turn cap all find it.
+        // Back-compat: pre-fix saves stripped these fields. Derive
+        // _provisionSlot from the buff id ('provision_meal' /
+        // 'provision_beverage') so the rest-clear path can still
+        // catch an old save's lingering provision.
+        if (b._provisionSlot) pb._provisionSlot = b._provisionSlot;
+        else if (b.id === 'provision_meal') pb._provisionSlot = 'meal';
+        else if (b.id === 'provision_beverage') pb._provisionSlot = 'beverage';
+        if (b._provisionTurnsPerCombat) pb._provisionTurnsPerCombat = b._provisionTurnsPerCombat;
+        if (b._provisionEffects) pb._provisionEffects = b._provisionEffects;
+        return pb;
+      })
       .filter(Boolean);
   }
   // Re-hydrate the Volcano's Blessing display buff after the globals

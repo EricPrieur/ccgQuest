@@ -106,6 +106,15 @@ export function saveGame(state, saveName = '') {
           effectValue: b.effectValue,
           trigger: b.trigger,
           condition: b.condition,
+          // Provision metadata (Beverage / Meal slot tag, per-combat
+          // turn cap, multi-effect array). Without these the underscore
+          // fields are stripped on autosave and the buff escapes the
+          // rest-clear filter (clearActiveProvisions matches on
+          // _provisionSlot). Result: a Chicken Leg buff that survives
+          // every rest until end of run.
+          _provisionSlot: b._provisionSlot || null,
+          _provisionTurnsPerCombat: b._provisionTurnsPerCombat || 0,
+          _provisionEffects: b._provisionEffects || null,
         }))
       : [],
     soldCardsHistory: Array.isArray(state.soldCardsHistory) ? state.soldCardsHistory.slice() : [],
@@ -127,6 +136,8 @@ export function saveGame(state, saveName = '') {
     dragonSlain: !!state.dragonSlain,
     dragonEggDamage: typeof state.dragonEggDamage === 'number' ? state.dragonEggDamage : 0,
     heroesOfQualibaf: !!state.heroesOfQualibaf,
+    volcanoChoiceCompleted: !!state.volcanoChoiceCompleted,
+    chapter8SlybladeSeen: !!state.chapter8SlybladeSeen,
     valdrisaJoined: !!state.valdrisaJoined,
     upperStairsReturnSeen: !!state.upperStairsReturnSeen,
     tharnagExitSeen: !!state.tharnagExitSeen,

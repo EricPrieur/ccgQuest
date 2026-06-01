@@ -27,6 +27,7 @@ export const CARD_ART_MAP = {
   cloth_armor: 'ClothArmor.jpg',
   buckler: 'Buckler.jpg',
   sharp_rock: 'SharpRock.jpg',
+  rock_barrage: 'SharpRock.jpg',
   chicken_leg: 'ChickenLeg.jpg',
 
   // === Paladin ===

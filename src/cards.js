@@ -101,7 +101,7 @@ export function createWoodenAxe() {
   return new Card({
     id: 'wooden_axe',
     name: 'Wooden Axe',
-    description: 'Recharge -> Deal 2 damage to up to 2 targets.',
+    description: 'Recharge -> Deal 2 Damage to 2 targets.',
     shortDesc: 'R->2 Dmg x2',
     subtype: 'martial',
     cardType: CardType.ATTACK,
@@ -573,11 +573,11 @@ export function createVialOfPoison() {
   return new Card({
     id: 'vial_of_poison',
     name: 'Vial of Poison',
-    description: 'Recharge -> Next attack applies Poison.',
-    shortDesc: 'R->+Poison',
+    description: 'Consume -> Next attack applies Poison.',
+    shortDesc: 'C->+Poison',
     subtype: 'item',
     cardType: CardType.ITEM,
-    costType: CostType.RECHARGE,
+    costType: CostType.BANISH,
     effects: [new CardEffect('grant_poison_buff', 1, TargetType.SELF)],
     characterClass: ['rogue'],
     tier: 1,
@@ -2173,6 +2173,26 @@ export function createSharpRock() {
   });
 }
 
+// Rock Barrage — enemy-only card used by the Stone Giant. Shares the
+// Sharp Rock art. Magic-missile-style barrage: 3 shots of 1 damage
+// each, each shot picks its own target (could be the same enemy
+// twice or spread across allies). Always draws.
+export function createRockBarrage() {
+  return new Card({
+    id: 'rock_barrage',
+    name: 'Rock Barrage',
+    description: 'Recharge -> Deal 1 Damage 3 times, Draw.',
+    shortDesc: 'R->1 Dmg x3, Draw',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 3),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+  });
+}
+
 // Zhost's Buckler — drops as boss loot. Light armor that hits for
 // 2 damage + 1 Ice, grants 2 Shields, and pulls a card if the player
 // has built up at least 2 Shields by the end of the play.
@@ -2555,7 +2575,7 @@ export function createSteelAxe() {
   return new Card({
     id: 'steel_axe',
     name: 'Steel Axe',
-    description: 'Recharge -> Deal 3 damage to up to 2 targets.',
+    description: 'Recharge -> Deal 3 Damage to 2 targets.',
     shortDesc: 'R->3 Dmg x2',
     subtype: 'martial',
     cardType: CardType.ATTACK,
@@ -2597,7 +2617,7 @@ export function createSteelGreataxe() {
   return new Card({
     id: 'steel_greataxe',
     name: 'Steel Greataxe',
-    description: 'Recharge +1 Card -> Deal 4 damage and 3 damage to up to 2 other targets.',
+    description: 'Recharge +1 Card -> Deal 4 Damage and\n3 Damage to 2 other targets.',
     shortDesc: 'R+1->4 Dmg\n+3 Dmg x2',
     subtype: 'martial_2h',
     cardType: CardType.ATTACK,
@@ -3797,20 +3817,21 @@ export function createMinersPickaxe() {
 }
 
 export function createDwarvenThrowingAxe() {
-  // Mirrors PY create_dwarven_throwing_axe (cards_basic.py:4568) —
-  // single-target 2 dmg + Draw 1, martial. Was implemented as a
-  // multi-target axe which doesn't match PY.
+  // Two-target martial — Cleave-shaped: 2 damage to up to 2 enemies,
+  // draws a card only when the player picks a 2nd target. The draw
+  // rider is `draw_on_two_targets`, read by the multi_damage handler
+  // at end of swing.
   return new Card({
     id: 'dwarven_throwing_axe',
     name: 'Dwarven Throwing Axe',
-    description: 'Recharge -> Deal 2 Damage. Draw.',
-    shortDesc: 'R->2 Dmg, Draw',
+    description: 'Recharge -> Deal 2 Damage to 2 targets.\n2 Targets: Draw.',
+    shortDesc: 'R->2 Dmg x2\n2 Targets: Draw',
     subtype: 'martial',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('draw_on_two_targets', 1, TargetType.SELF),
     ],
     rarity: 'common',
     tier: 2,
@@ -4453,14 +4474,15 @@ export function createWhiteWolfCloak() {
   return new Card({
     id: 'white_wolf_cloak',
     name: 'White Wolf Cloak',
-    description: 'Recharge -> Block 2 and clears 2 Ice.',
-    shortDesc: 'R->Block 2\nClear 2 Ice',
+    description: 'Recharge -> Block 2,\nClear 2 Ice. Draw.',
+    shortDesc: 'R->Block 2\nClear 2 Ice, Draw',
     subtype: 'clothing',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('clear_ice', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
   });

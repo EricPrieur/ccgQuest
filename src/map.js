@@ -819,8 +819,11 @@ export function createVolcanoSummitRidgeMap() {
     { id: 'summit_path_a',    name: 'Ridge Stairs',  description: 'Rough-cut steps lead upward along the clifftop.', encounterId: '', connections: ['summit_entry', 'summit_path_b'], unlocks: ['summit_path_b'], canRevisit: true, position: [900, 430], mapArea: 'volcano_summit_ridge' },
     { id: 'summit_path_b',    name: 'Higher Steps',  description: 'The path narrows. The sheer drop yawns to the left.', encounterId: '', connections: ['summit_path_a', 'summit_ridge'], unlocks: ['summit_ridge'], canRevisit: true, position: [1170, 220], mapArea: 'volcano_summit_ridge' },
     // Boss node on the ridge — Overseer Gnikan, kobold frost shaman.
-    // canRevisit=false so the boss + loot fire exactly once.
-    { id: 'summit_ridge',     name: 'The Ridge',     description: 'A bare obsidian ridge above the volcano. A lone figure waits at the far end.', encounterId: 'overseer_gnikan', connections: ['summit_path_b'], canRevisit: false, position: [690, 130], mapArea: 'volcano_summit_ridge' },
+    // canRevisit=true so the player can walk back here post-dragon to
+    // fire the ridge_post_dragon_offer "leave?" dialog (the dragonSlain
+    // gate in startNodeEncounter swaps the Gnikan fight for the
+    // farewell prompt).
+    { id: 'summit_ridge',     name: 'The Ridge',     description: 'A bare obsidian ridge above the volcano. A lone figure waits at the far end.', encounterId: 'overseer_gnikan', connections: ['summit_path_b'], canRevisit: true, position: [690, 130], mapArea: 'volcano_summit_ridge' },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'summit_entry';
