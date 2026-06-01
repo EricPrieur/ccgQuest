@@ -4185,8 +4185,8 @@ export function createObsidianStaff() {
 export function createObsidianSpear() {
   return new Card({
     id: 'obsidian_spear', name: 'Obsidian Spear',
-    description: 'Recharge +1 -> Deal 5 Damage. Draw 1 vs Armor/Shield.',
-    shortDesc: 'R+1->5 Dmg\nDraw 1 vs Armor',
+    description: 'Recharge +1 -> Deal 7 Damage. Draw 1 vs Armor/Shield.',
+    shortDesc: 'R+1->7 Dmg\nDraw 1 vs Armor',
     subtype: 'martial_2h', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // draw_vs_armor sits BEFORE the damage effect so it reads pre-hit
     // armor/shield (matches Obsidian Rock / Bone Mace ordering). Target
@@ -4195,7 +4195,7 @@ export function createObsidianSpear() {
     // and silently failed.
     effects: [
       new CardEffect('draw_vs_armor', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 7, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon', tier: 2,

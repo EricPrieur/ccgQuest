@@ -8273,7 +8273,7 @@ function setupEnemyForCombat(enemyId) {
     slime: () => {
       enemy = new Character('Slime');
       enemy.deck = new Deck();
-      for (let i = 0; i < 12; i++) enemy.deck.addCard(createSlimeAppendage());
+      for (let i = 0; i < 14; i++) enemy.deck.addCard(createSlimeAppendage());
       enemy.addPower(createSplit());
     },
     prison_guards: () => {
@@ -22624,8 +22624,19 @@ function startIncomingDamage(dmg, label = 'damage to you') {
   // any defense cards have been played).
   _pendingHitSfx = null;
   pendingIncomingDamage = remaining;
-  // Phase 2: defending (if defense cards available)
-  if (player.deck.hand.some(c => c.cardType === CardType.DEFENSE)) {
+  // Phase 2: defending (if defense cards available). Includes modal
+  // cards that carry a block-mode (Sturdy Boots — ATTACK type with a
+  // defense mode), since handleDefendingClick will let the player
+  // play those as a block. Without this check, a hand containing
+  // ONLY Sturdy Boots as the armor option skipped DEFENDING entirely.
+  const hasDefenseOption = player.deck.hand.some(c => {
+    if (c.cardType === CardType.DEFENSE) return true;
+    if (c.isModal && Array.isArray(c.modes)) {
+      return c.modes.some(m => (m.effects || []).some(e => e.effectType === 'block'));
+    }
+    return false;
+  });
+  if (hasDefenseOption) {
     state = GameState.DEFENDING;
     showStyledToast(`Incoming ${remaining} damage. Play defense cards or pass.`, 'damage');
     return;
