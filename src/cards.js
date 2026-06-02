@@ -411,7 +411,7 @@ export function createWhiteDragonEgg() {
 export function createWhiteDragonWyrmling() {
   return new Card({
     id: 'white_dragon_wyrmling', name: 'White Dragon Wyrmling',
-    description: 'Recharge +1 -> Call the White Dragon Wyrmling to the battle!',
+    description: 'Recharge a card ->\nCall the White Dragon Wyrmling to the battle!',
     shortDesc: 'R+1->Call\nthe Wyrmling',
     // 'allies' subtype (matches Thorb / Raena / Valdrisa companion
     // cards) — the wyrmling fights alongside the party as a
@@ -581,6 +581,11 @@ export function createVialOfPoison() {
     effects: [new CardEffect('grant_poison_buff', 1, TargetType.SELF)],
     characterClass: ['rogue'],
     tier: 1,
+    // Spawned by Pet Spider's play — it's a token, so the Antiquity
+    // shop sells it for 0 gp and other shops reject it (token gate).
+    // Counted in the deck (added to masterDeck by the handler) so the
+    // inventory shows it and the player can rebalance it normally.
+    isToken: true,
   });
 }
 
@@ -834,12 +839,16 @@ export function createRaenaCard() {
   return new Card({
     id: 'raena_card',
     name: 'Raena',
-    description: 'Play -> Call Raena to the battle!',
-    shortDesc: 'Call Raena',
+    description: 'Recharge a card ->\nCall Raena to the battle!\nCalled: Deal 2 Damage.',
+    shortDesc: 'Call Raena\nCalled: 2 Dmg',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
+    // SINGLE_ENEMY damage effect forces targeting — Raena loosed an
+    // arrow on the way in (matches her base attack stat). Then the
+    // summon spawns her on the field as a normal ally creature.
     effects: [
+      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
       new CardEffect('summon_raena', 1, TargetType.SUMMON),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -856,12 +865,13 @@ export function createRaenaCard2() {
   return new Card({
     id: 'raena_card_2',
     name: 'Raena',
-    description: 'Play -> Call Raena to the battle!',
-    shortDesc: 'Call Raena',
+    description: 'Recharge a card ->\nCall Raena to the battle!\nCalled: Deal 3 Damage.',
+    shortDesc: 'Call Raena\nCalled: 3 Dmg',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('summon_raena_upgraded', 1, TargetType.SUMMON),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -2174,20 +2184,20 @@ export function createSharpRock() {
 }
 
 // Rock Barrage — enemy-only card used by the Stone Giant. Shares the
-// Sharp Rock art. Magic-missile-style barrage: 3 shots of 1 damage
+// Sharp Rock art. Magic-missile-style barrage: 2 shots of 1 damage
 // each, each shot picks its own target (could be the same enemy
 // twice or spread across allies). Always draws.
 export function createRockBarrage() {
   return new Card({
     id: 'rock_barrage',
     name: 'Rock Barrage',
-    description: 'Recharge -> Deal 1 Damage 3 times, Draw.',
-    shortDesc: 'R->1 Dmg x3, Draw',
+    description: 'Recharge -> Deal 1 Damage 2 times, Draw.',
+    shortDesc: 'R->1 Dmg x2, Draw',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 3),
+      new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 2),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
   });
@@ -2465,24 +2475,32 @@ export function createBuffCalculating() {
   });
 }
 
-// Stone Giant summon card — heaves a 6/4/1-armor self-destructing boulder
-// into play. Played as a CREATURE summon (priority 10 so it lands before
-// sharp rocks).
+// Stone Giant boulder card — randomized payload. 50% chance: 2-4 Small
+// Boulders (2/2, self-destruct, Sharp Rock art). 50% chance: 1 Large
+// Boulder (6/4/1-armor self-destruct) PLUS another 50% to add a Small
+// Boulder alongside. Played as a CREATURE summon (priority 10 so it
+// lands before any Rock Barrage swings).
 export function createLargeBoulder() {
   return new Card({
     id: 'large_boulder',
-    name: 'Large Boulder',
-    description: 'Recharge -> Large Boulder rolling down the mountain!',
-    shortDesc: 'R->Summon Boulder',
+    name: 'Boulder',
+    description: 'Recharge -> Boulder(s) rolling down the mountain!',
+    shortDesc: 'R->Summon\nBoulder(s)',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('summon_large_boulder', 1, TargetType.SUMMON)],
+    effects: [new CardEffect('summon_boulders_random', 1, TargetType.SUMMON)],
     priority: 10,
-    previewCreature: new Creature({
-      name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true,
-      description: 'Self-Destruct: explodes after attacking.',
-    }),
+    previewCreatures: [
+      new Creature({
+        name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true,
+        description: 'Self-Destruct: explodes after attacking.',
+      }),
+      new Creature({
+        name: 'Small Boulder', attack: 2, maxHp: 2, selfDestruct: true,
+        description: 'Self-Destruct: explodes after attacking.',
+      }),
+    ],
   });
 }
 
@@ -3125,7 +3143,7 @@ export function createWebToken() {
   return new Card({
     id: 'web_token',
     name: 'Web',
-    description: 'Recharge another card -> Consume.\nWhen discarded, discard a card.',
+    description: 'Recharge a card -> Consume.\nWhen discarded, discard a card.',
     shortDesc: 'R1->Consume\nDiscard: -1',
     subtype: 'item',
     cardType: CardType.ITEM,
@@ -3342,7 +3360,8 @@ export function createSummonAncestor() {
         endTurnShieldAllies: 1,
         description: 'End of Turn: All allies gain 1 Shield.' }),
       new Creature({ name: 'Thordak Ashmantle', attack: 2, maxHp: 5, multiAttack: 99,
-        description: 'Attacks ALL enemies.' }),
+        haste: true,
+        description: 'Haste. Attacks ALL enemies.' }),
     ],
   });
 }
@@ -3685,7 +3704,7 @@ export function createObsidianCandle() {
   return new Card({
     id: 'obsidian_candle',
     name: 'Obsidian Candle',
-    description: 'Recharge another card: Scry 2. Stays in hand.',
+    description: 'Recharge a card: Scry 2. Stays in hand.',
     shortDesc: 'R other->Scry 2\nStays in hand',
     subtype: 'item',
     cardType: CardType.ITEM,
@@ -3709,7 +3728,7 @@ export function createObsidianShardToken() {
   return new Card({
     id: 'obsidian_shard_token',
     name: 'Obsidian Shard',
-    description: 'Recharge another card -> Consume.\nEnemy gains 1 Armor.',
+    description: 'Recharge a card -> Consume.\nEnemy gains 1 Armor.',
     shortDesc: 'R1->Consume\nEnemy +1 Armor',
     subtype: 'item',
     cardType: CardType.ITEM,
@@ -3863,7 +3882,7 @@ export function createDwarvenTowerShield() {
   return new Card({
     id: 'dwarven_tower_shield',
     name: 'Dwarven Tower Shield',
-    description: 'Recharge another card ->\nGain 5 Shields. Draw.\nStays in hand.',
+    description: 'Recharge a card ->\nGain 5 Shields. Draw.\nStays in hand.',
     shortDesc: 'R+1->+5 Shield\nDraw, Stays',
     subtype: 'heavy_armor',
     // ABILITY (not DEFENSE) so it can only be played proactively on the
@@ -4111,7 +4130,7 @@ export function createBoneStorm() {
 export function createValdrisaCreature() {
   return new Creature({
     name: 'Valdrisa', attack: 2, maxHp: 4, isCompanion: true,
-    description: '+2 vs Armor/Shield. Turn End: Heal 1 a random damaged ally.',
+    description: '+2 vs Armor/Shield. Turn End: Heal 2 a random damaged ally.',
   });
 }
 
@@ -4119,7 +4138,7 @@ export function createValdrisaCard() {
   return new Card({
     id: 'valdrisa_card',
     name: 'Valdrisa Emberforge',
-    description: 'Play -> Call Valdrisa to the battle!',
+    description: 'Recharge a card ->\nCall Valdrisa to the battle!',
     shortDesc: 'Call Valdrisa',
     subtype: 'allies',
     cardType: CardType.CREATURE,
@@ -4337,7 +4356,7 @@ export function createThorbCard() {
   return new Card({
     id: 'thorb_card',
     name: 'Thorb',
-    description: 'Play -> Call Thorb to the battle!',
+    description: 'Recharge a card ->\nCall Thorb to the battle!',
     shortDesc: 'Call Thorb',
     subtype: 'allies',
     cardType: CardType.CREATURE,
@@ -4357,7 +4376,7 @@ export function createThorbUpgradedCard() {
   return new Card({
     id: 'thorb_card_2',
     name: 'Thorb',
-    description: 'Play -> Call Thorb to the battle!',
+    description: 'Recharge a card ->\nCall Thorb to the battle!',
     shortDesc: 'Call Thorb',
     subtype: 'allies',
     cardType: CardType.CREATURE,

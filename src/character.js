@@ -16,7 +16,7 @@ export class Buff {
  * Multi-combat buff persisting across encounters.
  */
 export class CombatBuff {
-  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0, effects = null }) {
+  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0, effects = null, tickSfxKey = null, tickSfxCount = 1, tickSfxStagger = 150 }) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -31,6 +31,18 @@ export class CombatBuff {
     // processCombatBuffs loop iterates these instead of using the legacy
     // single { effectType, effectValue } pair.
     this.effects = effects;
+    // Optional per-buff SFX override for the start-of-turn tick. When
+    // set, processCombatBuffs stamps this onto every log entry the
+    // buff emits, overriding the effect-type defaults
+    // (gain_heroism → buff_angelic_03, gain_shield → protection_buff_01,
+    // draw_card → card_draw). Stone Giant's Running uses 'footstep'
+    // so its draw tick plays footsteps instead of card_draw.
+    this.tickSfxKey = tickSfxKey;
+    // Per-tick SFX repeat count + stagger (ms). Used for buffs whose
+    // tick should play multiple staggered samples — e.g. Stone Giant's
+    // Running plays 4 footsteps each turn. Defaults to a single play.
+    this.tickSfxCount = tickSfxCount;
+    this.tickSfxStagger = tickSfxStagger;
   }
 }
 
@@ -403,25 +415,70 @@ export class Character {
       return;
     }
     switch (effectType) {
-      case 'gain_heroism':
+      case 'gain_heroism': {
         this.heroism += effectValue;
-        logs.push({ text: `  ${buff.name}: +${effectValue} Heroism`, color: '#ffd700', token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700', buff });
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'buff_angelic_03';
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Heroism`,
+          color: '#ffd700',
+          token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
+          buff,
+          sfxKey: tickSfx,
+          sfxCount: buff.tickSfxCount || 1,
+          sfxStagger: buff.tickSfxStagger || 150,
+        });
         break;
-      case 'gain_shield':
+      }
+      case 'gain_shield': {
         this.shield += effectValue;
-        logs.push({ text: `  ${buff.name}: +${effectValue} Shield`, color: '#64b4dc', token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc', buff });
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'protection_buff_01';
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Shield`,
+          color: '#64b4dc',
+          token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc',
+          buff,
+          sfxKey: tickSfx,
+          sfxCount: buff.tickSfxCount || 1,
+          sfxStagger: buff.tickSfxStagger || 150,
+        });
         break;
+      }
       case 'draw_card':
         if (this.deck) {
           const drawn = this.deck.draw(effectValue, 10);
-          for (const d of drawn) logs.push({ text: `  ${buff.name}: Draw ${d.name}`, color: '#3c3cc8', card: d, buff });
+          // Stone Giant's Running buff sets tickSfxKey: 'footstep' +
+          // tickSfxCount: 4 so the start-of-turn draw plays 4
+          // staggered footsteps. Default for other Draw buffs stays a
+          // single card_draw cue on the first entry only.
+          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'card_draw';
+          const count = buff.tickSfxCount || 1;
+          const stagger = buff.tickSfxStagger || 150;
+          drawn.forEach((d, idx) => {
+            logs.push({
+              text: `  ${buff.name}: Draw ${d.name}`,
+              color: '#3c3cc8',
+              card: d,
+              buff,
+              sfxKey: idx === 0 ? tickSfx : undefined,
+              sfxCount: idx === 0 ? count : 1,
+              sfxStagger: idx === 0 ? stagger : 0,
+            });
+          });
         }
         break;
       case 'heal':
         if (this.deck && this.deck.discardPile.length > 0) {
           const card = this.deck.discardPile.pop();
           this.deck.addToRechargePile(card);
-          logs.push({ text: `  ${buff.name}: Healed 1 (${card.name})`, color: '#3cc83c', card, healed: 1, buff });
+          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+          logs.push({
+            text: `  ${buff.name}: Healed 1 (${card.name})`,
+            color: '#3cc83c',
+            card, healed: 1, buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
         }
         break;
       case 'heal_random': {
@@ -436,7 +493,15 @@ export class Character {
           healed++;
         }
         if (healed > 0) {
-          logs.push({ text: `  ${buff.name}: Healed ${healed}`, color: '#3cc83c', healed, buff });
+          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+          logs.push({
+            text: `  ${buff.name}: Healed ${healed}`,
+            color: '#3cc83c',
+            healed, buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
         }
         break;
       }

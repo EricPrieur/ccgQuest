@@ -594,6 +594,12 @@ export const SOUND_MAP = {
   // Arcane Shield + protection buffs (Shield of Faith, Defensive
   // Formation, etc.) — protective buff cast.
   arcane_shield:    'Magic/protection_buff_01',
+  // Direct alias used by the Stone Giant rockslide Hiding/Calculating
+  // buffs (Shield/Heroism start-of-turn ticks). Same sample as
+  // arcane_shield, exposed under the file name so the buff-tick
+  // dispatch reads like the literal SFX a designer would expect.
+  protection_buff_01: 'Magic/protection_buff_01',
+  buff_angelic_03:    'Magic/buff_angelic_03',
   // Goodberries (druid ability) — angelic chime when berries are
   // conjured. The eaten Goodberry token plays the eat cue instead.
   goodberries_cast: 'Magic/buff_angelic_01',

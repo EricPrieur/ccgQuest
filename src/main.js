@@ -8487,7 +8487,12 @@ function setupEnemyForCombat(enemyId) {
     guard.justSummoned = false;
     enemy.addCreature(guard);
     // Log so the player sees the guard is present from turn 1.
-    setTimeout(() => addLog(`  Kobold Guard is already in position!`, Colors.RED), 50);
+    // Skip when the codex sandbox is scanning enemy setups — the
+    // setTimeout would otherwise fire after the sandbox clears and
+    // leak the line into whatever combat log is live at that moment.
+    if (!_codexSandboxRunning) {
+      setTimeout(() => addLog(`  Kobold Guard is already in position!`, Colors.RED), 50);
+    }
   };
   ENEMY_HAND_SIZE.kobold_patrol = 3;
 
@@ -10399,6 +10404,11 @@ function handleEncounterChoiceClick(x, y) {
   for (const r of rects) {
     if (hitTest(x, y, r)) {
       if (r.choice.exhausted) return;
+      // Generic click cue for every encounter choice — gives the
+      // player immediate audio feedback the moment they commit. Some
+      // specific choices below layer additional cues on top (door
+      // unlock, splash, footstep burst, etc.); this is the baseline.
+      playSound('click', 0.5);
       // Kitchen sneak is a toast-only path — no dialog page. Resolve the
       // effect inline and complete the encounter immediately.
       if (r.choice.effectType === 'kitchen_sneak') {
@@ -10849,6 +10859,11 @@ function resolveBoulderBuff(choice) {
         description: 'Start of Turn: Draw 1',
         imageId: 'buff_running',
         effectType: 'draw_card', effectValue: 1,
+        // Override the generic card_draw tick — Running plays 4
+        // staggered footsteps each turn to match the "sprint" theme.
+        tickSfxKey: 'footstep',
+        tickSfxCount: 4,
+        tickSfxStagger: 160,
       },
       cardCreator: createBuffRunning,
     },
@@ -10858,6 +10873,7 @@ function resolveBoulderBuff(choice) {
         description: 'Start of Turn: +Shield',
         imageId: 'buff_hiding',
         effectType: 'gain_shield', effectValue: 1,
+        tickSfxKey: 'protection_buff_01',
       },
       cardCreator: createBuffHiding,
     },
@@ -10867,6 +10883,7 @@ function resolveBoulderBuff(choice) {
         description: 'Start of Turn: +1 Heroism',
         imageId: 'buff_calculating',
         effectType: 'gain_heroism', effectValue: 1,
+        tickSfxKey: 'buff_angelic_03',
       },
       cardCreator: createBuffCalculating,
     },
@@ -10878,6 +10895,10 @@ function resolveBoulderBuff(choice) {
   // omitted (default 0 = no per-turn limit) so the buff persists every turn
   // of that combat.
   player.addCombatBuff(new CombatBuff({ ...entry.buff, combatsRemaining: 1 }));
+  // Click cue (UI click) already fired in handleEncounterChoiceClick;
+  // the buff's tickSfxKey fires the matching footstep / shield /
+  // heroism chime at the start of every turn during the fight. No
+  // extra audio here — adding sounds at click was redundant.
   // Show the buff card on the result page (full-size, hoverable like loot).
   // The "Buff gained: X!" banner there replaces the toast.
   choice._lootItems = [entry.cardCreator()];
@@ -12096,6 +12117,7 @@ function startCombat() {
   // Dwarven Brew, Scroll of Potency, Regrowth) are added by card play, so
   // they're never present at startCombat and won't trip this call.
   const startBuffLogs = player.processCombatBuffs();
+  playBuffTickSfxQueue(startBuffLogs);
   for (const log of startBuffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
@@ -12296,6 +12318,7 @@ function continueCombatPhase2() {
   // Volcano's Blessing draw / heroism / shield) fire on the first turn
   // of phase 2 — matches the turn-1 behavior in startCombat below.
   const phase2BuffLogs = player.processCombatBuffs();
+  playBuffTickSfxQueue(phase2BuffLogs);
   for (const log of phase2BuffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
@@ -20490,7 +20513,8 @@ function resolveEffect(eff, caster, target) {
           endTurnShieldAllies: 1,
           description: 'End of Turn: All allies gain 1 Shield.' },
         { name: 'Thordak Ashmantle', attack: 2, maxHp: 5, multiAttack: 99,
-          description: 'Attacks ALL enemies.' },
+          haste: true,
+          description: 'Haste. Attacks ALL enemies.' },
       ];
       // Skip any ancestor already on the field — each Founder can
       // only be summoned once per fight (no duplicate stacking).
@@ -20562,14 +20586,21 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'create_vial_of_poison': {
-      // Pet Spider summons a spider AND drops a Vial of Poison token
-      // in hand. Single token, capped at MAX_HAND_SIZE — if hand is
-      // full the vial is lost (logged).
-      if (player.deck.hand.length >= MAX_HAND_SIZE) {
-        addLog('  Vial of Poison lost — hand full!', Colors.GRAY);
-      } else {
-        player.deck.hand.push(createVialOfPoison());
+      // Pet Spider summons a spider AND drops a Vial of Poison token.
+      // Mirrors the Barnacle pattern: ALWAYS added to masterDeck so it
+      // counts toward deck size + shows up in the inventory; placed
+      // into hand if there's room, otherwise into the recharge pile so
+      // it lands next time. createVialOfPoison stamps isToken:true so
+      // it sells for 0 gp at Antiquity (rejected at other shops by
+      // the token gate, mirroring Barnacle / Goodberry).
+      const vial = createVialOfPoison();
+      player.deck.masterDeck.push(vial);
+      if (player.deck.hand.length < MAX_HAND_SIZE) {
+        player.deck.hand.push(vial);
         addLog('  Vial of Poison created in hand!', Colors.GREEN);
+      } else {
+        player.deck.addToRechargePile(vial);
+        addLog('  Vial of Poison recharged (hand full)', Colors.GREEN);
       }
       break;
     }
@@ -23048,14 +23079,19 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
     playSound('heal_spell', 0.7);
     if (tgt === player) {
       addLog(`  Valdrisa heals you`, Colors.GREEN);
-      healPlayer(1);
+      healPlayer(2);
     } else {
       let healed = 0;
-      if (tgt.poisonStacks > 0) { tgt.poisonStacks -= 1; healed = 1; }
-      else {
+      // Clear up to 2 Poison first, then top up HP for any remainder.
+      if (tgt.poisonStacks > 0) {
+        const cleared = Math.min(tgt.poisonStacks, 2);
+        tgt.poisonStacks -= cleared;
+        healed += cleared;
+      }
+      if (healed < 2) {
         const before = tgt.currentHp;
-        tgt.currentHp = Math.min(tgt.maxHp, tgt.currentHp + 1);
-        healed = tgt.currentHp - before;
+        tgt.currentHp = Math.min(tgt.maxHp, tgt.currentHp + (2 - healed));
+        healed += tgt.currentHp - before;
       }
       if (healed > 0) {
         spawnHealOnTarget(tgt, healed);
@@ -26000,7 +26036,9 @@ function updateEnemyTurn(dt) {
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry) lastEntry.creature = spider;
       } else if (eff.effectType === 'summon_large_boulder') {
-        // Stone Giant: heave another Large Boulder onto the battlefield.
+        // Legacy single-Large-Boulder path kept for back-compat with any
+        // older save still holding a card that points at this effect id.
+        // New Boulder card uses summon_boulders_random below.
         const boulder = new Creature({
           name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true,
         });
@@ -26009,6 +26047,55 @@ function updateEnemyTurn(dt) {
         playSound('boulder_flesh', 0.7);
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry) lastEntry.creature = boulder;
+      } else if (eff.effectType === 'summon_boulders_random') {
+        // Stone Giant Boulder card — randomized payload.
+        //   50% → 2-4 Small Boulders (2/2 self-destruct).
+        //   50% → 1 Large Boulder (6/4/1-armor self-destruct), and a
+        //         further 50% chance to also drop one Small Boulder.
+        // Each spawn plays its own boulder_flesh cue (staggered so a
+        // 4-shower doesn't crunch four samples on top of each other),
+        // mirroring the Large Boulder summon's on-spawn beat.
+        let spawnIdx = 0;
+        const queueBoulderSfx = () => {
+          const delay = spawnIdx * 140;
+          spawnIdx++;
+          if (delay > 0) setTimeout(() => playSound('boulder_flesh', 0.7), delay);
+          else playSound('boulder_flesh', 0.7);
+        };
+        const summonSmall = (n) => {
+          for (let i = 0; i < n; i++) {
+            const sb = new Creature({
+              name: 'Small Boulder', attack: 2, maxHp: 2, selfDestruct: true,
+            });
+            if (!enemy.addCreature(sb)) break;
+            queueBoulderSfx();
+            const lastEntry = combatLog[combatLog.length - 1];
+            if (lastEntry) lastEntry.creature = sb;
+          }
+        };
+        const summonLarge = () => {
+          const lb = new Creature({
+            name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true,
+          });
+          if (enemy.addCreature(lb)) {
+            queueBoulderSfx();
+            const lastEntry = combatLog[combatLog.length - 1];
+            if (lastEntry) lastEntry.creature = lb;
+          }
+        };
+        if (Math.random() < 0.5) {
+          // Small-boulder shower: 2 + 0..2 → 2-4 total.
+          const count = 2 + Math.floor(Math.random() * 3);
+          addLog(`  ${count} Small Boulder${count === 1 ? '' : 's'} roll in!`, Colors.ORANGE);
+          summonSmall(count);
+        } else {
+          addLog(`  Large Boulder rolls in!`, Colors.ORANGE);
+          summonLarge();
+          if (Math.random() < 0.5) {
+            addLog(`  A Small Boulder tumbles after it!`, Colors.ORANGE);
+            summonSmall(1);
+          }
+        }
       } else if (eff.effectType === 'gain_rage') {
         // Blood in the Water bumps the priest's Rage by 1 on cast.
         enemy.rage = (enemy.rage || 0) + eff.value;
@@ -26192,6 +26279,7 @@ function completePlayerTurnTransition() {
 
   // Process combat buffs at start of player turn
   const buffLogs = player.processCombatBuffs();
+  playBuffTickSfxQueue(buffLogs);
   for (const log of buffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
@@ -26920,6 +27008,10 @@ function getDeathSfxKey(c) {
   }
   // Stone Giant — heavy rocks tumble at death (matches fight start).
   if (name === 'stone giant') return 'stone_giant_roll';
+  // Boulders (both Large and Small Stone Giant summons) — reuse the
+  // boulder_flesh sample they spawn with, so their self-destruct or
+  // killed-by-player death plays the same "rock crack" cue.
+  if (name === 'large boulder' || name === 'small boulder') return 'boulder_flesh';
   // Wolf Pack — distant pack howl on the boss-end (fight start uses the
   // same key, see getFightStartSfxKey).
   if (name === 'wolf pack') return 'wolf_howl';
@@ -33124,7 +33216,7 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'thorb') {
       return { flesh: 'axe_1h_flesh', blocked: 'axe_blocked' };
     }
-    if (name === 'large boulder') {
+    if (name === 'large boulder' || name === 'small boulder') {
       return { flesh: 'boulder_flesh', blocked: 'boulder_blocked' };
     }
     // Raena (player ranger companion) — bow swings on attack.
@@ -33517,6 +33609,34 @@ function getAllyShoutSfxKey(ally) {
 
 // Stagger N copies of a sound. Used by area attacks (Fan of Blades)
 // where the visual is multiple thrown daggers.
+// Stagger start-of-turn buff sounds so multiple buffs ticking on the
+// same turn (e.g. Ale's Heroism + Hiding's Shield + Running's draws)
+// don't all pop at the same instant. Each log entry gets a base offset
+// based on its order; within an entry, sfxCount > 1 plays a sub-stagger
+// (Running's 4 footsteps). Quiet logs (no sfxKey) skip silently but
+// still bump the offset so visible logs keep their spacing.
+function playBuffTickSfxQueue(buffLogs) {
+  if (!Array.isArray(buffLogs)) return;
+  const BUFF_OFFSET = 260; // ms gap between distinct buff ticks
+  let offset = 0;
+  for (const log of buffLogs) {
+    if (log && log.sfxKey) {
+      const baseDelay = offset;
+      const count = Math.max(1, log.sfxCount || 1);
+      const inner = log.sfxStagger || 150;
+      for (let j = 0; j < count; j++) {
+        const d = baseDelay + j * inner;
+        if (d > 0) setTimeout(() => playSound(log.sfxKey, 0.7), d);
+        else playSound(log.sfxKey, 0.7);
+      }
+      // Advance the inter-buff offset by the longer of BUFF_OFFSET or
+      // the time the multi-shot tail consumed, so a 4-footstep Running
+      // tick doesn't get clobbered by the next buff starting mid-stride.
+      offset += Math.max(BUFF_OFFSET, (count - 1) * inner + BUFF_OFFSET);
+    }
+  }
+}
+
 function playStaggeredSfx(key, count, stagger = 120, vol = 0.7) {
   if (!key || count <= 0) return;
   for (let i = 0; i < count; i++) {
