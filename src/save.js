@@ -75,6 +75,9 @@ export function saveGame(state, saveName = '') {
     // selector + gray-out of pray_cathedral / cathedral_rest choices.
     cathedralPrayed: !!state.cathedralPrayed,
     cathedralRested: !!state.cathedralRested,
+    // Cozy Spot fishing one-time success flag. Once latched, the
+    // encounter swaps to the quieter "already fished here" variant.
+    cozySpotFishingCaught: !!state.cozySpotFishingCaught,
     // Tomb of the Ancestor + Dwarven Workshop + Map Room one-time
     // flags. Each drives a revisit-encounter selector AND a
     // mechanical buff (ancestor rest pool, workbench armor enchant,
@@ -115,6 +118,7 @@ export function saveGame(state, saveName = '') {
           _provisionSlot: b._provisionSlot || null,
           _provisionTurnsPerCombat: b._provisionTurnsPerCombat || 0,
           _provisionEffects: b._provisionEffects || null,
+          _swimDraw: b._swimDraw || 0,
         }))
       : [],
     soldCardsHistory: Array.isArray(state.soldCardsHistory) ? state.soldCardsHistory.slice() : [],

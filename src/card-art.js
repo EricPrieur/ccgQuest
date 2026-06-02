@@ -300,6 +300,7 @@ export const CARD_ART_MAP = {
   wand_of_fire: 'WandOfFire.jpg',
   chain_shirt: 'ChainShirt.jpg',
   lambas_bread: 'LambasBread.jpg',
+  fresh_fish: 'FishFood.jpg',
   slime_jar: 'SlimeInJar.jpg',
   white_wolf_cloak: 'WhiteWolfCloak.jpg',
   wolf_teeth: 'WolfTeeth.jpg',

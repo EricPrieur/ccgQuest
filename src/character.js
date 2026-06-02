@@ -481,6 +481,62 @@ export class Character {
           });
         }
         break;
+      case 'goodberry_sustenance': {
+        // Tick variant of the on-play goodberry_sustenance roll. 50%
+        // for nothing, otherwise pick one of: +1 Shield / +1 Heroism /
+        // Draw 1 / Heal 1. Used by Goodberry's "If No Meal" fallback
+        // meal so the provision feels like a steady trickle of random
+        // small boons over 2 turns instead of a fixed buff.
+        if (Math.random() < 0.5) {
+          logs.push({ text: `  ${buff.name}: nothing this turn.`, color: '#808080', buff });
+          break;
+        }
+        const roll = Math.floor(Math.random() * 4);
+        if (roll === 0) {
+          this.shield = (this.shield || 0) + 1;
+          logs.push({
+            text: `  ${buff.name}: +1 Shield`,
+            color: '#64b4dc',
+            token: 'Shield', tokenAmount: 1, tokenColor: '#64b4dc',
+            buff,
+            sfxKey: 'protection_buff_01',
+          });
+        } else if (roll === 1) {
+          this.heroism = (this.heroism || 0) + 1;
+          logs.push({
+            text: `  ${buff.name}: +1 Heroism`,
+            color: '#ffd700',
+            token: 'Heroism', tokenAmount: 1, tokenColor: '#ffd700',
+            buff,
+            sfxKey: 'buff_angelic_03',
+          });
+        } else if (roll === 2) {
+          if (this.deck) {
+            const drawn = this.deck.draw(1, 10);
+            drawn.forEach((d, idx) => {
+              logs.push({
+                text: `  ${buff.name}: Draw ${d.name}`,
+                color: '#3c3cc8',
+                card: d, buff,
+                sfxKey: idx === 0 ? 'card_draw' : undefined,
+              });
+            });
+            if (drawn.length === 0) logs.push({ text: `  ${buff.name}: (no cards to draw)`, color: '#808080', buff });
+          }
+        } else {
+          if (this.deck && this.deck.discardPile.length > 0) {
+            const card = this.deck.discardPile.pop();
+            this.deck.addToRechargePile(card);
+            logs.push({
+              text: `  ${buff.name}: Heal 1 (${card.name})`,
+              color: '#3cc83c',
+              card, healed: 1, buff,
+              sfxKey: 'heal_spell',
+            });
+          }
+        }
+        break;
+      }
       case 'heal_random': {
         // Bad Rations Meal tick — heal 1..effectValue (random). Rolls
         // each tick so a 2-turn buff with value=2 gives a 1-1, 1-2,

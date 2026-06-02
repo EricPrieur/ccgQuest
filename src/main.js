@@ -25,7 +25,7 @@ import {
   createGuards, createHideInCorner,
   createDireRatBite, createDireRatScreech,
   createSharpRock, createRockBarrage, createLargeBoulder, createLuckyPebble, createBoneWand, createBoneClub, createBoneMace, createBoneStaff, createTorch,
-  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread,
+  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish,
   createThorbCreature, createThorbUpgradedCreature, createRaenaCreature, createRaenaUpgradedCreature,
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
@@ -99,7 +99,7 @@ import {
   createThunderclap, createShieldWall, createBattleShout, createExecute,
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
 } from './cards.js';
-import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -385,6 +385,13 @@ let undergroundEncounterChance = 0.07;
 // is overridden and a Slyblade is forced so the chapter never ends
 // without at least one of these encounters.
 let chapter8SlybladeSeen = false;
+// Cozy Spot fishing minigame. cozySpotFishingCaught latches forever
+// (save-persisted) once the player lands the catch; further visits
+// play the quieter "already fished here" beat. _cozySpotFishAttempts
+// is the per-visit attempt counter — resets on each fresh entry into
+// the cozy_spot encounter and drives the cumulative 10% chance.
+let cozySpotFishingCaught = false;
+let _cozySpotFishAttempts = 0;
 // Dwarven-city random encounter chance — used by the upper-path maps
 // (entry_corridor + the existing Thorgazad maps). Mirrors PY's
 // self.dwarven_city_encounter_chance (game.py:1268). Resets to the
@@ -1409,7 +1416,7 @@ const CARD_REGISTRY = {
   obsidian_staff: createObsidianStaff, obsidian_spear: createObsidianSpear,
   obsidian_shard: createObsidianShard, obsidian_core: createObsidianCore,
   obsidian_slime_card: createObsidianSlimeCard,
-  lambas_bread: createLambasBread,
+  lambas_bread: createLambasBread, fresh_fish: createFreshFish,
   bone_club: createBoneClub, bone_mace: createBoneMace, bone_staff: createBoneStaff, torch: createTorch,
   bad_rations: createBadRations, sturdy_boots: createSturdyBoots,
   chicken_leg: createChickenLeg, wardens_whip: createWardensWhip,
@@ -1865,6 +1872,8 @@ async function loadAssets() {
     loadImage('map_flood_temple_boss_wing', `${BASE}assets/Maps/FloodTempleBossWing.jpg`),
     loadImage('map_temple_exit', `${BASE}assets/Maps/TempleTowardTheExit.jpg`),
     loadImage('map_arriving_city', `${BASE}assets/Maps/ArrivingAtTheCity.jpg`),
+    loadImage('map_south_of_qualibaf', `${BASE}assets/Maps/SouthOfQualibaf.jpg`),
+    loadImage('map_south_outpost', `${BASE}assets/Maps/SouthOutpostMap.jpg`),
     loadImage('map_qualibaf', `${BASE}assets/Maps/QualibafMap.jpg`),
     loadImage('map_north_qualibaf', `${BASE}assets/Maps/NorthGateQualibafExternalMap.jpg`),
     loadImage('map_filibaf_forest', `${BASE}assets/Maps/FilibafForestMap.jpg`),
@@ -2954,6 +2963,11 @@ const MUSIC_FOR_AREA = {
   arriving_city: 'Music/music_castle_festivities_01',
   qualibaf:      'Music/music_castle_festivities_01',
   north_qualibaf: 'Music/music_castle_festivities_01',
+  // South of Qualibaf + the outpost grounds share the same forest
+  // ambience — the river path leaves cultivated land behind and the
+  // outpost itself sits in scrub-and-trees country.
+  south_of_qualibaf: 'Music/ambience_forest_01',
+  south_outpost:    'Music/ambience_forest_01',
   // Filibaf Forest map — looped forest ambience for the entire spider
   // maze. The filibaf_entrance node on the north_qualibaf side gets a
   // matching per-node override (see MUSIC_FOR_NODE) so the bed starts
@@ -3180,6 +3194,8 @@ function startNewGame() {
   volcanoEncounterChance = 0.34;
   undergroundEncounterChance = 0.07;
   chapter8SlybladeSeen = false;
+  cozySpotFishingCaught = false;
+  _cozySpotFishAttempts = 0;
   forgeUsed = false;
   forgeRested = false;
   volcanoHeartSacrificed = false;
@@ -4143,8 +4159,20 @@ function getMapNodeRects() {
   const currentArea = currentMap.getCurrentNode()?.mapArea || '';
   const { toScreen } = getMapTransform(currentArea);
   const rects = [];
+  const accessibleIds = currentMap.getAccessibleNodes().map(n => n.id);
   for (const [id, node] of Object.entries(currentMap.nodes)) {
     if (node.mapArea !== currentArea) continue;
+    // wip nodes are unclickable unless debug mode is on — matches the
+    // render gate so the hit-rect lines up with what the player can see.
+    if (node.wip && !debugMode) continue;
+    // discoverable nodes hide unless visited / done / accessible /
+    // current — match the render gate so the player can't click an
+    // invisible node by accident.
+    if (node.discoverable) {
+      const visibleNow = visitedNodes.has(id) || node.isDone
+        || accessibleIds.includes(id) || id === currentMap.currentNodeId;
+      if (!visibleNow) continue;
+    }
     const { x: nx, y: ny } = toScreen(node.position);
     rects.push({ x: nx - 18, y: ny - 18, w: 36, h: 36, nodeId: id, node });
   }
@@ -4174,6 +4202,12 @@ function pickMapNodeInDirection(direction) {
     if (!node) continue;
     if (node.mapArea !== current.mapArea) continue;
     if (node.isLocked) continue;
+    // wip nodes are unreachable via arrow-key navigation when debug is off,
+    // matching the render/click gate.
+    if (node.wip && !debugMode) continue;
+    // discoverable nodes don't need a separate gate here: the loop only
+    // iterates current.connections (so they're already within 1 hop),
+    // which means they're visible by the discoverable visibility rule.
     const [nx, ny] = node.position;
     const dx = nx - cx;
     const dy = ny - cy;
@@ -4223,7 +4257,7 @@ let _lastArrivalFrom = null;
 // unlocked nodes (no connection-lines drawn, moveToMapNode allows
 // non-adjacent hops). The Qualibaf city is intentionally a
 // city-grid where the player picks any shop/landmark directly.
-const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_hall']);
+const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_hall', 'south_outpost']);
 
 // === Well Rested ===
 // PY mirror: the city's south gate is gated behind a "Well Rested"
@@ -4288,6 +4322,15 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   currentMap.currentNodeId = nodeId;
   _lastArrivalFrom = fromNodeId;
   updateMusicForCurrentScene();
+  // Discoverable nodes reveal their real name on first arrival and
+  // stick in visitedNodes so they keep rendering even when the player
+  // walks away. Without this, the displayName stays at '???' even
+  // after exploration and the dot would re-hide on the next move.
+  if (node.discoverable && !visitedNodes.has(nodeId)) {
+    visitedNodes.add(nodeId);
+    if (node.hiddenName) node.hiddenName = '';
+    if (node.hiddenDescription) node.hiddenDescription = '';
+  }
 
   // Extra-vision maps: clear hidden labels two hops out from the
   // landing node so the player can read the names of nodes a step
@@ -4336,6 +4379,46 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   }
   if (!skipEncounter && nodeId === 'north_gate_return' && currentMap.id === 'north_qualibaf') {
     transitionToQualibafCity(nodeId);
+    return;
+  }
+  // South of Qualibaf WIP back-teleport — click-on-self on the lone
+  // outpost_approach node hops back to south_trail on arriving_city
+  // so the player isn't stranded on the placeholder map.
+  if (!skipEncounter && nodeId === 'outpost_approach' && currentMap.id === 'south_of_qualibaf') {
+    transitionFromSouthOfQualibafBack(nodeId);
+    return;
+  }
+  // South Trail forward gate — after the first-visit river-walk dialog
+  // has played (node isDone), every subsequent arrival or click-on-self
+  // hops the party straight to South of Qualibaf instead of leaving the
+  // node silent. Skip when skipEncounter is set (the back-teleport from
+  // outpost_approach lands here with that flag → don't bounce right
+  // back).
+  if (!skipEncounter && nodeId === 'south_trail' && node.isDone && currentMap.id === 'ruins_basin') {
+    transitionToSouthOfQualibaf(nodeId);
+    return;
+  }
+  // South Outpost forward gate — once the Gontran meeting has played,
+  // arriving at the outpost (or click-on-self) teleports into the
+  // south_outpost map. Pass `fromNodeId` so the helper routes the
+  // landing: arriving from south_bend drops you at river_trail (the
+  // south door); everything else lands at north_path_entry.
+  if (!skipEncounter && nodeId === 'outpost' && node.isDone && currentMap.id === 'south_of_qualibaf') {
+    transitionToSouthOutpost(fromNodeId || nodeId);
+    return;
+  }
+  // South Outpost back-teleport — click-on-self on the north_path_entry
+  // hops the player back to the outpost gate on south_of_qualibaf.
+  if (!skipEncounter && nodeId === 'north_path_entry' && currentMap.id === 'south_outpost') {
+    transitionFromSouthOutpostBack(nodeId);
+    return;
+  }
+  // River Trail (outpost south gate) → exit the city. Both city exits
+  // (north_path_entry and river_trail) land the party on the outpost
+  // node itself on south_of_qualibaf; from there the player walks
+  // onward through the outdoor map to south_bend / cozy_spot / etc.
+  if (!skipEncounter && nodeId === 'river_trail' && currentMap.id === 'south_outpost') {
+    transitionFromSouthOutpostBack(nodeId);
     return;
   }
   // Filibaf ↔ Tharnag teleport pair. Once the forest is cleared, the
@@ -6401,6 +6484,21 @@ function handleMapClick(x, y) {
       const isCrossMapGate =
         (r.nodeId === 'city_north_gate' && node.isDone && node.encounterId) ||
         (r.nodeId === 'north_gate_return' && currentMap.id === 'north_qualibaf') ||
+        // South of Qualibaf WIP back-teleport — single click on the
+        // entry node hops back to south_trail on arriving_city.
+        (r.nodeId === 'outpost_approach' && currentMap.id === 'south_of_qualibaf') ||
+        // South Trail forward gate — once the river-walk dialog has
+        // played, click-on-self hops the party south to outpost_approach.
+        (r.nodeId === 'south_trail' && currentMap.id === 'ruins_basin' && node.isDone) ||
+        // South Outpost forward gate — after the Gontran meeting,
+        // click-on-self on the outpost teleports into south_outpost.
+        (r.nodeId === 'outpost' && currentMap.id === 'south_of_qualibaf' && node.isDone) ||
+        // South Outpost back-teleport — click-on-self on the entry hops
+        // back to the outpost gate.
+        (r.nodeId === 'north_path_entry' && currentMap.id === 'south_outpost') ||
+        // Outpost south gate — click-on-self steps out of the city to
+        // South Bend on south_of_qualibaf.
+        (r.nodeId === 'river_trail' && currentMap.id === 'south_outpost') ||
         // Filibaf ↔ Tharnag pair: clicking the current entrance/entry
         // node hops to the other side.
         (r.nodeId === 'filibaf_entrance' && forestCleared && currentMap.id === 'north_qualibaf') ||
@@ -6608,6 +6706,21 @@ const ENCOUNTER_BG_MAP = {
   cave_exit: 'bg_mountain_overlook',
   // City
   river_crossing: 'bg_river_crossing', south_gate: 'bg_south_gate',
+  // South Trail river-walk dialog uses the south_of_qualibaf map art
+  // as its backdrop — the wide river landscape reads better than the
+  // bare arriving_city tile that would otherwise default in.
+  south_trail: 'bg_south_of_qualibaf',
+  // South Outpost — Gontran the Guard greeting + Merchant Boat task.
+  outpost_meeting: 'bg_south_outpost',
+  // Watchtower check-in reuses the same outpost-gate backdrop so the
+  // dialog reads as continuous with the first meeting rather than
+  // floating against the bare map view.
+  watchtower_check: 'bg_south_outpost',
+  // Cozy Spot fishing + ambush — both use the river crossing art so
+  // the riverbank reads through the whole minigame and the Sahuagin
+  // fight that chains off a successful catch.
+  cozy_spot: 'bg_river_crossing',
+  cozy_spot_ambush: 'bg_river_crossing',
   city_square: 'bg_qualibaf', weaponsmith: 'bg_smith', armorsmith: 'bg_smith',
   general_store: 'bg_general_store', inn: 'bg_inn', church: 'bg_church',
   arcane_emporium: 'bg_arcane_emporium', city_north_gate: 'bg_qualibaf',
@@ -6719,6 +6832,11 @@ const ENCOUNTER_BG_FILES = {
   bg_underground_rapids: 'InTheRiverCurrent.jpg',
   bg_temple_pool: 'TemplePool.jpg', bg_flood_temple: 'FloorTempleAltar.jpg',
   bg_river_crossing: 'RiverCrossing.jpg', bg_south_gate: 'SouthGate.jpg',
+  bg_south_outpost: 'SouthOutpostBG.jpg',
+  // South of Qualibaf reuses its own map art as the encounter backdrop
+  // (Maps/ prefix tells getEncounterBgImage to pull from assets/Maps/
+  // instead of assets/Backgrounds/). Used by the south_trail dialog.
+  bg_south_of_qualibaf: 'Maps/SouthOfQualibaf.jpg',
   bg_qualibaf: 'QualibafBackground.jpg', bg_smith: 'SmithBackground.jpg',
   bg_general_store: 'GeneralStoreBackground.jpg', bg_inn: 'InnBackground.jpg',
   bg_church: 'ChurchBackground.jpg', bg_arcane_emporium: 'ArcaneEmporium.jpg',
@@ -7185,6 +7303,66 @@ function transitionToQualibafCity(fromNodeId) {
   autosaveNow();
 }
 
+// Arriving City (south_trail) → South of Qualibaf (outpost_approach).
+// Forward jump triggered when the south_trail river-walk encounter
+// finishes. The destination map is a WIP placeholder — one node, no
+// background art, no further content yet.
+function transitionToSouthOfQualibaf(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+  visitedNodes = new Set(['outpost_approach']);
+  currentMap.currentNodeId = 'outpost_approach';
+  arriveAtNode('outpost_approach', fromNodeId, true);
+  autosaveNow();
+}
+
+// South of Qualibaf back-teleport. Click-on-self on outpost_approach
+// drops the player back at south_trail on the arriving_city map so the
+// WIP map isn't a dead-end while content is being built. Skip the
+// south_trail encounter on the way back — they just heard it.
+function transitionFromSouthOfQualibafBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('ruins_basin', createRuinsBasinMap);
+  visitedNodes = new Set(['south_trail']);
+  const target = currentMap.getNode('south_trail');
+  if (target) target.isDone = true;
+  arriveAtNode('south_trail', fromNodeId, true);
+  autosaveNow();
+}
+
+// South Outpost forward + back-teleport pair. Triggered after the
+// outpost_meeting dialog (Gontran the Guard) completes and again
+// whenever the player click-on-selfs the outpost node — drops them
+// onto north_path_entry inside the new south_outpost map. The back
+// half hops north_path_entry → outpost on south_of_qualibaf.
+function transitionToSouthOutpost(fromNodeId, landingNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('south_outpost', createSouthOutpostMap);
+  // Default landing is north_path_entry (party arrives at the north
+  // gate from outpost_approach). When the player walks in from
+  // south_bend, drop them at river_trail instead so they enter the
+  // city through the south door.
+  const landing = landingNodeId
+    || (fromNodeId === 'south_bend' ? 'river_trail' : 'north_path_entry');
+  visitedNodes = new Set([landing]);
+  currentMap.currentNodeId = landing;
+  arriveAtNode(landing, fromNodeId, true);
+  autosaveNow();
+}
+
+function transitionFromSouthOutpostBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+  visitedNodes = new Set(['outpost']);
+  const target = currentMap.getNode('outpost');
+  if (target) target.isDone = true;
+  arriveAtNode('outpost', fromNodeId, true);
+  autosaveNow();
+}
+
+
+
+
 // Filibaf entrance → Tharnag siege (cleared-forest skip + post-clearing
 // re-cross). Marks both gate nodes done so the back-trip works without
 // re-firing dialogs.
@@ -7484,6 +7662,16 @@ function startNodeEncounter(nodeId) {
     return;
   }
 
+  // East Side — debug-gated waypoint. Encounter only fires when debug
+  // mode is on; otherwise the node behaves like an empty waypoint
+  // (mark done, stay on map). Keeps the sign + WIP River Path branch
+  // hidden from normal play.
+  if (node.encounterId === 'east_side' && !debugMode) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+
   if (!node.encounterId || !ENCOUNTER_REGISTRY[node.encounterId]) {
     // No encounter defined — just mark done and stay on map
     currentMap.completeCurrentNode();
@@ -7499,6 +7687,40 @@ function startNodeEncounter(nodeId) {
     const cc = currentMap.getNode('corner_cell');
     const thorbRescued = !!(cc && cc.isDone);
     currentEncounter = factory(thorbRescued);
+  } else if (node.encounterId === 'south_trail') {
+    // The pre-dragon meta beat (Raena + Thorb roast the side-quest
+    // detour) only fires while Varimatras is alive. Factory branches
+    // on the flag at call time.
+    currentEncounter = factory(dragonSlain);
+  } else if (node.encounterId === 'cozy_spot') {
+    // Reset the per-visit attempt counter and pick a variant:
+    //   'caught'  — fish already pulled (short flavor beat only)
+    //   'revisit' — encounter has been completed at least once but
+    //               the catch is still out there (skip the banter,
+    //               drop straight onto the fishing choice)
+    //   'first'   — first visit (full banter then choice)
+    // node.isDone is the signal — visitedNodes.has(nodeId) would be
+    // true even on the first visit because the discoverable reveal
+    // stamps the set in arriveAtNode before startNodeEncounter runs.
+    _cozySpotFishAttempts = 0;
+    let variant = 'first';
+    if (cozySpotFishingCaught) variant = 'caught';
+    else if (node.isDone) variant = 'revisit';
+    currentEncounter = factory(variant);
+  } else if (node.encounterId === 'supply_pile') {
+    // Roll random shop samples per visit so the storehouse offering
+    // is fresh each run. Picker 1: 2 random weaponsmith + 1 random
+    // armorsmith (pick 2). Picker 2: 2 random general_store + 1
+    // random city_square (pick 2).
+    const picker1 = [
+      ...sampleShopCardIds('weaponsmith', 2),
+      ...sampleShopCardIds('armorsmith', 1),
+    ];
+    const picker2 = [
+      ...sampleShopCardIds('general_store', 2),
+      ...sampleShopCardIds('city_square', 1),
+    ];
+    currentEncounter = factory(picker1, picker2);
   } else if (node.encounterId === 'antiquity_shop') {
     // After the Mimic is dead the node still points at 'antiquity_shop',
     // but we swap to the cleared-shop short variant so revisits don't
@@ -7870,6 +8092,21 @@ function advanceEncounterPhase() {
           autosaveNow();
         },
       );
+      return;
+    }
+    if (nodeId === 'south_trail') {
+      // South Trail finishes the river-walk dialog → cross-map jump to
+      // the South of Qualibaf area, dropping the player at the top of
+      // that map (outpost_approach). WIP map: see transition helper
+      // for the round-trip pair.
+      transitionToSouthOfQualibaf(nodeId);
+      return;
+    }
+    if (nodeId === 'outpost') {
+      // Outpost — first-time Gontran meeting completes, then the party
+      // walks into the south_outpost map (north_path_entry). Re-visit
+      // forward jumps are handled by the arriveAtNode post-isDone gate.
+      transitionToSouthOutpost(nodeId);
       return;
     }
     // Filibaf Forest maze hooks. The encounter that just completed
@@ -9233,12 +9470,26 @@ function drawMap() {
   if (!CITY_FREE_MOVE_AREAS.has(currentArea)) {
     ctx.strokeStyle = 'rgba(200,200,200,0.3)';
     ctx.lineWidth = 2;
+    // Pre-compute discoverable visibility so we can skip drawing edges
+    // to/from nodes that aren't supposed to be on screen yet.
+    const connAccessible = currentMap.getAccessibleNodes().map(n => n.id);
+    const discoverableVisible = (n, id) => {
+      if (!n || !n.discoverable) return true;
+      return visitedNodes.has(id) || n.isDone
+        || connAccessible.includes(id) || id === currentMap.currentNodeId;
+    };
     for (const [id, node] of Object.entries(currentMap.nodes)) {
       if (node.mapArea !== currentArea) continue;
       if (node.isLocked) continue;
+      // wip nodes (work-in-progress) only render when debug is on —
+      // also skip drawing connections that lead into them.
+      if (node.wip && !debugMode) continue;
+      if (!discoverableVisible(node, id)) continue;
       for (const connId of node.connections) {
         const conn = currentMap.getNode(connId);
         if (!conn || conn.mapArea !== currentArea || conn.isLocked) continue;
+        if (conn.wip && !debugMode) continue;
+        if (!discoverableVisible(conn, connId)) continue;
         const a = toScreen(node.position);
         const b = toScreen(conn.position);
         ctx.beginPath();
@@ -9261,7 +9512,17 @@ function drawMap() {
   for (const [id, node] of Object.entries(currentMap.nodes)) {
     if (node.mapArea !== currentArea) continue;
     if (node.isLocked && !noFog) continue;
+    // wip nodes are invisible in normal play — only render under debug.
+    if (node.wip && !debugMode) continue;
     const { x: nx, y: ny } = toScreen(node.position);
+    // discoverable nodes hide unless visited / done / accessible /
+    // current — even on outdoor maps where the global fog filter is
+    // bypassed. accessible is computed below; pre-compute here.
+    if (node.discoverable && !noFog) {
+      const accessibleNow = accessible.includes(id);
+      const visibleNow = visitedNodes.has(id) || node.isDone || accessibleNow || id === currentMap.currentNodeId;
+      if (!visibleNow) continue;
+    }
     const isCurrent = id === currentMap.currentNodeId;
     const isAccessible = accessible.includes(id);
     // node.isDone covers nodes from prior visits on this map that the
@@ -9269,7 +9530,7 @@ function drawMap() {
     // visitedNodes to just the entry node).
     const isVisible = visitedNodes.has(id) || node.isDone || isAccessible || isCurrent;
     // In fog areas (non-outdoor), only show visible nodes
-    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
     if (!outdoorAreas.has(currentArea) && !isVisible && !noFog) continue;
 
     const hovered = hitTest(mouseX, mouseY, { x: nx - 18, y: ny - 18, w: 36, h: 36 });
@@ -9304,6 +9565,26 @@ function drawMap() {
       ctx.strokeStyle = '#7df';
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
+
+    // WIP marker — yellow outline + small "WIP" tag above wip nodes
+    // so when debug is on the dev can see what's gated. Render gate
+    // above already ensures we only reach here for wip nodes when debug
+    // is enabled.
+    if (node.wip && debugMode) {
+      ctx.beginPath();
+      ctx.arc(nx, ny, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = Colors.YELLOW;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(nx - 16, ny - 36, 32, 14);
+      ctx.fillStyle = Colors.YELLOW;
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('WIP', nx, ny - 25);
     }
 
     // Node label
@@ -10247,6 +10528,39 @@ function handleEncounterChoiceClick(x, y) {
         }
         break;
 
+      case 'fishing_attempt':
+        // resolveFishingAttempt sets _fishingCaught on success and
+        // latches the save-persisted cozySpotFishingCaught flag. On
+        // success, swap the encounter to the Sahuagin Sentinel ambush
+        // chain (TEXT → COMBAT → LOOT(fresh_fish)) instead of just
+        // completing the node — the big shadow trailing the fish is
+        // the whole point of the catch.
+        if (encounterChoiceResult._fishingCaught) {
+          const ambushFactory = ENCOUNTER_REGISTRY.cozy_spot_ambush;
+          if (ambushFactory) {
+            currentEncounter = ambushFactory();
+            encounterTextIndex = 0;
+            encounterChoiceResult = null;
+            _encounterHadCombat = false;
+            advanceEncounterPhase();
+            return;
+          }
+          // Defensive fallback: complete the node if the ambush factory
+          // is somehow missing.
+          currentMap.completeCurrentNode();
+          encounterChoiceResult = null;
+          currentEncounter = null;
+          state = GameState.MAP;
+          return;
+        }
+        // Failure / out-of-cards: loop back to the choice screen via
+        // returnToChoices. If the player ran out of hand cards, also
+        // disable repeats so the only remaining option is Pack Up.
+        if (encounterChoiceResult._fishingNoCards) {
+          encounterChoiceResult.exhausted = true;
+        }
+        break;
+
       case 'open_shop': {
         const shopId = encounterChoiceResult.resultText || 'general_store';
         openShop(shopId, shopId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
@@ -10563,6 +10877,10 @@ function handleEncounterChoiceClick(x, y) {
       }
       // Resolve try_squeeze immediately so result text is dynamic
       if (r.choice.effectType === 'try_squeeze') resolveTrySqueeze(r.choice);
+      // Cozy Spot fishing: pays a recharge from hand, rolls vs a chance
+      // that climbs by 10% per attempt this visit. One-time success
+      // (cozySpotFishingCaught) — repeat visits play the quieter beat.
+      if (r.choice.effectType === 'fishing_attempt') resolveFishingAttempt(r.choice);
       // Resolve search_camp immediately to generate loot/gold for result text
       if (r.choice.effectType === 'search_camp') resolveSearchCamp(r.choice);
       // Resolve search_clearing — same pattern as search_camp but uses the
@@ -10664,6 +10982,41 @@ function autosaveNow() {
   } catch (err) {
     console.warn('Autosave failed:', err);
   }
+}
+
+function resolveFishingAttempt(choice) {
+  // No cards in hand → can't pay the recharge cost. Stamp the
+  // out-of-cards flag so the choice-click handler can exhaust the
+  // choice and limit the player to "Pack up and move on".
+  if (!player || !player.deck || player.deck.hand.length === 0) {
+    choice.resultText = 'No cards in hand — nothing to commit to the cast.';
+    choice._fishingNoCards = true;
+    return;
+  }
+  // Pay the recharge: pick a random card from hand and send it to the
+  // recharge pile (matches the standard "Recharge a card" cost).
+  const idx = Math.floor(Math.random() * player.deck.hand.length);
+  const card = player.deck.hand.splice(idx, 1)[0];
+  player.deck.addToRechargePile(card);
+  _cozySpotFishAttempts += 1;
+  // Cumulative chance: 10% on attempt 1, 20% on 2, 30% on 3 ...
+  // Capped at 100%.
+  const chance = Math.min(1, 0.1 * _cozySpotFishAttempts);
+  const succeeded = Math.random() < chance;
+  showToast(`Recharged: ${card.name}`, 1800);
+  if (succeeded) {
+    // Reward TBD — for now just latch the flag, log a placeholder,
+    // and let the choice handler complete the encounter.
+    cozySpotFishingCaught = true;
+    addLog(`  You feel the line snap taut — something big has it.`, Colors.GOLD);
+    choice.resultText = 'A heavy tug. A fight. A flash of silver in the water — and a second, much larger shadow rising fast behind it.';
+    choice._fishingCaught = true;
+    autosaveNow();
+    return;
+  }
+  const handLeft = player.deck.hand.length;
+  const nextPct = Math.min(100, 10 * (_cozySpotFishAttempts + 1));
+  choice.resultText = `The line goes still. Nothing this cast. (Next try: ${nextPct}% chance, ${handLeft} card${handLeft !== 1 ? 's' : ''} left in hand)`;
 }
 
 function resolveTrySqueeze(choice) {
@@ -17029,6 +17382,17 @@ function handleCombatClick(x, y) {
         } else if (cardIsMultiTarget(card)) {
           enterMultiTargeting(i);
         } else if (needsTarget(card)) {
+          // Graceful fallback: if every targeting-requiring effect is
+          // flagged optional AND nothing on the field is a valid target
+          // (Stone Giant survival fight with no boulders, etc.), skip
+          // TARGETING and play the card without the optional effect.
+          // Raena still summons even when her Called arrow has nowhere
+          // to land.
+          if (canSkipOptionalTargeting(card)) {
+            card._skipOptionalEffects = true;
+            playCardSelf(i);
+            return;
+          }
           // Snapshot the hand order so Cancel (click elsewhere / ESC)
           // always returns the card to the exact spot it came from —
           // mirrors the recharge-extra/barrage flows. Needed for single-
@@ -18080,6 +18444,45 @@ function needsTarget(card) {
   );
 }
 
+// True when there's at least one valid SINGLE_ENEMY target on the
+// board — any enemy creature that's alive and not invulnerable, OR
+// the enemy character itself if alive and not invulnerable. Used by
+// the graceful-fallback path so summon-with-optional-attack cards
+// (Raena's Called arrow) can still resolve when every enemy is
+// untargetable (e.g. Stone Giant after the player wipes his boulders).
+function hasAnyAttackTarget() {
+  if (!enemy) return false;
+  if (Array.isArray(enemy.creatures) &&
+      enemy.creatures.some(c => c && c.isAlive && !c._invulnerable)) {
+    return true;
+  }
+  return !!(enemy.isAlive && !enemy._invulnerable);
+}
+
+// True when every targeting-requiring effect on the card is `optional`
+// AND no valid attack target exists. The caller (click handler) uses
+// this to bypass the TARGETING state and play the card as a pure
+// no-target play, skipping the optional damage effect.
+function canSkipOptionalTargeting(card) {
+  if (!needsTarget(card)) return false;
+  // Re-use needsTarget's effect-type list — anything that would have
+  // forced TARGETING must be flagged optional for us to skip.
+  const targetingEffects = (card.effects || []).filter(e =>
+    e.target === TargetType.SINGLE_ENEMY &&
+    (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
+     e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
+     e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
+     e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
+     e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
+     e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
+     e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
+     e.effectType === 'apply_fire' || e.effectType === 'apply_ice')
+  );
+  if (!targetingEffects.length) return false;
+  if (!targetingEffects.every(e => e.optional)) return false;
+  return !hasAnyAttackTarget();
+}
+
 // Reactively play any defense cards still in the enemy's hand (during player turn).
 // Called just before player damage lands on the enemy character.
 function enemyAutoPlayDefenses(incomingDmg = null) {
@@ -18293,7 +18696,10 @@ function resolveEffect(eff, caster, target) {
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
-      attacksThisTurn++;
+      // Ally-rider attacks (Raena's Called arrow) flag noAttackCount so
+      // they don't inflate Sneak Attack's per-turn scaling — the shot
+      // is conceptually the ally's, not the player's own swing.
+      if (!eff.noAttackCount) attacksThisTurn++;
       // On Kill rider — if the swing dropped the target, the card
       // reads `draw_on_kill` off its own currentEffects and the caster
       // draws. Works for both sides: player killing an enemy creature,
@@ -19953,11 +20359,23 @@ function resolveEffect(eff, caster, target) {
       const slot = prov.slot;
       const buffId = `provision_${slot}`;
       if (!Array.isArray(player.persistentBuffs)) player.persistentBuffs = [];
-      // Drop any prior provision in the same slot.
-      const prior = player.persistentBuffs.find(b => b.id === buffId);
-      if (prior) {
+      // Conditional fallback provisions (Goodberry's "If No Meal":
+      // basic sustenance for 2 turns) only fire when the slot is
+      // currently empty. If a stronger meal/beverage is already on
+      // the buff bar, silently skip the grant — the card's other
+      // effects (Heal + on-play goodberry_sustenance roll) still
+      // resolved normally before reaching us here.
+      const priorSlotBuff = player.persistentBuffs.find(b => b.id === buffId);
+      if (prov.conditionalOnEmpty && priorSlotBuff) {
+        const slotLabel = slot === 'beverage' ? 'Beverage' : 'Meal';
+        addLog(`  ${slotLabel} slot taken — ${prov.name} skipped.`, Colors.GRAY);
+        break;
+      }
+      // Drop any prior provision in the same slot (replacement flow
+      // for non-conditional provisions like Chicken Leg or Ale).
+      if (priorSlotBuff) {
         player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== buffId);
-        addLog(`  ${prior.name} replaced by ${prov.name}.`, Colors.GRAY);
+        addLog(`  ${priorSlotBuff.name} replaced by ${prov.name}.`, Colors.GRAY);
       }
       // Multi-effect provisions (Bad Rations) supply an `effects` array;
       // single-effect provisions (Ale) supply `effectType` + `value`.
@@ -19983,6 +20401,10 @@ function resolveEffect(eff, caster, target) {
       pb._provisionSlot = slot;
       pb._provisionTurnsPerCombat = prov.turnsPerCombat;
       pb._provisionEffects = provEffects;
+      // Fresh Fish meal: extra draw on every Swim-recharge while the
+      // buff is active. Stored as a flag on the persistent buff so the
+      // swim handler can detect it without name-matching.
+      pb._swimDraw = prov.swimDraw || 0;
       player.persistentBuffs.push(pb);
       const label = slot === 'beverage' ? 'Beverage' : 'Meal';
       addLog(`  ${label}: ${prov.name} active until you rest.`, Colors.GOLD);
@@ -20007,6 +20429,7 @@ function resolveEffect(eff, caster, target) {
           effects: provEffects,
         });
         projected._persistent = true;
+        projected._swimDraw = pb._swimDraw || 0;
         player.addCombatBuff(projected);
       }
       break;
@@ -20488,12 +20911,21 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_small_spider': {
-      // Summon: card discards normally, spider is loose.
-      const spider = new Creature({ name: 'Pet Spider', attack: 0, maxHp: 1, poisonAttack: true });
-      caster.addCreature(spider);
-      addLog(`  Pet Spider joins the fight!`, Colors.GREEN);
-      const lastEntry = combatLog[combatLog.length - 1];
-      if (lastEntry) lastEntry.creature = spider;
+      // Summon 1 spider when value=1 (legacy / enemy slyblade), or roll
+      // 1-2 when value=2 (player Pet Spider card after the tier-1
+      // ability buff). Each spider entry shows up as its own combat-log
+      // line + portrait so the player can hover-preview each one.
+      const maxRoll = Math.max(1, eff.value || 1);
+      const count = 1 + Math.floor(Math.random() * maxRoll);
+      let lastSpider = null;
+      for (let i = 0; i < count; i++) {
+        const spider = new Creature({ name: 'Pet Spider', attack: 0, maxHp: 1, poisonAttack: true });
+        caster.addCreature(spider);
+        addLog(`  Pet Spider joins the fight!`, Colors.GREEN);
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = spider;
+        lastSpider = spider;
+      }
       break;
     }
     case 'summon_ancestor': {
@@ -20961,10 +21393,17 @@ function playCardSelf(handIndex) {
     addLog(`You play ${card.name}`, Colors.GREEN, card);
   }
 
+  // _skipOptionalEffects (set by canSkipOptionalTargeting fallback)
+  // drops every effect flagged `optional` for this play — the card
+  // resolves as a pure no-target play (Raena summons even when her
+  // Called arrow had no valid target to land on).
+  const skipOptional = !!card._skipOptionalEffects;
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'stays_in_hand') continue;
+    if (skipOptional && eff.optional) continue;
     resolveEffect(eff, player, enemy);
   }
+  delete card._skipOptionalEffects;
 
   // Companion summon cards go to the play pile (not recharge/discard).
   // The flag is set by summon_thorb / summon_thorb_upgraded during
@@ -26018,23 +26457,28 @@ function updateEnemyTurn(dt) {
           if (lastEntry) lastEntry.creature = lastCreature;
         }
       } else if (eff.effectType === 'summon_slyblade_spider' || eff.effectType === 'summon_small_spider') {
-        // Pet Spider — small chip/poison creature. Single spawn per
-        // play. Reused by both the player Rogue card and the slyblade
-        // enemy (now the slyblade uses the same `summon_small_spider`
-        // effect via the shared createPetSpider creator).
-        const spider = new Creature({
-          name: 'Pet Spider', attack: 0, maxHp: 1,
-          description: 'Poison Attack.',
-          // Lightweight on-attack poison rider — the existing
-          // routeEnemyDamageToTarget call site honors onAttackApplyPoison
-          // on creature swings.
-          onAttackApplyPoison: 1,
-        });
-        enemy.addCreature(spider);
-        addLog(`  Pet Spider summoned!`, Colors.ORANGE);
-        playSound('spider_scuttle', 0.6);
-        const lastEntry = combatLog[combatLog.length - 1];
-        if (lastEntry) lastEntry.creature = spider;
+        // Pet Spider — small chip/poison creature. Roll 1-2 per play
+        // when value=2 (slyblade now uses the buffed player card with
+        // value=2 via createPetSpider), or always 1 for value=1.
+        const maxRoll = Math.max(1, eff.value || 1);
+        const count = 1 + Math.floor(Math.random() * maxRoll);
+        let lastSpider = null;
+        for (let i = 0; i < count; i++) {
+          const spider = new Creature({
+            name: 'Pet Spider', attack: 0, maxHp: 1,
+            description: 'Poison Attack.',
+            // Lightweight on-attack poison rider — the existing
+            // routeEnemyDamageToTarget call site honors onAttackApplyPoison
+            // on creature swings.
+            onAttackApplyPoison: 1,
+          });
+          enemy.addCreature(spider);
+          addLog(`  Pet Spider summoned!`, Colors.ORANGE);
+          playSound('spider_scuttle', 0.6);
+          const lastEntry = combatLog[combatLog.length - 1];
+          if (lastEntry) lastEntry.creature = spider;
+          lastSpider = spider;
+        }
       } else if (eff.effectType === 'summon_large_boulder') {
         // Legacy single-Large-Boulder path kept for back-compat with any
         // older save still holding a card that points at this effect id.
@@ -26421,6 +26865,17 @@ function handleSwimmingClick(x, y) {
       const drawn = player.deck.draw(swimDraw, MAX_HAND_SIZE);
       if (drawn.length > 0) {
         addLog(`  ${card.name}: Swim → Draw ${drawn.length}`, Colors.BLUE);
+      }
+    }
+    // Fresh Fish meal — while the meal's turn window is open, every
+    // card recharged during a Swim also draws a bonus card. Check the
+    // active combat buffs (not persistent) so the bonus stops when the
+    // meal's per-combat turn cap runs out.
+    const meal = (player.combatBuffs || []).find(b => b._swimDraw && b._swimDraw > 0 && (b.turnsRemaining || 0) > 0);
+    if (meal) {
+      const drawn = player.deck.draw(meal._swimDraw, MAX_HAND_SIZE);
+      if (drawn.length > 0) {
+        addLog(`  ${meal.name}: Swim → Draw ${drawn.length}`, Colors.BLUE);
       }
     }
     swimCardsThisTurn++;
@@ -28055,6 +28510,7 @@ function applyStartOfCombatBuffs() {
       effects: pb._provisionEffects || null,
     });
     projected._persistent = true;
+    projected._swimDraw = pb._swimDraw || 0;
     player.addCombatBuff(projected);
     addLog(`  ${pb.name} activates!`, Colors.GOLD);
   }
@@ -28480,6 +28936,30 @@ function buildAntiquityShopInventory() {
     if (creator) entries.push({ creator, priceOverride: sold.price });
   }
   return entries;
+}
+
+// Sample `count` random distinct card ids from a shop's inventory.
+// Used by the supply_pile encounter (Gontran's storehouse) to roll a
+// fresh loot-picker offering per visit. Returns fewer ids than asked
+// if the shop has less stock; never duplicates.
+function sampleShopCardIds(shopId, count) {
+  const inv = SHOP_INVENTORIES[shopId] || [];
+  if (inv.length === 0 || count <= 0) return [];
+  const indices = inv.map((_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const take = Math.min(count, inv.length);
+  const ids = [];
+  for (let i = 0; i < take; i++) {
+    const entry = inv[indices[i]];
+    const creator = typeof entry === 'function' ? entry : entry.creator;
+    if (typeof creator !== 'function') continue;
+    const card = creator();
+    if (card && card.id) ids.push(card.id);
+  }
+  return ids;
 }
 
 // Resolve a SHOP_INVENTORIES entry to { creator, priceOverride? }.
@@ -31343,6 +31823,7 @@ function restoreFromSave(data) {
   volcanoBuffTurns = typeof data.volcanoBuffTurns === 'number' ? data.volcanoBuffTurns : 0;
   cathedralPrayed = !!data.cathedralPrayed;
   cathedralRested = !!data.cathedralRested;
+  cozySpotFishingCaught = !!data.cozySpotFishingCaught;
   ancestorSpiritsDefeated = !!data.ancestorSpiritsDefeated;
   ancestorRested = !!data.ancestorRested;
   workbenchRested = !!data.workbenchRested;
@@ -31382,6 +31863,7 @@ function restoreFromSave(data) {
         else if (b.id === 'provision_beverage') pb._provisionSlot = 'beverage';
         if (b._provisionTurnsPerCombat) pb._provisionTurnsPerCombat = b._provisionTurnsPerCombat;
         if (b._provisionEffects) pb._provisionEffects = b._provisionEffects;
+        if (b._swimDraw) pb._swimDraw = b._swimDraw;
         return pb;
       })
       .filter(Boolean);
@@ -32481,6 +32963,9 @@ const END_CREDITS_TEMPLATE = [
   { text: '', style: 'gap' },
   { text: 'TESTING', style: 'section' },
   { text: 'Lead QA ................................... Nick 1', style: 'role' },
+  { text: 'Chaos QA .................................. Dom', style: 'role' },
+  { text: 'Thanks to Dom for breaking my games all the time', style: 'thanks' },
+  { text: '— and sorry for the nerfs!', style: 'thanks' },
   { text: '', style: 'gap' },
   { text: '', style: 'gap' },
   { text: 'SPECIAL THANKS', style: 'section' },
@@ -33093,8 +33578,11 @@ const CARD_SFX_OVERRIDES = {
   // fell back to no SFX (its id doesn't match the dagger/rock
   // keyword sniff in getWeaponSfxKeys).
   obsidian_shard:           { play: 'boulder_flesh', flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
-  raena_card:               { play: 'raena_summon' },
-  raena_card_2:             { play: 'raena_summon' },
+  // Raena's Called arrow rides the standard bow flesh/blocked impact
+  // cues — her voice fires on play, then the arrow lands with the
+  // same thwack as the ranger bow line.
+  raena_card:               { play: 'raena_summon', flesh: 'bow_flesh', blocked: 'bow_blocked' },
+  raena_card_2:             { play: 'raena_summon', flesh: 'bow_flesh', blocked: 'bow_blocked' },
   valdrisa_card:            { play: 'valdrisa_summon' },
   thorb_card:               { play: 'thorb_shout' },
   thorb_card_2:             { play: 'thorb_shout' },
@@ -33852,7 +34340,7 @@ function drawFogOfWar(currentArea) {
   if (!currentNode) return;
 
   // Fog applies to all non-outdoor areas (matching Python game)
-  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
   if (outdoorAreas.has(currentArea)) return;
 
   // Create offscreen fog canvas if needed

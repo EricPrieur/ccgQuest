@@ -14,10 +14,23 @@ export class CardEffect {
     this.value = value;
     this.target = target;
     this.maxTargets = maxTargets;
+    // optional: the play flow will skip this effect entirely when no
+    // valid target exists (e.g. Raena's Called arrow vs an invulnerable-
+    // only-enemy fight). Lets the card still resolve as a pure summon
+    // instead of becoming unplayable.
+    this.optional = false;
+    // noAttackCount: damage from this effect does NOT increment
+    // attacksThisTurn. Used by ally-rider attacks like Raena's Called
+    // arrow so they don't inflate Sneak Attack scaling — the ally's
+    // shot is conceptually theirs, not the player's swing.
+    this.noAttackCount = false;
   }
 
   copy() {
-    return new CardEffect(this.effectType, this.value, this.target, this.maxTargets);
+    const c = new CardEffect(this.effectType, this.value, this.target, this.maxTargets);
+    c.optional = this.optional;
+    c.noAttackCount = this.noAttackCount;
+    return c;
   }
 }
 

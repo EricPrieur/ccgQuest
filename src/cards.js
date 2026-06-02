@@ -491,14 +491,14 @@ export function createFireBurst() {
   return new Card({
     id: 'fire_burst',
     name: 'Fire Burst',
-    description: 'Recharge -> Deal 2 Damage and 1 Fire.',
-    shortDesc: 'R->2 Dmg+Fire',
+    description: 'Recharge -> Deal 2 Damage and 2 Fire.',
+    shortDesc: 'R->2 Dmg+2 Fire',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
-      new CardEffect('apply_fire', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_fire', 2, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['wizard'],
     tier: 1,
@@ -548,8 +548,8 @@ export function createArcaneShield() {
   return new Card({
     id: 'arcane_shield',
     name: 'Arcane Shield',
-    description: 'Recharge -> Block 3. Draw.',
-    shortDesc: 'R->Block 3, Draw',
+    description: 'Recharge -> Block 4. Draw.',
+    shortDesc: 'R->Block 4, Draw',
     // Subtype stays 'ability' so it groups with other Wizard abilities,
     // but cardType is DEFENSE so the DEFENDING phase recognizes it as
     // playable like armor.
@@ -557,7 +557,7 @@ export function createArcaneShield() {
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('block', 4, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['wizard'],
@@ -617,13 +617,15 @@ export function createPetSpider() {
   return new Card({
     id: 'pet_spider',
     name: 'Pet Spider',
-    description: 'Recharge -> Summon a Pet Spider.\nCreate 1 Vial of Poison.',
-    shortDesc: 'R->Summon Spider\n+Vial of Poison',
+    description: 'Recharge -> Summon 1-2 Pet Spiders.\nCreate 1 Vial of Poison.',
+    shortDesc: 'R->Summon 1-2 Spiders\n+Vial of Poison',
     subtype: 'ability',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('summon_small_spider', 1, TargetType.SUMMON),
+      // value=2 → handler rolls 1-2 spiders. Enemy slyblade summons
+      // still use value=1 (unchanged) and spawn exactly one.
+      new CardEffect('summon_small_spider', 2, TargetType.SUMMON),
       new CardEffect('create_vial_of_poison', 1, TargetType.SELF),
     ],
     characterClass: ['rogue'],
@@ -641,12 +643,12 @@ export function createHeroicStrike() {
   return new Card({
     id: 'heroic_strike',
     name: 'Heroic Strike',
-    description: 'Recharge -> Gain 3 Heroism.',
-    shortDesc: 'R->Heroism 3',
+    description: 'Recharge -> Gain 4 Heroism.',
+    shortDesc: 'R->Heroism 4',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('gain_heroism', 3, TargetType.SELF)],
+    effects: [new CardEffect('gain_heroism', 4, TargetType.SELF)],
     characterClass: ['paladin', 'warrior'],
     tier: 1,
   });
@@ -656,12 +658,12 @@ export function createCharge() {
   return new Card({
     id: 'charge',
     name: 'Charge',
-    description: 'Recharge -> Deal 2 Damage. Draw if first attack this turn.',
-    shortDesc: 'R->2 Dmg\nDraw if 1st atk',
+    description: 'Recharge -> Deal 3 Damage. Draw if first attack this turn.',
+    shortDesc: 'R->3 Dmg\nDraw if 1st atk',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('charge_attack', 2, TargetType.SINGLE_ENEMY)],
+    effects: [new CardEffect('charge_attack', 3, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
   });
@@ -686,12 +688,12 @@ export function createRecklessStrike() {
   return new Card({
     id: 'reckless_strike',
     name: 'Reckless Strike',
-    description: 'Discard -> Deal 6 Damage.',
-    shortDesc: 'D->6 Dmg',
+    description: 'Discard -> Deal 8 Damage.',
+    shortDesc: 'D->8 Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.DISCARD,
-    effects: [new CardEffect('damage', 6, TargetType.SINGLE_ENEMY)],
+    effects: [new CardEffect('damage', 8, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
   });
@@ -760,13 +762,13 @@ export function createCarefulStrike() {
   return new Card({
     id: 'careful_strike',
     name: 'Careful Strike',
-    description: 'Recharge -> Deal 1 Damage, Gain Shield equal to Damage dealt.',
-    shortDesc: 'R->1 Dmg\n+Shield = Dmg',
+    description: 'Recharge -> Deal 2 Damage, Gain Shield equal to Damage dealt.',
+    shortDesc: 'R->2 Dmg\n+Shield = Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('careful_strike', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('careful_strike', 2, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
@@ -798,14 +800,14 @@ export function createAimedShotCard() {
   return new Card({
     id: 'aimed_shot_card',
     name: 'Aimed Shot',
-    description: 'Recharge +1 Card -> Deal 3 Damage.\nHeroism is added twice.\nDraw.',
-    shortDesc: 'R+1->3 Dmg\nHeroism x2\nDraw',
+    description: 'Recharge +1 Card -> Deal 4 Damage.\nHeroism is added twice.\nDraw.',
+    shortDesc: 'R+1->4 Dmg\nHeroism x2\nDraw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heroism_double', 1, TargetType.SELF),
-      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -818,8 +820,8 @@ export function createGoodberry() {
   return new Card({
     id: 'goodberry',
     name: 'Goodberry',
-    description: 'Consume -> Heal 1 and some sustenance.',
-    shortDesc: 'C->Heal 1\n+ Sustenance',
+    description: 'Consume -> Heal 1 and some sustenance.\nIf No Meal: Basic sustenance for 2 turns.',
+    shortDesc: 'C->Heal 1\n+Sustenance\nMeal(if free)',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -828,7 +830,22 @@ export function createGoodberry() {
       // Sustenance — 50% chance to grant one random buff (Shield /
       // Heroism / Draw / Heal). Resolves in resolveEffect:goodberry_sustenance.
       new CardEffect('goodberry_sustenance', 1, TargetType.SELF),
+      // Fallback meal — grant_provision reads the `provision` field
+      // below. Marked conditionalOnEmpty so it only fires when no
+      // other meal is already active; with a stronger meal on the
+      // bar this is a silent no-op (the on-play heal + sustenance
+      // still resolved).
+      new CardEffect('grant_provision', 0, TargetType.SELF),
     ],
+    provision: {
+      slot: 'meal',
+      name: 'Goodberry',
+      effectType: 'goodberry_sustenance',
+      value: 1,
+      turnsPerCombat: 2,
+      conditionalOnEmpty: true,
+      description: 'Basic sustenance for 2 turns each combat (if no other meal).',
+    },
     isToken: true,
   });
 }
@@ -844,14 +861,23 @@ export function createRaenaCard() {
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
-    // SINGLE_ENEMY damage effect forces targeting — Raena loosed an
+    // SINGLE_ENEMY damage effect forces targeting — Raena looses an
     // arrow on the way in (matches her base attack stat). Then the
     // summon spawns her on the field as a normal ally creature.
-    effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
-      new CardEffect('summon_raena', 1, TargetType.SUMMON),
-      new CardEffect('recharge_extra', 1, TargetType.SELF),
-    ],
+    // Marked optional so the play flow gracefully skips it when no
+    // valid target exists (e.g. Stone Giant invulnerable, no boulders
+    // alive) — the card still summons. noAttackCount keeps her arrow
+    // out of Sneak Attack's scaling count.
+    effects: (() => {
+      const arrow = new CardEffect('damage', 2, TargetType.SINGLE_ENEMY);
+      arrow.optional = true;
+      arrow.noAttackCount = true;
+      return [
+        arrow,
+        new CardEffect('summon_raena', 1, TargetType.SUMMON),
+        new CardEffect('recharge_extra', 1, TargetType.SELF),
+      ];
+    })(),
     rarity: 'rare',
     isUnique: true,
     tier: 1,
@@ -870,11 +896,16 @@ export function createRaenaCard2() {
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
-      new CardEffect('summon_raena_upgraded', 1, TargetType.SUMMON),
-      new CardEffect('recharge_extra', 1, TargetType.SELF),
-    ],
+    effects: (() => {
+      const arrow = new CardEffect('damage', 3, TargetType.SINGLE_ENEMY);
+      arrow.optional = true;
+      arrow.noAttackCount = true;
+      return [
+        arrow,
+        new CardEffect('summon_raena_upgraded', 1, TargetType.SUMMON),
+        new CardEffect('recharge_extra', 1, TargetType.SELF),
+      ];
+    })(),
     rarity: 'rare',
     isUnique: true,
     tier: 2,
@@ -910,6 +941,40 @@ export function createLambasBread() {
       description: 'Heal 1 or Heroism each turn for 3 turns (each combat, until rest)',
     },
     rarity: 'uncommon',
+  });
+}
+
+// Fresh Fish — reward from the Cozy Spot fishing minigame south of
+// the outpost (after surviving the Sahuagin Sentinel ambush). Uncommon
+// item that doubles as a meal: small persistent heal each turn plus a
+// swim-trigger draw for the buff's duration.
+export function createFreshFish() {
+  return new Card({
+    id: 'fresh_fish',
+    name: 'Fresh Fish',
+    description: 'Consume + Recharge 1 -> Heal 2.\nMeal: Heal 1.\nOn Swim: Draw. (4 turns)',
+    shortDesc: 'C+R1->Heal 2\nMeal: Heal 1\nOn Swim: Draw\n(4 turns)',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 2, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Fresh Fish',
+      effectType: 'heal',
+      value: 1,
+      turnsPerCombat: 4,
+      // Swim hook is checked imperatively in the swim-recharge handler
+      // (main.js) via the buff's `swimDraw` flag.
+      swimDraw: 1,
+      description: 'Heal 1 each turn for 4 turns. While active, recharging a card during Swim also draws 1.',
+    },
+    rarity: 'uncommon',
+    tier: 1,
   });
 }
 
@@ -957,15 +1022,15 @@ export function createWrath() {
   return new Card({
     id: 'wrath',
     name: 'Wrath',
-    description: 'Choose 1:\n3 Damage\nOR 1 Damage, Draw.',
-    shortDesc: 'R->3 Dmg\nOR 1 Dmg, Draw',
+    description: 'Choose 1:\n4 Damage\nOR 1 Damage, Draw.',
+    shortDesc: 'R->4 Dmg\nOR 1 Dmg, Draw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [],
     modes: [
-      new CardMode('Deal 3 Damage', [
-        new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardMode('Deal 4 Damage', [
+        new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       ]),
       new CardMode('Deal 1 Damage, Draw', [
         new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
@@ -981,13 +1046,13 @@ export function createRegrowth() {
   return new Card({
     id: 'regrowth',
     name: 'Regrowth',
-    description: 'Recharge -> Heal 1. Heal 1 at start of turn for 4 turns.',
-    shortDesc: 'R->Heal 1\n+Regen 4t',
+    description: 'Recharge -> Heal 2. Heal 1 at start of turn for 4 turns.',
+    shortDesc: 'R->Heal 2\n+Regen 4t',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('heal', 2, TargetType.SELF),
       new CardEffect('regen_buff', 4, TargetType.SELF),
     ],
     characterClass: ['druid'],
@@ -999,14 +1064,14 @@ export function createFeralSwipe() {
   return new Card({
     id: 'feral_swipe',
     name: 'Feral Swipe',
-    description: 'Recharge -> Gain 2 Shield.\nDeal 1 damage per Shield\nto separate enemies.',
-    shortDesc: 'R->Shield 2\n1 Dmg x Shield',
+    description: 'Recharge -> Gain 2 Shield.\nDeal 2 damage per Shield\nto separate enemies.',
+    shortDesc: 'R->Shield 2\n2 Dmg x Shield',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_shield', 2, TargetType.SELF),
-      new CardEffect('feral_swipe_damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('feral_swipe_damage', 2, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['druid'],
     tier: 1,
@@ -1129,12 +1194,12 @@ export function createFlashHeal() {
   return new Card({
     id: 'flash_heal',
     name: 'Flash Heal',
-    description: 'Recharge -> Heal 3.',
-    shortDesc: 'R->Heal 3',
+    description: 'Recharge -> Heal 4.',
+    shortDesc: 'R->Heal 4',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('heal', 3, TargetType.SINGLE_ALLY)],
+    effects: [new CardEffect('heal', 4, TargetType.SINGLE_ALLY)],
     characterClass: ['paladin'],
     tier: 1,
   });
@@ -3882,8 +3947,8 @@ export function createDwarvenTowerShield() {
   return new Card({
     id: 'dwarven_tower_shield',
     name: 'Dwarven Tower Shield',
-    description: 'Recharge a card ->\nGain 5 Shields. Draw.\nStays in hand.',
-    shortDesc: 'R+1->+5 Shield\nDraw, Stays',
+    description: 'Recharge a card ->\nGain 5 Shields.\nStays in hand.',
+    shortDesc: 'R+1->+5 Shield\nStays in hand',
     subtype: 'heavy_armor',
     // ABILITY (not DEFENSE) so it can only be played proactively on the
     // player's turn, not reactively during the defending phase.
@@ -3891,7 +3956,6 @@ export function createDwarvenTowerShield() {
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_shield', 5, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],

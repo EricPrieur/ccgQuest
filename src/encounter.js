@@ -1512,6 +1512,227 @@ export function createRiverCrossingEncounter() {
   return new Encounter('river_crossing', 'River Crossing', 'The river runs shallow here.', phases);
 }
 
+// East Side — debug-gated sign waypoint between River Crossing and the
+// South Gate. The dialog only fires when debug mode is on
+// (startNodeEncounter no-ops this encounter otherwise). Mentions both
+// directions the path forks: Qualibaf South Gate to the north,
+// South Outpost to the south down the (wip) River Path.
+export function createEastSideEncounter() {
+  return new Encounter('east_side', 'East Side', 'A weathered signpost stands at the fork.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The path forks at a low rise on the east bank. A weathered wooden signpost leans into the wind, two planks nailed to its trunk.'),
+        new EncounterText('The upper plank, arrow pointing north, reads: QUALIBAF SOUTH GATE. The paint is faded but freshly traced over.'),
+        new EncounterText('The lower plank, arrow pointing south, reads: SOUTH OUTPOST. The wood here is darker, the lettering deeper — older work, but still legible.'),
+        new EncounterText('You memorize the layout and step back onto the trail.'),
+      ],
+    }),
+  ]);
+}
+
+// South Trail — last beat on the arriving_city map before the cross-
+// map jump to the South of Qualibaf area. Plays a "follow the river
+// south, civilization thins, tower on the horizon" travel montage.
+// If the dragon is still alive (Varimatras NOT slain), opens with a
+// tongue-in-cheek meta beat where Raena and Thorb roast the party
+// for going on a side quest while Qualibaf is in danger. Called via
+// startNodeEncounter with the current dragonSlain flag.
+export function createSouthTrailEncounter(dragonSlain = false) {
+  const texts = [];
+  if (!dragonSlain) {
+    texts.push(
+      new EncounterText('Raena stops. Plants her staff in the dirt. Turns very slowly to look at you.', 'Raena'),
+      new EncounterText('"Just so I have this straight," she says. "There is a kobold army massing somewhere north of Qualibaf. The wind has been wrong for a week — every shepherd we passed swore the cold came in too early and won\'t let go. The whole region feels like something is about to break. And we are walking south. Toward an outpost that, as far as anyone we\'ve met can recall, isn\'t actually in any trouble."', 'Raena'),
+      new EncounterText('"Aye!" Thorb says brightly. "Side quest!"', 'Thorb'),
+      new EncounterText('"A side quest." Raena pinches the bridge of her nose. "While the weather is broken and an army is gathering."', 'Raena'),
+      new EncounterText('"It\'s how the old tales work, lass! Hero gets the big quest, ignores it for six smaller quests, comes back with a tower full of loot, then handles the main thing. Tradition!" Thorb beams at the signpost like it personally endorses his point.', 'Thorb'),
+      new EncounterText('You consider mentioning that this is not actually a tale, and that armies and weather generally do not pause politely while protagonists collect side rewards. You decide this is a thought best kept to yourself.'),
+      new EncounterText('Raena exhales the kind of sigh that has entire essays behind it. "Fine. South Outpost. But we are not staying for the gift shop."', 'Raena'),
+    );
+  }
+  texts.push(
+    new EncounterText('The trail bends with the river and runs south. For a while the terraced fields keep pace — wheat, vines, a shepherd or two raising a wary hand as you pass — but mile by mile the cultivated ground gives way to scrub, then rough pasture, then nothing at all but wind and brown grass.'),
+    new EncounterText('The road dwindles to a footpath. Civilization thins behind you like smoke off a dying fire. Just the water, the rustle of the long grass, and the patient sun.'),
+    new EncounterText('Hours pass. The sun crawls. And then, far to the south against the haze, something resolves: a low, dark silhouette. Squat. Weather-beaten. The unmistakable shape of a small fortified tower rising out of the plain.'),
+    new EncounterText('"South Outpost, I\'d wager," Thorb murmurs. "Looks like nobody told it the war\'s on."', 'Thorb'),
+  );
+  return new Encounter('south_trail', 'Along the River', 'Following the water south.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts,
+    }),
+  ]);
+}
+
+// South Outpost — first arrival at the outpost gate. Gontran the Guard
+// and a couple of weary subordinates greet the party and (a touch too
+// hopefully) mistake them for the relief that was requested weeks ago.
+// Sets up the Merchant Boat investigation hook before teleporting into
+// the south_outpost map.
+export function createOutpostMeetingEncounter() {
+  return new Encounter('outpost_meeting', 'The South Outpost', 'Three tired guards man the gate.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The outpost is smaller up close than it looked on the horizon — a single squat tower, a sagging palisade, a stable that hasn\'t seen a horse in some time. Three men in mismatched, weather-stained uniforms perk up as you approach the gate. They had not, you suspect, been expecting visitors today. Or this week.'),
+        new EncounterText('The tallest of them — barrel-chested, salt-and-pepper beard, an officer\'s pin pinned somewhat crookedly to his collar — steps forward. His eyes drop to your weapons. Then to your packs. Then to your weapons again. The hope kindling in his face is almost painful to watch.', 'Gontran'),
+        new EncounterText('"You\'re... you\'re the relief, aren\'t you?" His voice cracks halfway through. "From Qualibaf. The relief we requested. Six weeks ago."', 'Gontran'),
+        new EncounterText('You glance at Raena. Raena glances at Thorb. Thorb stares at the sky as if he\'s never seen one before.', 'Raena'),
+        new EncounterText('"...Kinda?" you offer. "Maybe?"', '!'),
+        new EncounterText('Gontran chooses to take this as a yes. The relief on his face is enormous. The two guards behind him visibly sag. One of them sits down on a barrel and puts his head in his hands.', 'Gontran'),
+        new EncounterText('"Gontran. Gontran Vellis. Officer-in-charge — by which I mean the senior of the three of us still posted here." He claps a hand on your shoulder with the energy of a man who has just been thrown a rope. "Listen. I will be straight with you. We have a problem. A few days back a Qualibaf merchant boat went down the river and didn\'t come back up it. Crashed, we think — there\'s wreckage we can see from the watch — somewhere downstream before the cave mouth."', 'Gontran'),
+        new EncounterText('"We\'d investigate ourselves. We would. But there\'s gnoll sign in the foothills and word from the trappers that a whole pack is working its way down toward us. If we abandon the outpost, even for a day, there\'s no one between them and the city." He grimaces. "So. Could you follow the river? See what\'s left of the boat? Survivors, cargo, anything?"', 'Gontran'),
+        new EncounterText('"Take whatever supplies you need from the storehouse on the way out — bandages, rations, whatever\'s in there, we\'re not exactly hoarding." He pauses, then straightens with what is plainly an attempt at dignity. "And when you return — when you have investigated — come and find me. I will personally write you a Letter of Commendation for the Adventurers\' Guildmaster in Qualibaf. With my seal. So that you may be properly rewarded."', 'Gontran'),
+        new EncounterText('He says "Letter of Commendation" the way another man might say "ancient artifact of immense power." The two guards behind him try, valiantly, not to smirk.', 'Gontran'),
+        new EncounterText('Raena draws a long breath and lets it out slowly. "We\'ll take a look."', 'Raena'),
+        new EncounterText('Thorb is already eyeing the storehouse.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Watchtower — short canRevisit check-in dialog atop the outpost
+// tower. For now a single beat where Gontran asks if the party has
+// finished investigating the wreck yet; future passes can branch on
+// an investigation flag and route into the reward path. Re-uses the
+// south outpost gate art for the backdrop (rendered via the
+// ENCOUNTER_BG_MAP override on this encounter id).
+export function createWatchtowerCheckEncounter() {
+  return new Encounter('watchtower_check', 'On the Watchtower', 'Gontran leans on the parapet, scanning the southern road.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You climb the ladder. Gontran is at the south rail, one elbow propped on the worn timber, eyes fixed on the river road.', 'Gontran'),
+        new EncounterText('He turns as your boots hit the platform. "Any news?" The hope in his voice is doing its best to sound casual and is not, in fact, succeeding.', 'Gontran'),
+        new EncounterText('"Still working on it," you say.', '!'),
+        new EncounterText('He nods, more to himself than to you. "Aye. Right. Of course." He turns back to the road. "Come find me the moment you have something. Or — you know — even if you don\'t. It\'s a lonely view from up here."', 'Gontran'),
+      ],
+    }),
+  ]);
+}
+
+// Supply Pile — Gontran's storehouse on the way out. Two sequential
+// "pick 2 of 3" loot pickers (re-uses the Varimatras-style
+// ENCOUNTER_LOOT_PICK flow). The card-id pools are pre-rolled by the
+// startNodeEncounter dispatch in main.js and passed in here so the
+// offering re-rolls between visits.
+export function createSupplyPileEncounter(picker1Cards = [], picker2Cards = []) {
+  const phases = [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The storehouse smells of pine resin, old leather, and slightly damp grain. Crates and barrels are stacked higher than three guards on half rations have any business needing.'),
+        new EncounterText('"Help yourselves," Gontran called as you walked over. "Anything\'s yours."', 'Gontran'),
+      ],
+    }),
+  ];
+  if (picker1Cards.length > 0) {
+    phases.push(new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Weapons Rack & Armor Stand (pick 1)',
+      lootPickCards: picker1Cards,
+      lootPickCount: 1,
+    }));
+  }
+  if (picker2Cards.length > 0) {
+    phases.push(new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Provisions & Market Stock (pick 1)',
+      lootPickCards: picker2Cards,
+      lootPickCount: 1,
+    }));
+  }
+  return new Encounter('supply_pile', 'The Storehouse', 'Gontran said help yourself.', phases);
+}
+
+// Cozy Spot — discoverable fishing minigame south of the outpost.
+// Companions banter (lightly mocking the side-quest detour), then the
+// player gets a Cast a Line / Pack Up choice loop. Each cast spends a
+// recharge from hand and rolls vs a chance that starts at 10% and
+// climbs by 10% per attempt. The cumulative chance resets if the
+// player leaves; the catch is one-time across the whole save
+// (cozySpotFishingCaught flag). Reward TBD.
+//
+// Factory takes `caught` so the post-success visit shows a quieter
+// "great fishing spot, no luck pushing it" dialog without the choice.
+export function createCozySpotEncounter(variant = 'first') {
+  if (variant === 'caught') {
+    return new Encounter('cozy_spot', 'Cozy Spot', 'You\'ve already pulled the catch of the day out of here.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The river slides past the mossy stone in the same patient way it did before. The big one is somewhere downstream now, or possibly in Thorb\'s belly. Either way, this hole has given what it had to give.'),
+        ],
+      }),
+    ]);
+  }
+  const fishingChoice = new EncounterPhaseData({
+    phaseType: EncounterPhase.CHOICE,
+    choices: [
+      new EncounterChoice(
+        'Cast a line (Recharge 1 card)',
+        '',
+        'fishing_attempt', 1,
+        { returnToChoices: true, repeatable: true }
+      ),
+      new EncounterChoice(
+        'Pack up and move on',
+        'You roll up the line. The river keeps its secrets — for now.',
+        '', 0,
+        { completesEncounter: true }
+      ),
+    ],
+  });
+  // Revisit: skip the full banter and drop straight onto the fishing
+  // choice. The player already met the rock and the joke; they're
+  // here because they want to cast a line.
+  if (variant === 'revisit') {
+    return new Encounter('cozy_spot', 'Cozy Spot', 'Back at the fishing rock.', [fishingChoice]);
+  }
+  return new Encounter('cozy_spot', 'Cozy Spot', 'A flat stone, a deep pool, a perfect afternoon.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The trail opens onto a wide, flat stone that hangs out over a slow bend in the river. Sun-warmed moss. A pool below that looks deep enough to hide something interesting.'),
+        new EncounterText('Thorb stops dead. Stares at the water. Stares at the moss. Stares back at the water.', 'Thorb'),
+        new EncounterText('"This," he announces with the gravity of a man delivering a prophecy, "is a fishing rock. If this isn\'t a fishing rock, the gods don\'t want us happy."', 'Thorb'),
+        new EncounterText('"We are on a job," Raena says, in the tone of someone who has lost this argument before.', 'Raena'),
+        new EncounterText('"We are ALSO on a fishing rock," Thorb counters, already sitting down and rummaging in his pack for line and hook.', 'Thorb'),
+        new EncounterText('You look at the river. It looks back at you. Somewhere down there, something flicks a tail.'),
+      ],
+    }),
+    fishingChoice,
+  ]);
+}
+
+// Cozy Spot Ambush — chains in from a successful fishing roll. While
+// the party is hauling in the fish, a Sahuagin Sentinel that's been
+// shadowing it bursts up out of the pool. Fight, then take the fresh
+// fish home as a trophy. SouthOutpostBG backdrop via ENCOUNTER_BG_MAP.
+export function createCozySpotAmbushEncounter() {
+  return new Encounter('cozy_spot_ambush', 'The Big One', 'Something else has been watching that fish.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The line goes tight. You set the hook. The fish on the other end is heavy — heavier than it should be — and as you start to pull, you see why.', '!'),
+        new EncounterText('A second, much larger shadow is rising out of the deep pool behind it. Scaled. Webbed. Patient. It has been following your meal the whole time.', '!'),
+        new EncounterText('"Thorb."', 'Raena'),
+        new EncounterText('"I see it."', 'Thorb'),
+        new EncounterText('Water explodes off the stone as the Sahuagin Sentinel breaks the surface, trident leveled, eyes fixed on you.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'sahuagin_sentinel',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['fresh_fish'],
+    }),
+  ]);
+}
+
 export function createSouthGateEncounter() {
   // Mirrors PY create_south_gate_encounter, tightened: 7 beats → 5,
   // sensory details kept (fishing boats / terraced fields / blue
@@ -4070,6 +4291,13 @@ export const ENCOUNTER_REGISTRY = {
   passage_ambush: createPassageAmbushEncounter,
   cave_exit: createCaveExitEncounter,
   river_crossing: createRiverCrossingEncounter,
+  east_side: createEastSideEncounter,
+  south_trail: createSouthTrailEncounter,
+  outpost_meeting: createOutpostMeetingEncounter,
+  watchtower_check: createWatchtowerCheckEncounter,
+  supply_pile: createSupplyPileEncounter,
+  cozy_spot: createCozySpotEncounter,
+  cozy_spot_ambush: createCozySpotAmbushEncounter,
   south_gate: createSouthGateEncounter,
   sahuagin_sentinel: createSahuaginSentinelEncounter,
   // City Shops

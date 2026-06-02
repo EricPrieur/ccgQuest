@@ -9,6 +9,7 @@ export class MapNode {
     isLocked = false, canRevisit = false, unlocks = [],
     hiddenName = '', hiddenDescription = '',
     passthroughTo = '', repeatableUntil = '',
+    wip = false, discoverable = false,
   }) {
     this.id = id;
     this.name = name;
@@ -35,6 +36,17 @@ export class MapNode {
     // Keys of encounter choices that have been permanently exhausted on this node.
     // Used for repeat-visit encounters (Abandoned Camp: one rest, one search).
     this.exhaustedChoices = [];
+    // wip: marks a node as "work in progress" — invisible + unreachable
+    // unless debug mode is on. Render layer + click router gate on the
+    // debugMode flag in main.js. Lets us push half-built content to main
+    // without leaking it to players.
+    this.wip = wip;
+    // discoverable: hides the node from the map until the player is
+    // within 1 hop (accessible from the current node) — even on
+    // outdoor maps where everything is normally visible. Once visited,
+    // the node stays visible forever. Combine with hiddenName: '???'
+    // so the close-but-unexplored render reads as a mystery dot.
+    this.discoverable = discoverable;
   }
 
   get displayName() {
@@ -279,8 +291,24 @@ export function createRuinsBasinMap() {
     // manually click out of the cave.
     { id: 'cave_exit', name: 'Cave Exit', description: 'A passage leading out.', encounterId: 'cave_exit', connections: ['passage_ambush', 'mountain_overlook'], position: [512, 850], mapArea: 'temple_exit', hiddenName: 'Passage', passthroughTo: 'mountain_overlook' },
     { id: 'mountain_overlook', name: 'Mountain Overlook', description: 'A vista overlooking the land below.', encounterId: '', connections: ['cave_exit', 'river_crossing'], position: [212, 670], mapArea: 'arriving_city', canRevisit: true, passthroughTo: 'cave_exit' },
-    { id: 'river_crossing', name: 'River Crossing', description: 'A crossing over the river.', encounterId: 'river_crossing', connections: ['mountain_overlook', 'south_gate'], position: [322, 510], mapArea: 'arriving_city' },
-    { id: 'south_gate', name: 'South Gate', description: 'The southern gate of Qualibaf.', encounterId: 'south_gate', connections: ['river_crossing', 'city_south_gate'], position: [662, 260], mapArea: 'arriving_city', passthroughTo: 'city_south_gate' },
+    { id: 'river_crossing', name: 'River Crossing', description: 'A crossing over the river.', encounterId: 'river_crossing', connections: ['mountain_overlook', 'east_side'], position: [322, 510], mapArea: 'arriving_city' },
+    // East Side — waypoint between river_crossing and south_gate. With
+    // debug OFF the encounter no-ops (silent passthrough). With debug ON
+    // the sign dialog fires, pointing to South Outpost down the new
+    // river_path branch. River Path + South Trail are wip:true so they
+    // only surface when debug is on.
+    // East Side, River Path, South Trail — one-shot encounters: the
+    // sign dialog and the river-walk dialog each fire on first arrival
+    // only (no canRevisit, so subsequent walk-throughs stay silent
+    // while the node remains navigable).
+    { id: 'east_side', name: 'East Side', description: 'A path running east of the river.', encounterId: 'east_side', connections: ['river_crossing', 'south_gate', 'river_path'], position: [490, 380], mapArea: 'arriving_city' },
+    { id: 'river_path', name: 'River Path', description: 'A trail winding south along the river bank.', encounterId: '', connections: ['east_side', 'south_trail'], position: [459, 630], mapArea: 'arriving_city', canRevisit: true, wip: true },
+    // South Trail — last node on this map before the cross-map jump to
+    // South of Qualibaf. Its encounter plays the "follow the river south"
+    // dialog (with a tongue-in-cheek meta beat from Raena/Thorb pre-
+    // dragon), then teleports to the south_of_qualibaf map entry.
+    { id: 'south_trail', name: 'South Trail', description: 'A trail leading east along the river toward the southern outpost.', encounterId: 'south_trail', connections: ['river_path'], position: [870, 810], mapArea: 'arriving_city', wip: true },
+    { id: 'south_gate', name: 'South Gate', description: 'The southern gate of Qualibaf.', encounterId: 'south_gate', connections: ['east_side', 'city_south_gate'], position: [662, 260], mapArea: 'arriving_city', passthroughTo: 'city_south_gate' },
     { id: 'city_south_gate', name: 'City South Gate', description: 'Inside the southern gate of Qualibaf.', encounterId: '', connections: ['city_square', 'weaponsmith', 'armorsmith', 'general_store', 'inn', 'church', 'guild_hall', 'antiquity_shop', 'arcane_emporium', 'city_north_gate'], position: [512, 900], mapArea: 'qualibaf', canRevisit: true, passthroughTo: 'south_gate' },
     { id: 'city_square', name: 'City Square', description: 'The central square of Qualibaf.', encounterId: 'city_square', connections: ['city_south_gate', 'weaponsmith', 'armorsmith', 'general_store', 'inn', 'church', 'guild_hall', 'antiquity_shop', 'arcane_emporium', 'city_north_gate'], position: [512, 500], mapArea: 'qualibaf', canRevisit: true },
     { id: 'weaponsmith', name: 'Weaponsmith', description: 'A weaponsmith shop.', encounterId: 'weaponsmith', connections: ['city_south_gate', 'city_square'], position: [340, 390], mapArea: 'qualibaf', canRevisit: true },
@@ -301,6 +329,90 @@ export function createRuinsBasinMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'piranha_pool';
+  return map;
+}
+
+// === South of Qualibaf Map ===
+// WIP placeholder map reached via the East Side / River Path / South
+// Trail branch off the arriving_city map. Entry node sits at the top
+// of the layout so the player arrives "from the north" walking down.
+// No background image yet — the canvas just renders the node graph.
+export function createSouthOfQualibafMap() {
+  const map = new GameMap('south_of_qualibaf', 'South of Qualibaf');
+  map.mapImages = {
+    south_of_qualibaf: 'Maps/SouthOfQualibaf.jpg',
+  };
+
+  const nodes = [
+    { id: 'outpost_approach', name: 'Outpost Approach', description: 'The trail descends toward the South Outpost.', encounterId: '', connections: ['outpost'], position: [872, 370], mapArea: 'south_of_qualibaf', canRevisit: true },
+    // South Outpost — first visit fires the outpost_meeting encounter
+    // (Gontran the Guard) which then teleports into the south_outpost
+    // map. Subsequent visits hop straight into south_outpost via the
+    // post-isDone gate dispatch.
+    { id: 'outpost', name: 'South Outpost', description: 'A small fortified tower rises out of the plain.', encounterId: 'outpost_meeting', connections: ['outpost_approach', 'south_bend'], position: [802, 470], mapArea: 'south_of_qualibaf', wip: true },
+    // South Bend — the road south of the outpost. Discoverable too:
+    // hidden until the party walks out of the outpost via the south
+    // gate (transitionToSouthBend then reveals it). South Bend also
+    // links back to outpost so the player can re-enter the city by
+    // the south door (special-cased in transitionToSouthOutpost: when
+    // arriving from south_bend, land at river_trail instead of
+    // north_path_entry).
+    { id: 'south_bend', name: 'South Bend', description: 'The road continues south past the outpost walls, hugging the river.', encounterId: '', connections: ['cozy_spot', 'outpost'], position: [700, 560], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+    // Cozy Spot — fishing dialog. Discoverable: invisible until the
+    // party is at South Bend (one hop), shown as ??? when close, named
+    // after a first visit. Fishing is a recharge-per-attempt minigame
+    // with cumulative 10% chance.
+    { id: 'cozy_spot', name: 'Cozy Spot', description: 'A flat, mossy stone juts over the river — perfect for sitting, or for fishing.', encounterId: 'cozy_spot', connections: ['south_bend', 'river_trail_south'], position: [830, 660], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+    // River Trail South — placeholder next-step node beyond Cozy Spot.
+    // Same discoverable rules so the player only sees it once they
+    // reach Cozy Spot.
+    { id: 'river_trail_south', name: 'River Trail South', description: 'The trail bends back along the water, heading deeper south.', encounterId: '', connections: ['cozy_spot'], position: [1050, 760], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'outpost_approach';
+  return map;
+}
+
+// === South Outpost Map ===
+// Detailed map of the outpost grounds reached after the Gontran the
+// Guard dialog. WIP — currently a single north-path entry node that
+// teleports back to the outpost on south_of_qualibaf so the player
+// can come and go while the rest of the area (merchant boat crash,
+// cave entrance) is being built out.
+export function createSouthOutpostMap() {
+  const map = new GameMap('south_outpost', 'South Outpost');
+  map.mapImages = {
+    south_outpost: 'Maps/SouthOutpostMap.jpg',
+  };
+
+  // south_outpost lives in CITY_FREE_MOVE_AREAS in main.js, so the
+  // `connections` field is only used as a structural hint — the render
+  // skips edge lines and the click router relaxes the adjacency check,
+  // letting the player one-click between any two nodes here.
+  const nodes = [
+    { id: 'north_path_entry', name: 'North Path', description: 'The trail back north toward the outpost gate.', encounterId: '', connections: [], position: [912, 300], mapArea: 'south_outpost', canRevisit: true },
+    // Watchtower — Gontran posted at the top. Each click fires the
+    // watchtower_check dialog (canRevisit) so the player can drop in
+    // any time before / after the merchant boat investigation.
+    { id: 'watchtower', name: 'Watchtower', description: 'A wooden ladder climbs to Gontran\'s post atop the tower.', encounterId: 'watchtower_check', connections: [], position: [492, 220], mapArea: 'south_outpost', canRevisit: true },
+    // Supply Pile — Gontran offered the storehouse on the way out.
+    // One-shot loot picker (two sequential picks: weapon/armor then
+    // supplies/rations). Card ids are rolled per visit in
+    // startNodeEncounter so the offering re-rolls between runs.
+    { id: 'supply_pile', name: 'Supply Pile', description: 'A pile of crates and barrels by the inner wall.', encounterId: 'supply_pile', connections: [], position: [302, 760], mapArea: 'south_outpost' },
+    // River Trail — south of the outpost, still on this map for now.
+    // No encounter yet; the merchant boat investigation hooks in here
+    // on the next pass.
+    { id: 'river_trail', name: 'River Trail', description: 'The road slips out the south gate and tracks the river bank toward the wreck.', encounterId: '', connections: [], position: [482, 960], mapArea: 'south_outpost', canRevisit: true, wip: true },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'north_path_entry';
   return map;
 }
 
