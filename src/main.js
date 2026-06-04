@@ -8002,15 +8002,9 @@ function startNodeEncounter(nodeId) {
     return;
   }
 
-  // East Side — debug-gated waypoint. Encounter only fires when debug
-  // mode is on; otherwise the node behaves like an empty waypoint
-  // (mark done, stay on map). Keeps the sign + WIP River Path branch
-  // hidden from normal play.
-  if (node.encounterId === 'east_side' && !debugMode) {
-    currentMap.completeCurrentNode();
-    state = GameState.MAP;
-    return;
-  }
+  // East Side — sign that points toward the South Outpost branch.
+  // Previously debug-only while the arc was WIP; now that the kraken
+  // arc ships in normal play, the dialog fires for every player.
   // Outpost Resting Tent — pre-Kraken: one-time +5 short rest. Once
   // taken (outpostTentRested), skip on revisit. Post-Kraken: the
   // tent re-arms as a full rest each time (setWellRested clears the
