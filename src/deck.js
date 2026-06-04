@@ -168,6 +168,7 @@ export class Deck {
       card._drawAnimStart = now + drawn.length * 80;
       this.hand.push(card);
       drawn.push(card);
+      if (typeof this.onCardDrawn === 'function') this.onCardDrawn(card);
     }
     return drawn;
   }
@@ -202,6 +203,7 @@ export class Deck {
       case 'DISCARD':
       default:
         this.discardPile.push(card);
+        if (typeof this.onCardDiscarded === 'function') this.onCardDiscarded(card);
         break;
     }
   }

@@ -74,6 +74,7 @@ export class Card {
     isToken = false,
     isUnique = false,
     provision = null,
+    unplayable = false,
   }) {
     this.id = id;
     this.name = name;
@@ -97,6 +98,7 @@ export class Card {
     this.isToken = isToken;
     this.isUnique = isUnique;
     this.provision = provision;
+    this.unplayable = unplayable;
     this.exhausted = false;
   }
 
@@ -112,7 +114,7 @@ export class Card {
   }
 
   canPlay() {
-    return !this.exhausted;
+    return !this.exhausted && !this.unplayable;
   }
 
   copy(preserveUid = false) {
@@ -138,6 +140,7 @@ export class Card {
       isToken: this.isToken,
       isUnique: this.isUnique,
       provision: this.provision,
+      unplayable: this.unplayable,
     });
     if (preserveUid) c.uid = this.uid;
     // Preserve the on-card enchant tags (Obsidian Forge, Dwarven

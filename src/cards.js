@@ -703,8 +703,8 @@ export function createShieldBash() {
   return new Card({
     id: 'shield_bash',
     name: 'Shield Bash',
-    description: 'Recharge -> Gain Shield, Deal damage = Shield.',
-    shortDesc: 'R->+Shield\nDmg=Shield',
+    description: 'Recharge -> Gain Shield, Deal damage = Shield.\nLose Half Shield.',
+    shortDesc: 'R->+Shield\nDmg=Shield\nLose 1/2 Shield',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -2268,6 +2268,605 @@ export function createRockBarrage() {
   });
 }
 
+// ============================================================
+// Giant Frog enemy deck (River Cave Mouth lake-rock ambush).
+// ============================================================
+
+// Baby Giant Frog — On-attack: hit ALL enemies for 2 then explode.
+// The attackAll + attack=2 stack lands the 2-damage AoE on the swing
+// itself; selfDestruct then kills the frog right after. No more
+// on-death rider — all the damage is folded into the attack.
+export function createBabyGiantFrogCreature() {
+  return new Creature({
+    name: 'Baby Giant Frog', attack: 2, maxHp: 1,
+    attackAll: true, selfDestruct: true,
+    description: 'On Attack: Explode. Deal 2 Damage to all enemies.',
+  });
+}
+
+// Baby Frog Swarm — Block 1, Draw, then summon 1-3 Baby Giant Frogs.
+// summon_baby_giant_frogs reads eff.value as the max roll on the
+// enemy side.
+export function createBabyFrogSwarm() {
+  return new Card({
+    id: 'baby_frog_swarm',
+    name: 'Baby Frog Swarm',
+    description: 'Recharge -> Block 1, Draw,\nSummon 1 to 2 Baby Giant Frog.',
+    shortDesc: 'R->Block 1, Draw\nSummon 1-2 Babies',
+    // DEFENSE so the enemy AI auto-plays the card reactively when
+    // the player swings (Block 1 in front of incoming damage), and
+    // the card renders with the blue defense frame.
+    subtype: 'simple',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('summon_baby_giant_frogs', 2, TargetType.SUMMON),
+    ],
+    previewCreature: createBabyGiantFrogCreature(),
+  });
+}
+
+// Frog Bite — plain 3 damage chomp, no poison rider. Enemy-only.
+export function createFrogBite() {
+  return new Card({
+    id: 'frog_bite',
+    name: 'Frog Bite',
+    description: 'Recharge -> Deal 3 Damage.',
+    shortDesc: 'R->3 Dmg',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+    ],
+  });
+}
+
+// Giant Frog Swallow — slow heavy strike. Tongue-grab-and-gulp art.
+// The recharge_extra effect actually costs the enemy 1 extra card
+// from hand (the AI gate at main.js:25671 holds the card unless the
+// hand has at least 2 cards), so the frog has to "load up" before
+// it can fire this swallow.
+export function createGiantFrogSwallow() {
+  return new Card({
+    id: 'giant_frog_swallow',
+    name: 'Giant Frog Swallow',
+    description: 'Recharge +1 ->\nDeal 5 Damage + Poison.',
+    shortDesc: 'R+1->5 Dmg+Poison',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+  });
+}
+
+// Acid Spit — Poison spray. One Poison stack to the player AND every
+// living ally creature, with a green arrow per target (mirrors the
+// apply_fire_all / apply_ice_all batch). Enemy-only.
+export function createAcidSpit() {
+  return new Card({
+    id: 'acid_spit',
+    name: 'Acid Spit',
+    description: 'Recharge -> Poison to all enemies.',
+    shortDesc: 'R->Poison ALL',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+    ],
+  });
+}
+
+// ============================================================
+// Giant Frog loot drops (River Cave Mouth reef ambush).
+// ============================================================
+
+// Frog Nursery — defensive ally card. Block 1 + Draw + 1-2 Baby
+// Giant Frog summons on the player's side. The babies use the same
+// 2-attack-attackAll-selfDestruct profile as the enemy variant, but
+// on the player side multiAttack=99 routes them through the
+// "attacks all enemies" auto-resolve path (mirrors Thordak Ashmantle).
+export function createPlayerBabyFrogCreature() {
+  return new Creature({
+    name: 'Baby Giant Frog', attack: 2, maxHp: 1,
+    multiAttack: 99, selfDestruct: true,
+    description: 'On Attack: Explode. Hits all enemies for 2.',
+  });
+}
+
+export function createFrogNursery() {
+  return new Card({
+    id: 'frog_nursery',
+    name: 'Frog Nursery',
+    description: 'Recharge -> Block 1, Draw,\nSummon 1-2 Baby Frogs.',
+    shortDesc: 'R->Block 1, Draw\n+1-2 Baby Frogs',
+    subtype: 'ally',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('summon_player_baby_frogs', 2, TargetType.SUMMON),
+    ],
+    previewCreature: createPlayerBabyFrogCreature(),
+    rarity: 'rare',
+    tier: 1,
+  });
+}
+
+// Frog Skin Boots — clothing. Block 1 + Heal 1 + Draw + on-swim
+// rider that draws another card per swim-recharge of the boots
+// themselves (matches Fish Scale Boots).
+export function createFrogSkinBoots() {
+  return new Card({
+    id: 'frog_skin_boots',
+    name: 'Frog Skin Boots',
+    description: 'Recharge -> Block 1, Heal 1, Draw.\nOn Swim: Draw.',
+    shortDesc: 'R->Block 1, Heal 1, Draw\nOn Swim: Draw',
+    subtype: 'clothing',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('heal', 1, TargetType.SINGLE_ALLY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('on_swim_recharge_draw', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 1,
+  });
+}
+
+// Toxic Frog Extract — common item but plays as an ATTACK so it
+// gets the standard player AoE arrow batch (green spit lines to
+// every legal target). Consume cost; 1 Poison stack to every enemy.
+export function createToxicFrogExtract() {
+  return new Card({
+    id: 'toxic_frog_extract',
+    name: 'Toxic Frog Extract',
+    description: 'Consume -> Poison to all enemies.',
+    shortDesc: 'C->Poison ALL',
+    subtype: 'item',
+    cardType: CardType.ATTACK,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+    ],
+    rarity: 'common',
+    tier: 1,
+  });
+}
+
+// ============================================================
+// Harpy loot drops (post-wreckage_arrival combat).
+// ============================================================
+
+// Feather Cloak — clothing. Block 2, Draw on play. Carries an
+// on_discard rider so if the cloak itself ever leaves hand to
+// discard (Reckless Strike cost, Talon Blade cost, etc.) the player
+// also draws 1.
+export function createFeatherCloak() {
+  return new Card({
+    id: 'feather_cloak',
+    name: 'Feather Cloak',
+    description: 'Recharge -> Block 2, Draw.\nOn Discard: Draw.',
+    shortDesc: 'R->Block 2, Draw\nOn Discard: Draw',
+    subtype: 'clothing',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('on_discard', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 1,
+  });
+}
+
+// Harpy Feather — Tier 1 Relic. Sole effect is the on_discard
+// trigger (draw 2 whenever the feather moves to discard). Costs
+// nothing on its own — players cycle it deliberately to mill draws.
+export function createHarpyFeather() {
+  return new Card({
+    id: 'harpy_feather',
+    name: 'Harpy Feather',
+    description: 'On Discard: Draw 2.',
+    shortDesc: 'On Discard: Draw 2',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('on_discard', 2, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// Harpy Egg Omelette — uncommon item. Consume + Recharge 1 → Heal 5
+// (poison-first via the standard healPlayer path). Meal provision:
+// for 3 turns, every player discard triggers a draw via the
+// _onDiscardDraw flag on the projected combat buff.
+export function createHarpyEggOmelette() {
+  return new Card({
+    id: 'harpy_egg_omelette',
+    name: 'Harpy Egg Omelette',
+    description: 'Consume + Recharge 1 -> Heal 5.\nMeal: When discarding from hand: Draw. 3 Turns.',
+    shortDesc: 'C+R1->Heal 5\nMeal: Discard=Draw 3T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 5, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Harpy Egg Omelette',
+      // No per-turn tick effect; the meal's payoff fires
+      // imperatively from triggerOnDiscard whenever a card moves
+      // hand→discard while the buff is active.
+      effectType: 'noop',
+      value: 0,
+      turnsPerCombat: 3,
+      onDiscardDraw: 1,
+      description: 'Discarding from hand draws a card. Lasts 3 turns each combat.',
+    },
+    rarity: 'uncommon',
+    tier: 1,
+  });
+}
+
+// Harpy Talon Blade — rare simple weapon. Discards 1 random hand
+// card as cost, deals 6 damage, stays in hand. Each discarded card
+// fires its own on_discard rider so chaining the blade with feather
+// cloaks / Harpy Feather is the design payoff.
+export function createHarpyTalonBlade() {
+  return new Card({
+    id: 'harpy_talon_blade',
+    name: 'Harpy Talon Blade',
+    description: 'Discard a card -> Deal 6 Damage.\nStays in hand.',
+    shortDesc: 'D 1 Card->6 Dmg\nStays',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('discard_extra', 1, TargetType.SELF),
+      new CardEffect('damage', 6, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 1,
+  });
+}
+
+// Harpy Screaming Charm — rare item. Discard the charm; for every
+// enemy: lose 1 random hand card (or take 1 damage if no hand),
+// then draw 1. Mirrors the boss Luring Song mechanic but with a
+// guaranteed self-draw rider.
+export function createHarpyScreamingCharm() {
+  return new Card({
+    id: 'harpy_screaming_charm',
+    name: 'Harpy Screaming Charm',
+    description: 'Consume ->\nEnemy discard 1 card or take 1 damage.\nDraw.',
+    shortDesc: 'C->Enemy -Card\nor 1 Dmg, Draw',
+    subtype: 'item',
+    cardType: CardType.ATTACK,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('luring_song', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 1,
+  });
+}
+
+// ============================================================
+// Kraken Spawn enemy deck (post-ship_chest fall-in-the-water boss).
+// ============================================================
+
+// Tentacle — Kraken Spawn summon. 3/5. Its swing carries the
+// onAttackSnagCard rider: lands the damage like a normal attack and
+// also splices 1 random hand card off the player, parking it on
+// the tentacle creature (`_snaggedCard`). When the tentacle dies,
+// the snagged card returns to the player's discard pile. Hovering
+// the tentacle in combat surfaces the snagged card.
+export function createKrakenTentacleCreature() {
+  return new Creature({
+    name: 'Tentacle', attack: 3, maxHp: 5,
+    onAttackSnagCard: true,
+    description: 'On Attack: snag 1 random card from your hand.',
+  });
+}
+
+// Tentacle Grab — Kraken card. Each play summons a fresh Tentacle
+// onto the enemy field (and the creature gets to swing immediately
+// next tick because it spawns ready). The 3-tentacle cap is
+// enforced inside the summon handler in main.js so the AI's Tentacle
+// Grab is a no-op once the field is full.
+export function createTentacleGrab() {
+  return new Card({
+    id: 'tentacle_grab',
+    name: 'Tentacle Grab',
+    // cardType=ATTACK so the enemy AI queues it as an 'attack' action
+    // — the 'summon' action path doesn't dispatch
+    // summon_kraken_tentacle, which is why the tentacles weren't
+    // spawning before. previewCreature still works on ATTACK cards
+    // for the hover preview.
+    description: 'Recharge ->\nSummon a Tentacle, it attacks.',
+    shortDesc: 'R->Tentacle\n+Attack',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle', 1, TargetType.SUMMON),
+    ],
+    previewCreature: createKrakenTentacleCreature(),
+    rarity: 'epic',
+  });
+}
+
+// Tentacle — passive spawn variant. Same 3/5 Tentacle creature as
+// Tentacle Grab, but the summon does NOT inject an immediate attack.
+// The tentacle waits in the row until next turn (where it joins the
+// normal creature_attack queue). Cheaper card cycle — just builds up
+// the row without spending an attack beat.
+export function createKrakenTentacleCard() {
+  return new Card({
+    id: 'kraken_tentacle',
+    name: 'Tentacle',
+    description: 'Recharge ->\nSummon a Tentacle.',
+    shortDesc: 'R->Tentacle',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle_passive', 1, TargetType.SUMMON),
+    ],
+    previewCreature: createKrakenTentacleCreature(),
+    rarity: 'epic',
+  });
+}
+
+// Tentacle Block — Kraken defense card. When the player swings on
+// the Kraken Spawn, the boss summons a fresh Tentacle that soaks the
+// hit instead of the boss. The summon path applies the incoming
+// damage directly to the new tentacle (it may die from the swing if
+// the player hit hard enough). Also draws so the boss keeps churning
+// through its deck of tentacles.
+export function createKrakenTentacleBlock() {
+  return new Card({
+    id: 'kraken_tentacle_block',
+    name: 'Tentacle Block',
+    description: 'Recharge ->\nSummon a Tentacle\nwho blocks the attack.\nDraw.',
+    shortDesc: 'R->Tentacle\nBlocks, Draw',
+    subtype: 'spell',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle_block', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    previewCreature: createKrakenTentacleCreature(),
+    rarity: 'epic',
+  });
+}
+
+// Ink Cloud — Kraken AoE debuff. Stacks INK_CLOUD on every legal
+// enemy target. While stacked, each of the afflicted character's
+// attacks has a 50% chance to miss outright (no damage, no riders).
+// Every attack consumes 1 stack regardless of the hit/miss roll, so
+// the debuff naturally burns off over the next few swings.
+export function createInkCloud() {
+  return new Card({
+    id: 'ink_cloud',
+    name: 'Ink Cloud',
+    description: 'Recharge ->\nAll enemies gain 3 Ink Cloud.',
+    shortDesc: 'R->All +3 Ink',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_ink_cloud_all', 3, TargetType.ALL_ENEMIES),
+    ],
+    rarity: 'epic',
+  });
+}
+
+// Swallowing Bite — heavy single-shot strike from the Kraken Spawn
+// itself (not a tentacle). Damage scales DOWN with the player's hand
+// size: base 10, minus the number of cards in hand. An empty hand
+// eats the full 10; a stuffed hand softens it almost to nothing.
+// "Recharge +1" cost (one extra hand-card to fire), high priority
+// so the AI leads with it whenever it's drawn.
+export function createSwallowingBite() {
+  return new Card({
+    id: 'swallowing_bite',
+    name: 'Swallowing Bite',
+    description: 'Recharge +1 ->\nDeal 10 Damage minus cards in hand.',
+    shortDesc: 'R+1->10-hand Dmg',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_minus_hand_count', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+  });
+}
+
+// ============================================================
+// Kraken Spawn loot drops (post-fight pick-2 from the wreck).
+// All tier-1 epics, all themed around the sea / bleed / heroism.
+// ============================================================
+
+// Bloody Eye Patch — defensive light armor. Block 1 + scaling Heroism
+// (2 per enemy currently below max HP) + Draw. The bigger the field
+// you've already chipped, the bigger the payoff when you eat a hit.
+export function createBloodyEyePatch() {
+  return new Card({
+    id: 'bloody_eye_patch',
+    name: 'Bloody Eye Patch',
+    description: 'Recharge ->\nBlock 1, Gain 2 Heroism for each Damaged Enemy, Draw.',
+    shortDesc: 'R->Block 1\n+2H/Damaged\n+Draw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('gain_heroism_per_damaged_enemy', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// Harpoon of the Deep — clean single-target burst with a Bleed rider.
+// Tier-1 epic martial: 4 damage + 2 Bleed for a recharge cost.
+export function createHarpoonOfTheDeep() {
+  return new Card({
+    id: 'harpoon_of_the_deep',
+    name: 'Harpoon of the Deep',
+    description: 'Recharge ->\nDeal 4 Damage + 2 Bleed.',
+    shortDesc: 'R->4 Dmg\n+2 Bleed',
+    subtype: 'martial',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 2, TargetType.SINGLE_ENEMY),
+    ],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// Tentacle Whip — AoE bleed plus a party rally. Simple weapon so the
+// Tentacle Whip equipper doesn't need martial proficiency; both
+// effects fire for the recharge cost.
+export function createTentacleWhip() {
+  return new Card({
+    id: 'tentacle_whip',
+    name: 'Tentacle Whip',
+    description: 'Recharge ->\nDeal 1 Bleed to all enemies.\nAllies gain 1 Heroism.',
+    shortDesc: 'R->1 Bleed All\nAllies +1 H',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_bleed_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// Sailor's Lucky Compass — passive relic, can NOT be played manually.
+// Every time it's drawn (start of combat, mid-turn draw, end-of-turn
+// refill) the player gains 1 Heroism.
+export function createSailorsLuckyCompass() {
+  return new Card({
+    id: 'sailors_lucky_compass',
+    name: "Sailor's Lucky Compass",
+    description: 'On Draw: Gain 1 Heroism.',
+    shortDesc: 'On Draw:\n+1 Heroism',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_draw_heroism', 1, TargetType.SELF)],
+    rarity: 'epic',
+    tier: 1,
+    unplayable: true,
+  });
+}
+
+// Kraken's Eye Spyglass — item that lets you sculpt your discard pile.
+// Peek the top 3 of discard, pick 1 into hand, the unpicked cards
+// stay in the discard pile (don't move to recharge).
+export function createKrakensEyeSpyglass() {
+  return new Card({
+    id: 'krakens_eye_spyglass',
+    name: "Kraken's Eye Spyglass",
+    description: 'Recharge ->\nScry 3 from your discard pile.',
+    shortDesc: 'R->Scry 3\nfrom discard',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('scry_pick_discard', 3, TargetType.SELF)],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// Barnacle-Covered Buckler — light armor with shield generation, a
+// Barnacle token spawn (1..N banish-heal token, mirrors Sahuagin Baron's
+// Plate), First Shield: Draw, and an on-swim draw rider.
+export function createBarnacleCoveredBuckler() {
+  return new Card({
+    id: 'barnacle_covered_buckler',
+    name: 'Barnacle-Covered Buckler',
+    description: 'Recharge ->\nGain 3 Shield. Create 1 Barnacle.\nFirst Shield, On Swim: Draw.',
+    shortDesc: 'R->3 Shield\n+1 Barnacle\n1st/Swim: Draw',
+    subtype: 'light_armor',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 3, TargetType.SELF),
+      new CardEffect('create_barnacle', 1, TargetType.SELF),
+      new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
+      new CardEffect('on_swim_recharge_draw', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 1,
+  });
+}
+
+// ============================================================
+// Harpy enemy deck (shipwreck_deck "Harpies" boss).
+// ============================================================
+
+// Harpy summon — 2/6 creature spawned at fight start. On death:
+// every enemy discards their hand OR takes 5 damage. Wired via the
+// onDeathDiscardOrDamage field; the handler lives in main.js.
+export function createHarpyCreature() {
+  return new Creature({
+    name: 'Harpy', attack: 2, maxHp: 6,
+    onDeathDiscardOrDamage: 5,
+    description: 'On Death: Enemies discard their hand or take 5 damage.',
+  });
+}
+
+// Luring Song — Harpy boss spell. For every enemy: lose 1 random
+// hand card OR take 1 damage if the hand is empty. Ally creatures
+// have no hand, so the rider always lands as damage on them.
+export function createLuringSong() {
+  return new Card({
+    id: 'luring_song',
+    name: 'Luring Song',
+    description: 'Recharge ->\nEnemies lose 1 random card\nor take 1 damage.',
+    shortDesc: 'R->Lose Card\nOR 1 Dmg',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('luring_song', 1, TargetType.ALL_ENEMIES),
+    ],
+  });
+}
+
 // Zhost's Buckler — drops as boss loot. Light armor that hits for
 // 2 damage + 1 Ice, grants 2 Shields, and pulls a card if the player
 // has built up at least 2 Shields by the end of the play.
@@ -3046,14 +3645,15 @@ export function createScaleArmor() {
   return new Card({
     id: 'scale_armor',
     name: 'Scale Armor',
-    description: 'Recharge -> Block 3.\nDeal Ice randomly.\nOn Swim: Draw 2.',
-    shortDesc: 'R->Block 3\nIce random\nOn Swim: Draw 2',
+    description: 'Recharge -> Block 3, Draw.\nDeal 2 Ice randomly.\nOn Swim: Draw 2.',
+    shortDesc: 'R->Block 3, Draw\n2 Ice random\nOn Swim: Draw 2',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 3, TargetType.SELF),
-      new CardEffect('apply_ice_random', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('apply_ice_random', 2, TargetType.RANDOM_ENEMY),
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],
     rarity: 'rare',
@@ -3254,20 +3854,23 @@ export function createSlyBlade() {
   });
 }
 
-// Shadow Cloak — uncommon clothing defense. Block 2 + draw 1.
+// Shadow Cloak — uncommon clothing defense. Coin-flip Block 10 +
+// draw 1. On heads the cloak grants a wall of Block (effectively
+// soaks any reasonable swing); on tails the swing lands at full
+// force with no block.
 export function createShadowCloak() {
   return new Card({
     id: 'shadow_cloak',
     name: 'Shadow Cloak',
-    description: 'Recharge -> 50% to avoid\nall damage. Draw.',
-    shortDesc: 'R->50% Dodge ALL\nDraw',
+    description: 'Recharge -> 50% to gain\n10 Block. Draw.',
+    shortDesc: 'R->50% Block 10\nDraw',
     subtype: 'clothing',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      // value = chance %, handled inline in the defense play loop.
-      // On success, pendingIncomingDamage is zeroed.
-      new CardEffect('dodge_chance_all', 50, TargetType.SELF),
+      // value = chance %, handler grants 10 Block on success and
+      // does nothing on failure.
+      new CardEffect('block_chance_10', 50, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
@@ -4632,12 +5235,18 @@ export function createSahuaginEye() {
 // during the Piranha Pool swim phase (and any future encounter that
 // uses the swim mechanic). Not playable. Mirrors PY's swim overlay
 // title + description; the visible art is SwimingInCurrent.jpg.
-export function createSwimmingShowcase() {
+export function createSwimmingShowcase(opts = {}) {
+  // Default text matches the Piranha Pool / open-water swim phase
+  // (1-3 cards per turn). Other callers (Giant Frog swim_drag forces
+  // exactly 1) can override the description + shortDesc so the card
+  // reflects their own recharge cap.
+  const description = opts.description || 'To Swim: Recharge 1 to 3 cards.';
+  const shortDesc = opts.shortDesc || 'Swim:\nR 1-3 Cards';
   return new Card({
     id: 'swimming_in_current',
     name: 'Swimming In Current',
-    description: 'To Swim: Recharge 1 to 3 cards.',
-    shortDesc: 'Swim:\nR 1-3 Cards',
+    description,
+    shortDesc,
     subtype: 'spell',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -4805,5 +5414,6 @@ export function createWolfFang() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('on_recharge_heroism', 1, TargetType.SELF)],
     rarity: 'rare',
+    unplayable: true,
   });
 }

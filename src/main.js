@@ -25,6 +25,13 @@ import {
   createGuards, createHideInCorner,
   createDireRatBite, createDireRatScreech,
   createSharpRock, createRockBarrage, createLargeBoulder, createLuckyPebble, createBoneWand, createBoneClub, createBoneMace, createBoneStaff, createTorch,
+  createBabyFrogSwarm, createFrogBite, createAcidSpit, createGiantFrogSwallow, createBabyGiantFrogCreature,
+  createFrogNursery, createFrogSkinBoots, createToxicFrogExtract, createPlayerBabyFrogCreature,
+  createLuringSong, createHarpyCreature,
+  createFeatherCloak, createHarpyFeather, createHarpyEggOmelette, createHarpyTalonBlade, createHarpyScreamingCharm,
+  createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createInkCloud,
+  createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
+  createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
   createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish,
   createThorbCreature, createThorbUpgradedCreature, createRaenaCreature, createRaenaUpgradedCreature,
   createBuffRunning, createBuffHiding, createBuffCalculating,
@@ -99,7 +106,7 @@ import {
   createThunderclap, createShieldWall, createBattleShout, createExecute,
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
 } from './cards.js';
-import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -392,6 +399,35 @@ let chapter8SlybladeSeen = false;
 // the cozy_spot encounter and drives the cumulative 10% chance.
 let cozySpotFishingCaught = false;
 let _cozySpotFishAttempts = 0;
+// Outpost resting tent (south_outpost map). Two phases:
+//   pre-Kraken  → one-time short rest (+5 heal); latches outpostTentRested.
+//   post-Kraken → re-armed as a FULL rest (calls setWellRested, full deck
+//                 heal, and re-spawns the southern monster encounters).
+//                 Re-usable: clears outpostTentRested each time so the
+//                 player can rest again to re-spawn the south.
+let outpostTentRested = false;
+// Storehouse (supply_pile) — one-time. Latches when the player picks
+// any loot card from the pile so the dialog can't refire. Cleared
+// only by starting a new run.
+let supplyPileTaken = false;
+// Lake Giant Frog ambush placement — rolled lazily on first arrival
+// to any reef stone, holds up to 2 rock ids out of [1..4]. Wiped on
+// rest (setWellRested) so a fresh run after recharging the deck
+// re-rolls the placement. _currentFrogRockId tracks which rock fired
+// the active ambush so the post-encounter dispatch can prune it.
+let _lakeFrogRocks = null;
+let _currentFrogRockId = null;
+// Harpy / Kraken boss-flight bookkeeping. harpiesDefeated latches
+// when the wreckage harpy fight is won and clears on rest, so
+// walking back onto the cog after resting refires the (short)
+// revisit encounter. krakenDefeated latches forever — the Kraken
+// Spawn is a one-time boss.
+let harpiesDefeated = false;
+let krakenDefeated = false;
+// One-time post-Kraken tier-1 level-up + deck rebalance. Latches
+// when the player lands on South Hill after the Kraken fight so the
+// award only fires once even on save/reload.
+let krakenLevelUpClaimed = false;
 // Dwarven-city random encounter chance — used by the upper-path maps
 // (entry_corridor + the existing Thorgazad maps). Mirrors PY's
 // self.dwarven_city_encounter_chance (game.py:1268). Resets to the
@@ -1287,6 +1323,9 @@ let modalTarget = null; // Target for modal card (enemy or creature)
 
 // Scry state
 let scryCards = []; // cards revealed for scry_pick
+// scry_pick_discard sets this so unpicked cards return to the discard pile
+// instead of the recharge pile (Kraken's Eye Spyglass).
+let _scryFromDiscard = false;
 
 // Power recharge state
 let powerRechargeMode = false;
@@ -1299,6 +1338,23 @@ let cardRechargeMode = false;
 let cardRechargeNeeded = 0;
 let cardRechargedCards = []; // cards already paid as recharge cost
 let pendingRechargeNames = []; // names to log after the card resolves
+
+// Card discard-pick state (for cards with discard_extra cost like
+// Harpy Talon Blade — player picks WHICH hand card to discard rather
+// than the auto-random fallback used by enemy AI / NPC casters).
+let cardDiscardPickMode = false;
+let cardDiscardPickNeeded = 0;
+let pendingDiscardNames = []; // names to log after the card resolves
+// Full-undo snapshots taken when entering discard-pick mode. Cover
+// hand, discardPile AND drawPile so a cancel cleanly reverses BOTH
+// the discard cost (card goes back to hand) AND the on_discard rider
+// fallout (cards drawn by Feather Cloak / Harpy Egg Omelette get
+// pushed back onto the drawPile). Cleared once the play commits
+// (enemy click, self-play, ally heal target) so a successful cast
+// can't be rolled back.
+let _discardPickHandSnapshot = null;
+let _discardPickDiscardSnapshot = null;
+let _discardPickDrawSnapshot = null;
 // Snapshot of hand order taken when entering any recharge/barrage/power mode.
 // Restored on cancel so the hand returns to exactly the same order.
 let _handOrderSnapshot = null;
@@ -1409,6 +1465,22 @@ const CARD_REGISTRY = {
   starfire: createStarfire, healing_touch: createHealingTouch,
   // Loot / Story
   sharp_rock: createSharpRock, lucky_pebble: createLuckyPebble, bone_wand: createBoneWand,
+  baby_frog_swarm: createBabyFrogSwarm, frog_bite: createFrogBite, acid_spit: createAcidSpit,
+  giant_frog_swallow: createGiantFrogSwallow,
+  frog_nursery: createFrogNursery, frog_skin_boots: createFrogSkinBoots, toxic_frog_extract: createToxicFrogExtract,
+  luring_song: createLuringSong,
+  feather_cloak: createFeatherCloak, harpy_feather: createHarpyFeather,
+  harpy_egg_omelette: createHarpyEggOmelette, harpy_talon_blade: createHarpyTalonBlade,
+  harpy_screaming_charm: createHarpyScreamingCharm,
+  tentacle_grab: createTentacleGrab,
+  kraken_tentacle: createKrakenTentacleCard,
+  kraken_tentacle_block: createKrakenTentacleBlock,
+  swallowing_bite: createSwallowingBite,
+  ink_cloud: createInkCloud,
+  // Kraken Spawn loot drops (pick-2 epic table).
+  bloody_eye_patch: createBloodyEyePatch, harpoon_of_the_deep: createHarpoonOfTheDeep,
+  tentacle_whip: createTentacleWhip, sailors_lucky_compass: createSailorsLuckyCompass,
+  krakens_eye_spyglass: createKrakensEyeSpyglass, barnacle_covered_buckler: createBarnacleCoveredBuckler,
   small_faery: createSmallFaery, raena_card: createRaenaCard, raena_card_2: createRaenaCard2,
   queens_locket: createQueensLocket, valdrisa_card: createValdrisaCard,
   // Obsidian Wastes loot
@@ -1591,6 +1663,36 @@ const LOOT_TABLES = {
     { creator: createFishScaleBoots,      weight: 0.5 },
     { creator: createSahuaginEye,         weight: 0.25 },
   ],
+  // Giant Frog loot — guaranteed 1-card weighted pick across the
+  // three frog drops (River Cave Mouth reef ambush). Re-tuned per
+  // playtest: Toxic Extract less of a default, Nursery a touch more
+  // common.
+  giant_frog_loot: [
+    { creator: createToxicFrogExtract, weight: 0.67 }, // common
+    { creator: createFrogSkinBoots,    weight: 0.50 }, // uncommon
+    { creator: createFrogNursery,      weight: 0.33 }, // rare
+  ],
+  // Harpy loot — pick 2 distinct cards per fight (rolls again on
+  // each rest-reset re-fight). Mix of clothing/relic/item/weapon
+  // with the on-discard / discard-cost design hook.
+  harpies_loot: Object.assign([
+    { creator: createHarpyEggOmelette,    weight: 1.00 }, // uncommon
+    { creator: createFeatherCloak,        weight: 0.50 }, // rare
+    { creator: createHarpyTalonBlade,     weight: 0.50 }, // rare
+    { creator: createHarpyScreamingCharm, weight: 0.50 }, // rare
+    { creator: createHarpyFeather,        weight: 0.25 }, // epic
+  ], { pickCount: 2, distinct: true }),
+  // Kraken Spawn loot — pick 2 distinct epics from the wrecked-hull
+  // dive. All six are tier-1 epics, equal weight so the table reads
+  // as a clean "pick any two" choice screen.
+  kraken_spawn_loot: Object.assign([
+    { creator: createBloodyEyePatch,         weight: 1.0 },
+    { creator: createHarpoonOfTheDeep,       weight: 1.0 },
+    { creator: createTentacleWhip,           weight: 1.0 },
+    { creator: createSailorsLuckyCompass,    weight: 1.0 },
+    { creator: createKrakensEyeSpyglass,     weight: 1.0 },
+    { creator: createBarnacleCoveredBuckler, weight: 1.0 },
+  ], { pickCount: 2, distinct: true }),
   // Sahuagin Baron loot — guaranteed Barnacle Encrusted Plate.
   // Mirrors PY get_sahuagin_baron_loot. The boss encounter also
   // rolls sahuagin_sentinel_loot for a second random card.
@@ -1736,6 +1838,9 @@ const LOOT_TABLE_LABELS = {
   prison_warden_loot:  'Prison Warden',
   kobold_patrol_loot:  'Kobold Patrol',
   stone_giant_loot:    'Stone Giant',
+  giant_frog_loot:     'Giant Frog',
+  harpies_loot:        'Harpies',
+  kraken_spawn_loot:   'Kraken Spawn',
   general_zhost_loot:  'General Zhost',
   bone_amalgam_loot:   'Bone Amalgam',
   wolf_pack_loot:      'Wolf Pack',
@@ -1768,6 +1873,9 @@ const LOOT_TABLE_NOTES = {
   prison_warden_loot:  'Looted from the warden\'s body after the prison-entrance fight.',
   kobold_patrol_loot:  'Dropped after defeating Kobold Patrol encounters.',
   stone_giant_loot:    'Survived after the Stone Giant fight. Pick-one: Sharp Rock or (rarely) Lucky Pebble.',
+  giant_frog_loot:     'Dropped after defeating the Giant Frog reef ambush. Pick-one — Toxic Frog Extract common, Frog Skin Boots uncommon, Frog Nursery rare.',
+  harpies_loot:        'Dropped after every Harpy fight on the wrecked cog (resets on rest). Pick TWO distinct — Egg Omelette uncommon meal, Feather Cloak/Talon Blade/Screaming Charm rare, Harpy Feather epic relic.',
+  kraken_spawn_loot:   'Salvaged from the wrecked hold after killing the Kraken Spawn. Pick TWO distinct tier-1 epics — Bloody Eye Patch / Harpoon of the Deep / Tentacle Whip / Sailor\'s Lucky Compass / Kraken\'s Eye Spyglass / Barnacle-Covered Buckler.',
   general_zhost_loot:  'Dropped after defeating General Zhost — 50/50 White Claw or Zhost\'s Buckler.',
   bone_amalgam_loot:   'Dropped after defeating the Bone Amalgam. Pick-one bone weapon.',
   wolf_pack_loot:      'Dropped after surviving the Wolf Blizzard (kill 10 wolves).',
@@ -1792,16 +1900,34 @@ function rollLootTable(id) {
   const table = LOOT_TABLES[id];
   if (!table) return null;
   const picks = Math.max(1, table.pickCount || 1);
+  const distinct = !!table.distinct;
   const out = [];
+  // When `distinct` is set, exclude already-picked entries from the
+  // weighted pool so a multi-pick table (Harpy loot pickCount=2)
+  // never hands out duplicates. Otherwise, multi-picks can repeat
+  // (Cave Shroom's "2 of the same" drop relies on the no-distinct
+  // default).
+  const usedIdx = new Set();
   for (let n = 0; n < picks; n++) {
-    const totalWeight = table.reduce((s, e) => s + e.weight, 0);
+    const pool = distinct
+      ? table.filter((_e, i) => !usedIdx.has(i))
+      : table;
+    if (pool.length === 0) break;
+    const totalWeight = pool.reduce((s, e) => s + e.weight, 0);
     let roll = Math.random() * totalWeight;
     let picked = null;
-    for (const entry of table) {
+    let pickedIdx = -1;
+    for (let i = 0; i < pool.length; i++) {
+      const entry = pool[i];
       roll -= entry.weight;
-      if (roll <= 0) { picked = entry.creator(); break; }
+      if (roll <= 0) { picked = entry.creator(); pickedIdx = table.indexOf(entry); break; }
     }
-    if (!picked) picked = table[table.length - 1].creator();
+    if (!picked) {
+      const last = pool[pool.length - 1];
+      picked = last.creator();
+      pickedIdx = table.indexOf(last);
+    }
+    if (distinct && pickedIdx >= 0) usedIdx.add(pickedIdx);
     out.push(picked);
   }
   return out;
@@ -1874,6 +2000,8 @@ async function loadAssets() {
     loadImage('map_arriving_city', `${BASE}assets/Maps/ArrivingAtTheCity.jpg`),
     loadImage('map_south_of_qualibaf', `${BASE}assets/Maps/SouthOfQualibaf.jpg`),
     loadImage('map_south_outpost', `${BASE}assets/Maps/SouthOutpostMap.jpg`),
+    loadImage('map_river_cave_mouth', `${BASE}assets/Maps/RiverCaveMouth.jpg`),
+    loadImage('map_shipwreck_deck', `${BASE}assets/Maps/ShipwreckDeckMap.jpg`),
     loadImage('map_qualibaf', `${BASE}assets/Maps/QualibafMap.jpg`),
     loadImage('map_north_qualibaf', `${BASE}assets/Maps/NorthGateQualibafExternalMap.jpg`),
     loadImage('map_filibaf_forest', `${BASE}assets/Maps/FilibafForestMap.jpg`),
@@ -1928,6 +2056,8 @@ async function loadAssets() {
     loadImage('icon_ice', `${BASE}assets/Icons/IceElementIcon.png`),
     loadImage('icon_poison', `${BASE}assets/Icons/PoisonIcon.png`),
     loadImage('icon_shock', `${BASE}assets/Icons/LightningIcon.png`),
+    loadImage('icon_bleed', `${BASE}assets/Icons/BleedIcon.png`),
+    loadImage('icon_ink_cloud', `${BASE}assets/Icons/InkCloudIcon.png`),
     loadImage('icon_rage', `${BASE}assets/Icons/RageIcon.png`),
     loadImage('icon_ignite', `${BASE}assets/Icons/IgniteIcon.png`),
     // Hunter's Mark debuff icon — reuses the HunterMark card art (PY does the same).
@@ -1950,6 +2080,23 @@ async function loadAssets() {
     loadImage('creature_piranha', `${BASE}assets/Cards/PiranhasSwarm.jpg`),
     loadImage('creature_shark', `${BASE}assets/Cards/Shark.jpg`),
     loadImage('creature_sahuagin_sentinel', `${BASE}assets/Cards/SahuaginSentinel.jpg`),
+    // Giant Frog enemy art. The combat character portrait keys off
+    // `enemy.name.toLowerCase().replace(/ /g, '_')` (see
+    // drawCharacterCard) — so the boss image lives under 'giant_frog'
+    // (no 'creature_' prefix). The Swallow art reads better as the
+    // big in-your-face portrait than the side-view GiantFrog.jpg.
+    // creature_giant_frog covers the codex Heroes/Monsters thumbnail
+    // and any preview hovers that look up by creature-name.
+    loadImage('giant_frog',                `${BASE}assets/Cards/GiantFrogSwallow.jpg`),
+    loadImage('creature_giant_frog',       `${BASE}assets/Cards/GiantFrogSwallow.jpg`),
+    loadImage('creature_baby_giant_frog',  `${BASE}assets/Cards/BabyFrogSwarm.jpg`),
+    // Harpy encounter — boss portrait keys off character.name → 'harpies'.
+    // The Harpy creature summons key off creature.name → 'harpy'.
+    loadImage('harpies',                   `${BASE}assets/Cards/HarpyMonster.jpg`),
+    loadImage('creature_harpy',            `${BASE}assets/Cards/HarpySummon.jpg`),
+    // Kraken Spawn boss portrait + tentacle creature art.
+    loadImage('kraken_spawn',              `${BASE}assets/Cards/KrakenSpawn.jpg`),
+    loadImage('creature_tentacle',         `${BASE}assets/Cards/KrakenSpawnTentacle.jpg`),
     loadImage('creature_high_priest', `${BASE}assets/Cards/SahuaginPriest.jpg`),
     // Boss panel art for the Piranhas Swarm — same file as the
     // per-creature piranhas. Eager preload so the intro splash isn't
@@ -2076,7 +2223,7 @@ canvas.addEventListener('mousedown', (e) => {
   }
   // Only track drags during the player's normal turn in COMBAT state
   if (state !== GameState.COMBAT || !isPlayerTurn || !player || !player.deck) return;
-  if (powerRechargeMode || cardRechargeMode) return;
+  if (powerRechargeMode || cardRechargeMode || cardDiscardPickMode) return;
 
   // Check player allies first (they sit above the hand row)
   const allyRects = getPlayerCreatureRects();
@@ -2101,6 +2248,7 @@ canvas.addEventListener('mousedown', (e) => {
     if (hitTest(x, y, getHandCardHoverRect(handRects, i))) {
       const card = player.deck.hand[i];
       if (card.exhausted) return;
+      if (card.unplayable) return;
       if (card.cardType === CardType.DEFENSE) return;
       if (card.isModal) return; // modal cards still go through click flow
       // Defer entering targeting until the user actually drags
@@ -2689,6 +2837,8 @@ function handleKeyDown(key, event) {
       cancelPowerRecharge();
     } else if (cardRechargeMode) {
       cancelCardRecharge();
+    } else if (cardDiscardPickMode) {
+      cancelCardDiscardPick();
     } else if (state === GameState.MODAL_SELECT) {
       cancelModalSelect();
     } else if (state === GameState.REVIVE_SELECT) {
@@ -2711,15 +2861,23 @@ function handleKeyDown(key, event) {
         cancelBeamMode();
       }
       healTargetMode = false;
-      // Restore the hand snapshot if one was set on TARGETING entry.
-      // Without this defensive restore, ESC during a non-barrage,
-      // non-extra-recharge targeting (White Claw, Heroic Strike,
-      // etc.) leaks the snapshot and any in-flight hand mutation
-      // sticks. cancelCardRecharge / cancelBarrage already do the
-      // restore for their paths — this catches the plain case.
-      if (_handOrderSnapshot) {
+      // Full discard-pick undo takes precedence over the plain hand
+      // restore — it rewinds hand AND discardPile AND drawPile so a
+      // canceled Talon Blade puts the discarded card back into hand
+      // AND returns any on_discard-drawn cards to the drawPile.
+      if (_discardPickHandSnapshot) {
+        restoreDiscardPickSnapshots();
+      } else if (_handOrderSnapshot) {
+        // Plain targeting cancel (no discard cost was paid). Just
+        // restore the hand order so the selected card returns to
+        // its original slot.
         player.deck.hand = _handOrderSnapshot;
         _handOrderSnapshot = null;
+      }
+      // Clear any in-flight discard-cost prepay flags so the next
+      // click re-pays the discard cost cleanly.
+      for (const c of player.deck.hand) {
+        if (c && c._discardExtraPaid) delete c._discardExtraPaid;
       }
       selectedCardIndex = -1;
       hideToast();
@@ -2968,6 +3126,15 @@ const MUSIC_FOR_AREA = {
   // outpost itself sits in scrub-and-trees country.
   south_of_qualibaf: 'Music/ambience_forest_01',
   south_outpost:    'Music/ambience_forest_01',
+  // River Cave Mouth — lake nestled in low cliffs, same forest bed
+  // as the south arm. Per-node overrides below swap the rocks-in-the-
+  // water nodes to a rushing-water bed so the swim-across reads
+  // sonically distinct from the shore.
+  river_cave_mouth: 'Music/ambience_forest_01',
+  // Shipwreck deck — on the listing cog itself. Same fast-water bed
+  // as the reef rocks so the boarding + Harpy fight reads sonically
+  // as part of the water-side arc.
+  shipwreck_deck: 'Music/water_fast_flowing_01',
   // Filibaf Forest map — looped forest ambience for the entire spider
   // maze. The filibaf_entrance node on the north_qualibaf side gets a
   // matching per-node override (see MUSIC_FOR_NODE) so the bed starts
@@ -3111,6 +3278,14 @@ const MUSIC_FOR_NODE = {
   // Piranha Pool — the rapids carry through into the cavern; the
   // torrent ambience keeps playing under the encounter narrative.
   piranha_pool:       'Music/water_fast_flowing_01',
+  // Reef stones across the lake — same fast-water bed so each hop
+  // off shore reads as the water taking over from the forest. Combat
+  // (giant_frog_ambush) inherits the per-node track because no combat
+  // music override fires for this fight.
+  lake_rock_1: 'Music/water_fast_flowing_01',
+  lake_rock_2: 'Music/water_fast_flowing_01',
+  lake_rock_3: 'Music/water_fast_flowing_01',
+  lake_rock_4: 'Music/water_fast_flowing_01',
 };
 
 let _lastMusicNodeId = null;
@@ -3196,6 +3371,13 @@ function startNewGame() {
   chapter8SlybladeSeen = false;
   cozySpotFishingCaught = false;
   _cozySpotFishAttempts = 0;
+  outpostTentRested = false;
+  supplyPileTaken = false;
+  _lakeFrogRocks = null;
+  _currentFrogRockId = null;
+  harpiesDefeated = false;
+  krakenDefeated = false;
+  krakenLevelUpClaimed = false;
   forgeUsed = false;
   forgeRested = false;
   volcanoHeartSacrificed = false;
@@ -4274,6 +4456,25 @@ function setWellRested() {
   clearActiveProvisions();
 }
 
+// Respawn the southern monsters (Giant Frog reef ambush, Harpy
+// revisit, Cozy Spot fishing) and re-arm the post-Kraken outpost
+// tent. Called from EXPLICIT rest beats only — the post-Kraken
+// level-up calls setWellRested for the deck-size snapshot but
+// deliberately skips this so the harpies don't immediately re-arm
+// the moment the player picks an ability. The actual respawn needs
+// a tent / inn / chapel rest after the kraken to fire.
+function respawnSouthernMonsters() {
+  _lakeFrogRocks = null;
+  _currentFrogRockId = null;
+  harpiesDefeated = false;
+  cozySpotFishingCaught = false;
+  _cozySpotFishAttempts = 0;
+  if (completedEncounters && completedEncounters.delete) {
+    completedEncounters.delete('cozy_spot_ambush');
+  }
+  outpostTentRested = false;
+}
+
 // Strip every Provision-flavored PersistentBuff (the food/drink slot
 // system). Beverage and Meal slots each hold at most one provision;
 // both clear on rest. Logs each removal so the player sees what
@@ -4398,14 +4599,42 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     transitionToSouthOfQualibaf(nodeId);
     return;
   }
+  // Wreckage harpy revisit — once the first wreckage_arrival has
+  // completed (node.isDone) AND harpiesDefeated has been cleared by
+  // a rest, walking back onto the cog fires the short revisit
+  // encounter (skips the bird-reveal banter, drops into combat).
+  // Skip the dispatch while we're inside the first-visit encounter
+  // (skipEncounter=true from the post-completion arrival).
+  if (!skipEncounter && nodeId === 'wreckage' && currentMap.id === 'river_cave_mouth'
+      && node.isDone && !harpiesDefeated) {
+    currentMap.currentNodeId = nodeId;
+    const factory = ENCOUNTER_REGISTRY['wreckage_harpy_revisit'];
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+  }
   // South Outpost forward gate — once the Gontran meeting has played,
   // arriving at the outpost (or click-on-self) teleports into the
   // south_outpost map. Pass `fromNodeId` so the helper routes the
   // landing: arriving from south_bend drops you at river_trail (the
   // south door); everything else lands at north_path_entry.
-  if (!skipEncounter && nodeId === 'outpost' && node.isDone && currentMap.id === 'south_of_qualibaf') {
+  if (!skipEncounter && nodeId === 'outpost' && node.isDone && currentMap.id === 'south_of_qualibaf'
+      && !(krakenDefeated && !krakenLevelUpClaimed)) {
     transitionToSouthOutpost(fromNodeId || nodeId);
     return;
+  }
+  // Post-Kraken outpost arrival — un-done the node so startNodeEncounter
+  // fires below and the kraken-report dispatch (which swaps in the
+  // Gontran victory dialog) can run. Without this the node stays
+  // done from the pre-Kraken visit and the dispatch is never reached.
+  if (!skipEncounter && nodeId === 'outpost' && currentMap.id === 'south_of_qualibaf'
+      && krakenDefeated && !krakenLevelUpClaimed) {
+    node.isDone = false;
   }
   // South Outpost back-teleport — click-on-self on the north_path_entry
   // hops the player back to the outpost gate on south_of_qualibaf.
@@ -4419,6 +4648,23 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // onward through the outdoor map to south_bend / cozy_spot / etc.
   if (!skipEncounter && nodeId === 'river_trail' && currentMap.id === 'south_outpost') {
     transitionFromSouthOutpostBack(nodeId);
+    return;
+  }
+  // River Trail South → River Cave Mouth (forward cross-map jump).
+  // The node has no in-area encounter, so arrival fires the helper
+  // and the party lands on the lake shore (which then plays its own
+  // entry dialog the first time).
+  if (!skipEncounter && nodeId === 'river_trail_south' && currentMap.id === 'south_of_qualibaf') {
+    transitionToRiverCaveMouth(nodeId);
+    return;
+  }
+  // Lake Shore back-teleport — click-on-self on lake_shore hops back
+  // to river_trail_south once the arrival dialog has played. The
+  // forward teleport path (transitionToRiverCaveMouth) passes
+  // skipEncounter=true on revisit so this check doesn't bounce the
+  // party right back during a forward arrival.
+  if (!skipEncounter && nodeId === 'lake_shore' && currentMap.id === 'river_cave_mouth' && node.isDone) {
+    transitionFromRiverCaveMouthBack(nodeId);
     return;
   }
   // Filibaf ↔ Tharnag teleport pair. Once the forest is cleared, the
@@ -6272,6 +6518,40 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       }
     }
   }
+  // Lake Giant Frog ambush — random placement across the reef stones
+  // (2 of 4 nodes per run, reset on rest). Rolls lazily on first
+  // arrival to any rock; fires the ambush encounter before the rock's
+  // own (empty) encounter would run. Tracks _currentFrogRockId so the
+  // post-combat dispatch can prune the entry.
+  const LAKE_ROCK_IDS = ['lake_rock_1', 'lake_rock_2', 'lake_rock_3', 'lake_rock_4'];
+  if (!skipEncounter && currentMap.id === 'river_cave_mouth' && LAKE_ROCK_IDS.includes(nodeId)) {
+    if (_lakeFrogRocks === null) {
+      const pool = LAKE_ROCK_IDS.slice();
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      _lakeFrogRocks = pool.slice(0, 2);
+    }
+    if (_lakeFrogRocks.includes(nodeId)) {
+      _currentFrogRockId = nodeId;
+      currentMap.currentNodeId = nodeId;
+      const factory = ENCOUNTER_REGISTRY.giant_frog_ambush;
+      if (factory) {
+        // After the player has already cleared one Giant Frog this
+        // save, every subsequent ambush plays the short "ANOTHER one?!"
+        // variant instead of replaying the full intro.
+        const seenBefore = completedEncounters.has('giant_frog_ambush');
+        currentEncounter = factory(seenBefore);
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        visitedNodes.add(nodeId);
+        advanceEncounterPhase();
+        return;
+      }
+    }
+  }
   if (canRunEncounter) {
     startNodeEncounter(nodeId);
     return;
@@ -6499,6 +6779,10 @@ function handleMapClick(x, y) {
         // Outpost south gate — click-on-self steps out of the city to
         // South Bend on south_of_qualibaf.
         (r.nodeId === 'river_trail' && currentMap.id === 'south_outpost') ||
+        // River Trail South → River Cave Mouth (forward).
+        (r.nodeId === 'river_trail_south' && currentMap.id === 'south_of_qualibaf') ||
+        // Lake Shore → River Trail South (back, after dialog).
+        (r.nodeId === 'lake_shore' && currentMap.id === 'river_cave_mouth' && node.isDone) ||
         // Filibaf ↔ Tharnag pair: clicking the current entrance/entry
         // node hops to the other side.
         (r.nodeId === 'filibaf_entrance' && forestCleared && currentMap.id === 'north_qualibaf') ||
@@ -6712,6 +6996,7 @@ const ENCOUNTER_BG_MAP = {
   south_trail: 'bg_south_of_qualibaf',
   // South Outpost — Gontran the Guard greeting + Merchant Boat task.
   outpost_meeting: 'bg_south_outpost',
+  outpost_kraken_report: 'bg_south_outpost',
   // Watchtower check-in reuses the same outpost-gate backdrop so the
   // dialog reads as continuous with the first meeting rather than
   // floating against the bare map view.
@@ -6721,6 +7006,15 @@ const ENCOUNTER_BG_MAP = {
   // fight that chains off a successful catch.
   cozy_spot: 'bg_river_crossing',
   cozy_spot_ambush: 'bg_river_crossing',
+  // South Hill recon — distant view of the stranded cog from the brush.
+  south_hill: 'bg_shipwreck',
+  // Wreckage boarding — the deck itself with the harpy reveal.
+  wreckage_arrival: 'bg_shipwreck_deck',
+  // Deck Chest opens on the deck; the post-loot squid dialog switches
+  // to bg_shipwreck_inside mid-scene via per-text bgOverride.
+  ship_chest: 'bg_shipwreck_deck',
+  // Giant Frog tongue-drag ambush on the reef stones.
+  giant_frog_ambush: 'bg_lake_rock_formation',
   city_square: 'bg_qualibaf', weaponsmith: 'bg_smith', armorsmith: 'bg_smith',
   general_store: 'bg_general_store', inn: 'bg_inn', church: 'bg_church',
   arcane_emporium: 'bg_arcane_emporium', city_north_gate: 'bg_qualibaf',
@@ -6837,6 +7131,14 @@ const ENCOUNTER_BG_FILES = {
   // (Maps/ prefix tells getEncounterBgImage to pull from assets/Maps/
   // instead of assets/Backgrounds/). Used by the south_trail dialog.
   bg_south_of_qualibaf: 'Maps/SouthOfQualibaf.jpg',
+  // Shipwreck art — distant cog viewed from the brush (south_hill
+  // backdrop), the boarded deck (wreckage_arrival / ship_chest), and
+  // the interior breach into dark water (post-chest squid ambush).
+  bg_shipwreck: 'ShipwreckBG.jpg',
+  bg_shipwreck_deck: 'Maps/ShipwreckDeckMap.jpg',
+  bg_shipwreck_inside: 'ShipwreckInsideShipBG.jpg',
+  // Lake rock formation — tongue-drag-into-water Giant Frog ambush.
+  bg_lake_rock_formation: 'LakeRockFormationBG.jpg',
   bg_qualibaf: 'QualibafBackground.jpg', bg_smith: 'SmithBackground.jpg',
   bg_general_store: 'GeneralStoreBackground.jpg', bg_inn: 'InnBackground.jpg',
   bg_church: 'ChurchBackground.jpg', bg_arcane_emporium: 'ArcaneEmporium.jpg',
@@ -7350,6 +7652,44 @@ function transitionToSouthOutpost(fromNodeId, landingNodeId) {
   autosaveNow();
 }
 
+// River Cave Mouth ↔ South of Qualibaf (river_trail_south). Forward
+// jump triggered when the party walks onto river_trail_south; back
+// jump is the click-on-self on lake_shore after the entry dialog.
+function transitionToRiverCaveMouth(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('river_cave_mouth', createRiverCaveMouthMap);
+  const lakeShore = currentMap.getNode('lake_shore');
+  // First visit fires the lake_shore arrival dialog. Subsequent
+  // visits drop the party on the node silently — both flags (the
+  // per-node isDone and the saved completedEncounters entry) cover
+  // the case where the river_cave_mouth map dropped out of cache
+  // between sessions and arrives fresh. Pass skipEncounter=true on
+  // revisit so the back-teleport check in arriveAtNode (which fires
+  // when lake_shore.isDone) doesn't bounce the party back the
+  // instant they land here.
+  const alreadySeen = (lakeShore && lakeShore.isDone)
+    || (completedEncounters && completedEncounters.has && completedEncounters.has('river_cave_mouth_entry'));
+  if (alreadySeen && lakeShore) {
+    lakeShore.isDone = true;
+    lakeShore.hiddenName = '';
+    lakeShore.hiddenDescription = '';
+  }
+  visitedNodes = new Set(['lake_shore']);
+  currentMap.currentNodeId = 'lake_shore';
+  arriveAtNode('lake_shore', fromNodeId, alreadySeen);
+  autosaveNow();
+}
+
+function transitionFromRiverCaveMouthBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+  visitedNodes = new Set(['river_trail_south']);
+  const target = currentMap.getNode('river_trail_south');
+  if (target) { target.isDone = true; target.hiddenName = ''; }
+  arriveAtNode('river_trail_south', fromNodeId, true);
+  autosaveNow();
+}
+
 function transitionFromSouthOutpostBack(fromNodeId) {
   if (currentMap) _mapCache[currentMap.id] = currentMap;
   currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
@@ -7671,6 +8011,62 @@ function startNodeEncounter(nodeId) {
     state = GameState.MAP;
     return;
   }
+  // Outpost Resting Tent — pre-Kraken: one-time +5 short rest. Once
+  // taken (outpostTentRested), skip on revisit. Post-Kraken: the
+  // tent re-arms as a full rest each time (setWellRested clears the
+  // flag on every rest), so the dispatch only suppresses it pre-
+  // Kraken. The factory branches on krakenDefeated to pick the
+  // dialog variant.
+  if (node.encounterId === 'outpost_tent' && outpostTentRested && !krakenDefeated) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+  // Storehouse — one-time across the whole save. Once the player
+  // has touched the supply pile (supplyPileTaken latches when the
+  // first card is picked), the dialog never replays.
+  if (node.encounterId === 'supply_pile' && supplyPileTaken) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+  // River Cave Mouth arrival — one-time reveal dialog. Gated on the
+  // saved-and-reliable `completedEncounters` set rather than
+  // node.isDone, because the river_cave_mouth map can drop out of
+  // _mapCache between sessions and arrive fresh (isDone=false even
+  // though the dialog has already played in this save).
+  const lakeShoreDoneOnce = (node.isDone)
+    || (completedEncounters && completedEncounters.has && completedEncounters.has('river_cave_mouth_entry'));
+  if (node.encounterId === 'river_cave_mouth_entry' && lakeShoreDoneOnce) {
+    if (!node.isDone) {
+      node.isDone = true;
+      node.hiddenName = '';
+      node.hiddenDescription = '';
+    }
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
+  // Post-Kraken outpost dispatch — swap the standard Gontran
+  // meeting for the kraken-report dialog. Latch krakenLevelUpClaimed
+  // immediately so a save/load mid-dialog doesn't replay it; the
+  // empty LOOT phase at the end of the encounter fires the tier-1
+  // level-up. Player loses the level-up if they back out, which is
+  // their choice — but the report dialog won't re-fire.
+  if (node.encounterId === 'outpost_meeting'
+      && krakenDefeated && !krakenLevelUpClaimed) {
+    krakenLevelUpClaimed = true;
+    const factory = ENCOUNTER_REGISTRY.outpost_kraken_report;
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      autosaveNow();
+      advanceEncounterPhase();
+      return;
+    }
+  }
 
   if (!node.encounterId || !ENCOUNTER_REGISTRY[node.encounterId]) {
     // No encounter defined — just mark done and stay on map
@@ -7693,19 +8089,54 @@ function startNodeEncounter(nodeId) {
     // on the flag at call time.
     currentEncounter = factory(dragonSlain);
   } else if (node.encounterId === 'cozy_spot') {
-    // Reset the per-visit attempt counter and pick a variant:
-    //   'caught'  — fish already pulled (short flavor beat only)
-    //   'revisit' — encounter has been completed at least once but
-    //               the catch is still out there (skip the banter,
-    //               drop straight onto the fishing choice)
-    //   'first'   — first visit (full banter then choice)
-    // node.isDone is the signal — visitedNodes.has(nodeId) would be
-    // true even on the first visit because the discoverable reveal
-    // stamps the set in arriveAtNode before startNodeEncounter runs.
+    // Already-caught visits skip the encounter entirely — the player
+    // doesn't need a post-fishing flavor beat every time they walk by.
+    // Belt-and-suspenders: also skip if the Sahuagin ambush ever
+    // completed (some save flows had a window where the catch flag
+    // didn't persist but the ambush completion did, leaving fishing
+    // re-offered on revisit). Otherwise: 'revisit' drops straight
+    // onto the choice (banter already heard) and 'first' plays the
+    // full intro.
+    const ambushDone = completedEncounters && completedEncounters.has
+      && completedEncounters.has('cozy_spot_ambush');
+    if (cozySpotFishingCaught || ambushDone) {
+      // Sync the in-memory flag so subsequent in-session checks (and
+      // the next autosave) read the right value even if we got here
+      // via the ambush-completed backup signal.
+      cozySpotFishingCaught = true;
+      currentMap.completeCurrentNode();
+      state = GameState.MAP;
+      return;
+    }
     _cozySpotFishAttempts = 0;
-    let variant = 'first';
-    if (cozySpotFishingCaught) variant = 'caught';
-    else if (node.isDone) variant = 'revisit';
+    const variant = node.isDone ? 'revisit' : 'first';
+    currentEncounter = factory(variant);
+  } else if (node.encounterId === 'ship_chest') {
+    // 1 random item across the four staple shops. Pool every
+    // creator's id, shuffle, take 1 — the chest is a small reward
+    // before the kraken ambush, not a full loot pickup. Re-rolls
+    // per visit (canRevisit is unset, so this only really matters
+    // before the first open).
+    const pool = ['armorsmith', 'weaponsmith', 'arcane_emporium', 'general_store']
+      .flatMap(s => sampleShopCardIds(s, 99));
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    currentEncounter = factory(pool.slice(0, 1));
+  } else if (node.encounterId === 'outpost_tent') {
+    // Swap to the post-Kraken full-rest variant once the boss is
+    // dead. The pre-Kraken short-rest stays the default offer until
+    // then (and the rest-once gate above suppresses revisits until
+    // the post-Kraken flag re-arms it).
+    const variant = krakenDefeated ? 'post_kraken' : 'pre_kraken';
+    currentEncounter = factory(variant);
+  } else if (node.encounterId === 'watchtower_check') {
+    // Swap to the gnoll-watch variant once the Kraken Letter has been
+    // delivered (krakenLevelUpClaimed latches when the outpost report
+    // fires). Pre-Kraken / pre-report path still gets the boat
+    // hopeful check-in.
+    const variant = krakenLevelUpClaimed ? 'post_kraken' : 'pre_kraken';
     currentEncounter = factory(variant);
   } else if (node.encounterId === 'supply_pile') {
     // Roll random shop samples per visit so the storehouse offering
@@ -7933,6 +8364,22 @@ function advanceEncounterPhase() {
     if (completedEncounterId && !REPEATABLE_ENCOUNTERS.has(completedEncounterId)) {
       completedEncounters.add(completedEncounterId);
     }
+    // Giant Frog ambush — prune the rock the player just cleared from
+    // the active list so the same stone doesn't keep firing the
+    // tongue grab. The other rock in _lakeFrogRocks (if any) stays
+    // armed until visited or wiped by rest.
+    if (completedEncounterId === 'giant_frog_ambush' && _currentFrogRockId
+        && Array.isArray(_lakeFrogRocks)) {
+      _lakeFrogRocks = _lakeFrogRocks.filter(r => r !== _currentFrogRockId);
+      _currentFrogRockId = null;
+    }
+    // Harpies (first fight or revisit) — latch the per-run flag so
+    // walking back onto the cog skips the encounter until the next
+    // rest clears the flag again.
+    if (completedEncounterId === 'wreckage_arrival'
+        || completedEncounterId === 'wreckage_harpy_revisit') {
+      harpiesDefeated = true;
+    }
     currentEncounter = null;
     // Clear the chapter-7 random-encounter backdrop override so the
     // next encounter (or post-fight map) renders against its own
@@ -8107,6 +8554,47 @@ function advanceEncounterPhase() {
       // walks into the south_outpost map (north_path_entry). Re-visit
       // forward jumps are handled by the arriveAtNode post-isDone gate.
       transitionToSouthOutpost(nodeId);
+      return;
+    }
+    if (completedEncounterId === 'ship_chest') {
+      // Post-Kraken: the cog is breaking apart. Latch krakenDefeated
+      // (one-time boss) and teleport the party to South Bend on
+      // south_of_qualibaf — south of the outpost gate, the natural
+      // spot to wash up at after drifting downstream. The level-up
+      // is NOT granted here; it fires after the player walks into
+      // the outpost and reports the kraken to Gontran (the dispatch
+      // in startNodeEncounter swaps outpost_meeting for the kraken
+      // report dialog when krakenDefeated && !krakenLevelUpClaimed).
+      // Cache the river_cave_mouth map first so re-entry preserves
+      // its state.
+      krakenDefeated = true;
+      // Latch harpiesDefeated too — the wreckage is in pieces after
+      // the cog cracked open, so walking back onto it should NOT
+      // refire "They're back" until the party actually rests. The
+      // post-Kraken level-up only handles deck stuff; the harpy
+      // respawn waits for a tent/inn/chapel rest beat.
+      harpiesDefeated = true;
+      _encounterBgOverride = null;
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+      const bend = currentMap.getNode('south_bend');
+      if (bend) {
+        bend.isDone = true;
+        bend.hiddenName = '';
+        bend.hiddenDescription = '';
+      }
+      // Reveal the outpost too so the player can see where to go
+      // next on the map without backtracking blind.
+      const outpostNode = currentMap.getNode('outpost');
+      if (outpostNode) {
+        outpostNode.hiddenName = '';
+        outpostNode.hiddenDescription = '';
+      }
+      currentMap.currentNodeId = 'south_bend';
+      visitedNodes = new Set(['south_bend']);
+      state = GameState.MAP;
+      updateMusicForCurrentScene();
+      autosaveNow();
       return;
     }
     // Filibaf Forest maze hooks. The encounter that just completed
@@ -8760,6 +9248,95 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.sahuagin_sentinel = 3;
 
+  // Giant Frog — lake-rock ambush (River Cave Mouth). 21-card deck:
+  // 6 Baby Frog Swarm (defensive block + draw + summon 1-2 babies),
+  // 6 Frog Bite (3 dmg chomp), 6 Acid Spit (poison-to-all spray),
+  // 3 Giant Frog Swallow (5 dmg + poison heavy strike). Swallow gets
+  // a high priority so whenever the frog has Swallow + at least one
+  // other hand card (the +1 recharge cost), it leads with the big hit.
+  ENEMY_DECKS.giant_frog = () => {
+    enemy = new Character('Giant Frog');
+    enemy.deck = new Deck();
+    const withPriority = (creator, prio) => {
+      const c = creator();
+      c.priority = prio;
+      return c;
+    };
+    for (let i = 0; i < 3; i++) enemy.deck.addCard(withPriority(createGiantFrogSwallow, 30));
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createBabyFrogSwarm());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createFrogBite());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createAcidSpit());
+  };
+  ENEMY_HAND_SIZE.giant_frog = 3;
+
+  // Harpies — shipwreck-deck invulnerable boss. Hand size 1, 1-card
+  // deck (Luring Song) so the boss cycles Luring Song every turn.
+  // Start with 3 Harpy summons on the field; killTarget=3 means
+  // killing all three wins the fight. Boss itself is invulnerable.
+  ENEMY_DECKS.harpies = () => {
+    enemy = new Character('Harpies');
+    enemy.deck = new Deck();
+    enemy.deck.addCard(createLuringSong());
+    enemy._invulnerable = true;
+    enemy._killTarget = 3;
+    for (let i = 0; i < 3; i++) {
+      const h = createHarpyCreature();
+      h.exhausted = false;
+      h.justSummoned = false;
+      enemy.addCreature(h);
+    }
+  };
+  ENEMY_HAND_SIZE.harpies = 1;
+
+  // Kraken Spawn — post-ship_chest fall-in-the-water boss. 3 hand
+  // size, 25-card deck:
+  //   10 Tentacle Grab (summon + immediate attack, snags a card)
+  //   10 Tentacle      (summon only, no attack this turn)
+  //    5 Swallowing Bite (high-priority big-hit, 10 - hand-size dmg)
+  // The 3-tentacle field cap is enforced inside the summon handler so
+  // the AI can never lock the entire 4-card player hand. Swallowing
+  // Bite priority 35 ranks ABOVE all the tentacle plays so the
+  // Kraken leads with the bite whenever it's drawn.
+  ENEMY_DECKS.kraken_spawn = () => {
+    enemy = new Character('Kraken Spawn');
+    enemy.deck = new Deck();
+    const withPriority = (creator, prio) => {
+      const c = creator();
+      c.priority = prio;
+      return c;
+    };
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(withPriority(createSwallowingBite, 35));
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createTentacleGrab());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createKrakenTentacleCard());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createKrakenTentacleBlock());
+    // Ink Cloud is wired (icon + status + handler + tooltip) but
+    // currently NOT in the Kraken deck — the mechanic is parked for
+    // a later balance pass. The card stays in CARD_REGISTRY so the
+    // codex surfaces it.
+    // Dire Fury: +1 Rage per turn, so Swallowing Bite and tentacle
+    // swings ramp the longer the fight drags. Overwhelm: damage
+    // dealt to allies spills onto the player when it kills them, so
+    // tentacle swings on Raena/Thorb still hurt you.
+    enemy.addPower(createDireFury());
+    enemy.addPower(createOverwhelm());
+    // Start with 2 Tentacles already coiled on the field. Each one
+    // is the standard 3/5 snag-tentacle and arrives ready to swing
+    // on turn 1 (justSummoned=false), so the opening turn already
+    // has both lashes coming at the player before the Kraken even
+    // plays a card. Skipped during codex sandbox scans (same guard
+    // as the Kobold Patrol opening guard).
+    if (!_codexSandboxRunning) {
+      for (let i = 0; i < 2; i++) {
+        const tentacle = createKrakenTentacleCreature();
+        tentacle.exhausted = false;
+        tentacle.justSummoned = false;
+        enemy.addCreature(tentacle);
+      }
+      setTimeout(() => addLog(`  Two Tentacles already coil up out of the water!`, Colors.RED), 50);
+    }
+  };
+  ENEMY_HAND_SIZE.kraken_spawn = 3;
+
   ENEMY_DECKS.sahuagin_priest = () => {
     // Mirrors PY get_sahuagin_priest_deck: 5 Blood in the Water,
     // 5 Whirlpool, 5 Scale Armor, 5 Sahuagin Staff. Plus 2 starting
@@ -8879,7 +9456,7 @@ function setupEnemyForCombat(enemyId) {
     const seed = new Creature({
       name: 'Goblin Sapper', attack: 1, maxHp: 2,
       selfDestruct: true, onDeathDamage: 2,
-      description: 'On Attack: Self-Destruct. On Death: Deal 1-2 damage to a random enemy.',
+      description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
     });
     seed.exhausted = false;
     enemy.addCreature(seed);
@@ -9530,7 +10107,7 @@ function drawMap() {
     // visitedNodes to just the entry node).
     const isVisible = visitedNodes.has(id) || node.isDone || isAccessible || isCurrent;
     // In fog areas (non-outdoor), only show visible nodes
-    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
     if (!outdoorAreas.has(currentArea) && !isVisible && !noFog) continue;
 
     const hovered = hitTest(mouseX, mouseY, { x: nx - 18, y: ny - 18, w: 36, h: 36 });
@@ -9969,6 +10546,30 @@ function handleEncounterTextClick() {
         // re-runs updateMusicForCurrentScene properly afterwards.
         _lastMusicArea = null;
         _lastMusicNodeId = null;
+      }
+    }
+    // Ship Chest squid ambush — splash cue on the transition into the
+    // interior bg (the beat where the party hits the water inside the
+    // hull). Only fires on the first bg-switch beat so the next
+    // interior-bg lines don't restack the splash. Same beat also
+    // crossfades to music_tension_01 with the fast-water bed at 0.35
+    // underneath (mirrors the Sahuagin Baron flooded-chamber
+    // backdrop). The ambience layer auto-clears at encounter end via
+    // stopAmbienceLayer in advanceEncounterPhase.
+    if (currentEncounter && currentEncounter.id === 'ship_chest') {
+      const t = phase.texts[encounterTextIndex];
+      const prev = encounterTextIndex > 0 ? phase.texts[encounterTextIndex - 1] : null;
+      if (t && t.bgOverride === 'bg_shipwreck_inside'
+          && (!prev || prev.bgOverride !== 'bg_shipwreck_inside')) {
+        playSound('splash_dive', 0.9);
+        crossfadeMusic('Music/music_tension_01', 1500, 2500);
+        playAmbienceLayer('Music/water_fast_flowing_01', 0.35);
+        _lastMusicArea = null;
+        _lastMusicNodeId = null;
+        // Persist the interior bg through the Kraken combat that
+        // chains off this dialog. Cleared at encounter completion
+        // by advanceEncounterPhase's _encounterBgOverride reset.
+        _encounterBgOverride = 'bg_shipwreck_inside';
       }
     }
   } else {
@@ -10881,6 +11482,15 @@ function handleEncounterChoiceClick(x, y) {
       // that climbs by 10% per attempt this visit. One-time success
       // (cozySpotFishingCaught) — repeat visits play the quieter beat.
       if (r.choice.effectType === 'fishing_attempt') resolveFishingAttempt(r.choice);
+      // Outpost tent short rest: +N HP and latch outpostTentRested
+      // (one-time per save). Resolved at selection time so the result
+      // splash already reads correctly.
+      if (r.choice.effectType === 'outpost_tent_rest') resolveOutpostTentRest(r.choice);
+      if (r.choice.effectType === 'outpost_tent_full_rest') resolveOutpostTentFullRest(r.choice);
+      // South Hill pre-board rest: simple +N heal, no latch — south_hill
+      // is one-shot via the encounter itself so the rest naturally only
+      // fires once.
+      if (r.choice.effectType === 'south_hill_rest') resolveSouthHillRest(r.choice);
       // Resolve search_camp immediately to generate loot/gold for result text
       if (r.choice.effectType === 'search_camp') resolveSearchCamp(r.choice);
       // Resolve search_clearing — same pattern as search_camp but uses the
@@ -10977,11 +11587,41 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
     addLog('  [Auto-saved]', Colors.GRAY);
   } catch (err) {
     console.warn('Autosave failed:', err);
   }
+}
+
+function resolveOutpostTentRest(choice) {
+  const healAmt = Math.max(1, choice.value || 5);
+  healPlayer(healAmt);
+  outpostTentRested = true;
+  showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
+  autosaveNow();
+}
+
+// Post-Kraken full rest at the Outpost tent. Merges hand + discard +
+// recharge back into a single deck, heals all damage, shuffles, and
+// draws a fresh hand — same rebalance the inn / level-up rest does
+// — then fires setWellRested + respawnSouthernMonsters so the
+// southern monsters (Giant Frog ambush rocks, Harpy revisit, Cozy
+// Spot fishing) all respawn for another run.
+function resolveOutpostTentFullRest(_choice) {
+  if (player && player.deck) {
+    player.deck.rebalance(getPlayerHandSize(), MAX_HAND_SIZE);
+  }
+  setWellRested();
+  respawnSouthernMonsters();
+  showStyledToast('Full rest — you wake up ready.', 'heal', 2600);
+  autosaveNow();
+}
+
+function resolveSouthHillRest(choice) {
+  const healAmt = Math.max(1, choice.value || 5);
+  healPlayer(healAmt);
+  showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
 }
 
 function resolveFishingAttempt(choice) {
@@ -11003,10 +11643,19 @@ function resolveFishingAttempt(choice) {
   // Capped at 100%.
   const chance = Math.min(1, 0.1 * _cozySpotFishAttempts);
   const succeeded = Math.random() < chance;
-  showToast(`Recharged: ${card.name}`, 1800);
+  // Green/heal-styled toast on success, neutral on a miss — same
+  // pattern as the Tight Opening squeeze attempt so the player
+  // gets an immediate visual on whether the cast landed.
   if (succeeded) {
-    // Reward TBD — for now just latch the flag, log a placeholder,
-    // and let the choice handler complete the encounter.
+    showStyledToast(`Recharged: ${card.name}`, 'heal', 2200);
+  } else {
+    showToast(`Recharged: ${card.name}`, 1800);
+  }
+  if (succeeded) {
+    // Splash when the catch breaks the surface — same body-fall cue
+    // used by Shark Splash / Splash Dive so the audio matches the
+    // moment the line goes taut.
+    playSound('splash_dive', 0.9);
     cozySpotFishingCaught = true;
     addLog(`  You feel the line snap taut — something big has it.`, Colors.GOLD);
     choice.resultText = 'A heavy tug. A fight. A flash of silver in the water — and a second, much larger shadow rising fast behind it.';
@@ -11884,8 +12533,10 @@ function resolveShortRest(choice) {
   }
   // Inn rest also marks the player Well Rested — required to leave
   // the city via the south gate. Even a healing-no-op rest counts:
-  // PY treats the rest action itself as the trigger.
+  // PY treats the rest action itself as the trigger. Southern
+  // monsters respawn on any explicit rest beat.
   setWellRested();
+  respawnSouthernMonsters();
 }
 
 // Inn rest (Qualibaf): pay 5 GP if affordable (free if too poor), heal
@@ -12106,12 +12757,31 @@ function getLootPickRects() {
   const cardW = 200;
   const cardH = 280;
   const gap = 18;
-  const totalW = offered.length * cardW + (offered.length - 1) * gap;
-  const startX = Math.floor((SCREEN_WIDTH - totalW) / 2);
-  const y = Math.floor((SCREEN_HEIGHT - cardH) / 2);
-  return offered.map((_, i) => ({
-    x: startX + i * (cardW + gap), y, w: cardW, h: cardH,
-  }));
+  // Multi-row layout for big offers (Kraken: 6 cards in 2 rows of 3).
+  // Single row stays the layout for 4-or-fewer (Varimatras: 5 in one
+  // row reads fine at this width, but anything 6+ overflows so we
+  // switch to a grid). Per-row count = ceil(sqrt(n)) capped at 4 so
+  // 6→3, 7→3, 8→4, 9→3. Centered horizontally per row and vertically
+  // across the stack.
+  const cols = offered.length > 4 ? Math.min(4, Math.ceil(offered.length / 2)) : offered.length;
+  const rows = Math.ceil(offered.length / cols);
+  const rowGap = 24;
+  const stackH = rows * cardH + (rows - 1) * rowGap;
+  const startY = Math.floor((SCREEN_HEIGHT - stackH) / 2);
+  const rects = [];
+  for (let i = 0; i < offered.length; i++) {
+    const r = Math.floor(i / cols);
+    const cardsThisRow = Math.min(cols, offered.length - r * cols);
+    const rowTotalW = cardsThisRow * cardW + (cardsThisRow - 1) * gap;
+    const startX = Math.floor((SCREEN_WIDTH - rowTotalW) / 2);
+    const col = i - r * cols;
+    rects.push({
+      x: startX + col * (cardW + gap),
+      y: startY + r * (cardH + rowGap),
+      w: cardW, h: cardH,
+    });
+  }
+  return rects;
 }
 
 function drawEncounterLootPick() {
@@ -12148,7 +12818,7 @@ function drawEncounterLootPick() {
   ctx.font = '20px Georgia, serif';
   const remaining = Math.max(0, _lootPickRemaining);
   const word = remaining === 1 ? 'card' : 'cards';
-  ctx.fillText(`Choose ${remaining} more ${word}.`, SCREEN_WIDTH / 2, 122);
+  ctx.fillText(`Choose ${remaining} ${word}.`, SCREEN_WIDTH / 2, 122);
   ctx.restore();
   ctx.textAlign = 'left';
 
@@ -12211,6 +12881,12 @@ function handleEncounterLootPickClick(x, y) {
     addLootedCard(card);
     addLog(`Picked ${card.name}!`, Colors.GOLD, card);
     playSound('gold');
+    // Storehouse latches as one-time the moment the player takes
+    // anything off the pile — covers both picker phases (picker1
+    // first card lands here, picker2 first card also lands here).
+    if (currentEncounter && currentEncounter.id === 'supply_pile') {
+      supplyPileTaken = true;
+    }
     if (_lootPickRemaining <= 0) {
       // Hand off — clear pick state and let the encounter advance.
       _lootPickOffered = [];
@@ -12433,6 +13109,10 @@ function startCombat() {
   feralSwipeMode = false;
   feralSwipeShieldGranted = 0;
   powerRechargeMode = false;
+  cardRechargeMode = false;
+  cardDiscardPickMode = false;
+  cardDiscardPickNeeded = 0;
+  pendingDiscardNames = [];
   killCount = 0;
   killTarget = enemy._killTarget || 0;
   survivalRounds = enemy._survivalRounds || 0;
@@ -12452,6 +13132,15 @@ function startCombat() {
 
   const hs = getPlayerHandSize();
   player.deck.startCombat(hs, MAX_HAND_SIZE);
+  // Hook on-discard so every card hitting the discard pile via
+  // placeByCost (DISCARD / FREE costType, plus the discard_extra
+  // effect below) fires the Feather Cloak / Harpy Feather riders
+  // AND the Harpy Egg Omelette meal's per-discard draw.
+  player.deck.onCardDiscarded = (c) => triggerOnDiscard(c);
+  // Symmetric hook for on-draw passives — Sailor's Lucky Compass and
+  // any future on_draw_* relic fires every time it lands in hand
+  // (start of combat, mid-turn draw, end-of-turn refill).
+  player.deck.onCardDrawn = (c) => triggerOnDraw(c);
   const enemyStartHand = enemy._handSize || 2;
   enemy.deck.startCombat(enemyStartHand, 10);
 
@@ -12514,6 +13203,21 @@ function startCombat() {
   // arrive with a louder, more layered cue.
   if (enemy && enemy._enemyId === 'ancestor_spirits') {
     playAncestorsBurst();
+  }
+  // Harpies — 3 staggered alien-scream samples herald the masthead
+  // reveal (boss + 3 summons already in place). Same burst replays
+  // on each summon death (see playHarpyBurst call in the death SFX
+  // pass at the end of countAndRemoveDeadCreatures... no, actually
+  // we add it via getDeathSfxKey returning monster_alien_scream_01;
+  // single-shot on death keeps the audio from stacking too thickly).
+  if (enemy && (enemy.name || '').toLowerCase() === 'harpies') {
+    playHarpyBurst();
+  }
+  // Kraken Spawn — scream + splash layered (the startKey above
+  // already fired the alien scream; add the body-fall splash on top
+  // so the boss surfaces audibly).
+  if (enemy && (enemy.name || '').toLowerCase() === 'kraken spawn') {
+    playSound('splash_dive', 0.8);
   }
   // Overseer Gnikan — three staggered ice-blast cues for the three
   // Ice Elementals already on the field (1/1, 2/2, 3/3). Fires on
@@ -12605,6 +13309,26 @@ function startCombat() {
   // is the swim phase (PY mirror). Triggers after combat splash.
   if (swimTarget > 0 && swimCount < swimTarget) {
     startSwimmingPhase();
+  }
+
+  // Giant Frog swim_drag debuff — fires the interactive swim picker
+  // on turn 1 (completePlayerTurnTransition handles turn 2+). Must
+  // run AFTER the `state = GameState.COMBAT` line above; otherwise
+  // that assignment clobbers the SWIMMING state startWhirlpoolPhase
+  // set and the player's next click is routed to handleCombatClick
+  // instead of handleSwimmingClick (which is why the picker
+  // "vanished" on turn 1 when the player clicked a defense card).
+  const startSwimDrag = (player.combatBuffs || []).find(b => b.id === 'swim_drag' && b.effectType === 'swim_drag_recharge');
+  if (startSwimDrag && state === GameState.COMBAT) {
+    const need = Math.max(1, startSwimDrag.effectValue || 1);
+    startWhirlpoolPhase(need, {
+      showcase: () => createSwimmingShowcase({
+        description: `To Swim: Recharge ${need} card${need > 1 ? 's' : ''}.`,
+        shortDesc: `Swim:\nR ${need} Card${need > 1 ? 's' : ''}`,
+      }),
+      introLog: `Dragged under! Recharge ${need} card to swim back up.`,
+      toastLabel: `SWIM — recharge ${need} hand card${need > 1 ? 's' : ''}`,
+    });
   }
 
   // Enemy surprise (PY game.py:5219+). Only the Kobold Slyblade
@@ -13010,9 +13734,11 @@ const KEYWORD_ICONS = {
   ice: { iconKey: 'icon_ice', label: 'Ice', desc: 'Reduces damage dealt by stacks, decays by 1' },
   poison: { iconKey: 'icon_poison', label: 'Poison', desc: 'Deals damage equal to stacks each turn. Only removed by healing.' },
   shock: { iconKey: 'icon_shock', label: 'Shock', desc: '-1 dmg dealt and +1 dmg taken per stack' },
+  bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing). Decays by 1 at end of turn. Cleared 1-to-1 by healing.' },
+  ink_cloud: { iconKey: 'icon_ink_cloud', label: 'Ink Cloud', desc: 'Each attack the afflicted character makes has a 50% chance to miss entirely (no damage, no riders). Every attack consumes 1 stack of Ink Cloud whether or not the swing connected.' },
   mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Marked targets take +1 damage per stack from every attack. Persistent — does not decay.' },
   rage: { iconKey: 'icon_rage', label: 'Rage', desc: 'Permanent bonus damage to all attacks' },
-  scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards. Pick 1 to draw, recharge the rest.' },
+  scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards of your draw pile. Pick 1 to draw, recharge the rest. Variant: Scry N from your discard pile — pick 1 to draw, the unpicked cards stay in the discard pile.' },
   heal: { isTextKeyword: true, color: '#7cff9c', label: 'Heal N', desc: 'Restore up to N cards from your discard pile. If you have Poison, each stack is cleared first (1 heal = 1 Poison removed); any leftover heals cards.' },
   sentinel: { isTextKeyword: true, color: '#c8a060', label: 'Sentinel', desc: 'Attacks must target this creature first while it is alive.' },
   haste: { isTextKeyword: true, color: '#9cf07c', label: 'Haste', desc: 'Ready to attack the turn it enters play.' },
@@ -13122,7 +13848,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -13187,6 +13913,20 @@ function tokenizeKeywordText(text, opts = {}) {
         // Purple palette — death-time, distinct from attack/tick/cost.
         badge = { type: 'badge', label: 'ON DEATH',
           bg: 'rgba(60,40,80,0.92)', border: '#a880d8', fg: '#e0c8ff' };
+      } else if (phrase === 'On Draw') {
+        // Passive relic trigger fired every time the card is drawn
+        // into hand (Sailor's Lucky Compass). Gold palette to evoke
+        // the Heroism payoff that's the typical reward, distinct
+        // from the cool-blue On Recharge / When Recharged pills.
+        badge = { type: 'badge', label: 'ON DRAW',
+          bg: 'rgba(90,70,20,0.92)', border: '#f0c860', fg: '#ffe8a8' };
+      } else if (phrase === 'On Discard') {
+        // Trigger fired when the card lands in the discard pile
+        // (Lucky Pebble, Feather Cloak, Harpy Feather). Purple
+        // palette mirrors the perk-card ON DISCARD badge so the
+        // pill family is consistent across the codex.
+        badge = { type: 'badge', label: 'ON DISCARD',
+          bg: 'rgba(80,50,110,0.92)', border: '#c898ff', fg: '#ecd9ff' };
       } else if (phrase === 'Vs Sahuagin') {
         // Persistent buffs scoped to the Sahuagin family (Old God's
         // Blessing). Sea-green pill so it reads distinct from the
@@ -13277,7 +14017,7 @@ function tokenizeKeywordText(text, opts = {}) {
   const isPerk = !!opts.asPerk;
   const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
-    'Fire', 'Ice', 'Poison', 'Shock', 'Rage', 'Ignite', 'Sentinel', 'Haste',
+    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Ignite', 'Sentinel', 'Haste',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
   let lastIdx = 0;
@@ -14328,6 +15068,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     ctx.fillText('Zzz', x + w / 2, y + h / 2);
     ctx.textBaseline = 'alphabetic';
   }
+  // Passive relics (On Draw / On Recharge triggers, never played) get
+  // NO dim and NO "Passive" label. The in-description pill
+  // (ON DRAW / ON RECHARGE) carries the unplayable-ness on its own
+  // and the card art reads at full brightness.
 
   ctx.textAlign = 'left';
 }
@@ -14775,8 +15519,12 @@ function drawCombat() {
   if (enemyArrowsBatch && Array.isArray(enemyArrowsBatch.segments)) {
     const a = Math.min(1, enemyArrowsBatch.timer / (ENEMY_ARROW_DURATION * 0.3));
     ctx.globalAlpha = a;
+    // Whole-batch color override (Acid Spit → GREEN); per-segment
+    // color wins when present (none of the enemy AoE callers use it
+    // yet, but it mirrors the player batch shape).
+    const batchColor = enemyArrowsBatch.color || Colors.RED;
     for (const seg of enemyArrowsBatch.segments) {
-      drawTargetingArrow(seg.x1, seg.y1, seg.x2, seg.y2, Colors.RED);
+      drawTargetingArrow(seg.x1, seg.y1, seg.x2, seg.y2, seg.color || batchColor);
     }
     ctx.globalAlpha = 1;
   }
@@ -14826,7 +15574,16 @@ function drawCombat() {
         };
         hoveredCardPreview = buffCard;
       } else if (area.creature) {
-        hoveredCreaturePreview = area.creature;
+        // Kraken Tentacle: if this creature is holding a snagged
+        // player card, surface the snagged card as the primary hover
+        // preview (instead of the creature info) so the player can
+        // see exactly which card is being held. Hovering a tentacle
+        // with no snag still shows the normal creature preview.
+        if (area.creature._snaggedCard) {
+          hoveredCardPreview = area.creature._snaggedCard;
+        } else {
+          hoveredCreaturePreview = area.creature;
+        }
       } else if (area.card instanceof Power) {
         hoveredPowerPreview = area.card;
       } else if (area.card && typeof area.card.copy === 'function') {
@@ -15232,6 +15989,8 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   if (creature.iceStacks > 0) buffEntries.push({ icon: 'icon_ice', value: creature.iceStacks, color: Colors.ICE_BLUE, keyword: 'ice' });
   if (creature.poisonStacks > 0) buffEntries.push({ icon: 'icon_poison', value: creature.poisonStacks, color: Colors.GREEN, keyword: 'poison' });
   if ((creature.shockStacks || 0) > 0) buffEntries.push({ icon: 'icon_shock', value: creature.shockStacks, color: Colors.SHOCK_YELLOW, keyword: 'shock' });
+  if ((creature.bleedStacks || 0) > 0) buffEntries.push({ icon: 'icon_bleed', value: creature.bleedStacks, color: Colors.RED, keyword: 'bleed' });
+  if ((creature.inkCloudStacks || 0) > 0) buffEntries.push({ icon: 'icon_ink_cloud', value: creature.inkCloudStacks, color: '#202040', keyword: 'ink_cloud' });
   if ((creature.markStacks || 0) > 0) buffEntries.push({ icon: 'icon_mark', value: creature.markStacks, color: Colors.RED, keyword: 'mark' });
   if (buffEntries.length > 0) {
     const bIconSize = Math.max(14, Math.floor(w * 0.085));
@@ -15424,10 +16183,11 @@ function drawToast() {
   const isOverlay = state === GameState.SCRY_SELECT || state === GameState.MODAL_SELECT ||
     state === GameState.REVIVE_SELECT || state === GameState.POWER_CHOICE;
   // While in SWIMMING (whirlpool resolution OR a regular swim
-  // phase), float the toast ABOVE the Swimming In Current /
-  // Whirlpool showcase card. The Done button takes the slot
-  // BELOW the card (see getSwimDoneRect). Showcase sits at
-  // SCREEN_HEIGHT/2 - 146..+106 (180×252 centered with -20 nudge).
+  // phase), restore the toast to its old above-showcase slot. To
+  // keep the visual clean, the toast is now DELAYED in
+  // startWhirlpoolPhase until the showcase card has finished its
+  // fade-in/fade-out — by the time this draws, the showcase is gone
+  // and the toast has the slot to itself.
   let y;
   if (state === GameState.SWIMMING) y = Math.floor(SCREEN_HEIGHT / 2) - 215;
   else if (isOverlay) y = 130;
@@ -16002,6 +16762,18 @@ function drawCharacterPanel(character, side) {
     if (value <= 0) return;
     const img = images[iconKey];
     if (img) {
+      // Ink Cloud — frame the icon in a red debuff square so it
+      // pops out against the row of helpful blue/gold buffs as
+      // "something bad is happening to you".
+      if (keyword === 'ink_cloud') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(120,20,20,0.55)';
+        ctx.fillRect(iconX - 2, iconRowY - 2, iconSize + 4, iconSize + 4);
+        ctx.strokeStyle = '#ff4040';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(iconX - 2, iconRowY - 2, iconSize + 4, iconSize + 4);
+        ctx.restore();
+      }
       ctx.drawImage(img, iconX, iconRowY, iconSize, iconSize);
       // Register hover hit area so the keyword tooltip system shows the definition
       if (keyword) {
@@ -16041,6 +16813,8 @@ function drawCharacterPanel(character, side) {
   drawStatusIcon('icon_ice', character.getStatus('ICE') || 0, Colors.ICE_BLUE, 'ice');
   drawStatusIcon('icon_poison', character.getStatus('POISON') || 0, Colors.GREEN, 'poison');
   drawStatusIcon('icon_shock', character.getStatus('SHOCK') || 0, Colors.SHOCK_YELLOW, 'shock');
+  drawStatusIcon('icon_bleed', character.getStatus('BLEED') || 0, Colors.RED, 'bleed');
+  drawStatusIcon('icon_ink_cloud', character.getStatus('INK_CLOUD') || 0, '#202040', 'ink_cloud');
   drawStatusIcon('icon_mark', character.getStatus('MARK') || 0, Colors.RED, 'mark');
 
   // Combat buff badges (continue on same row as status icons, using iconX)
@@ -16049,13 +16823,15 @@ function drawCharacterPanel(character, side) {
     const buffSize = iconSize;
     for (const buff of character.combatBuffs) {
       const buffArt = getCardArt(buff.imageId);
+      const isDebuff = !!buff.isDebuff;
       if (buffArt) {
         ctx.drawImage(buffArt, iconX, iconRowY, buffSize, buffSize);
       } else {
-        ctx.fillStyle = '#3a6a3a';
+        // No art → fill placeholder. Red for debuffs, green for buffs.
+        ctx.fillStyle = isDebuff ? '#6a3a3a' : '#3a6a3a';
         ctx.fillRect(iconX, iconRowY, buffSize, buffSize);
       }
-      ctx.strokeStyle = Colors.GREEN;
+      ctx.strokeStyle = isDebuff ? Colors.RED : Colors.GREEN;
       ctx.lineWidth = 1;
       ctx.strokeRect(iconX, iconRowY, buffSize, buffSize);
       // Count badge: turns remaining (timed buffs) or stacks (persistent buffs)
@@ -16371,6 +17147,16 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
     if (stacks <= 0) return;
     const img = images[iconKey];
     if (img) {
+      // Ink Cloud — red debuff frame, same as the character-row icon.
+      if (iconKey === 'icon_ink_cloud') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(120,20,20,0.55)';
+        ctx.fillRect(bx - 1, badgeY - 2, cIconSize + 2, cIconSize + 2);
+        ctx.strokeStyle = '#ff4040';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(bx - 1, badgeY - 2, cIconSize + 2, cIconSize + 2);
+        ctx.restore();
+      }
       ctx.drawImage(img, bx, badgeY - 1, cIconSize, cIconSize);
       bx += cIconSize + 1;
     }
@@ -16383,6 +17169,8 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   drawCreatureStatus('icon_ice', creature.iceStacks, Colors.ICE_BLUE);
   drawCreatureStatus('icon_poison', creature.poisonStacks, Colors.GREEN);
   drawCreatureStatus('icon_shock', creature.shockStacks || 0, Colors.SHOCK_YELLOW);
+  drawCreatureStatus('icon_bleed', creature.bleedStacks || 0, Colors.RED);
+  drawCreatureStatus('icon_ink_cloud', creature.inkCloudStacks || 0, '#202040');
   drawCreatureStatus('icon_mark', creature.markStacks || 0, Colors.RED);
 
   // Exhausted indicator: just the Zzz glyph — no dim overlay. Drop-shadowed
@@ -17175,6 +17963,15 @@ function handleCombatClick(x, y) {
     return;
   }
 
+  // Card discard-pick mode: clicking hand cards to pay discard_extra
+  // cost (Harpy Talon Blade — player picks WHICH card goes to
+  // discard rather than the auto-random fallback). Proceeds to
+  // targeting once the cost is paid.
+  if (cardDiscardPickMode) {
+    handleCardDiscardPickClick(x, y);
+    return;
+  }
+
   // Check power card click
   for (let i = 0; i < player.powers.length; i++) {
     const power = player.powers[i];
@@ -17242,6 +18039,12 @@ function handleCombatClick(x, y) {
         showToast(`${card.name} already used this turn.`);
         return;
       }
+      // Passive relics that fire from hand (On Draw / On Recharge) — never
+      // played manually, just sit until the trigger fires elsewhere.
+      if (card.unplayable) {
+        showToast(`${card.name} is passive — can't be played.`);
+        return;
+      }
       // Defense cards can't be played proactively
       if (card.cardType === CardType.DEFENSE) {
         showToast('Defense cards are played when the enemy attacks.');
@@ -17262,6 +18065,17 @@ function handleCombatClick(x, y) {
         showToast(`${card.name} only triggers when discarded.`);
         return;
       }
+      // Harpy Feather pattern — card whose ONLY effects are on_discard
+      // riders. Direct play would do nothing visible (just discard +
+      // draw); block it so the player understands the card has to be
+      // used as a discard cost (Talon Blade, future discard sinks).
+      {
+        const effs = card.effects || [];
+        if (effs.length > 0 && effs.every(e => e && e.effectType === 'on_discard')) {
+          showToast(`${card.name} only triggers when discarded.`);
+          return;
+        }
+      }
       // Wolf Fang and any other on-recharge-only relic — same idea:
       // the active card play does nothing, the bonus fires only when
       // the card lands in the recharge pile (paid as cost or rolled
@@ -17271,6 +18085,7 @@ function handleCombatClick(x, y) {
           && !(card.effects || []).some(e => e && (
             e.effectType === 'damage' || e.effectType === 'apply_poison' ||
             e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
+            e.effectType === 'apply_bleed' ||
             e.effectType === 'heal' || e.effectType === 'gain_shield' ||
             e.effectType === 'block' || e.effectType === 'draw'
           ))) {
@@ -17306,6 +18121,31 @@ function handleCombatClick(x, y) {
           pendingRechargeNames = [];
           _handOrderSnapshot = [...player.deck.hand];
           showStyledToast(`Recharge: Click another card to recharge as cost (${rechargeNeeded} more, ESC to cancel)`, 'recharge');
+          return;
+        }
+        // Player-picked discard cost (Harpy Talon Blade). Skip the
+        // entry if the card already has _discardExtraPaid stamped on
+        // it (the second click after the discard pick lands us back
+        // here on the way to TARGETING — don't re-enter the loop).
+        const discardNeeded = getCardDiscardExtra(card);
+        if (discardNeeded > 0 && !card._discardExtraPaid) {
+          const otherCards = player.deck.hand.filter((c, j) => j !== i).length;
+          if (otherCards < discardNeeded) {
+            showToast(`Not enough cards in hand to pay Discard ${discardNeeded} cost.`);
+            selectedCardIndex = -1;
+            return;
+          }
+          cardDiscardPickMode = true;
+          cardDiscardPickNeeded = discardNeeded;
+          pendingDiscardNames = [];
+          _handOrderSnapshot = [...player.deck.hand];
+          // Full-undo snapshots: cancel rewinds hand AND discardPile
+          // AND drawPile so the discarded card goes back to hand and
+          // any on_discard-drawn cards return to drawPile.
+          _discardPickHandSnapshot = [...player.deck.hand];
+          _discardPickDiscardSnapshot = [...player.deck.discardPile];
+          _discardPickDrawSnapshot = [...player.deck.drawPile];
+          showStyledToast(`Discard: Click a card to discard (${discardNeeded} more, ESC to cancel)`, 'recharge');
           return;
         }
         // Wand of Fire / Gravechill Shard — elemental-barrage flow.
@@ -17681,35 +18521,37 @@ function handleDefendingClick(x, y) {
         player.ignite = (player.ignite || 0) + eff.value;
         addLog(`  +${eff.value} Ignite (Ignite:${player.ignite})`, Colors.ORANGE);
         spawnTokenOnTarget(player, eff.value, 'Ignite', Colors.ORANGE);
-      } else if (eff.effectType === 'dodge_chance_all') {
-        // Shadow Cloak — roll eff.value% to negate every point of the
-        // pending incoming damage on this swing. On success, the
-        // autoMitigate / finishIncomingDamage path below sees 0
-        // remaining and exits DEFENDING cleanly. On failure the swing
-        // lands at full force (no fallback block — this is a gamble).
+      } else if (eff.effectType === 'block_chance_10') {
+        // Shadow Cloak — roll eff.value% to grant 10 Block on the
+        // player. Block soaks the incoming swing through the normal
+        // defense math; if the swing is bigger than 10, the
+        // remainder still lands. On a failed roll the card just
+        // draws (nothing else fires). Pure gamble — no fallback
+        // block on a miss.
         const chance = Math.max(0, Math.min(100, eff.value));
         const roll = Math.random() * 100;
         if (roll < chance) {
-          addLog(`  ${card.name}: Dodged! (${Math.round(chance)}%)`, Colors.GOLD);
-          pendingIncomingDamage = 0;
-          // Visual: same gold sparkle the heroism cue uses, so the
-          // dodge reads as "blessed luck" not "block".
-          spawnTokenOnTarget(player, 1, 'Dodge!', Colors.GOLD);
+          player.addBlock(10);
+          addLog(`  ${card.name}: +10 Block! (${Math.round(chance)}%)`, Colors.GOLD);
+          spawnTokenOnTarget(player, 10, 'Block', BLOCK_BLUE);
         } else {
-          addLog(`  ${card.name}: Failed to dodge (${Math.round(chance)}%)`, Colors.GRAY);
+          addLog(`  ${card.name}: Failed (${Math.round(chance)}%)`, Colors.GRAY);
         }
       } else if (eff.effectType === 'apply_fire_random'
                  || eff.effectType === 'apply_ice_random'
                  || eff.effectType === 'apply_fire_all'
                  || eff.effectType === 'apply_ice_all'
+                 || eff.effectType === 'apply_poison_all'
                  || eff.effectType === 'damage_random'
                  || eff.effectType === 'destroy_shield_random'
                  || eff.effectType === 'draw_if_no_shield'
                  || eff.effectType === 'scry_pick'
+                 || eff.effectType === 'scry_pick_discard'
                  || eff.effectType === 'clear_fire'
                  || eff.effectType === 'heal_random'
                  || eff.effectType === 'block_random'
-                 || eff.effectType === 'gain_shield_random') {
+                 || eff.effectType === 'gain_shield_random'
+                 || eff.effectType === 'summon_player_baby_frogs') {
         // Effects that retaliate on block (Molten Scale Armor →
         // apply_fire_random; Goblin Rocket Boots → apply_fire_all;
         // Fish Scale Boots → apply_ice_all; Sturdy Boots defense
@@ -17852,6 +18694,111 @@ function cancelCardRecharge() {
   selectedCardIndex = -1;
   hideToast();
   addLog('Cancelled.', Colors.GRAY);
+}
+
+// Player-picked discard cost (Harpy Talon Blade). Mirrors the recharge
+// flow but the chosen card lands in the discard pile (and fires its
+// on_discard rider) rather than the recharge pile.
+function handleCardDiscardPickClick(x, y) {
+  const handRects = getHandCardRects(player.deck.hand);
+  for (let i = handRects.length - 1; i >= 0; i--) {
+    if (i === selectedCardIndex) continue;
+    if (hitTest(x, y, getHandCardHoverRect(handRects, i))) {
+      playSound('click');
+      const card = player.deck.hand[i];
+      player.deck.hand.splice(i, 1);
+      player.deck.discardPile.push(card);
+      addLog(`  Discard: ${card.name}`, Colors.PURPLE, card);
+      triggerOnDiscard(card);
+      pendingDiscardNames.push(card.name);
+      if (i < selectedCardIndex) selectedCardIndex--;
+      cardDiscardPickNeeded--;
+      if (cardDiscardPickNeeded <= 0) {
+        cardDiscardPickMode = false;
+        const selectedCard = player.deck.hand[selectedCardIndex];
+        if (!selectedCard) {
+          hideToast();
+          pendingDiscardNames = [];
+          _handOrderSnapshot = null;
+          selectedCardIndex = -1;
+          return;
+        }
+        selectedCard._discardExtraPaid = true;
+        // _handOrderSnapshot covers the plain "cancel during TARGETING"
+        // path. The full undo snapshots (_discardPickHandSnapshot et al.)
+        // stay armed through TARGETING so cancel at that stage can
+        // rewind hand + discard + draw.
+        _handOrderSnapshot = null;
+        if (canPlayWithoutTarget(selectedCard)) {
+          hideToast();
+          // Card is about to fire immediately — commit by clearing
+          // the full-undo snapshots so a later cancel can't roll
+          // back a played card.
+          clearDiscardPickSnapshots();
+          playCardSelf(selectedCardIndex);
+        } else if (cardIsMultiTarget(selectedCard)) {
+          hideToast();
+          clearDiscardPickSnapshots();
+          enterMultiTargeting(selectedCardIndex);
+        } else {
+          state = GameState.TARGETING;
+          showStickyToast('Click on an enemy to attack (or click elsewhere to cancel)');
+        }
+        pendingDiscardNames = [];
+      } else {
+        showStyledToast(`Discard: Click another card to discard (${cardDiscardPickNeeded} more, ESC to cancel)`, 'recharge');
+      }
+      return;
+    }
+  }
+  // Clicked elsewhere — cancel
+  cancelCardDiscardPick();
+}
+
+function cancelCardDiscardPick() {
+  // Full undo: rewind hand AND discardPile AND drawPile from the
+  // snapshots taken on entry. That reverses the discard (card goes
+  // back to hand) AND the on_discard rider fallout (drawn cards
+  // return to drawPile in their original order).
+  restoreDiscardPickSnapshots();
+  pendingDiscardNames = [];
+  cardDiscardPickMode = false;
+  cardDiscardPickNeeded = 0;
+  selectedCardIndex = -1;
+  hideToast();
+  addLog('Cancelled.', Colors.GRAY);
+}
+
+// Pull the hand / discard / drawPile snapshots taken at discard-pick
+// entry back into the live deck. Idempotent; clears the snapshots so
+// the next discard-pick can take fresh ones. Used by both
+// cancelCardDiscardPick (clicked elsewhere during pick) and the
+// cancel-TARGETING paths (ESC / clicked-elsewhere after the cost was
+// paid but before the play committed).
+function restoreDiscardPickSnapshots() {
+  if (_discardPickHandSnapshot) {
+    player.deck.hand = _discardPickHandSnapshot;
+  } else if (_handOrderSnapshot) {
+    // Older code path used only _handOrderSnapshot — preserve as a
+    // fallback in case anything else still relies on it.
+    player.deck.hand = _handOrderSnapshot;
+  }
+  if (_discardPickDiscardSnapshot) {
+    player.deck.discardPile = _discardPickDiscardSnapshot;
+  }
+  if (_discardPickDrawSnapshot) {
+    player.deck.drawPile = _discardPickDrawSnapshot;
+  }
+  _handOrderSnapshot = null;
+  _discardPickHandSnapshot = null;
+  _discardPickDiscardSnapshot = null;
+  _discardPickDrawSnapshot = null;
+}
+
+function clearDiscardPickSnapshots() {
+  _discardPickHandSnapshot = null;
+  _discardPickDiscardSnapshot = null;
+  _discardPickDrawSnapshot = null;
 }
 
 function handleTargetingClick(x, y) {
@@ -17999,6 +18946,7 @@ function handleTargetingClick(x, y) {
     pendingRechargeNames = [];
     // Snapshot is only for cancel; successful play consumes it.
     _handOrderSnapshot = null;
+    clearDiscardPickSnapshots();
     hideToast();
     barrageMode = false;
     playCardOnEnemy(selectedCardIndex);
@@ -18027,6 +18975,7 @@ function handleTargetingClick(x, y) {
       cardRechargedCards = [];
       pendingRechargeNames = [];
       _handOrderSnapshot = null;
+      clearDiscardPickSnapshots();
       hideToast();
       barrageMode = false;
       playCardOnCreature(selectedCardIndex, t);
@@ -18044,12 +18993,18 @@ function handleTargetingClick(x, y) {
   if (fireBarrageMode) cancelFireBarrage();
   if (beamMode) cancelBeamMode();
   healTargetMode = false;
-  // Restore hand order (snapshot taken when targeting started) so the
-  // selected card returns to the exact slot it was in — even for plain
-  // single-target attacks like Sneak Attack.
-  if (_handOrderSnapshot) {
+  // Full discard-pick undo takes precedence over the plain hand
+  // restore — see the matching ESC-key branch above for the reason.
+  if (_discardPickHandSnapshot) {
+    restoreDiscardPickSnapshots();
+  } else if (_handOrderSnapshot) {
     player.deck.hand = _handOrderSnapshot;
     _handOrderSnapshot = null;
+  }
+  // Clear any in-flight discard-cost prepay flags so the next click
+  // re-pays the discard cost cleanly.
+  for (const c of player.deck.hand) {
+    if (c && c._discardExtraPaid) delete c._discardExtraPaid;
   }
   hideToast();
   selectedCardIndex = -1;
@@ -18385,6 +19340,13 @@ function getCardRechargeExtra(card) {
   return 0;
 }
 
+function getCardDiscardExtra(card) {
+  for (const eff of card.currentEffects || []) {
+    if (eff.effectType === 'discard_extra') return eff.value;
+  }
+  return 0;
+}
+
 function canPlayWithoutTarget(card) {
   // Defense cards can ONLY be played reactively when defending against enemy attacks
   if (card.cardType === CardType.DEFENSE) return false;
@@ -18440,7 +19402,8 @@ function needsTarget(card) {
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
-     e.effectType === 'apply_fire' || e.effectType === 'apply_ice')
+     e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
+     e.effectType === 'apply_bleed')
   );
 }
 
@@ -18476,7 +19439,8 @@ function canSkipOptionalTargeting(card) {
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
-     e.effectType === 'apply_fire' || e.effectType === 'apply_ice')
+     e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
+     e.effectType === 'apply_bleed')
   );
   if (!targetingEffects.length) return false;
   if (!targetingEffects.every(e => e.optional)) return false;
@@ -18537,6 +19501,67 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         // the holder — passing `enemy` here heals the enemy's deck and
         // clears Fire off the enemy character.
         resolveEffect(eff, enemy, player);
+      } else if (eff.effectType === 'summon_kraken_tentacle_block') {
+        // Tentacle Block — Kraken DEFENSE card. Spawn a fresh Tentacle
+        // and have IT soak the incoming swing instead of the boss.
+        // Mechanically: apply landingDmg to the tentacle directly,
+        // then grant the enemy Block equal to what the tentacle just
+        // absorbed so the boss's takeDamageWithDefense (about to fire
+        // after this returns) wipes the damage. If the swing was
+        // bigger than the tentacle's HP, the tentacle dies and only
+        // the absorbed amount becomes Block — the remainder still
+        // lands on the boss. No field cap — Kraken can stack as many
+        // tentacles as Character.MAX_CREATURES allows.
+        {
+          const tentacle = new Creature({
+            name: 'Tentacle', attack: 3, maxHp: 5,
+            onAttackSnagCard: true,
+            description: 'On Attack: snag 1 random card from your hand.',
+          });
+          tentacle.exhausted = false;
+          tentacle.justSummoned = false;
+          enemy.addCreature(tentacle);
+          addLog(`  A Tentacle lashes out to block!`, Colors.ORANGE, null, null, tentacle);
+          playSound('splash_dive', 0.6);
+          const lastEntry = combatLog[combatLog.length - 1];
+          if (lastEntry) lastEntry.creature = tentacle;
+          if (landingDmg && landingDmg > 0) {
+            // takeDamage returns the requested amount (overflow
+            // included) when there's no shield/armor — so cap the
+            // soak at the tentacle's pre-hit HP. A 6-damage swing
+            // against a fresh 5HP tentacle absorbs 5 and lets the
+            // remaining 1 land on the boss.
+            const hpBefore = tentacle.currentHp;
+            const soakDmg = Math.min(landingDmg, hpBefore);
+            tentacle.takeDamage(soakDmg);
+            if (soakDmg > 0) spawnDamageOnTarget(tentacle, soakDmg);
+            addLog(`  Tentacle takes ${soakDmg} dmg!`, Colors.RED);
+            enemy.addBlock(soakDmg);
+            landingDmg = Math.max(0, landingDmg - soakDmg);
+            if (!tentacle.isAlive) {
+              spawnDeathAnimation(tentacle);
+              addLog(`  Tentacle severed!`, Colors.GOLD, null, null, tentacle);
+              countAndRemoveDeadCreatures();
+            }
+          }
+        }
+      } else if (eff.effectType === 'summon_baby_giant_frogs') {
+        // Baby Frog Swarm — DEFENSE card with a summon rider. Without
+        // this branch the auto-defense loop dropped the summon
+        // silently (block fired, frogs didn't spawn). Roll 1..value
+        // and spawn each as an exploder.
+        const maxRoll = Math.max(1, eff.value || 1);
+        const count = 1 + Math.floor(Math.random() * maxRoll);
+        for (let i = 0; i < count; i++) {
+          const frog = new Creature({
+            name: 'Baby Giant Frog', attack: 2, maxHp: 1,
+            attackAll: true, selfDestruct: true,
+            description: 'On Attack: Explode. Deal 2 Damage to all enemies.',
+          });
+          enemy.addCreature(frog);
+          addLog(`  Baby Giant Frog joins the swarm!`, Colors.GREEN);
+        }
+        playStaggeredSfx('spider_scuttle', count, 120, 0.6);
       }
     }
     // Loose Bone: spawn a Restless Bone when it blocks
@@ -19048,6 +20073,17 @@ function resolveEffect(eff, caster, target) {
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
+      // Lose half the caster's shield (rounded down) AFTER the swing —
+      // 3 shields drops 1 (keeps 2), 4 drops 2 (keeps 2). The card
+      // text frames it as "Lose Half Shield" without specifying the
+      // rounding so newer players don't have to read fine print.
+      if (caster.shield > 0) {
+        const lost = Math.floor(caster.shield / 2);
+        if (lost > 0) {
+          caster.shield -= lost;
+          addLog(`  Lose ${lost} Shield (S:${caster.shield})`, Colors.GRAY);
+        }
+      }
       break;
     }
     case 'multi_damage': {
@@ -19258,6 +20294,32 @@ function resolveEffect(eff, caster, target) {
       }
       spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
       firePowerSurgeIfArmed(caster, 'poison');
+      break;
+    }
+    case 'apply_bleed': {
+      if (target instanceof Creature) {
+        target.bleedStacks += eff.value;
+      } else {
+        target.applyStatus('BLEED', eff.value);
+      }
+      addLog(`  +${eff.value} Bleed on ${target.name}`, Colors.RED);
+      spawnTokenOnTarget(target, eff.value, 'Bleed', Colors.RED);
+      break;
+    }
+    case 'apply_bleed_all': {
+      // AoE Bleed — apply to the enemy character and every alive enemy
+      // creature. Mirrors apply_fire_all / apply_poison_all etc.
+      const targets = [];
+      if (enemy && enemy.isAlive) targets.push(enemy);
+      for (const c of (enemy && enemy.creatures || [])) {
+        if (c && c.isAlive) targets.push(c);
+      }
+      for (const t of targets) {
+        if (t instanceof Creature) t.bleedStacks += eff.value;
+        else t.applyStatus('BLEED', eff.value);
+        spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
+      }
+      if (targets.length > 0) addLog(`  +${eff.value} Bleed on ${targets.length} target${targets.length > 1 ? 's' : ''}`, Colors.RED);
       break;
     }
     case 'apply_poison_vs_armor': {
@@ -20001,6 +21063,67 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'luring_song': {
+      // Player-cast variant (Harpy Screaming Charm). Mirrors the
+      // enemy-side handler at the same name: for every legal enemy
+      // target, discard one random hand card OR deal N damage if the
+      // hand is empty. Enemy creatures have no hand, so they always
+      // eat the damage. Purple arrows spawn from the played card.
+      {
+        const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+        const tgts = [];
+        if (enemy && enemy.isAlive && !enemy._invulnerable) tgts.push(enemy);
+        for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) tgts.push(c);
+        spawnPlayerArrowBatch(src, tgts, 550, Colors.PURPLE);
+      }
+      const dmg = Math.max(1, eff.value || 1);
+      // Enemy character: discard 1 random hand card, else take damage.
+      if (enemy && !enemy._invulnerable && enemy.isAlive) {
+        if (enemy.deck && enemy.deck.hand.length > 0) {
+          const idx = Math.floor(Math.random() * enemy.deck.hand.length);
+          const lost = enemy.deck.hand.splice(idx, 1)[0];
+          enemy.deck.discardPile.push(lost);
+          addLog(`  Screaming Charm: ${enemy.name} discards ${lost.name}`, Colors.PURPLE, lost);
+        } else {
+          const [, taken] = enemy.takeDamageWithDefense(dmg);
+          if (taken > 0) spawnDamageOnTarget(enemy, taken);
+          addLog(`  Screaming Charm: ${taken} damage to ${enemy.name} (empty hand)`, Colors.RED);
+        }
+      }
+      // Each living enemy creature has no hand — just take damage.
+      for (const c of enemy.creatures) {
+        if (c._invulnerable || !c.isAlive) continue;
+        const actual = c.takeDamage(dmg);
+        if (actual > 0) spawnDamageOnTarget(c, actual);
+        addLog(`  Screaming Charm: ${actual} damage to ${c.name}`, Colors.RED);
+      }
+      countAndRemoveDeadCreatures();
+      break;
+    }
+    case 'apply_poison_all': {
+      // Toxic Frog Extract — green spit arrows to every legal target,
+      // applies N Poison stacks per target. Mirrors apply_fire_all /
+      // apply_ice_all but stamps Poison instead.
+      {
+        const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+        const tgts = [];
+        if (enemy && enemy.isAlive && !enemy._invulnerable) tgts.push(enemy);
+        for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) tgts.push(c);
+        spawnPlayerArrowBatch(src, tgts, 550, Colors.GREEN);
+      }
+      if (enemy && !enemy._invulnerable) {
+        enemy.applyStatus('POISON', eff.value);
+        addLog(`  +${eff.value} Poison on ${enemy.name}`, Colors.GREEN);
+        spawnTokenOnTarget(enemy, eff.value, 'Poison', Colors.GREEN);
+      }
+      for (const c of enemy.creatures) {
+        if (c._invulnerable || !c.isAlive) continue;
+        c.poisonStacks = (c.poisonStacks || 0) + eff.value;
+        addLog(`  +${eff.value} Poison on ${c.name}`, Colors.GREEN);
+        spawnTokenOnTarget(c, eff.value, 'Poison', Colors.GREEN);
+      }
+      break;
+    }
     case 'apply_fire_all': {
       // Orange fire-spray arrows to every legal target. Appends to
       // the active batch so a sibling damage_all's red arrows AND
@@ -20405,6 +21528,9 @@ function resolveEffect(eff, caster, target) {
       // buff is active. Stored as a flag on the persistent buff so the
       // swim handler can detect it without name-matching.
       pb._swimDraw = prov.swimDraw || 0;
+      // Harpy Egg Omelette meal: per-discard draw while the buff is
+      // active. Fired by triggerOnDiscard.
+      pb._onDiscardDraw = prov.onDiscardDraw || 0;
       player.persistentBuffs.push(pb);
       const label = slot === 'beverage' ? 'Beverage' : 'Meal';
       addLog(`  ${label}: ${prov.name} active until you rest.`, Colors.GOLD);
@@ -20430,6 +21556,7 @@ function resolveEffect(eff, caster, target) {
         });
         projected._persistent = true;
         projected._swimDraw = pb._swimDraw || 0;
+        projected._onDiscardDraw = pb._onDiscardDraw || 0;
         player.addCombatBuff(projected);
       }
       break;
@@ -20472,6 +21599,27 @@ function resolveEffect(eff, caster, target) {
       addLog(`  +${eff.value} Heroism`, Colors.GOLD);
       spawnTokenOnTarget(caster, eff.value, 'Heroism', Colors.GOLD);
       break;
+    case 'gain_heroism_per_damaged_enemy': {
+      // Bloody Eye Patch: count enemies + enemy creatures currently
+      // below max HP. Boss damage AND any tentacle/baby summon counts.
+      const otherSide = (caster === player) ? enemy : player;
+      let damaged = 0;
+      if (otherSide && otherSide.isAlive && (otherSide.currentHp || 0) < (otherSide.maxHp || 0)) {
+        damaged++;
+      }
+      for (const c of (otherSide && otherSide.creatures) || []) {
+        if (c && c.isAlive && (c.currentHp || 0) < (c.maxHp || 0)) damaged++;
+      }
+      const gain = damaged * (eff.value || 0);
+      if (gain > 0) {
+        caster.heroism += gain;
+        addLog(`  +${gain} Heroism (${damaged} damaged target${damaged === 1 ? '' : 's'})`, Colors.GOLD);
+        spawnTokenOnTarget(caster, gain, 'Heroism', Colors.GOLD);
+      } else {
+        addLog(`  No damaged targets — no Heroism gained.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'queens_gift': {
       // The Queen's Locket — random blessing of 1-4 effects from
       // {Shield, Heroism, Heal, Draw}. Weighted: singles=12, doubles=6,
@@ -20910,6 +22058,31 @@ function resolveEffect(eff, caster, target) {
       if (lastEntry) lastEntry.creature = slime;
       break;
     }
+    case 'summon_player_baby_frogs': {
+      // Frog Nursery — roll 1..value Baby Giant Frogs on the player
+      // side. Each baby is attack=2, multiAttack=99, selfDestruct=true
+      // (mirrors Thordak Ashmantle's auto-resolve attacks-all path so
+      // clicking the baby instantly hits every enemy, then it dies).
+      const maxRoll = Math.max(1, eff.value || 1);
+      const count = 1 + Math.floor(Math.random() * maxRoll);
+      let lastFrog = null;
+      for (let i = 0; i < count; i++) {
+        const frog = new Creature({
+          name: 'Baby Giant Frog', attack: 2, maxHp: 1,
+          multiAttack: 99, selfDestruct: true,
+          description: 'On Attack: Explode. Hits all enemies for 2.',
+        });
+        caster.addCreature(frog);
+        addLog(`  Baby Giant Frog joins the fight!`, Colors.GREEN, null, null, frog);
+        lastFrog = frog;
+      }
+      playStaggeredSfx('splash_dive', count, 120, 0.6);
+      if (lastFrog) {
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = lastFrog;
+      }
+      break;
+    }
     case 'summon_small_spider': {
       // Summon 1 spider when value=1 (legacy / enemy slyblade), or roll
       // 1-2 when value=2 (player Pet Spider card after the tier-1
@@ -21056,6 +22229,38 @@ function resolveEffect(eff, caster, target) {
     }
     case 'recharge_extra':
       // Cost is paid via the card recharge phase before targeting; nothing to do here.
+      break;
+    case 'discard_extra': {
+      // Talon Blade — when the PLAYER plays it, the discard pick is
+      // resolved upfront via cardDiscardPickMode (see
+      // handleCardDiscardPickClick) and the card is stamped with
+      // _discardExtraPaid so the effects loop just clears the flag
+      // here. Enemy / NPC casters fall through to the auto-random
+      // splice below.
+      if (caster === player && _activePlayCard && _activePlayCard._discardExtraPaid) {
+        delete _activePlayCard._discardExtraPaid;
+        break;
+      }
+      if (!caster.deck) break;
+      const need = Math.max(1, eff.value || 1);
+      for (let i = 0; i < need && caster.deck.hand.length > 0; i++) {
+        // Don't discard the active play card itself (it's stays-in-hand).
+        const choices = caster.deck.hand
+          .map((c, idx) => ({ c, idx }))
+          .filter(({ c }) => c !== _activePlayCard);
+        if (choices.length === 0) break;
+        const pick = choices[Math.floor(Math.random() * choices.length)];
+        const dropped = caster.deck.hand.splice(pick.idx, 1)[0];
+        caster.deck.discardPile.push(dropped);
+        addLog(`  Discard: ${dropped.name}`, Colors.PURPLE, dropped);
+        if (caster === player) triggerOnDiscard(dropped);
+      }
+      break;
+    }
+    case 'on_discard':
+      // Rider read by triggerOnDiscard when the card hits the
+      // discard pile via placeByCost (or via discard_extra above);
+      // nothing to resolve standalone.
       break;
     case 'heroism_double':
       // Rider read by the 'damage' case off _activePlayCard.currentEffects;
@@ -21297,6 +22502,7 @@ function resolveEffect(eff, caster, target) {
       }
       if (revealed.length > 0) {
         scryCards = revealed;
+        _scryFromDiscard = false;
         // If the card that triggered this scry already produced visible
         // animations this play (e.g. Torch's "Fire to all" float numbers),
         // pause briefly so the player sees the hit land before the modal
@@ -21312,6 +22518,33 @@ function resolveEffect(eff, caster, target) {
         } else {
           openScry();
         }
+      }
+      break;
+    }
+    case 'scry_pick_discard': {
+      // Kraken's Eye Spyglass — peek the top N of the DISCARD pile, pick 1
+      // to draw into hand, leave the rest in the discard pile. Same UI as
+      // scry_pick; _scryFromDiscard tells handleScrySelectClick to return
+      // unpicked cards to discard instead of recharge.
+      const scryCount = eff.value || 3;
+      const revealed = [];
+      for (let i = 0; i < scryCount && player.deck.discardPile.length > 0; i++) {
+        revealed.push(player.deck.discardPile.pop());
+      }
+      if (revealed.length > 0) {
+        scryCards = revealed;
+        _scryFromDiscard = true;
+        const openScry = () => {
+          state = GameState.SCRY_SELECT;
+          showStyledToast(`Scry ${revealed.length} (discard): pick 1 card to draw, the rest stay in discard`, 'scry');
+        };
+        if (damageNumbers.length > 0) {
+          setTimeout(openScry, 450);
+        } else {
+          openScry();
+        }
+      } else {
+        addLog(`  Discard pile is empty.`, Colors.GRAY);
       }
       break;
     }
@@ -21495,12 +22728,26 @@ function playCardOnEnemy(handIndex) {
   if (modalCard && modalCard._chosenMode) {
     addLog(`  Mode: ${modalCard._chosenMode.description}`);
   }
-  for (const eff of effects) {
-    if (eff.effectType === 'stays_in_hand') continue;
-    resolveEffect(eff, player, enemy);
+  // Ink Cloud: ATTACK cards roll the miss check once per play. On miss
+  // the entire effects loop is skipped — no damage, no riders — but
+  // the card still pays its cost. Stack consumed either way.
+  const inkMiss = card.cardType === CardType.ATTACK
+    ? consumeInkCloudForAttack(player, 'You')
+    : false;
+  if (!inkMiss) {
+    for (const eff of effects) {
+      if (eff.effectType === 'stays_in_hand') continue;
+      resolveEffect(eff, player, enemy);
+    }
   }
 
   if (!stays) player.deck.placeByCost(card);
+
+  // Bleed tick fires AFTER the attack card resolves so a fatal bleed
+  // never robs the player of the swing. Only ATTACK-type cards count
+  // — buffs / utility plays don't bleed. Bleed still fires on an
+  // Ink Cloud miss (the bleeder still "swung", they just whiffed).
+  if (card.cardType === CardType.ATTACK) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
   modalCard = null;
@@ -21544,16 +22791,25 @@ function playCardOnCreature(handIndex, creature) {
   if (modalCard && modalCard._chosenMode) {
     addLog(`  Mode: ${modalCard._chosenMode.description}`);
   }
-  for (const eff of effects) {
-    if (eff.effectType === 'stays_in_hand') continue;
-    if (eff.target === TargetType.SINGLE_ENEMY || eff.target === TargetType.RANDOM_ENEMY) {
-      resolveEffect(eff, player, creature);
-    } else {
-      resolveEffect(eff, player, enemy);
+  // Ink Cloud miss check — mirrors playCardOnEnemy. On miss, the
+  // effects loop is suppressed entirely. Stack consumed regardless.
+  const inkMissCC = card.cardType === CardType.ATTACK
+    ? consumeInkCloudForAttack(player, 'You')
+    : false;
+  if (!inkMissCC) {
+    for (const eff of effects) {
+      if (eff.effectType === 'stays_in_hand') continue;
+      if (eff.target === TargetType.SINGLE_ENEMY || eff.target === TargetType.RANDOM_ENEMY) {
+        resolveEffect(eff, player, creature);
+      } else {
+        resolveEffect(eff, player, enemy);
+      }
     }
   }
 
   if (!stays) player.deck.placeByCost(card);
+
+  if (card.cardType === CardType.ATTACK) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
   modalCard = null;
@@ -21689,6 +22945,49 @@ function healCreature(creature, amount) {
   playSound('heal');
 }
 
+// Discard rider — fires every time a player card lands in the
+// discard pile (the deck.onCardDiscarded hook calls us). Two payoffs:
+//  1. Per-card `on_discard` effect → caster draws eff.value.
+//     Used by Feather Cloak (1) and Harpy Feather (2).
+//  2. Per-active-buff `_onDiscardDraw` → caster draws the configured
+//     amount. Used by Harpy Egg Omelette's meal projection.
+// Draw rider — fires every time a card lands in the player's hand
+// (deck.onCardDrawn hook). Currently powers Sailor's Lucky Compass
+// (on_draw_heroism); the per-card effect grants Heroism passively
+// each time the card is drawn (including end-of-turn refill).
+function triggerOnDraw(card) {
+  if (!player || !card || !Array.isArray(card.currentEffects)) return;
+  let heroismGain = 0;
+  for (const eff of card.currentEffects) {
+    if (eff && eff.effectType === 'on_draw_heroism') heroismGain += eff.value || 0;
+  }
+  if (heroismGain > 0) {
+    player.heroism = (player.heroism || 0) + heroismGain;
+    addLog(`  ${card.name}: On Draw → +${heroismGain} Heroism (H:${player.heroism})`, Colors.GOLD);
+    spawnTokenOnTarget(player, heroismGain, 'Heroism', Colors.GOLD);
+  }
+}
+
+function triggerOnDiscard(card) {
+  if (!player || !player.deck) return;
+  const fired = (card && card.effects)
+    ? card.effects.filter(e => e.effectType === 'on_discard')
+    : [];
+  for (const eff of fired) {
+    const drawn = player.deck.draw(eff.value || 1, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  ${card.name}: On Discard → Draw ${d.name}`, Colors.PURPLE, d);
+    if (drawn.length > 0 && typeof playDrawSounds === 'function') playDrawSounds(drawn.length);
+  }
+  // Meal hook (Harpy Egg Omelette): every player discard fires an
+  // extra draw while the meal's turn window is open.
+  const meal = (player.combatBuffs || []).find(b => b._onDiscardDraw && b._onDiscardDraw > 0 && (b.turnsRemaining || 0) > 0);
+  if (meal) {
+    const drawn = player.deck.draw(meal._onDiscardDraw, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  ${meal.name}: Discard → Draw ${d.name}`, Colors.PURPLE, d);
+    if (drawn.length > 0 && typeof playDrawSounds === 'function') playDrawSounds(drawn.length);
+  }
+}
+
 function healPlayer(amount) {
   // Heal = pop the top `amount` cards from the discard pile (most recently
   // damaged cards first). In combat they go to the recharge pile (re-enter
@@ -21698,6 +22997,7 @@ function healPlayer(amount) {
   // (clears 1 Poison stack instead of healing 1 card).
   let remaining = amount;
   let poisonCleared = 0;
+  let bleedCleared = 0;
   const poison = player.getStatus('POISON') || 0;
   if (poison > 0 && remaining > 0) {
     const toClear = Math.min(poison, remaining);
@@ -21706,6 +23006,17 @@ function healPlayer(amount) {
     remaining -= toClear;
     addLog(`  Healing purges ${toClear} Poison`, Colors.GREEN);
     if (state !== GameState.COMBAT) showStyledToast(`-${toClear} Poison (healed)`, 'scry', 2000);
+  }
+  // Bleed clears 1-to-1 with healing (same rule as Poison). Resolves
+  // after Poison so a single heal goes Poison → Bleed → HP cards.
+  const bleed = player.getStatus('BLEED') || 0;
+  if (bleed > 0 && remaining > 0) {
+    const toClear = Math.min(bleed, remaining);
+    player.removeStatus('BLEED', toClear);
+    bleedCleared = toClear;
+    remaining -= toClear;
+    addLog(`  Healing stops ${toClear} Bleed`, Colors.RED);
+    if (state !== GameState.COMBAT) showStyledToast(`-${toClear} Bleed (healed)`, 'scry', 2000);
   }
   let healed = 0;
   for (let i = 0; i < remaining && player.deck.discardPile.length > 0; i++) {
@@ -21720,7 +23031,7 @@ function healPlayer(amount) {
     playSound('heal');
     spawnHealOnTarget(player, healed);
     if (state !== GameState.COMBAT) showStyledToast(`+${healed} Healed`, 'heal', 2000);
-  } else if (poisonCleared === 0 && amount > 0) {
+  } else if (poisonCleared === 0 && bleedCleared === 0 && amount > 0) {
     // Nothing to heal
     addLog(`  Nothing to heal.`, Colors.GRAY);
   }
@@ -22352,6 +23663,12 @@ function resolveMultiTargeting() {
     // marked spent. Per-call stagger via setTimeout so the swing SFX
     // (Raena's bow) audibly chains across targets.
     const STRIKE_STAGGER_MS = 180;
+    // Suppress per-strike selfDestruct in resolveAllyAttack so a
+    // multi-target exploder (Baby Giant Frog with multiAttack=99)
+    // lands all of its hits before dying. The unified explosion fires
+    // after the last setTimeout via the schedule below.
+    const wantsSelfDestruct = ally.selfDestruct;
+    if (wantsSelfDestruct) ally._suppressSelfDestruct = true;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       if (!t) continue;
@@ -22371,6 +23688,21 @@ function resolveMultiTargeting() {
       };
       if (i === 0) fire();
       else setTimeout(fire, i * STRIKE_STAGGER_MS);
+    }
+    // Deferred selfDestruct — fires after the last strike's setTimeout
+    // resolves, then sweeps the dead frog through countAndRemove.
+    if (wantsSelfDestruct) {
+      const finalDelay = Math.max(0, targets.length - 1) * STRIKE_STAGGER_MS + 250;
+      setTimeout(() => {
+        if (!ally) return;
+        delete ally._suppressSelfDestruct;
+        if (ally.isAlive) {
+          ally.currentHp = 0;
+          spawnDeathAnimation(ally);
+          addLog(`  ${ally.name} crumbles!`, Colors.GOLD);
+          countAndRemoveDeadCreatures();
+        }
+      }, finalDelay);
     }
     return;
   }
@@ -22519,6 +23851,21 @@ function resolveMultiTargeting() {
       }
       if (dmg > 0) applyIgniteRider(t, multiIgnite);
     }
+    // 2 Targets: Draw rider (Dwarven Throwing Axe). The resolveEffect
+    // multi_damage case has the same check, but this picker flow runs
+    // its own damage loop and would otherwise skip the rider. Fires
+    // for any multi-target chain — enemy character + creature, two
+    // creatures, etc. — as long as the player picked >= 2 distinct
+    // targets.
+    if (targets.length >= 2) {
+      const drawRider = (card.currentEffects || [])
+        .find(e => e.effectType === 'draw_on_two_targets');
+      if (drawRider) {
+        const drawn = player.deck.draw(drawRider.value || 1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  2 Targets! Draw: ${d.name}`, Colors.BLUE, d);
+        if (drawn.length > 0) playDrawSounds(drawn.length);
+      }
+    }
     attacksThisTurn++;
     _activePlayCard = null;
   }
@@ -22617,12 +23964,23 @@ function handleAllyTargetingClick(x, y) {
 }
 
 function resolveAllyAttack(ally, target) {
+  addLog(`${ally.name} attacks`, Colors.GREEN, ally.sourceCard || null, null, ally);
+  // Ink Cloud miss check — fires BEFORE damage / rage / heroism so a
+  // missed swing doesn't burn Heroism or trigger riders. Stack
+  // consumed regardless. On miss, exhaust the ally and bail out.
+  if (consumeInkCloudForAttack(ally, ally.name)) {
+    ally.exhaust();
+    selectedAlly = null;
+    state = GameState.COMBAT;
+    hideToast();
+    checkCombatEnd();
+    return;
+  }
   // Apply rage (persistent) and heroism (consumed on attack), matching Python.
   const rageBonus = ally.rage || 0;
   const heroismBonus = ally.heroism || 0;
   let dmg = ally.attack + rageBonus + heroismBonus;
   if (heroismBonus > 0) ally.heroism = 0;
-  addLog(`${ally.name} attacks`, Colors.GREEN, ally.sourceCard || null, null, ally);
   if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
   if (heroismBonus > 0) addLog(`  Heroism! +${heroismBonus} damage`, Colors.GOLD);
   // Ice on the attacker reduces this swing and burns 1 stack.
@@ -22729,6 +24087,10 @@ function resolveAllyAttack(ally, target) {
   _activeAttacker = null;
   countAndRemoveDeadCreatures();
 
+  // Bleed tick fires AFTER all strikes land so the attack is never
+  // robbed by a fatal bleed. Multi-attack is one swing = one tick.
+  tickBleedOnAttack(ally, ally.name);
+
   ally.exhaust();
   // Bloodfrenzy: ally gains +N persistent Rage after every swing
   // (Sharks: +1). Mirrors PY's per-attack rage bump. Was previously
@@ -22738,6 +24100,17 @@ function resolveAllyAttack(ally, target) {
     ally.rage = (ally.rage || 0) + ally.bloodfrenzy;
     addLog(`  Bloodfrenzy! ${ally.name} +${ally.bloodfrenzy} Rage (R:${ally.rage})`, Colors.RED);
     spawnTokenOnTarget(ally, ally.bloodfrenzy, 'Rage', Colors.RED);
+  }
+  // Self-destruct: player-side exploder (Baby Giant Frog from Frog
+  // Nursery) crumbles after its swing. Mirrors the enemy-side branch
+  // in finishCreatureAttack — sets HP to 0, plays the death animation,
+  // and lets countAndRemoveDeadCreatures sweep + fire any on-death
+  // rider.
+  if (ally.selfDestruct && ally.isAlive && !ally._suppressSelfDestruct) {
+    ally.currentHp = 0;
+    spawnDeathAnimation(ally);
+    addLog(`  ${ally.name} crumbles!`, Colors.GOLD);
+    countAndRemoveDeadCreatures();
   }
   selectedAlly = null;
   state = GameState.COMBAT;
@@ -23488,6 +24861,7 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   // banner instead of trailing the previous turn's actions.
   decayIceAtTurnEnd(player, 'You');
   decayShockAtTurnEnd(player, 'You');
+  decayBleedAtTurnEnd(player, 'You');
   if (checkCombatEnd()) return;
 
   // Thorb gains +1 Shield at end of player's turn (matches PY behavior).
@@ -23769,6 +25143,57 @@ function decayShockAtTurnEnd(character, label) {
   }
 }
 
+// Bleed tick — fires AFTER the bleeder's attack lands so a fatal bleed
+// never robs them of their swing. Fires once per attack ACTION (the
+// card / the creature swing), not per individual strike — a multiAttack
+// creature swinging 3 times in one action still bleeds once; a barrage
+// card firing 3 shots bleeds once for the card; but each separate
+// attack card the player plays this turn ticks bleed again.
+//
+// Damage is unpreventable for creatures (matches Poison) and routes
+// through the deck for the character (a bleed kill chips the deck like
+// any other DoT). Logged in red.
+function tickBleedOnAttack(attacker, label) {
+  if (!attacker || !attacker.isAlive) return;
+  let stacks = 0;
+  if (typeof attacker.getStatus === 'function') {
+    stacks = attacker.getStatus('BLEED') || 0;
+  } else {
+    stacks = attacker.bleedStacks || 0;
+  }
+  if (stacks <= 0) return;
+  if (typeof attacker.takeDamageFromDeck === 'function') {
+    attacker.takeDamageFromDeck(stacks);
+  } else if (typeof attacker.takeUnpreventableDamage === 'function') {
+    attacker.takeUnpreventableDamage(stacks);
+  }
+  spawnDamageOnTarget(attacker, stacks);
+  addLog(`  ${label || attacker.name} takes ${stacks} Bleed damage!`, Colors.RED);
+  if (!attacker.isAlive && attacker instanceof Creature) {
+    spawnDeathAnimation(attacker);
+    addLog(`  ${attacker.name} bleeds out!`, Colors.GOLD, null, null, attacker);
+  }
+}
+
+// Decay BLEED by 1 at the end of the bleeder's own turn (and on each of
+// their creatures). Mirrors the Fire decay pattern.
+function decayBleedAtTurnEnd(character, label) {
+  if (!character) return;
+  const bleed = character.getStatus ? (character.getStatus('BLEED') || 0) : 0;
+  if (bleed > 0) {
+    character.removeStatus('BLEED', 1);
+    const remaining = character.getStatus('BLEED') || 0;
+    if (remaining > 0) addLog(`  ${label}'s bleed slows (Bleed:${remaining})`, Colors.RED);
+    else addLog(`  ${label}'s bleeding stops`, Colors.RED);
+  }
+  for (const c of (character.creatures || [])) {
+    if (!c) continue;
+    if ((c.bleedStacks || 0) > 0 && c.isAlive) {
+      c.bleedStacks -= 1;
+    }
+  }
+}
+
 // Get damage modifier from ice/shock for a character
 function getDamageModifier(character) {
   // Shock applies as a flat per-attack penalty (also decays at end of turn).
@@ -23792,6 +25217,34 @@ function consumeIceForAttack(attacker, rawDamage, label = null) {
   const remaining = (attacker.getStatus ? (attacker.getStatus('ICE') || 0) : (attacker.iceStacks || 0));
   addLog(`  ${label || attacker.name}: Ice -${reduction} dmg (Ice:${remaining})`, Colors.ICE_BLUE);
   return rawDamage - reduction;
+}
+
+// Ink Cloud — per-attack miss roll. Returns true when the swing
+// MISSES (damage and all riders should be suppressed), false when it
+// connects. Either way, every attack consumes 1 stack so the cloud
+// burns off naturally. Mirrors consumeIceForAttack — works on both
+// Characters (status map via getStatus / removeStatus) and Creatures
+// (direct `inkCloudStacks` field). Logs the miss / hit roll in a dark
+// purple/black so it reads as the same family as the icon.
+function consumeInkCloudForAttack(attacker, label = null) {
+  if (!attacker) return false;
+  let stacks = 0;
+  if (typeof attacker.getStatus === 'function') {
+    stacks = attacker.getStatus('INK_CLOUD') || 0;
+  } else {
+    stacks = attacker.inkCloudStacks || 0;
+  }
+  if (stacks <= 0) return false;
+  const miss = Math.random() < 0.5;
+  if (attacker.removeStatus) attacker.removeStatus('INK_CLOUD', 1);
+  else if (typeof attacker.inkCloudStacks === 'number') attacker.inkCloudStacks = Math.max(0, attacker.inkCloudStacks - 1);
+  const remaining = stacks - 1;
+  if (miss) {
+    addLog(`  ${label || attacker.name}: MISS — Ink Cloud (Ink:${remaining})`, '#9c80d8');
+  } else {
+    addLog(`  ${label || attacker.name}: hits through the Ink Cloud (Ink:${remaining})`, Colors.GRAY);
+  }
+  return miss;
 }
 
 function getIncomingDamageModifier(character) {
@@ -24826,7 +26279,7 @@ function startEnemyTurn() {
           enemy.addCreature(new Creature({
             name: 'Goblin Sapper', attack: 1, maxHp: 2,
             selfDestruct: true, onDeathDamage: 2,
-            description: 'On Attack: Self-Destruct. On Death: Deal 1-2 damage to a random enemy.',
+            description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
           }));
         }
         // Sapper signature SFX — the goblin_explosion cue (their on-death
@@ -25082,6 +26535,15 @@ function updateEnemyTurn(dt) {
   if (action.type === 'creature_attack') {
     enemyActionTimer = 250 * getEnemySpeedMul(); // faster for summons
     const c = action.creature;
+    // Kraken Tentacle holding a snagged card — wrapped up around the
+    // card, can't swing again until it dies and releases the card.
+    // Skip the attack cleanly (exhaust + flavor log) so the action
+    // queue advances without trying to fire.
+    if (c.isAlive && c._snaggedCard) {
+      c.exhaust();
+      addLog(`  ${c.name} is busy holding ${c._snaggedCard.name}.`, Colors.GRAY);
+      return;
+    }
     if (c.isAlive && !c.exhausted) {
       // High Priest creature: chants Whirlpool instead of attacking.
       // Mirrors PY: adds 1 stack to player.whirlpoolStacks; resolved
@@ -25099,6 +26561,15 @@ function updateEnemyTurn(dt) {
       // Creature swing ambient (Shark splash before bite, etc.).
       playCreatureSwingAmbient(c);
       addLog(`${c.name} attacks`, Colors.RED, null, null, c);
+      // Ink Cloud miss check — fires BEFORE damage / heroism so a
+      // missed swing doesn't burn Heroism on the creature. Stack
+      // consumed regardless. On miss, exhaust + bleed-tick + bail.
+      if (consumeInkCloudForAttack(c, c.name)) {
+        tickBleedOnAttack(c, c.name);
+        c.exhaust();
+        _activeAttacker = null;
+        return;
+      }
       // Apply rage (persistent) and heroism (consumed on attack), matching
       // Python — Warden's Whip / similar rallies grant heroism to the army,
       // and the bonus has to land on this swing to be useful.
@@ -25206,6 +26677,16 @@ function updateEnemyTurn(dt) {
           spawnTokenOnTarget(c, c.bloodfrenzy, 'Rage', Colors.RED);
         }
         c.exhaust();
+        // Self-destruct: same crumble-on-attack handling as the single-
+        // target branch below. Without this, attackAll+selfDestruct
+        // creatures (Baby Giant Frog) would deal their AoE damage and
+        // stick around forever instead of exploding.
+        if (c.selfDestruct && c.isAlive) {
+          c.currentHp = 0;
+          spawnDeathAnimation(c);
+          addLog(`  ${c.name} crumbles!`, Colors.GOLD);
+          countAndRemoveDeadCreatures();
+        }
         _activeAttacker = null;
         return;
       }
@@ -25296,6 +26777,62 @@ function updateEnemyTurn(dt) {
           if (target) spawnTokenOnTarget(target, 1, 'Poison', Colors.GREEN);
         }
       }
+      // Kraken Tentacle snag — on every swing that targets the player,
+      // splice 1 random hand card off and park it on the creature
+      // (`_snaggedCard`). The snag does NOT shrink the hand: the
+      // player immediately draws a replacement so they stay at hand
+      // size and the lock-down pressure comes from the lost CARD
+      // rather than the lost slot. No-op if the tentacle is already
+      // holding a card — one snag per tentacle.
+      if (c.onAttackSnagCard && target === player && target.isAlive && !c._snaggedCard
+          && player.deck.hand.length > 0) {
+        const idx = Math.floor(Math.random() * player.deck.hand.length);
+        const snag = player.deck.hand[idx];
+        // Visual cue: two red arrows from the tentacle — one to the
+        // player character (the swing itself) and one to the targeted
+        // hand card (the grab). Replaces the lone strike arrow so the
+        // grab reads as part of the same attack instead of a separate
+        // beat. Splice the card after a short delay so the player
+        // sees both arrows land before the card vanishes.
+        const tentacleRects = getEnemyCreatureRects();
+        const ci = enemy.creatures.indexOf(c);
+        const src = (ci !== -1 && tentacleRects[ci])
+          ? { x: tentacleRects[ci].x + tentacleRects[ci].w / 2,
+              y: tentacleRects[ci].y + tentacleRects[ci].h / 2 }
+          : getEnemyCenter();
+        const handRects = getHandCardRects(player.deck.hand);
+        const playerCenter = getTargetCenter(player);
+        const segments = [
+          { x1: src.x, y1: src.y, x2: playerCenter.x, y2: playerCenter.y },
+        ];
+        if (handRects[idx]) {
+          const hr = handRects[idx];
+          segments.push({
+            x1: src.x, y1: src.y,
+            x2: hr.x + hr.w / 2, y2: hr.y + hr.h / 2,
+          });
+        }
+        enemyArrow = null;
+        enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul() };
+        // Park the card on the tentacle and remove it from hand.
+        // Hand size shrinks until the tentacle dies and the card
+        // returns — the natural end-of-turn refill brings the hand
+        // back up over time, so no immediate replacement draw.
+        setTimeout(() => {
+          if (!c._snaggedCard) {
+            const handIdx = player.deck.hand.indexOf(snag);
+            if (handIdx !== -1) {
+              player.deck.hand.splice(handIdx, 1);
+              c._snaggedCard = snag;
+              addLog(`  ${c.name} snags ${snag.name}!`, Colors.PURPLE, snag);
+            }
+          }
+        }, 350);
+      }
+      // Bleed tick fires AFTER the swing lands so a fatal bleed never
+      // robs the creature of its attack. One tick per swing (multiAttack
+      // is one swing).
+      tickBleedOnAttack(c, c.name);
       c.exhaust();
       // Bloodfrenzy: creature gains +N persistent Rage after every
       // swing (Sharks: +1). Mirrors PY's per-attack rage bump.
@@ -25471,6 +27008,17 @@ function updateEnemyTurn(dt) {
         if (playerUndamaged) cardTarget = player;
         else if (undamagedAlly) cardTarget = undamagedAlly;
       }
+    }
+    // Ink Cloud miss check — fires BEFORE the effects loop. On miss
+    // the entire attack card is suppressed (no damage, no riders),
+    // but the card still pays its cost. Stack consumed regardless.
+    // Skipped for the Bleed tick fall-through so a missed attack
+    // still ticks bleed on the enemy.
+    const enemyInkMiss = consumeInkCloudForAttack(enemy, enemy.name);
+    if (enemyInkMiss) {
+      _activePlayCard = null;
+      tickBleedOnAttack(enemy, enemy.name);
+      return;
     }
     for (const eff of card.currentEffects) {
       if (eff.effectType === 'enemy_sneak_attack' || eff.effectType === 'sneak_attack') {
@@ -25985,6 +27533,33 @@ function updateEnemyTurn(dt) {
         // Single-target fire rider (Molten Bite). Lands on the same
         // target the swing picked.
         applyFireToTarget(cardTarget, eff.value);
+      } else if (eff.effectType === 'apply_poison_all') {
+        // Giant Frog Acid Spit — N Poison stacks on the player AND
+        // every alive ally, with a single GREEN arrow per target so
+        // the spray reads as a wide spit. Mirrors the apply_fire_all
+        // shape; poison apply path matches the standard apply_poison
+        // handler (status on player, poisonStacks on creatures).
+        if (!enemyArrowsBatch) {
+          const src = getEnemyCenter();
+          const segments = [
+            { x1: src.x, y1: src.y, x2: getTargetCenter(player).x, y2: getTargetCenter(player).y },
+          ];
+          for (const ally of player.creatures) {
+            if (!ally.isAlive) continue;
+            const dst = getTargetCenter(ally);
+            segments.push({ x1: src.x, y1: src.y, x2: dst.x, y2: dst.y });
+          }
+          enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul(), color: Colors.GREEN };
+          screenFlashTimer = 200;
+        }
+        player.applyStatus('POISON', eff.value);
+        spawnTokenOnTarget(player, eff.value, 'Poison', Colors.GREEN);
+        for (const ally of player.creatures) {
+          if (!ally.isAlive) continue;
+          ally.poisonStacks = (ally.poisonStacks || 0) + eff.value;
+          spawnTokenOnTarget(ally, eff.value, 'Poison', Colors.GREEN);
+        }
+        addLog(`  +${eff.value} Poison to all!`, Colors.GREEN);
       } else if (eff.effectType === 'apply_fire_all') {
         // AoE fire breath (Magma Drake's Fire Breath) — N Fire on the
         // player AND every alive ally. Arrow batch mirrors damage_all.
@@ -26006,6 +27581,34 @@ function updateEnemyTurn(dt) {
           if (ally.isAlive) applyFireToTarget(ally, eff.value);
         }
         addLog(`  ${eff.value} Fire to all!`, Colors.ORANGE);
+      } else if (eff.effectType === 'apply_ink_cloud_all') {
+        // Kraken Ink Cloud — stack INK_CLOUD on the player and every
+        // alive ally. Each future attack from an inked target has a
+        // 50% chance to miss outright (see consumeInkCloudForAttack).
+        // Dark purple arrow batch reads as a different cue from the
+        // red ATTACK / green POISON / orange FIRE spreads.
+        if (!enemyArrowsBatch) {
+          const src = getEnemyCenter();
+          const segments = [
+            { x1: src.x, y1: src.y, x2: getTargetCenter(player).x, y2: getTargetCenter(player).y },
+          ];
+          for (const ally of player.creatures) {
+            if (!ally.isAlive) continue;
+            const dst = getTargetCenter(ally);
+            segments.push({ x1: src.x, y1: src.y, x2: dst.x, y2: dst.y });
+          }
+          enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul(), color: '#6c50a0' };
+          screenFlashTimer = 200;
+        }
+        const inkStacks = Math.max(1, eff.value || 1);
+        player.applyStatus('INK_CLOUD', inkStacks);
+        spawnTokenOnTarget(player, inkStacks, 'Ink', '#202040');
+        for (const ally of player.creatures) {
+          if (!ally.isAlive) continue;
+          ally.inkCloudStacks = (ally.inkCloudStacks || 0) + inkStacks;
+          spawnTokenOnTarget(ally, inkStacks, 'Ink', '#202040');
+        }
+        addLog(`  +${inkStacks} Ink Cloud on all!`, '#9c80d8');
       } else if (eff.effectType === 'damage_all') {
         // AoE attack (Tail Swipe etc.) — same Heroism/Rage/Ice rules
         // as a single-target damage swing on the enemy side. Hits the
@@ -26073,6 +27676,157 @@ function updateEnemyTurn(dt) {
           addLog(`  +${eff.value} Poison on ${cardTarget.name}`, Colors.GREEN);
         }
         if (cardTarget) spawnTokenOnTarget(cardTarget, eff.value, 'Poison', Colors.GREEN);
+      } else if (eff.effectType === 'apply_bleed') {
+        // Bleed-applying enemy attacks. Same routing as apply_poison.
+        if (cardTarget instanceof Creature) {
+          cardTarget.bleedStacks += eff.value;
+        } else if (cardTarget) {
+          cardTarget.applyStatus('BLEED', eff.value);
+        }
+        if (cardTarget) {
+          addLog(`  +${eff.value} Bleed on ${cardTarget.name}`, Colors.RED);
+          spawnTokenOnTarget(cardTarget, eff.value, 'Bleed', Colors.RED);
+        }
+      } else if (eff.effectType === 'apply_poison_multi') {
+        // Acid Spit — N separate Poison stacks fired back-to-back.
+        // Each shot picks its OWN target via pickEnemyAttackTarget
+        // (so sentinel rules apply per shot, same as apply_ice_multi
+        // for Gravechill Shard). Each shot spawns its own GREEN arrow
+        // + acid splat + applies 1 Poison.
+        const shots = Math.max(1, eff.value);
+        const enemyCenter = getEnemyCenter();
+        const arrowTimer = 600 * getEnemySpeedMul();
+        const stagger = Math.max(700, arrowTimer + 100) * getEnemySpeedMul();
+        for (let s = 0; s < shots; s++) {
+          const delay = s * stagger;
+          const fire = () => {
+            const t = pickEnemyAttackTarget();
+            if (!t) return;
+            const dst = getTargetCenter(t);
+            enemyArrow = {
+              x1: enemyCenter.x, y1: enemyCenter.y,
+              x2: dst.x, y2: dst.y,
+              timer: arrowTimer,
+              sourceCreature: null,
+              color: Colors.GREEN,
+            };
+            playSound('ooze_attack', 0.55);
+            addLog(`  Spit ${s + 1}:`, Colors.GRAY);
+            if (t instanceof Creature) {
+              t.poisonStacks = (t.poisonStacks || 0) + 1;
+              addLog(`  +1 Poison on ${t.name}`, Colors.GREEN);
+            } else {
+              t.applyStatus('POISON', 1);
+              addLog(`  +1 Poison on ${t.name}`, Colors.GREEN);
+            }
+            spawnTokenOnTarget(t, 1, 'Poison', Colors.GREEN);
+          };
+          if (delay > 0) setTimeout(fire, delay);
+          else fire();
+        }
+      } else if (eff.effectType === 'summon_baby_giant_frogs') {
+        // Baby Frog Swarm — roll 1..eff.value Baby Giant Frogs. Each
+        // is an on-attack exploder with an on-death 2-dmg-to-all rider
+        // (handled by the standard selfDestruct + onDeathDamage fields).
+        const maxRoll = Math.max(1, eff.value || 1);
+        const count = 1 + Math.floor(Math.random() * maxRoll);
+        let lastFrog = null;
+        for (let i = 0; i < count; i++) {
+          const frog = new Creature({
+            name: 'Baby Giant Frog', attack: 2, maxHp: 1,
+            attackAll: true, selfDestruct: true,
+            description: 'On Attack: Explode. Deal 2 Damage to all enemies.',
+          });
+          enemy.addCreature(frog);
+          addLog(`  Baby Giant Frog joins the swarm!`, Colors.GREEN, null, null, frog);
+          lastFrog = frog;
+        }
+        playStaggeredSfx('spider_scuttle', count, 120, 0.6);
+        if (lastFrog) {
+          const lastEntry = combatLog[combatLog.length - 1];
+          if (lastEntry) lastEntry.creature = lastFrog;
+        }
+      } else if (eff.effectType === 'damage_minus_hand_count') {
+        // Swallowing Bite — base damage minus the player's hand size,
+        // plus the boss's persistent Rage (so Dire Fury actually
+        // ramps the bite). Tentacles use c.rage (their own, always 0
+        // here) so Dire Fury — which feeds enemy.rage — only
+        // strengthens the bite, never the tentacle swings.
+        // Empty hand → full damage; stuffed hand → softens or zeroes
+        // out. Goes through the standard enemy damage routing so
+        // block/shield/armor still apply.
+        const base = Math.max(0, eff.value || 0);
+        const handCount = (player && player.deck && player.deck.hand) ? player.deck.hand.length : 0;
+        const rageBonus = enemy.rage || 0;
+        const swingDmg = Math.max(0, base - handCount + rageBonus);
+        const rageStr = rageBonus > 0 ? ` + ${rageBonus} Rage` : '';
+        addLog(`  Swallowing Bite: ${base} - ${handCount} hand${rageStr} = ${swingDmg}`, Colors.GRAY);
+        const tgt = pickEnemyAttackTarget() || player;
+        routeEnemyDamageToTarget(tgt, swingDmg, enemy.name, null);
+      } else if (eff.effectType === 'summon_kraken_tentacle'
+              || eff.effectType === 'summon_kraken_tentacle_passive') {
+        // Tentacle spawn — Tentacle Grab (active) injects an
+        // immediate attack right after the cast so the tentacle
+        // swings the same beat. Tentacle (passive) just adds the
+        // creature to the row and waits for the next turn's normal
+        // creature_attack queue. No field cap — Kraken stacks
+        // tentacles up to Character.MAX_CREATURES.
+        const passive = eff.effectType === 'summon_kraken_tentacle_passive';
+        {
+          const tentacle = new Creature({
+            name: 'Tentacle', attack: 3, maxHp: 5,
+            onAttackSnagCard: true,
+            description: 'On Attack: snag 1 random card from your hand.',
+          });
+          tentacle.exhausted = false;
+          tentacle.justSummoned = false;
+          enemy.addCreature(tentacle);
+          addLog(`  A Tentacle slithers up out of the water!`, Colors.ORANGE, null, null, tentacle);
+          playSound('splash_dive', 0.6);
+          const lastEntry = combatLog[combatLog.length - 1];
+          if (lastEntry) lastEntry.creature = tentacle;
+          if (!passive) {
+            // Active variant — inject an immediate attack action so the
+            // tentacle swings this same beat (matches the Tentacle
+            // Grab card text "Summon a Tentacle, it attacks"). Splice
+            // at enemyActionIndex (NOT +1): the dispatch loop already
+            // incremented the index past the card before running this
+            // handler, so position [enemyActionIndex] is the NEXT slot.
+            enemyActions.splice(enemyActionIndex, 0, { type: 'creature_attack', creature: tentacle });
+          }
+        }
+      } else if (eff.effectType === 'luring_song') {
+        // Harpy Luring Song — for every enemy: lose 1 random hand
+        // card if any, otherwise take 1 damage. Allies have no hand,
+        // so the rider always lands as damage on them.
+        const dmg = Math.max(1, eff.value || 1);
+        const src = getEnemyCenter();
+        const segments = [{ x1: src.x, y1: src.y, x2: getTargetCenter(player).x, y2: getTargetCenter(player).y }];
+        for (const ally of (player.creatures || [])) {
+          if (!ally.isAlive) continue;
+          const dst = getTargetCenter(ally);
+          segments.push({ x1: src.x, y1: src.y, x2: dst.x, y2: dst.y });
+        }
+        enemyArrowsBatch = { segments, timer: 550 * getEnemySpeedMul(), color: Colors.PURPLE };
+        screenFlashTimer = 200;
+        if (player.deck.hand.length > 0) {
+          const idx = Math.floor(Math.random() * player.deck.hand.length);
+          const lost = player.deck.hand.splice(idx, 1)[0];
+          player.deck.discardPile.push(lost);
+          addLog(`  Luring Song: ${lost.name} → discard`, Colors.PURPLE, lost);
+        } else {
+          const [, taken] = player.takeDamageWithDefense(dmg);
+          if (taken > 0) spawnDamageOnTarget(player, taken);
+          addLog(`  Luring Song: ${taken} damage to you (empty hand)`, Colors.RED);
+        }
+        // Each ally with no hand just takes the damage.
+        for (const ally of (player.creatures || [])) {
+          if (!ally.isAlive) continue;
+          const actual = ally.takeDamage(dmg);
+          if (actual > 0) spawnDamageOnTarget(ally, actual);
+          addLog(`  Luring Song: ${actual} damage to ${ally.name}`, Colors.RED);
+        }
+        countAndRemoveDeadCreatures();
       } else if (eff.effectType === 'gain_rage') {
         // Enraged Strike — bumps the enemy's persistent Rage by N
         // (each subsequent attack gets +N damage). Mirrors PY.
@@ -26254,6 +28008,9 @@ function updateEnemyTurn(dt) {
       }
     }
     _activePlayCard = null;
+    // Bleed tick after the attack card resolves so a fatal bleed
+    // never robs the enemy of their swing.
+    tickBleedOnAttack(enemy, enemy.name);
   } else if (action.action === 'ability') {
     // ABILITY cards (Defensive Formation, etc.) — utility plays. Mirrors PY's
     // enemy ABILITY-card handler at game.py:13823. Does NOT bump
@@ -26612,6 +28369,7 @@ function completePlayerTurnTransition() {
   if (enemy) {
     decayIceAtTurnEnd(enemy, enemy.name);
     decayShockAtTurnEnd(enemy, enemy.name);
+    decayBleedAtTurnEnd(enemy, enemy.name);
   }
 
   // End-of-enemy-turn passive powers. Dire Fury: +1 Rage per turn, stacking
@@ -26714,14 +28472,10 @@ function completePlayerTurnTransition() {
   for (const c of player.deck.hand) c.exhausted = false;
   attacksThisTurn = 0;
 
-  // Status DoTs fire here (PY parity): Poison, Fire, Shock tick on the
-  // player + every ally creature, just after the new turn banner. Bail
-  // out of the rest of the start-of-turn flow if combat ended (e.g.
-  // poison killed the last creature and ended the fight).
-  processStatusEffects(player, 'You');
-  if (checkCombatEnd()) return;
-
-  // Process combat buffs at start of player turn
+  // Combat buffs (food/meal heals, Regrowth, etc.) fire BEFORE the
+  // status DoTs so meal heals can clear Poison stacks before they
+  // tick damage. Without this swap, Fresh Fish + Poison would tick
+  // poison first (damaging the player), then heal only the leftover.
   const buffLogs = player.processCombatBuffs();
   playBuffTickSfxQueue(buffLogs);
   for (const log of buffLogs) {
@@ -26729,6 +28483,15 @@ function completePlayerTurnTransition() {
     if (log.healed) spawnHealOnTarget(player, log.healed);
     if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
   }
+
+  // Status DoTs fire AFTER meals (PY parity was status-first; we
+  // intentionally diverge so food can shield the player from Poison
+  // ticks). Poison, Fire, Shock tick on the player + every ally
+  // creature. Bail out of the rest of the start-of-turn flow if
+  // combat ended (e.g. poison killed the last creature and ended
+  // the fight).
+  processStatusEffects(player, 'You');
+  if (checkCombatEnd()) return;
 
   // Whirlpool — forced swim of 1 per stack. Show the Whirlpool
   // card on screen and route through the SWIMMING flow so On Swim
@@ -26739,6 +28502,25 @@ function completePlayerTurnTransition() {
     startWhirlpoolPhase(player.whirlpoolStacks);
     player.whirlpoolStacks = 0;
     clearWhirlpoolBuff();
+    return;
+  }
+  // Giant Frog swim_drag debuff — mandatory recharge of N at start
+  // of turn. Reuses startWhirlpoolPhase (player picks which card,
+  // standard swim-recharge handler fires Fish Scale Boots' on_swim_
+  // recharge_draw + Fresh Fish's _swimDraw on each pick). The
+  // SwimmingInCurrent card is shown in the showcase instead of the
+  // Whirlpool card so the visual matches the debuff icon.
+  const swimDragBuff = (player.combatBuffs || []).find(b => b.id === 'swim_drag' && b.effectType === 'swim_drag_recharge');
+  if (swimDragBuff) {
+    const need = Math.max(1, swimDragBuff.effectValue || 1);
+    startWhirlpoolPhase(need, {
+      showcase: () => createSwimmingShowcase({
+        description: `To Swim: Recharge ${need} card${need > 1 ? 's' : ''}.`,
+        shortDesc: `Swim:\nR ${need} Card${need > 1 ? 's' : ''}`,
+      }),
+      introLog: `Dragged under! Recharge ${need} card to swim back up.`,
+      toastLabel: `SWIM — recharge ${need} hand card${need > 1 ? 's' : ''}`,
+    });
     return;
   }
 
@@ -26790,17 +28572,21 @@ function startSwimmingPhase() {
 // swimTarget bookkeeping (no encounter goal here) and routes empty-
 // hand failure to per-stack damage. The Whirlpool card is shown on
 // screen via the showcase slot so the player sees what's happening.
-function startWhirlpoolPhase(stacks) {
+function startWhirlpoolPhase(stacks, opts = {}) {
   if (stacks <= 0) return;
   whirlpoolMode = true;
   whirlpoolPending = stacks;
   swimCardsThisTurn = 0;
   swimFlashTimer = 0;
-  // Show the Whirlpool card on-screen for the player.
-  showcaseCard = createWhirlpool();
+  // Showcase override — swim_drag (Giant Frog) shows the SwimmingInCurrent
+  // card instead of the Whirlpool card so the picker reads as "you're
+  // swimming for your life" rather than a literal whirlpool. Log /
+  // toast labels also accept overrides.
+  showcaseCard = (typeof opts.showcase === 'function') ? opts.showcase() : createWhirlpool();
   showcaseTimer = SHOWCASE_DURATION + 1500; // hold longer than a normal play
   showcaseFadeIn = 0;
-  addLog(`Whirlpool drags you under! Resolve ${stacks} stack(s).`, Colors.RED);
+  const introLog = opts.introLog || `Whirlpool drags you under! Resolve ${stacks} stack(s).`;
+  addLog(introLog, Colors.RED);
   // Empty hand: drown for the full count without entering interactive
   // swim — take 1 deck damage per stack, flash, and bounce out.
   if (!player.deck.hand.length) {
@@ -26819,7 +28605,15 @@ function startWhirlpoolPhase(stacks) {
     return;
   }
   state = GameState.SWIMMING;
-  showStyledToast(`WHIRLPOOL — recharge ${whirlpoolPending} hand card(s)`, 'swim');
+  const toastLabel = opts.toastLabel || `WHIRLPOOL — recharge ${whirlpoolPending} hand card(s)`;
+  // Delay the toast until the showcase card has finished its
+  // fade-in/hold/fade-out (SHOWCASE_DURATION + 1500ms hold). Avoids
+  // the toast crowding the showcase art; by the time the toast
+  // appears the card is gone and the prompt has the slot to itself.
+  const showcaseHold = SHOWCASE_DURATION + 1500;
+  setTimeout(() => {
+    if (state === GameState.SWIMMING) showStyledToast(toastLabel, 'swim');
+  }, showcaseHold);
 }
 
 function handleSwimmingClick(x, y) {
@@ -27389,6 +29183,10 @@ function getCreaturePlaySfxKey(c) {
   if (name === 'misha') return 'bear_growl';
   if (name === 'huffer') return 'pig_grunt';
   if (name === 'pet spider') return 'spider_scuttle';
+  // Baby Giant Frog — splash on summon AND on death (matches the
+  // attack splash wired through getWeaponSfxKeys below). The frog
+  // belly-flops when it explodes.
+  if (name === 'baby giant frog') return 'splash_dive';
   if (name === 'pet slime') return 'ooze_attack';
   if (name === 'tamed rat') return 'rat_screech';
   // Dire Rat (Rat Taming summon) — same squeak as the enemy Dire
@@ -27455,6 +29253,18 @@ function getDeathSfxKey(c) {
   }
   // Kobold Warden death — louder hiss to bookend the fight.
   if (name === 'kobold warden') return 'warden_hiss';
+  // Baby Giant Frog death — splash, matching the on-summon and
+  // on-attack water cues for the same creature.
+  if (name === 'baby giant frog') return 'splash_dive';
+  // Harpy summon death — alien scream (one shot here so the death
+  // doesn't overlap noisily with the on-death song fallout; combat
+  // start gets the full 3-staggered burst via playHarpyBurst).
+  if (name === 'harpy') return 'monster_alien_scream_01';
+  // Kraken Spawn death — alien scream (matches the fight-start
+  // scream + splash combo). Tentacle deaths stay wet — body-fall
+  // splash.
+  if (name === 'kraken spawn') return 'monster_alien_scream_01';
+  if (name === 'tentacle') return 'splash_dive';
   // Kobold Patrol death — generic kobold hiss.
   if (name === 'kobold patrol') return 'kobold_attack';
   // General Zhost (army wave + boss phase) — beefier hiss.
@@ -27562,6 +29372,20 @@ function getFightStartSfxKey(rawName) {
   }
   if (name === 'sahuagin baron') return 'sahuagin_baron_scream';
   if (name === 'piranhas swarm') return 'piranha_swarm';
+  // Giant Frog — the tongue grab yanks the party into the lake; the
+  // body-fall water cue doubles as the spawn splash on the codex tile
+  // and as the combat-start sting.
+  if (name === 'giant frog') return 'splash_dive';
+  // Harpies — the boss enters on the masthead song; reuse the spider
+  // scuttle as a placeholder leg-rustle until a dedicated harpy
+  // screech sample lands.
+  if (name === 'harpies' || name === 'harpy') return 'spider_scuttle';
+  // Kraken Spawn — fight-start scream layered with a splash (the
+  // boss roars as it surfaces). The single-key return here is the
+  // alien scream; the splash layer is added by the special-case
+  // burst hook in startCombat. Tentacle summons stay as just splash.
+  if (name === 'kraken spawn') return 'monster_alien_scream_01';
+  if (name === 'tentacle') return 'splash_dive';
   if (name === 'deathjump spiders') return 'spider_scuttle';
   if (name === 'siege ogre') return 'ogre_growl';
   // Mimic — antiquity shop ambush. The alien shriek doubles as the
@@ -27665,6 +29489,46 @@ function countAndRemoveDeadCreatures() {
     }
     addLog(`  ${c.name} bursts! ${hits} Fire scattered.`, Colors.ORANGE);
     c.onDeathFireHits = 0;
+  }
+  // Tentacle snag release — when a Kraken Tentacle dies, the card
+  // it grabbed returns to the player's hand. Bypasses the hand cap
+  // (the snag was forced, so the return is too — temporarily
+  // over-cap is fine).
+  for (const c of enemy.creatures) {
+    if (c.isAlive) continue;
+    if (!c._snaggedCard) continue;
+    const released = c._snaggedCard;
+    c._snaggedCard = null;
+    player.deck.hand.push(released);
+    addLog(`  ${c.name} releases ${released.name} — back in hand.`, Colors.GREEN, released);
+  }
+  // onDeathDiscardOrDamage — Harpy death rider. For every enemy:
+  // if the player has cards in hand, the whole hand discards;
+  // allies (no hand) take N damage. If the player's hand is empty,
+  // they also take N damage.
+  for (const c of enemy.creatures) {
+    if (c.isAlive) continue;
+    if (!(c.onDeathDiscardOrDamage > 0)) continue;
+    const dmg = c.onDeathDiscardOrDamage;
+    if (player.deck.hand.length > 0) {
+      const count = player.deck.hand.length;
+      while (player.deck.hand.length > 0) {
+        const card = player.deck.hand.shift();
+        player.deck.discardPile.push(card);
+      }
+      addLog(`  ${c.name}'s death song: you discard ${count} card${count > 1 ? 's' : ''}!`, Colors.RED);
+    } else {
+      const [, taken] = player.takeDamageWithDefense(dmg);
+      if (taken > 0) spawnDamageOnTarget(player, taken);
+      addLog(`  ${c.name}'s death song: ${taken} damage to you!`, Colors.RED);
+    }
+    for (const a of (player.creatures || [])) {
+      if (!a.isAlive) continue;
+      const actual = a.takeDamage(dmg);
+      if (actual > 0) spawnDamageOnTarget(a, actual);
+      addLog(`  ${c.name}'s death song: ${actual} damage to ${a.name}!`, Colors.RED);
+    }
+    c.onDeathDiscardOrDamage = 0;
   }
   enemy.removeDeadCreatures();
   player.removeDeadCreatures();
@@ -27951,6 +29815,7 @@ function handleModalSelectClick(x, y) {
       const needsSingleTarget = chosen.effects.some(e =>
         e.target === TargetType.SINGLE_ENEMY &&
         (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
+         e.effectType === 'apply_bleed' ||
          e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
          e.effectType === 'sneak_attack' || e.effectType === 'charge_attack')
       );
@@ -28511,6 +30376,7 @@ function applyStartOfCombatBuffs() {
     });
     projected._persistent = true;
     projected._swimDraw = pb._swimDraw || 0;
+    projected._onDiscardDraw = pb._onDiscardDraw || 0;
     player.addCombatBuff(projected);
     addLog(`  ${pb.name} activates!`, Colors.GOLD);
   }
@@ -28532,6 +30398,38 @@ function applyStartOfCombatBuffs() {
         effectValue: 1,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
+      }));
+    }
+  }
+  // Giant Frog swim drag — mandatory recharge of 1 hand card at the
+  // start of every player turn. Fires for both the first ambush and
+  // every subsequent reef-rock ambush since each is its own fresh
+  // combat-start.
+  // Both the Giant Frog reef ambush AND the Kraken Spawn fall-in-the-
+  // water boss apply the swim_drag debuff (mandatory recharge of 1
+  // hand card at the start of every player turn). Same buff for
+  // both fights — the player is in the water either way.
+  const swimDragEncounters = new Set(['giant_frog_ambush']);
+  const inSwimDragFight =
+    (currentEncounter && swimDragEncounters.has(currentEncounter.id))
+    || (enemy && enemy._enemyId === 'kraken_spawn');
+  if (inSwimDragFight) {
+    const hasBuff = (player.combatBuffs || []).some(b => b.id === 'swim_drag');
+    if (!hasBuff) {
+      player.addCombatBuff(new CombatBuff({
+        id: 'swim_drag',
+        name: 'Dragged Into the Water',
+        // "Swim 1" wording so Fish Scale Boots' on_swim_recharge_draw
+        // and Fresh Fish's _swimDraw hooks all read this as a Swim
+        // and fire their extra draws when the start-of-turn recharge
+        // resolves.
+        description: 'Start of Turn: Swim 1 (mandatory recharge).',
+        imageId: 'swimming_in_current',
+        effectType: 'swim_drag_recharge',
+        effectValue: 1,
+        trigger: 'start_of_turn',
+        combatsRemaining: 1,
+        isDebuff: true,
       }));
     }
   }
@@ -28723,14 +30621,20 @@ function handleScrySelectClick(x, y) {
       playSound('card_play');
       player.deck.hand.push(picked);
       addLog(`  Draw: ${picked.name}`, Colors.BLUE, picked);
-      // Recharge the rest
+      // Recharge (or return to discard) the rest
       for (let j = 0; j < scryCards.length; j++) {
         if (j !== i) {
-          player.deck.addToRechargePile(scryCards[j]);
-          addLog(`  Recharged: ${scryCards[j].name}`, Colors.GRAY, scryCards[j]);
+          if (_scryFromDiscard) {
+            player.deck.discardPile.push(scryCards[j]);
+            addLog(`  Returned to discard: ${scryCards[j].name}`, Colors.GRAY, scryCards[j]);
+          } else {
+            player.deck.addToRechargePile(scryCards[j]);
+            addLog(`  Recharged: ${scryCards[j].name}`, Colors.GRAY, scryCards[j]);
+          }
         }
       }
       scryCards = [];
+      _scryFromDiscard = false;
       hideToast();
       // If the scry came from a defense card (Traveler's Clothing) and
       // damage was already fully absorbed mid-flow, finalize the
@@ -28892,6 +30796,7 @@ const SHOP_INVENTORIES = {
     createGoodberry,
     createChickenLeg,
     createAle,
+    createFreshFish,
   ],
   dwarven_tavern: [
     createDwarvenBrew,
@@ -31182,6 +33087,9 @@ function commitSaveEditing() {
     mapTableCopied, mapTableRested,
     caveEntranceDoubledBack,
     corridorEntranceDoubledBack,
+    cozySpotFishingCaught, outpostTentRested, supplyPileTaken,
+    krakenDefeated, krakenLevelUpClaimed, harpiesDefeated,
+    lakeFrogRocks: _lakeFrogRocks,
     backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
@@ -31824,6 +33732,12 @@ function restoreFromSave(data) {
   cathedralPrayed = !!data.cathedralPrayed;
   cathedralRested = !!data.cathedralRested;
   cozySpotFishingCaught = !!data.cozySpotFishingCaught;
+  outpostTentRested = !!data.outpostTentRested;
+  supplyPileTaken = !!data.supplyPileTaken;
+  harpiesDefeated = !!data.harpiesDefeated;
+  _lakeFrogRocks = Array.isArray(data.lakeFrogRocks) ? data.lakeFrogRocks.slice() : null;
+  krakenDefeated = !!data.krakenDefeated;
+  krakenLevelUpClaimed = !!data.krakenLevelUpClaimed;
   ancestorSpiritsDefeated = !!data.ancestorSpiritsDefeated;
   ancestorRested = !!data.ancestorRested;
   workbenchRested = !!data.workbenchRested;
@@ -31864,6 +33778,7 @@ function restoreFromSave(data) {
         if (b._provisionTurnsPerCombat) pb._provisionTurnsPerCombat = b._provisionTurnsPerCombat;
         if (b._provisionEffects) pb._provisionEffects = b._provisionEffects;
         if (b._swimDraw) pb._swimDraw = b._swimDraw;
+        if (b._onDiscardDraw) pb._onDiscardDraw = b._onDiscardDraw;
         return pb;
       })
       .filter(Boolean);
@@ -31897,6 +33812,13 @@ function restoreFromSave(data) {
     cave: createCaveMap,
     ruins_basin: createRuinsBasinMap,
     north_qualibaf: createNorthQualibafMap,
+    // South arm (post-launch additions). Without these entries the
+    // map-id lookup on load fell back to createPrisonCellMap and the
+    // player landed on a blank/wrong map after autosave reload while
+    // standing anywhere south of Qualibaf.
+    south_of_qualibaf: createSouthOfQualibafMap,
+    south_outpost: createSouthOutpostMap,
+    river_cave_mouth: createRiverCaveMouthMap,
     filibaf_forest: createFilibafForestMap,
     tharnag: createTharnagMap,
     volcano: createVolcanoMap,
@@ -32223,7 +34145,7 @@ const HELP_CONTENT = [
     { text: 'Heroism: bonus damage added to your next attack, then consumed.', color: '#ffd700' },
     { text: 'Rage: permanent bonus damage to all your attacks for this combat.', color: '#dc4040' },
     { text: 'Block: absorbs damage from defense cards. Clears at end of turn.', color: '#ffffff' },
-    { text: 'Scry N: look at the top N cards of your deck, pick 1 to draw, recharge the rest.', color: '#7ec8ff' },
+    { text: 'Scry N: look at the top N cards of your draw pile, pick 1 to draw, recharge the rest. Variant — Scry N from your discard pile: pick 1 to draw, the unpicked cards stay in discard.', color: '#7ec8ff' },
     { text: 'Heal N: restore up to N cards from discard. Poison stacks are cleared first (1 heal = 1 Poison removed); the rest heals cards.', color: '#7cff9c' },
     { text: 'True damage: unpreventable. Bypasses Shield, Armor, Block, and the defense phase — pulls straight from the deck.', color: '#ff9a70' },
     { text: 'Ignite: your next damaging attack also applies Fire equal to stacks. Consumed on attack.', color: '#ff8c40' },
@@ -32233,6 +34155,7 @@ const HELP_CONTENT = [
     { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn. Applying Ice to a target with Fire cancels the Fire instead (1-for-1).', color: '#78c8ff' },
     { text: 'Poison: deals damage equal to stacks each turn. Removed by healing — each point of Heal cancels 1 Poison stack before any actual healing lands (1-for-1).', color: '#3cc83c' },
     { text: 'Shock: -1 damage dealt and +1 damage taken per stack, decays by 1.', color: '#ffe650' },
+    { text: 'Bleed: deals damage equal to stacks AFTER every attack the bleeder makes (so a fatal bleed never robs them of the swing). One tick per attack action — a multi-attack creature bleeds once per swing. Decays by 1 at end of turn. Cleared 1-to-1 by healing, just like Poison.', color: '#ff5050' },
   ]},
   { title: 'Allies & Summons', items: [
     { text: 'Summoned creatures and allies are exhausted the turn they come into play and can attack on the next turn.' },
@@ -33415,6 +35338,7 @@ const CARD_SFX_OVERRIDES = {
   // it reads as the blade catching fire after the impact).
   obsidian_edge:            { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
   white_claw:               { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  harpy_talon_blade:        { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
   white_claw_reforged:      { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
   rock_mace:                { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
   // Ruga's Pummel — wooden-bat thud on every swing (flesh AND
@@ -33433,7 +35357,8 @@ const CARD_SFX_OVERRIDES = {
   // shows the wiring even though the actual playback is bespoke.
   arcane_beam:              { play: 'arcane_beam' },
   fire_burst:               { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
-  wand_of_fire:             { flesh: 'fire_flesh',    blocked: 'fire_flesh' },
+  wand_of_fire:             { flesh: 'fire_flesh', blocked: 'fire_flesh',
+                              play:  'fireball_whoosh_01' },
   ice_bolt:                 { flesh: 'ice_flesh',     blocked: 'ice_flesh' },
   // Ranger Multi Shot — three staggered bow shots on cast, same UX
   // as Sprint / Shield Wall / Treants. flesh/blocked omitted so the
@@ -33598,6 +35523,25 @@ const CARD_SFX_OVERRIDES = {
   runeforged_buckler:       { play: 'shield_grab' },
   web_spider:               { play: 'spider_scuttle' },
   poisoned_bite:            { flesh: 'spider_scuttle', blocked: 'spider_scuttle' },
+  // Giant Frog enemy deck — ooze-attack squelch for the bite, scuttle
+  // for the swarm summon, and (per-shot) ooze-attack inside the
+  // apply_poison_multi handler for Acid Spit. Swallow uses the same
+  // wet-bite cue but lands harder via the splash on play.
+  frog_bite:                { flesh: 'ooze_attack',    blocked: 'spider_scuttle' },
+  baby_frog_swarm:          { play:  'spider_scuttle' },
+  acid_spit:                { play:  'ooze_attack' },
+  giant_frog_swallow:       { play:  'splash_dive', flesh: 'ooze_attack', blocked: 'spider_scuttle' },
+  // Harpy Luring Song — same alien scream the harpies use on entry
+  // and on death so the boss "song" reads as the whole flock singing.
+  luring_song:              { play:  'monster_alien_scream_01' },
+  // Swallowing Bite — Kraken boss heavy strike. Same alien scream as
+  // the Harpy luring song and the kraken's other monstrous beats so
+  // the boss reads sonically as the same horror across all its cards.
+  swallowing_bite:          { play:  'monster_alien_scream_01' },
+  // Kraken Tentacle Grab — splash on cast (the new tentacle breaches
+  // the water). Per-swing flesh/blocked SFX handled by the creature
+  // weapon-key branch above.
+  tentacle_grab:            { play:  'splash_dive' },
   kobold_backup:            { play: 'kobold_attack' },
   kobold_army:              { play: 'kobold_attack' },
   split:                    { play: 'ooze_attack' },
@@ -33625,6 +35569,7 @@ const CARD_SFX_OVERRIDES = {
   bad_rations:              { play: 'eat' },
   lambas_bread:             { play: 'eat' },
   travel_rations:           { play: 'eat' },
+  fresh_fish:               { play: 'eat' },
   bandages:                 { play: 'cloth_use' },
   scraps:                   { play: 'cloth_use' },
   sack:                     { play: 'bag_use' },
@@ -33706,6 +35651,22 @@ function getWeaponSfxKeys(card = null, creature = null) {
     }
     if (name === 'large boulder' || name === 'small boulder') {
       return { flesh: 'boulder_flesh', blocked: 'boulder_blocked' };
+    }
+    // Baby Giant Frog — splash water on every swing (the on-attack
+    // explode hits all enemies with the same body-fall cue used for
+    // its play + death triggers).
+    if (name === 'baby giant frog') {
+      return { flesh: 'splash_dive', blocked: 'splash_dive' };
+    }
+    // Harpy summon — talon rake routes through the dagger family:
+    // gore_flesh on a clean hit, stab on a blocked one.
+    if (name === 'harpy') {
+      return { flesh: 'dagger_flesh', blocked: 'dagger_blocked' };
+    }
+    // Kraken Tentacle — wet whip on every grab. Splash on the swing
+    // for both hits and blocks so the snag reads as a body-fall.
+    if (name === 'tentacle') {
+      return { flesh: 'splash_dive', blocked: 'splash_dive' };
     }
     // Raena (player ranger companion) — bow swings on attack.
     if (name === 'raena') {
@@ -33968,6 +35929,15 @@ function playObsidianSlimeBurst(volume = 0.7) {
 function playObsidianGolemBurst(volume = 0.7) {
   playSound('rocks_impact_small', volume);
   setTimeout(() => playSound('rocks_impact_small', volume), 260);
+}
+
+// Harpies — 3 staggered alien-scream samples for the fight-start
+// reveal (mast full of harpies singing) and for each Harpy summon
+// death so the wing-collapse reads as a screech bookend.
+function playHarpyBurst(volume = 0.7) {
+  playSound('monster_alien_scream_01', volume);
+  setTimeout(() => playSound('monster_alien_scream_01', volume), 220);
+  setTimeout(() => playSound('monster_alien_scream_01', volume), 440);
 }
 
 // Obsidian Oracle — same layered golem burst plus a dark-spell tail so
@@ -34340,7 +36310,7 @@ function drawFogOfWar(currentArea) {
   if (!currentNode) return;
 
   // Fog applies to all non-outdoor areas (matching Python game)
-  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
   if (outdoorAreas.has(currentArea)) return;
 
   // Create offscreen fog canvas if needed
@@ -35054,7 +37024,7 @@ function drawCodexCardGrid(L) {
   const visible = all
     .filter(e => e.side === sideWanted)
     .filter(e => passesCodexCardFilter(e, codexFilter))
-    .filter(e => !codexSearchText || _codexSearchMatches(e.card.name) || _codexSearchMatches(e.card.id))
+    .filter(e => !codexSearchText || _codexCardTextMatches(e.card))
     .sort((a, b) => a.card.name.localeCompare(b.card.name));
 
   // Card sizes — exact match to in-game so this is a faithful debug view.
@@ -35339,6 +37309,15 @@ function _codexSearchMatches(haystack) {
   return (haystack || '').toLowerCase().includes(q);
 }
 
+// Card/power text search: name, id, and the full rules text. Lets players
+// find cards by keyword (e.g. "Scry", "Bleed") instead of only by name.
+function _codexCardTextMatches(c) {
+  if (!c) return false;
+  return _codexSearchMatches(c.name) || _codexSearchMatches(c.id) ||
+         _codexSearchMatches(c.description) || _codexSearchMatches(c.shortDesc) ||
+         _codexSearchMatches(c.effectDescription);
+}
+
 // Renders one section per loot table: title bar, optional note, then a row of
 // member cards with the drop % overlaid below each card. Honors codexShowFull
 // (small / full). Each section ends with a "Test Roll" button that calls
@@ -35395,7 +37374,7 @@ function drawCodexLootGrid(L) {
     if (e.kind === 'loot') {
       const label = LOOT_TABLE_LABELS[e.id] || e.id;
       if (_codexSearchMatches(label)) return true;
-      return LOOT_TABLES[e.id].some(x => _codexSearchMatches(x.creator().name));
+      return LOOT_TABLES[e.id].some(x => _codexCardTextMatches(x.creator()));
     } else if (e.kind === 'perk') {
       const label = `Perk Roll — ${e.className} Tier ${e.tier}`;
       if (_codexSearchMatches(label) || _codexSearchMatches(e.className)) return true;
@@ -35409,7 +37388,7 @@ function drawCodexLootGrid(L) {
       if (_codexSearchMatches(label)) return true;
       return SHOP_INVENTORIES[e.shopId].some(entry => {
         const { creator } = resolveShopEntry(entry);
-        return _codexSearchMatches(creator().name);
+        return _codexCardTextMatches(creator());
       });
     }
   });
@@ -36231,7 +38210,7 @@ function drawCodexDecksGrid(L) {
   const decks = allDecks.filter(d => {
     if (!codexSearchText) return true;
     if (_codexSearchMatches(d.label)) return true;
-    return d.entries.some(e => _codexSearchMatches(e.card.name));
+    return d.entries.some(e => _codexCardTextMatches(e.card));
   }).sort((a, b) => a.label.localeCompare(b.label));
 
   const cardW = codexShowFull ? 200 : 90;
@@ -36373,6 +38352,15 @@ function getCodexMonsterIds() {
     // Chapter 8 phase-3 dragon — Varimatras, ancient frost dragon
     // that descends after Gnikan's second death.
     'varimatras',
+    // Lake rock formation ambush — Giant Frog. Boss with Acid Spit,
+    // Frog Bite, Swallow heavy hit, and Baby Frog Swarm summons.
+    'giant_frog',
+    // Shipwreck deck — Harpies. Invulnerable boss cycling Luring Song
+    // while three Harpy summons must be killed (killTarget=3).
+    'harpies',
+    // Post-ship_chest water boss — Kraken Spawn. Tentacle field with
+    // Swallowing Bite.
+    'kraken_spawn',
   ];
 }
 
@@ -36387,6 +38375,9 @@ function drawCodexCharacterPanel(entry, x, y, w, h) {
     // Zhost Revenge reuses the General Zhost portrait — same character,
     // returning at the upper bridge after the Tharnag siege.
     zhost_revenge: 'general_zhost',
+    // Harpies enemy id has no preloaded `harpies` art; the boss portrait
+    // (HarpyMonster.jpg) lives on the luring_song card-art entry.
+    harpies: 'luring_song',
   };
   let portraitId, displayName;
   if (entry.kind === 'hero') {
@@ -36723,18 +38714,25 @@ function buildCodexSourceCache() {
   // Encounter drops — each encounter's LOOT phase lootCards[] lists cardIds
   // or loot-table ids. Expand loot-table ids into their member cards so every
   // droppable card is attributed to the encounter that drops it.
+  // Also covers lootPickCards (Varimatras / Kraken-style player-pick lists).
   for (const [encId, fn] of Object.entries(ENCOUNTER_REGISTRY)) {
     try {
       const enc = fn();
       for (const phase of enc.phases || []) {
-        if (!Array.isArray(phase.lootCards) || !phase.lootCards.length) continue;
-        for (const ref of phase.lootCards) {
-          if (LOOT_TABLES[ref]) {
-            for (const entry of LOOT_TABLES[ref]) {
-              addCard(entry.creator().id, `Drop: ${enc.name}`);
+        if (Array.isArray(phase.lootCards) && phase.lootCards.length) {
+          for (const ref of phase.lootCards) {
+            if (LOOT_TABLES[ref]) {
+              for (const entry of LOOT_TABLES[ref]) {
+                addCard(entry.creator().id, `Drop: ${enc.name}`);
+              }
+            } else {
+              addCard(ref, `Drop: ${enc.name}`);
             }
-          } else {
-            addCard(ref, `Drop: ${enc.name}`);
+          }
+        }
+        if (Array.isArray(phase.lootPickCards) && phase.lootPickCards.length) {
+          for (const id of phase.lootPickCards) {
+            addCard(id, `Drop: ${enc.name} (pick ${phase.lootPickCount || 1})`);
           }
         }
       }
@@ -36752,6 +38750,7 @@ function buildCodexSourceCache() {
     'wolf_pack','stone_giant','mimic','ruga_slave_master','zhost_revenge','ancestor_spirits',
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',
     'magma_mephit','overseer_gnikan','overseer_gnikan_phase_2','varimatras',
+    'giant_frog','harpies','kraken_spawn',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the

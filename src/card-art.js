@@ -301,6 +301,38 @@ export const CARD_ART_MAP = {
   chain_shirt: 'ChainShirt.jpg',
   lambas_bread: 'LambasBread.jpg',
   fresh_fish: 'FishFood.jpg',
+  // Giant Frog enemy deck (River Cave Mouth lake-rock ambush).
+  baby_frog_swarm:    'BabyFrogSwarm.jpg',
+  frog_bite:          'GiantFrog.jpg',
+  acid_spit:          'GiantFrogAcidSpit.jpg',
+  giant_frog_swallow: 'GiantFrogSwallow.jpg',
+  // Giant Frog loot drops.
+  frog_nursery:       'BabyFrogSwarm.jpg',
+  frog_skin_boots:    'FrogSkinBoots.jpg',
+  toxic_frog_extract: 'ToxicFrogExtract.jpg',
+  // Harpy encounter — Luring Song uses the boss portrait art; the
+  // creature lookup for "Harpy" summons points at HarpySummon.jpg.
+  luring_song:        'HarpyMonster.jpg',
+  // Harpy loot drops.
+  feather_cloak:         'FeatherCloak.jpg',
+  harpy_feather:         'HarpyFeather.jpg',
+  harpy_egg_omelette:    'HarpyEggOmelette.jpg',
+  harpy_talon_blade:     'HarpyTalonBlade.jpg',
+  harpy_screaming_charm: 'HarpyScreamingCharm.jpg',
+  // Kraken Spawn — boss portrait + tentacle creature + Tentacle Grab
+  // card art. Boss image is the body; tentacle image is just the limb.
+  tentacle_grab:      'KrakenSpawn_TentacleAttack.jpg',
+  swallowing_bite:    'KrakenSpawn.jpg',
+  kraken_tentacle:    'KrakenSpawnTentacle.jpg',
+  kraken_tentacle_block: 'KrakenSpawnTentacle.jpg',
+  ink_cloud:             'InkCloud.jpg',
+  // Kraken loot drops (pick-2 epics after the fight).
+  bloody_eye_patch:        'BloodyEyePatch.jpg',
+  harpoon_of_the_deep:     'HarpoonOfTheDeep.jpg',
+  tentacle_whip:           'TentacleWhip.jpg',
+  sailors_lucky_compass:   'SailorsLuckyCompass.jpg',
+  krakens_eye_spyglass:    'KrakensEyeSpyglass.jpg',
+  barnacle_covered_buckler:'BarnacleCoveredBuckler.jpg',
   slime_jar: 'SlimeInJar.jpg',
   white_wolf_cloak: 'WhiteWolfCloak.jpg',
   wolf_teeth: 'WolfTeeth.jpg',

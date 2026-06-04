@@ -5,7 +5,7 @@
 const SAVE_KEY = 'ccgquest_save';
 const AUTO_SAVE_KEY = 'ccgquest_autosave';
 
-export const MANUAL_SLOT_COUNT = 10;
+export const MANUAL_SLOT_COUNT = 20;
 export const AUTO_SLOT_COUNT = 10;
 
 function slotKey(slot) {
@@ -78,6 +78,28 @@ export function saveGame(state, saveName = '') {
     // Cozy Spot fishing one-time success flag. Once latched, the
     // encounter swaps to the quieter "already fished here" variant.
     cozySpotFishingCaught: !!state.cozySpotFishingCaught,
+    // Outpost resting tent one-time short rest. Once latched, the
+    // tent encounter short-circuits in startNodeEncounter.
+    outpostTentRested: !!state.outpostTentRested,
+    // Storehouse one-time pickup. Latches when the player takes any
+    // card off the supply pile; never re-armed.
+    supplyPileTaken: !!state.supplyPileTaken,
+    // Lake Giant Frog ambush placement — rolled lazily on the first
+    // reef-stone arrival, holds up to 2 rock node ids. Persisted so a
+    // save/load in the middle of crossing the reef doesn't re-roll
+    // which stones are mined (the frogs would otherwise visibly
+    // re-appear on cleared rocks). Cleared via setWellRested on rest.
+    lakeFrogRocks: Array.isArray(state.lakeFrogRocks) ? state.lakeFrogRocks.slice() : null,
+    // Kraken Spawn one-time boss. Latches forever (never cleared on
+    // rest) so a save+reload after the kraken fight remembers the
+    // post-kraken level-up was awarded.
+    krakenDefeated: !!state.krakenDefeated,
+    krakenLevelUpClaimed: !!state.krakenLevelUpClaimed,
+    // Harpy nest — latches when the wreckage harpies (first fight or
+    // revisit) are defeated. Cleared by respawnSouthernMonsters at
+    // any explicit rest beat so walking back onto the cog refires
+    // the short revisit encounter.
+    harpiesDefeated: !!state.harpiesDefeated,
     // Tomb of the Ancestor + Dwarven Workshop + Map Room one-time
     // flags. Each drives a revisit-encounter selector AND a
     // mechanical buff (ancestor rest pool, workbench armor enchant,
@@ -119,6 +141,7 @@ export function saveGame(state, saveName = '') {
           _provisionTurnsPerCombat: b._provisionTurnsPerCombat || 0,
           _provisionEffects: b._provisionEffects || null,
           _swimDraw: b._swimDraw || 0,
+          _onDiscardDraw: b._onDiscardDraw || 0,
         }))
       : [],
     soldCardsHistory: Array.isArray(state.soldCardsHistory) ? state.soldCardsHistory.slice() : [],

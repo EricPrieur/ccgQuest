@@ -349,7 +349,7 @@ export function createSouthOfQualibafMap() {
     // (Gontran the Guard) which then teleports into the south_outpost
     // map. Subsequent visits hop straight into south_outpost via the
     // post-isDone gate dispatch.
-    { id: 'outpost', name: 'South Outpost', description: 'A small fortified tower rises out of the plain.', encounterId: 'outpost_meeting', connections: ['outpost_approach', 'south_bend'], position: [802, 470], mapArea: 'south_of_qualibaf', wip: true },
+    { id: 'outpost', name: 'South Outpost', description: 'A small fortified tower rises out of the plain.', encounterId: 'outpost_meeting', connections: ['outpost_approach', 'south_bend'], position: [802, 470], mapArea: 'south_of_qualibaf' },
     // South Bend — the road south of the outpost. Discoverable too:
     // hidden until the party walks out of the outpost via the south
     // gate (transitionToSouthBend then reveals it). South Bend also
@@ -357,16 +357,16 @@ export function createSouthOfQualibafMap() {
     // the south door (special-cased in transitionToSouthOutpost: when
     // arriving from south_bend, land at river_trail instead of
     // north_path_entry).
-    { id: 'south_bend', name: 'South Bend', description: 'The road continues south past the outpost walls, hugging the river.', encounterId: '', connections: ['cozy_spot', 'outpost'], position: [700, 560], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+    { id: 'south_bend', name: 'South Bend', description: 'The road continues south past the outpost walls, hugging the river.', encounterId: '', connections: ['cozy_spot', 'outpost'], position: [700, 560], mapArea: 'south_of_qualibaf', canRevisit: true, discoverable: true, hiddenName: '???' },
     // Cozy Spot — fishing dialog. Discoverable: invisible until the
     // party is at South Bend (one hop), shown as ??? when close, named
     // after a first visit. Fishing is a recharge-per-attempt minigame
     // with cumulative 10% chance.
-    { id: 'cozy_spot', name: 'Cozy Spot', description: 'A flat, mossy stone juts over the river — perfect for sitting, or for fishing.', encounterId: 'cozy_spot', connections: ['south_bend', 'river_trail_south'], position: [830, 660], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+    { id: 'cozy_spot', name: 'Cozy Spot', description: 'A flat, mossy stone juts over the river — perfect for sitting, or for fishing.', encounterId: 'cozy_spot', connections: ['south_bend', 'river_trail_south'], position: [830, 660], mapArea: 'south_of_qualibaf', canRevisit: true, discoverable: true, hiddenName: '???' },
     // River Trail South — placeholder next-step node beyond Cozy Spot.
     // Same discoverable rules so the player only sees it once they
     // reach Cozy Spot.
-    { id: 'river_trail_south', name: 'River Trail South', description: 'The trail bends back along the water, heading deeper south.', encounterId: '', connections: ['cozy_spot'], position: [1050, 760], mapArea: 'south_of_qualibaf', canRevisit: true, wip: true, discoverable: true, hiddenName: '???' },
+    { id: 'river_trail_south', name: 'River Trail South', description: 'The trail bends back along the water, heading deeper south.', encounterId: '', connections: ['cozy_spot'], position: [1050, 760], mapArea: 'south_of_qualibaf', canRevisit: true, discoverable: true, hiddenName: '???' },
   ];
 
   for (const data of nodes) {
@@ -403,16 +403,78 @@ export function createSouthOutpostMap() {
     // supplies/rations). Card ids are rolled per visit in
     // startNodeEncounter so the offering re-rolls between runs.
     { id: 'supply_pile', name: 'Supply Pile', description: 'A pile of crates and barrels by the inner wall.', encounterId: 'supply_pile', connections: [], position: [302, 760], mapArea: 'south_outpost' },
+    // Resting Tent — one-time short rest for +5 HP. Latches via
+    // outpostTentRested (save-persisted) so the dialog only fires
+    // until the player accepts the rest; "Move on" leaves the tent
+    // available for a later visit.
+    { id: 'outpost_tent', name: 'Resting Tent', description: 'A small canvas tent pitched inside the palisade — bedroll, water flask, room for one.', encounterId: 'outpost_tent', connections: [], position: [752, 750], mapArea: 'south_outpost', canRevisit: true },
     // River Trail — south of the outpost, still on this map for now.
     // No encounter yet; the merchant boat investigation hooks in here
     // on the next pass.
-    { id: 'river_trail', name: 'River Trail', description: 'The road slips out the south gate and tracks the river bank toward the wreck.', encounterId: '', connections: [], position: [482, 960], mapArea: 'south_outpost', canRevisit: true, wip: true },
+    { id: 'river_trail', name: 'River Trail', description: 'The road slips out the south gate and tracks the river bank toward the wreck.', encounterId: '', connections: [], position: [482, 960], mapArea: 'south_outpost', canRevisit: true },
   ];
 
   for (const data of nodes) {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'north_path_entry';
+  return map;
+}
+
+// === River Cave Mouth Map ===
+// Reached by walking onto river_trail_south on south_of_qualibaf —
+// the road empties out onto a wide mountain lake with a stranded
+// merchant ship in the middle. WIP: currently a single lake-shore
+// entry node that fires the arrival dialog, then sits there waiting
+// for the next-pass investigation content.
+export function createRiverCaveMouthMap() {
+  const map = new GameMap('river_cave_mouth', 'River Cave Mouth');
+  map.mapImages = {
+    river_cave_mouth: 'Maps/RiverCaveMouth.jpg',
+    // Boarding the cog swaps mapArea to 'shipwreck_deck' so the canvas
+    // background changes from the lake view to the deck plan.
+    shipwreck_deck: 'Maps/ShipwreckDeckMap.jpg',
+  };
+
+  // Linear shore-to-rocks chain across the lake. Player walks two
+  // shore nodes toward the cave (lake_path_1 is silent, lake_path_2
+  // fires the birds + Raena-points + Thorb-assault dialog), then
+  // hops four water/reef nodes across to the far side, ending on
+  // South Hill on the opposite shore. Every node past lake_shore is
+  // discoverable — invisible until the party is one hop away — so the
+  // lake reads as a fog-of-war exploration rather than a laid-out
+  // path. All wip until the assault content lands in the next pass.
+  const nodes = [
+    { id: 'lake_shore', name: 'Lake Shore', description: 'The river widens here, opening onto a still mountain lake. A merchant ship sits stranded in the middle.', encounterId: 'river_cave_mouth_entry', connections: ['lake_path_1'], position: [682, 200], mapArea: 'river_cave_mouth', canRevisit: true },
+    { id: 'lake_path_1', name: 'Lake Path', description: 'The trail hugs the shore, closing the distance to the wreck.', encounterId: '', connections: ['lake_shore', 'lake_path_2'], position: [590, 330], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'lake_path_2', name: 'Vantage Point', description: 'A vantage point — close enough to see the gouges down the cog\'s hull, and the dark birds circling the mast.', encounterId: 'lake_path_2', connections: ['lake_path_1', 'lake_rock_1'], position: [750, 380], mapArea: 'river_cave_mouth', discoverable: true, hiddenName: '???' },
+    { id: 'lake_rock_1', name: 'First Rock', description: 'A flat-topped stone breaks the surface — easy hop from shore.', encounterId: '', connections: ['lake_path_2', 'lake_rock_2'], position: [820, 440], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'lake_rock_2', name: 'Second Rock', description: 'Another slab. The channel deepens here — the next jump is longer.', encounterId: '', connections: ['lake_rock_1', 'lake_rock_3'], position: [720, 460], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'lake_rock_3', name: 'Third Rock', description: 'The reef chain breaks. From here it\'s a short swim to the last stone.', encounterId: '', connections: ['lake_rock_2', 'lake_rock_4'], position: [790, 530], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'lake_rock_4', name: 'Far Rock', description: 'The last stone before the far shore. The merchant cog sits just upstream of you now.', encounterId: '', connections: ['lake_rock_3', 'south_hill'], position: [720, 550], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???' },
+    // South Hill — first node on the far shore. Fires the "birds have
+    // LEGS?" reconnaissance beat from the brush. Connects forward to
+    // ship_approach (the boarding beat on the lake) which in turn
+    // crosses into the shipwreck_deck mapArea at wreckage.
+    { id: 'south_hill', name: 'South Hill', description: 'A low scrub-covered hill with a view straight down onto the listing cog.', encounterId: 'south_hill', connections: ['lake_rock_4', 'ship_approach'], position: [630, 610], mapArea: 'river_cave_mouth', discoverable: true, hiddenName: '???' },
+    // Ship Approach + Wreckage form a paired teleport across mapAreas.
+    // Walking onto ship_approach (from south_hill) auto-jumps to
+    // wreckage (lake → deck). After the harpy dialog, any path back
+    // INTO wreckage — including clicking the back-direction from
+    // ship_passage — bounces the party out to ship_approach (outside
+    // the wreck). The passthroughTo "same-from" guard keeps the pair
+    // from ping-ponging.
+    { id: 'ship_approach', name: 'Ship Approach', description: 'A scramble through reeds and shallow water — close enough now to grab the cog\'s anchor chain.', encounterId: '', connections: ['south_hill', 'wreckage'], position: [580, 510], mapArea: 'river_cave_mouth', canRevisit: true, discoverable: true, hiddenName: '???', passthroughTo: 'wreckage' },
+    { id: 'wreckage', name: 'Wreckage', description: 'The cog\'s deck — listing hard to one side, ropes flapping, no crew in sight.', encounterId: 'wreckage_arrival', connections: ['ship_approach', 'ship_passage'], position: [622, 760], mapArea: 'shipwreck_deck', discoverable: true, hiddenName: '???', passthroughTo: 'ship_approach' },
+    { id: 'ship_passage', name: 'Forecastle Passage', description: 'A narrow walkway under the leaning forecastle. Doors thrown open.', encounterId: '', connections: ['wreckage', 'ship_hold'], position: [800, 460], mapArea: 'shipwreck_deck', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'ship_hold', name: 'Top of the Deck', description: 'A ladder drops below. The list of the ship makes the floor feel wrong.', encounterId: '', connections: ['ship_passage', 'ship_chest'], position: [850, 330], mapArea: 'shipwreck_deck', canRevisit: true, discoverable: true, hiddenName: '???' },
+    { id: 'ship_chest', name: 'Deck Chest', description: 'A heavy iron-banded chest wedged against the rail — somehow untouched by the harpies.', encounterId: 'ship_chest', connections: ['ship_hold'], position: [940, 370], mapArea: 'shipwreck_deck', discoverable: true, hiddenName: '???' },
+  ];
+
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'lake_shore';
   return map;
 }
 

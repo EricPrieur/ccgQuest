@@ -1592,13 +1592,71 @@ export function createOutpostMeetingEncounter() {
   ]);
 }
 
+// Outpost Kraken Report — replaces the standard outpost_meeting
+// dialog the FIRST time the player walks into the outpost after
+// surviving the Kraken Spawn. The party tells Gontran what
+// happened — embellished into a tall tale of total carnage — and he
+// hastily writes them a Letter of Commendation with a hand-pressed
+// (clearly not-quite-official) seal. Triggers the post-Kraken tier-1
+// level-up via the empty LOOT phase (noLoot + triggersLevelUp routes
+// straight into ABILITY_SELECT).
+export function createOutpostKrakenReportEncounter() {
+  return new Encounter('outpost_kraken_report', 'The South Outpost', 'Gontran is on the gate again. He spots you coming.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Gontran is back on the gate post, leaning on the same crooked spear. He spots you coming up the road and his whole face shifts — relief, surprise, and something else that takes him a second to land on. Probably guilt.', 'Gontran'),
+        new EncounterText('"Gods. You\'re alive." He half-trots down the path to meet you, eyes flicking over the state of your gear. Your boots are still damp from the river. There is, very faintly, weed in Thorb\'s beard. "I — when you didn\'t come back yesterday I started preparing myself for the worst. Tell me you found the boat."', 'Gontran'),
+        new EncounterText('"We found it," you say.', '!'),
+        new EncounterText('"And the crew?"', 'Gontran'),
+        new EncounterText('You exchange a look with Raena. Raena, to her credit, manages an expression of solemn grief. Thorb is doing the same expression upside down.', 'Raena'),
+        new EncounterText('"There was a thing in the water," you say. "Down by the wreck. Tentacles. Huge. Reached up out of the dark and — well. It was horrible. No survivors. None at all."', '!'),
+        new EncounterText('(This is, technically, true. You did not see any survivors. You also did not look very hard, on account of being eaten.)', '!'),
+        new EncounterText('"We barely escaped with our lives," Raena adds, which is also technically true.', 'Raena'),
+        new EncounterText('"Many tentacles," Thorb confirms grimly. "All bigger than me. Some bigger than two of me. One was big as a house, maybe."', 'Thorb'),
+        new EncounterText('"I... gods." Gontran sits down on the barrel one of his guards had been using. The guard quickly produces another barrel. "That\'s — that\'s a kraken. There hasn\'t been a kraken in this river since my grandfather\'s time. I have to send word to Qualibaf. Tonight."', 'Gontran'),
+        new EncounterText('He scrubs a hand down his face, then stands again with effort. "Right. Right. The Letter. I promised you a Letter." He disappears into the tower and returns moments later with a hastily-folded sheet of parchment, the ink still wet. He pulls a small ring from his belt pouch, breathes on it, and presses it firmly into a blob of warm wax. The seal that comes out is — generous interpretation — vaguely circular.', 'Gontran'),
+        new EncounterText('"There. To the Guildmaster, in Qualibaf. \'In service to the Crown and the South Outpost, the bearer of this letter slew a great beast in the river and is to be afforded every courtesy.\' I\'ve signed it. With my full title." He hands it over with both hands. "It\'s — it should be official enough."', 'Gontran'),
+        new EncounterText('Raena examines the seal at arm\'s length. It is, very faintly, the wrong way around. She tucks it away anyway. "Thank you, Gontran."', 'Raena'),
+        new EncounterText('"You\'ve earned every word of it." He grips your shoulder, hard. "I owe you, and the south road owes you. Storehouse is still open to you — take whatever you need. And get some rest. Gods know you\'ve earned that too."', 'Gontran'),
+      ],
+    }),
+    // Empty LOOT phase → noLoot branch routes straight into the
+    // tier-1 level-up flow (ABILITY_SELECT). No card / no gold to
+    // show — the Letter is narrative-only.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      triggersLevelUp: true,
+      levelUpTier: 1,
+    }),
+  ]);
+}
+
 // Watchtower — short canRevisit check-in dialog atop the outpost
 // tower. For now a single beat where Gontran asks if the party has
 // finished investigating the wreck yet; future passes can branch on
 // an investigation flag and route into the reward path. Re-uses the
 // south outpost gate art for the backdrop (rendered via the
 // ENCOUNTER_BG_MAP override on this encounter id).
-export function createWatchtowerCheckEncounter() {
+export function createWatchtowerCheckEncounter(variant = 'pre_kraken') {
+  // Post-Kraken variant — boat business is closed, dialog rotates to
+  // Gontran's other open problem: the gnoll pack the trappers warned
+  // about. Triggered from startNodeEncounter when krakenLevelUpClaimed
+  // has latched (the report has been delivered).
+  if (variant === 'post_kraken') {
+    return new Encounter('watchtower_check', 'On the Watchtower', 'Gontran is up on the wall, eyes north now.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Gontran is at the north rail this time, looking up the foothill road instead of down the river. He hears your boots and half-turns.', 'Gontran'),
+          new EncounterText('"Any news from the gnolls?" you ask.', '!'),
+          new EncounterText('"Not yet." He shakes his head, slow. "But we\'re watching. The trapper boys are running a circuit through the high meadow every other day, and I\'m sending a proper patrol up there at the end of the week — three men, full kit. If they\'re moving south, we\'ll see them before they see us."', 'Gontran'),
+          new EncounterText('He nods at you. "Thanks to you, I can actually spare the bodies for it. Wouldn\'t have been possible before."', 'Gontran'),
+        ],
+      }),
+    ]);
+  }
+  // Default pre-Kraken: hopeful check-in about the boat investigation.
   return new Encounter('watchtower_check', 'On the Watchtower', 'Gontran leans on the parapet, scanning the southern road.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -1630,7 +1688,6 @@ export function createSupplyPileEncounter(picker1Cards = [], picker2Cards = []) 
   if (picker1Cards.length > 0) {
     phases.push(new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootTitle: 'Weapons Rack & Armor Stand (pick 1)',
       lootPickCards: picker1Cards,
       lootPickCount: 1,
     }));
@@ -1638,7 +1695,6 @@ export function createSupplyPileEncounter(picker1Cards = [], picker2Cards = []) 
   if (picker2Cards.length > 0) {
     phases.push(new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootTitle: 'Provisions & Market Stock (pick 1)',
       lootPickCards: picker2Cards,
       lootPickCount: 1,
     }));
@@ -1729,6 +1785,348 @@ export function createCozySpotAmbushEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootCards: ['fresh_fish'],
+    }),
+  ]);
+}
+
+// River Cave Mouth arrival — first time the party walks onto the
+// lake shore from river_trail_south. Short reveal beat: the river
+// widens into a still lake and the merchant ship Gontran asked them
+// to find is sitting dead center, listing badly.
+export function createRiverCaveMouthEntryEncounter() {
+  return new Encounter('river_cave_mouth_entry', 'River Cave Mouth', 'The river opens out.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The trees fall back. The current slows. Then — almost without warning — the river isn\'t a river at all anymore, but a long, still lake cupped between low limestone cliffs. The far end disappears into the dark mouth of a cave you can\'t quite see the bottom of from here.'),
+        new EncounterText('Halfway out, dead center on the water, a merchant cog sits at a slightly wrong angle. The mast leans further than any mast should. The hull tilts. It has not moved in days.'),
+        new EncounterText('"There," Raena says quietly. "That\'s our boat."', 'Raena'),
+        new EncounterText('Thorb squints across the lake. "Caught on a rock by the look of it. Bottom must come up like a fist out there." He scratches his beard. "Doesn\'t explain why nobody\'s climbing off it, though."', 'Thorb'),
+        new EncounterText('No smoke. No movement. No bodies on the rail. Just the lap of water against a hull that should not be where it is.'),
+      ],
+    }),
+  ]);
+}
+
+// Vantage Point — one-shot dialog on the second shore node. Spots
+// the strange birds circling the mast (bad omen), then Raena lays
+// out the reef-crossing plan and Thorb pitches the assault on the
+// stranded cog. Player gets the "feel like getting a bit wet?" beat
+// before they start hopping the rock chain.
+export function createLakePath2Encounter() {
+  return new Encounter('lake_path_2', 'Closer to the Wreck', 'The cog looms ahead.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Closer in, you can see the ship in detail. The hull is scarred with long gouges — the kind a hidden reef leaves when a captain doesn\'t see it in time. The mast leans a good twenty degrees off true. The flag at the top hangs limp.'),
+        new EncounterText('And circling the top of that mast — gliding, never landing — are a half-dozen dark birds. Wings too long. Heads too pointed. They make no sound at all.', '!'),
+        new EncounterText('"That\'s..." Thorb starts. Stops. Tries again. "That\'s not just birds. Those aren\'t just birds, are they."', 'Thorb'),
+        new EncounterText('"Old sailors\' word for it," Raena says quietly. "Bad omen. They wait for things." She does not finish that sentence.', 'Raena'),
+        new EncounterText('She points instead — out across the lake — to a chain of stones breaking the surface. A path. The reef the ship caught on, you realize: a sunken ridge running half across the lake, with a clean channel where boats once threaded through.', 'Raena'),
+        new EncounterText('"We can hop most of it. Bit of a swim through the channel in the middle — nothing serious." She glances sideways. "Feel like getting a bit wet?"', 'Raena'),
+        new EncounterText('"Once we\'re on the far side," Thorb adds, eyeing the listing cog with a kind of grim cheerfulness, "we can pick our way up and have a proper look at what\'s aboard. Or," he adds, watching the birds, "what isn\'t."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Outpost Tent — two variants:
+//   pre-Kraken (default): a one-time short rest (+5 heal). Latches
+//     outpostTentRested so the dialog doesn't refire.
+//   post-Kraken ('post_kraken'): re-armed as a FULL rest. Gontran
+//     offers the tent for as long as the party wants to stay, since
+//     the boat job is done. Each rest re-spawns the southern monster
+//     encounters (frog ambushes, harpy revisit, cozy spot fishing).
+export function createOutpostTentEncounter(variant = 'pre_kraken') {
+  if (variant === 'post_kraken') {
+    return new Encounter('outpost_tent', 'Resting Tent', 'Gontran gestures at the tent — stay as long as you like.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The tent\'s still here, bedroll still folded. Gontran catches you eyeing it and waves a hand.', 'Gontran'),
+          new EncounterText('"Aye, take it. Take it as often as you like. The boat job\'s done — if you want to stay a while longer, the tent\'s yours. Patrol shift\'s mine. You earned a proper sleep."', 'Gontran'),
+          new EncounterText('A proper rest, this time. The kind where you actually wake up feeling like a person.'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choices: [
+          new EncounterChoice(
+            'Take a full rest',
+            'You sleep deep, eat well, and roll out at dawn ready for whatever\'s next. Word from Gontran: the frog\'s back at the rock, harpies have crept back onto the wreck, and a fresh fish has been sighted at the cozy spot.',
+            'outpost_tent_full_rest', 0,
+            { completesEncounter: true }
+          ),
+          new EncounterChoice(
+            'Maybe later',
+            'You nod and step back out into the yard. The tent will keep.',
+            '', 0,
+            { completesEncounter: true }
+          ),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('outpost_tent', 'Resting Tent', 'A spare canvas tent, a folded bedroll.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('A small canvas tent inside the palisade — folded bedroll, a clay water flask, a stub of candle on a tin plate. Whoever set this up evidently meant for the relief that never arrived to use it.'),
+        new EncounterText('You could grab an hour or two. Nothing fancy, but enough to take the edge off.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Take a short rest',
+          'You stretch out on the bedroll for a quiet hour. The aches ease back a little.',
+          'outpost_tent_rest', 5,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          'Move on',
+          'You leave the tent for whoever needs it next.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// South Hill — recon beat on the far shore. The party crouches in
+// the brush watching the cog; Thorb realises the birds are bigger
+// (and have feet) than they look from across the water. One-shot,
+// then offers a short rest (Heal 5) or jump straight into the assault.
+export function createSouthHillEncounter() {
+  return new Encounter('south_hill', 'South Hill', 'Cover in the brush.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You drop to a crouch at the crest of the hill. The brush is thick enough to hide three travelers and a dwarf-shaped opinion about birds. The cog is close now — close enough to see paint flaking off the rail.'),
+        new EncounterText('Thorb shades his eyes with one hand. Watches for a long moment.', 'Thorb'),
+        new EncounterText('"Hey." His voice is very level. "Those birds. Those birds are pretty big, right?"', 'Thorb'),
+        new EncounterText('"Mm," Raena says, not looking away.', 'Raena'),
+        new EncounterText('"And they have... do they have legs? Tell me they don\'t have legs."', 'Thorb'),
+        new EncounterText('"They have legs."', 'Raena'),
+        new EncounterText('A short, contemplative silence.', '!'),
+        new EncounterText('"Right." Thorb hefts his axe and gives it an experimental swing. "Let\'s go find out what they\'re waiting for."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Rest a bit before going in',
+          'You drop your packs in the brush and take a few quiet minutes. Water. Bandage check. Slow breath. The cog isn\'t going anywhere.',
+          'south_hill_rest', 5,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          "No need to rest — let's go get some chickens!",
+          'Thorb grins like a man who has been waiting all morning for permission. "That\'s the spirit."',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Wreckage Harpy Revisit — short re-encounter that fires when the
+// party walks back onto the cog after a rest (harpiesDefeated flag
+// reset). Skips the bird-reveal banter; just spawns the harpies
+// straight into combat.
+export function createWreckageHarpyRevisitEncounter() {
+  return new Encounter('wreckage_harpy_revisit', 'They\'re Back', 'The nest never stays empty.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You climb back onto the listing deck. The mast is empty for half a heartbeat — then the song starts up again, low and wrong, and the dark shapes come gliding back down out of the rigging.'),
+        new EncounterText('"They\'re BACK," Thorb mutters. "Of course they\'re back."', 'Thorb'),
+        new EncounterText('Raena unslings her staff. "Same as last time, then."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'harpies',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['harpies_loot'],
+    }),
+  ]);
+}
+
+// Wreckage Arrival — boarding the listing cog. Funny escalation:
+// the nest at the masthead is enormous; the birds aren't birds at all;
+// the song carries on the wind and ohhh no, harpies. Drops into the
+// Harpy combat (invulnerable boss + 3 summons) after the reveal.
+export function createWreckageArrivalEncounter() {
+  return new Encounter('wreckage_arrival', 'On the Deck', 'You climb aboard.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You haul yourselves up the listing hull and onto the deck. Up close, the smell hits first — salt, tar, and something else. Something organic. Something that has been there a while.'),
+        new EncounterText('The nest at the masthead is bigger than you thought. Much bigger. Big enough that "nest" feels like the wrong word for it.', '!'),
+        new EncounterText('And the birds — the things you took for birds — are not birds.', '!'),
+        new EncounterText('They have legs. Long ones. Bent the wrong way at the knee.', '!'),
+        new EncounterText('They have faces. Pale, hungry, almost-human faces ringed in oily black feathers.', '!'),
+        new EncounterText('And the sound they make — that wailing, alluring, half-musical keening drifting down from the rigging — is not a bird call. It is a song. A song aimed at YOU.', '!'),
+        new EncounterText('"Oh," Raena breathes, very softly. "Oh no."', 'Raena'),
+        new EncounterText('"What?" Thorb says. "WHAT?"', 'Thorb'),
+        new EncounterText('"Harpies." She is already drawing her staff. "Thorb. They\'re HARPIES."', 'Raena'),
+        new EncounterText('Thorb stares at the nest. "Right. So. Not chickens, then."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'harpies',
+    }),
+    // Pick 2 distinct drops from the harpies_loot table (rolled
+    // again on each rest-reset re-fight via the revisit encounter).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['harpies_loot'],
+    }),
+    // After the fight: catch-your-breath beat with an optional Heal 5
+    // short rest (same resolver as the South Hill pre-board rest).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The last harpy crumples against the rail. Feathers settle on the deck. The wind stops trying to sing.', '!'),
+        new EncounterText('Thorb sits down heavily on a coil of rope and blows out a long breath. Raena is already checking the others over for wounds.', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Catch your breath before pressing on',
+          'You sit a minute. Water and bandages. The deck stops listing in your head, at least.',
+          'south_hill_rest', 5,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          'No time — keep moving',
+          'You shoulder your gear and step over the bodies.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Ship Chest — one-time auto-loot at the deepest deck node. Card ids
+// are pre-rolled in startNodeEncounter (main.js): 2 random items
+// sampled across the four staple shops (armorsmith, weaponsmith,
+// arcane_emporium, general_store). Reward placeholder until the
+// harpy fight content lands proper.
+export function createShipChestEncounter(lootIds = []) {
+  return new Encounter('ship_chest', 'The Deck Chest', 'Iron-banded, wedged tight, somehow intact.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You pry the lid open. Whatever was looking after this chest had better taste than the things upstairs — the lock is real, the wood is oiled, and the contents have not been picked over.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: lootIds,
+    }),
+    // Post-loot ambush: the bridge erupts, tentacles drag the party
+    // down through the hull, and a squid-thing waits in the dark
+    // water inside the wreck. Per-text bgOverride flips the backdrop
+    // from the deck plan to the interior-breach art mid-scene.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You straighten up with the haul in hand. Thorb is already grinning. Raena is already nodding. For a single, beautiful heartbeat the job is almost done.', 'You'),
+        new EncounterText('Then the bridge above you EXPLODES.', '!'),
+        new EncounterText('Splinters fly. A sound like a tree being snapped in half. Black, slick, horse-leg-thick tentacles burst through the planking and lash down across the deck.', '!'),
+        new EncounterText('One wraps your waist. Another whips around Thorb\'s shoulders. A third loops Raena\'s ankle and lifts. The deck tilts wrong, then it isn\'t under you at all.', '!'),
+        new EncounterText('You\'re not falling — you\'re THROWN — through the splintered hole and down into the dark water inside the hull.', '!'),
+        new EncounterText('Cold water closes over your head with a roar.', '!', 'bg_shipwreck_inside'),
+        new EncounterText('You break the surface inside the wreck. Daylight knifes down through the hole you came through. Everything else is shadow and slow-moving water.', 'You', 'bg_shipwreck_inside'),
+        new EncounterText('Something huge shifts below you. A pale, slitted eye the size of a dinner plate fixes on you from the gloom. Tentacles uncoil out of the dark — and one of them is already wrapped around your ankle, tightening, dragging you down.', '!', 'bg_shipwreck_inside'),
+        new EncounterText('"WE HAVE A PROBLEM," Thorb bellows from somewhere off to your right.', 'Thorb', 'bg_shipwreck_inside'),
+        new EncounterText('You drag your weapon out of the water and brace. This is going to be bloody.', 'You', 'bg_shipwreck_inside'),
+      ],
+    }),
+    // Kraken Spawn — boss combat fires straight off the splash
+    // dialog. Player is now in the water; the swim_drag debuff is
+    // wired in applyStartOfCombatBuffs (kraken_spawn enemyId trigger).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'kraken_spawn',
+    }),
+    // Salvage pick — six tier-1 epics from the wrecked hold, party
+    // picks 2 distinct. Mirrors the Varimatras dragon-loot picker
+    // (lootPickCount + lootPickCards).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      phaseTitle: "Wreckage Salvage",
+      lootTitle: "Wreckage Salvage",
+      lootPickCount: 2,
+      lootPickCards: [
+        'bloody_eye_patch',
+        'harpoon_of_the_deep',
+        'tentacle_whip',
+        'sailors_lucky_compass',
+        'krakens_eye_spyglass',
+        'barnacle_covered_buckler',
+      ],
+    }),
+    // Post-kraken — ship breaks apart, party swims for shore. Hooked
+    // into the post-encounter dispatch in main.js (ship_chest case)
+    // which teleports the party back to South Hill on south_of_qualibaf.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The last tentacle goes limp. The water around you boils with dying things, then settles.', '!'),
+        new EncounterText('Above you, the hull groans like a wounded animal. A spar snaps. Then another. The whole cog is coming apart.', '!'),
+        new EncounterText('"OUT!" Raena barks. "Out, out, OUT!"', 'Raena'),
+        new EncounterText('You haul yourself through the splintered hole, kick away from the wreck as a section of the deck collapses inward, and strike out for the south shore. The water is cold. The swim is short. The brush on the hill is the most welcome thing you have ever seen.'),
+      ],
+    }),
+  ]);
+}
+
+// Giant Frog Ambush — fires when the party arrives at one of the
+// 2 randomly-placed frog rocks on the reef chain. First ambush per
+// save plays the full reveal dialog; subsequent ambushes (player
+// already met one) drop into a 1-beat "ANOTHER frog?!" splash and
+// straight into combat. Backdrop is the lake-rock-formation art so
+// the fight reads as taking place ON the reef itself.
+export function createGiantFrogAmbushEncounter(short = false) {
+  const texts = short
+    ? [
+        new EncounterText('Water explodes in front of you AGAIN. Another tongue. Another slab. Another giant slimy face staring at you out of the lake.', '!'),
+        new EncounterText('"ANOTHER ONE?!" Thorb howls.', 'Thorb'),
+        new EncounterText('Less talk, more fight.'),
+      ]
+    : [
+        new EncounterText('You\'re halfway through the swim to the next stone when the water in front of you EXPLODES.', '!'),
+        new EncounterText('Something pink, wet, and absurdly long whips out of the lake and slaps around your waist before you can register what you\'re looking at. It yanks. Hard.', '!'),
+        new EncounterText('You go under for half a second, come up coughing, and find yourself dragged backwards onto a flat slab of slick black rock — face to face with the biggest frog you have ever seen.', '!'),
+        new EncounterText('"OH COME ON," Thorb roars, axe already out. "We have to FIGHT a frog now?"', 'Thorb'),
+        new EncounterText('The frog\'s throat balloons. Acid sizzles between its teeth. Behind it, a writhing pile of egg-things twitches.', '!'),
+        new EncounterText('Looks like we\'re fighting our way back to the rocks.'),
+      ];
+  return new Encounter('giant_frog_ambush', 'Something in the Water', 'A tongue uncoils.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'giant_frog',
+    }),
+    // Guaranteed loot — weighted pick across Toxic Frog Extract
+    // (common), Frog Skin Boots (uncommon), Frog Nursery (rare).
+    // Roll happens via the giant_frog_loot table in main.js.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['giant_frog_loot'],
     }),
   ]);
 }
@@ -4294,10 +4692,19 @@ export const ENCOUNTER_REGISTRY = {
   east_side: createEastSideEncounter,
   south_trail: createSouthTrailEncounter,
   outpost_meeting: createOutpostMeetingEncounter,
+  outpost_kraken_report: createOutpostKrakenReportEncounter,
   watchtower_check: createWatchtowerCheckEncounter,
   supply_pile: createSupplyPileEncounter,
+  outpost_tent: createOutpostTentEncounter,
   cozy_spot: createCozySpotEncounter,
   cozy_spot_ambush: createCozySpotAmbushEncounter,
+  river_cave_mouth_entry: createRiverCaveMouthEntryEncounter,
+  lake_path_2: createLakePath2Encounter,
+  south_hill: createSouthHillEncounter,
+  wreckage_arrival: createWreckageArrivalEncounter,
+  wreckage_harpy_revisit: createWreckageHarpyRevisitEncounter,
+  ship_chest: createShipChestEncounter,
+  giant_frog_ambush: createGiantFrogAmbushEncounter,
   south_gate: createSouthGateEncounter,
   sahuagin_sentinel: createSahuaginSentinelEncounter,
   // City Shops

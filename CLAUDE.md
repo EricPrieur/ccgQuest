@@ -145,6 +145,35 @@ lives under `assets/Icons/` (then `.png`). After running the script,
 `git status` will show the `.png` deletions next to the matching `.jpg`
 adds — commit both in the same commit so the working tree stays in sync.
 
+### Source filename convention — CamelCase, no spaces
+
+The converter **preserves the filename** and only swaps the extension
+(`Bloody Eye Patch.png` → `Bloody Eye Patch.jpg`). `CARD_ART_MAP` keys
+on the exact filename, so source PNGs straight off Midjourney
+(`Bloody Eye Patch.png`, `Kraken's Eye Spyglass.png`) need to be
+**renamed before conversion**:
+
+- Strip spaces, apostrophes, and dashes.
+- CamelCase each word (`BloodyEyePatch.png`, `KrakensEyeSpyglass.png`).
+- Match what you put in `CARD_ART_MAP` exactly.
+
+If you wire `CARD_ART_MAP[my_card] = 'MyCardArt.jpg'` but the file on
+disk is still `My Card Art.png`, the converter happily produces
+`My Card Art.jpg` and the card renders as a brown placeholder. Rename
+the PNG first, **then** run `npm run png-to-jpg`.
+
+### End-to-end checklist for new card art
+
+1. Drop the source PNG into `public/assets/Cards/` (or the appropriate
+   subdir).
+2. Rename to CamelCase (`BloodyEyePatch.png`) — no spaces, no
+   apostrophes, no dashes.
+3. Run `npm run png-to-jpg public/assets/Cards`.
+4. Add the entry to `CARD_ART_MAP` in `src/card-art.js`
+   (`bloody_eye_patch: 'BloodyEyePatch.jpg'`).
+5. `git status` should show one `.png` deletion + one `.jpg` add per
+   image — commit both together.
+
 ## Versioning
 
 `GAME_VERSION` in `src/constants.js` is bumped manually before every push.

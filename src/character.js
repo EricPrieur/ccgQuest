@@ -16,7 +16,7 @@ export class Buff {
  * Multi-combat buff persisting across encounters.
  */
 export class CombatBuff {
-  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0, effects = null, tickSfxKey = null, tickSfxCount = 1, tickSfxStagger = 150 }) {
+  constructor({ id, name, description, imageId, effectType, effectValue, trigger = 'start_of_turn', combatsRemaining = 1, turnsRemaining = 0, effects = null, tickSfxKey = null, tickSfxCount = 1, tickSfxStagger = 150, isDebuff = false }) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -26,6 +26,10 @@ export class CombatBuff {
     this.trigger = trigger;
     this.combatsRemaining = combatsRemaining;
     this.turnsRemaining = turnsRemaining;
+    // Debuff flag — flips the icon border color from green to red so
+    // the player can scan-distinguish "good thing happening to me"
+    // from "bad thing happening to me" on the buff bar.
+    this.isDebuff = isDebuff;
     // Optional multi-effect array for buffs that fire several things per tick
     // (Bad Rations: heal_random + discard_deck_random). When set, the
     // processCombatBuffs loop iterates these instead of using the legacy
@@ -466,8 +470,42 @@ export class Character {
           });
         }
         break;
-      case 'heal':
-        if (this.deck && this.deck.discardPile.length > 0) {
+      case 'heal': {
+        // Food / meal heal tick. Each "point" of healing first clears
+        // a Poison stack, then a Bleed stack, then heals a card from
+        // discard as the remainder. Value defaults to 1.
+        let remaining = Math.max(1, effectValue || 1);
+        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
+        if (poison > 0 && remaining > 0) {
+          const toClear = Math.min(poison, remaining);
+          this.removeStatus('POISON', toClear);
+          remaining -= toClear;
+          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+          logs.push({
+            text: `  ${buff.name}: Purged ${toClear} Poison`,
+            color: '#3cc83c',
+            buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
+        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
+        if (bleed > 0 && remaining > 0) {
+          const toClear = Math.min(bleed, remaining);
+          this.removeStatus('BLEED', toClear);
+          remaining -= toClear;
+          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+          logs.push({
+            text: `  ${buff.name}: Stopped ${toClear} Bleed`,
+            color: '#ff5050',
+            buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
+        while (remaining > 0 && this.deck && this.deck.discardPile.length > 0) {
           const card = this.deck.discardPile.pop();
           this.deck.addToRechargePile(card);
           const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
@@ -479,8 +517,10 @@ export class Character {
             sfxCount: buff.tickSfxCount || 1,
             sfxStagger: buff.tickSfxStagger || 150,
           });
+          remaining--;
         }
         break;
+      }
       case 'goodberry_sustenance': {
         // Tick variant of the on-play goodberry_sustenance roll. 50%
         // for nothing, otherwise pick one of: +1 Shield / +1 Heroism /
@@ -524,7 +564,29 @@ export class Character {
             if (drawn.length === 0) logs.push({ text: `  ${buff.name}: (no cards to draw)`, color: '#808080', buff });
           }
         } else {
-          if (this.deck && this.deck.discardPile.length > 0) {
+          // Heal 1 branch — status-first like the standard meal heal:
+          // clear a Poison stack, then a Bleed stack, before falling
+          // through to card-from-discard, so the heal point never goes
+          // to waste.
+          const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
+          const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
+          if (poison > 0) {
+            this.removeStatus('POISON', 1);
+            logs.push({
+              text: `  ${buff.name}: Purged 1 Poison`,
+              color: '#3cc83c',
+              buff,
+              sfxKey: 'heal_spell',
+            });
+          } else if (bleed > 0) {
+            this.removeStatus('BLEED', 1);
+            logs.push({
+              text: `  ${buff.name}: Stopped 1 Bleed`,
+              color: '#ff5050',
+              buff,
+              sfxKey: 'heal_spell',
+            });
+          } else if (this.deck && this.deck.discardPile.length > 0) {
             const card = this.deck.discardPile.pop();
             this.deck.addToRechargePile(card);
             logs.push({
@@ -537,19 +599,63 @@ export class Character {
         }
         break;
       }
+      case 'swim_drag_recharge': {
+        // Giant Frog swim debuff — no-op at the tick level. The actual
+        // forced-recharge is interactive (player picks which card to
+        // recharge) and is dispatched in main.js at the start-of-turn
+        // hook by calling startWhirlpoolPhase(effectValue). That path
+        // already wires on_swim_recharge_draw + Fresh Fish _swimDraw
+        // through the standard swim recharge handler.
+        logs.push({
+          text: `  ${buff.name}: Swim ${Math.max(1, effectValue || 1)} — pick a card to recharge.`,
+          color: '#64b4dc',
+          buff,
+        });
+        break;
+      }
       case 'heal_random': {
         // Bad Rations Meal tick — heal 1..effectValue (random). Rolls
         // each tick so a 2-turn buff with value=2 gives a 1-1, 1-2,
-        // 2-1, or 2-2 spread.
-        const rolled = 1 + Math.floor(Math.random() * Math.max(1, effectValue));
+        // 2-1, or 2-2 spread. Same poison-first rule as the standard
+        // 'heal' meal tick: each healing point clears one Poison stack
+        // before falling through to card-from-discard.
+        let remaining = 1 + Math.floor(Math.random() * Math.max(1, effectValue));
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
+        if (poison > 0 && remaining > 0) {
+          const toClear = Math.min(poison, remaining);
+          this.removeStatus('POISON', toClear);
+          remaining -= toClear;
+          logs.push({
+            text: `  ${buff.name}: Purged ${toClear} Poison`,
+            color: '#3cc83c',
+            buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
+        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
+        if (bleed > 0 && remaining > 0) {
+          const toClear = Math.min(bleed, remaining);
+          this.removeStatus('BLEED', toClear);
+          remaining -= toClear;
+          logs.push({
+            text: `  ${buff.name}: Stopped ${toClear} Bleed`,
+            color: '#ff5050',
+            buff,
+            sfxKey: tickSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
         let healed = 0;
-        for (let i = 0; i < rolled && this.deck && this.deck.discardPile.length > 0; i++) {
+        for (let i = 0; i < remaining && this.deck && this.deck.discardPile.length > 0; i++) {
           const card = this.deck.discardPile.pop();
           this.deck.addToRechargePile(card);
           healed++;
         }
         if (healed > 0) {
-          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
           logs.push({
             text: `  ${buff.name}: Healed ${healed}`,
             color: '#3cc83c',

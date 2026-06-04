@@ -26,6 +26,8 @@ export class Creature {
     endTurnDamage = 0,
     onDeathDamage = 0,
     onDeathFireHits = 0,
+    onDeathDiscardOrDamage = 0,
+    onAttackSnagCard = false,
     endTurnHealAllies = 0,
     endTurnShieldAllies = 0,
     endTurnHeroismAllies = 0,
@@ -60,6 +62,8 @@ export class Creature {
     this.iceStacks = 0;
     this.poisonStacks = 0;
     this.shockStacks = 0;
+    this.bleedStacks = 0;
+    this.inkCloudStacks = 0;
     this.markStacks = 0;
 
     this.poisonAttack = poisonAttack;
@@ -81,6 +85,12 @@ export class Creature {
     this.endTurnDamage = endTurnDamage;
     this.onDeathDamage = onDeathDamage;
     this.onDeathFireHits = onDeathFireHits;
+    this.onDeathDiscardOrDamage = onDeathDiscardOrDamage;
+    // Kraken Tentacle: on swing land, splice 1 random hand card off
+    // the player and park it on this creature (`_snaggedCard`). When
+    // the tentacle dies the card returns to the player's discard.
+    this.onAttackSnagCard = onAttackSnagCard;
+    this._snaggedCard = null;
     this.endTurnHealAllies = endTurnHealAllies;
     this.endTurnShieldAllies = endTurnShieldAllies;
     this.endTurnHeroismAllies = endTurnHeroismAllies;
