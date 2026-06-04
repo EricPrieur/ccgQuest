@@ -302,12 +302,12 @@ export function createRuinsBasinMap() {
     // only (no canRevisit, so subsequent walk-throughs stay silent
     // while the node remains navigable).
     { id: 'east_side', name: 'East Side', description: 'A path running east of the river.', encounterId: 'east_side', connections: ['river_crossing', 'south_gate', 'river_path'], position: [490, 380], mapArea: 'arriving_city' },
-    { id: 'river_path', name: 'River Path', description: 'A trail winding south along the river bank.', encounterId: '', connections: ['east_side', 'south_trail'], position: [459, 630], mapArea: 'arriving_city', canRevisit: true, wip: true },
+    { id: 'river_path', name: 'River Path', description: 'A trail winding south along the river bank.', encounterId: '', connections: ['east_side', 'south_trail'], position: [459, 630], mapArea: 'arriving_city', canRevisit: true },
     // South Trail — last node on this map before the cross-map jump to
     // South of Qualibaf. Its encounter plays the "follow the river south"
     // dialog (with a tongue-in-cheek meta beat from Raena/Thorb pre-
     // dragon), then teleports to the south_of_qualibaf map entry.
-    { id: 'south_trail', name: 'South Trail', description: 'A trail leading east along the river toward the southern outpost.', encounterId: 'south_trail', connections: ['river_path'], position: [870, 810], mapArea: 'arriving_city', wip: true },
+    { id: 'south_trail', name: 'South Trail', description: 'A trail leading east along the river toward the southern outpost.', encounterId: 'south_trail', connections: ['river_path'], position: [870, 810], mapArea: 'arriving_city' },
     { id: 'south_gate', name: 'South Gate', description: 'The southern gate of Qualibaf.', encounterId: 'south_gate', connections: ['east_side', 'city_south_gate'], position: [662, 260], mapArea: 'arriving_city', passthroughTo: 'city_south_gate' },
     { id: 'city_south_gate', name: 'City South Gate', description: 'Inside the southern gate of Qualibaf.', encounterId: '', connections: ['city_square', 'weaponsmith', 'armorsmith', 'general_store', 'inn', 'church', 'guild_hall', 'antiquity_shop', 'arcane_emporium', 'city_north_gate'], position: [512, 900], mapArea: 'qualibaf', canRevisit: true, passthroughTo: 'south_gate' },
     { id: 'city_square', name: 'City Square', description: 'The central square of Qualibaf.', encounterId: 'city_square', connections: ['city_south_gate', 'weaponsmith', 'armorsmith', 'general_store', 'inn', 'church', 'guild_hall', 'antiquity_shop', 'arcane_emporium', 'city_north_gate'], position: [512, 500], mapArea: 'qualibaf', canRevisit: true },

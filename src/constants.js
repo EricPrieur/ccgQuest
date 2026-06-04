@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.36';
+export const GAME_VERSION = '2.37';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;

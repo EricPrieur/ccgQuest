@@ -969,11 +969,22 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
     for (const id of Object.keys(PERK_REGISTRY)) weights[id] = 1.0;
   }
   const ownedUniqueIds = new Set(existingPerks.filter(p => p.unique).map(p => p.id));
+  // Count current stacks per perk id so non-unique (common/repeatable)
+  // perks cap at 5 — once the player has 5 copies the perk drops out
+  // of the offer pool entirely. Unique perks already filter on the
+  // ownedUniqueIds rule above (cap is implicitly 1).
+  const stackCount = {};
+  for (const p of existingPerks) {
+    if (!p || p.unique) continue;
+    stackCount[p.id] = (stackCount[p.id] || 0) + 1;
+  }
+  const STACK_CAP = 5;
   let ids = Object.keys(weights).filter(id => {
     const creator = PERK_REGISTRY[id];
     if (!creator) return false;
     const sample = creator();
-    return !sample.unique || !ownedUniqueIds.has(id);
+    if (sample.unique) return !ownedUniqueIds.has(id);
+    return (stackCount[id] || 0) < STACK_CAP;
   });
   let w = ids.map(id => weights[id]);
   const chosen = [];

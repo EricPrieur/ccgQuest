@@ -931,7 +931,7 @@ const TUTORIAL_BOXES = {
   },
   inventory_perks_buffs: {
     title: 'Perks & Buffs',
-    body: 'Perks are passive bonuses you pick on level-up — they stick around for the whole run. Buffs are temporary blessings from shrines, idols, and other relics you find along the way.',
+    body: 'Perks are passive bonuses you pick on level-up — they stick around for the whole run. Common (repeatable) perks stack up to 5 copies; once you have 5 of the same perk it stops showing up in the picker. Unique perks (one-of-a-kind, gold pill) only ever land once. Buffs are temporary blessings from shrines, idols, and other relics you find along the way.',
     arrow: () => {
       const s = (typeof getInvSections === 'function') ? getInvSections() : null;
       if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 600 };
@@ -33148,7 +33148,12 @@ function cancelSaveEditing() {
 
 function handleSaveClick(x, y) {
   const rects = getSaveSlotRects();
+  // Clip to the visible list area — off-screen slot rects (slot 11+
+  // when only 10 fit on screen) used to steal clicks meant for the
+  // Save / Cancel buttons below, making the save button feel broken.
+  const listBounds = getLoadListBounds(true);
   for (const r of rects) {
+    if (r.y + r.h <= listBounds.y || r.y >= listBounds.y + listBounds.h) continue;
     if (hitTest(x, y, r)) {
       // If the clicked row is already in edit mode, clicking the row again
       // is a no-op (the Save button below commits). Clicking a DIFFERENT row
@@ -33211,10 +33216,14 @@ function handleLoadClick(x, y) {
     return;
   }
 
-  // Slot selection
+  // Slot selection — clip to visible list bounds so off-screen slot
+  // rects don't steal clicks meant for the action buttons below.
   const rects = getLoadSlotRects();
+  const listBounds = getLoadListBounds(false);
   for (let i = 0; i < rects.length; i++) {
-    if (hitTest(x, y, rects[i]) && rects[i].hasData) {
+    const r = rects[i];
+    if (r.y + r.h <= listBounds.y || r.y >= listBounds.y + listBounds.h) continue;
+    if (hitTest(x, y, r) && r.hasData) {
       loadSelectedIndex = i;
       return;
     }
