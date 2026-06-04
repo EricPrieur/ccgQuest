@@ -75,6 +75,9 @@ export class Card {
     isUnique = false,
     provision = null,
     unplayable = false,
+    gamePlusOffset = null,
+    noTierOffset = false,
+    sellable = false,
   }) {
     this.id = id;
     this.name = name;
@@ -99,6 +102,27 @@ export class Card {
     this.isUnique = isUnique;
     this.provision = provision;
     this.unplayable = unplayable;
+    // ccgQuest+ tier-offset scaling rules — optional. Object with
+    // per-effect-type bump amounts applied PER offset point. Example:
+    //   gamePlusOffset: { heal: 3 }     // Flash Heal: 4 → 7 → 10 ...
+    //   gamePlusOffset: { gain_heroism: 3 }
+    //   gamePlusOffset: { shield_bash: 1 }
+    //   gamePlusOffset: { gain_shield: 2 }
+    //   gamePlusOffset: { damage: 1 }
+    // Cards without this field still get the name+tier suffix on the
+    // codex preview, but the codex flags them with a red "+N?" badge
+    // until offset rules are wired.
+    this.gamePlusOffset = gamePlusOffset;
+    // Explicit "this card does not scale with tier offset" marker —
+    // suppresses the codex red "+N?" badge for cards/powers that
+    // intentionally stay flat (Overwhelm, Vanish, etc.).
+    this.noTierOffset = noTierOffset;
+    // Opt-in flag that overrides canSellAtShop's class-restriction
+    // and token gates. Used for cards a player should be allowed to
+    // sell back even though they normally wouldn't qualify (the
+    // Spider's Vial of Poison token, the Wizard-only Wand of Fire,
+    // etc.). The category-vs-shop-stock check still applies.
+    this.sellable = sellable;
     this.exhausted = false;
   }
 
@@ -141,6 +165,9 @@ export class Card {
       isUnique: this.isUnique,
       provision: this.provision,
       unplayable: this.unplayable,
+      gamePlusOffset: this.gamePlusOffset,
+      noTierOffset: this.noTierOffset,
+      sellable: this.sellable,
     });
     if (preserveUid) c.uid = this.uid;
     // Preserve the on-card enchant tags (Obsidian Forge, Dwarven

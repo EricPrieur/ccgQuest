@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.38';
+export const GAME_VERSION = '2.66';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -62,6 +62,11 @@ export const GameState = Object.freeze({
   // sleep-in-room beat. Auto-advances back to MENU when the scroll
   // runs out, or clicks-to-skip back early.
   END_CREDITS: 'END_CREDITS',
+  // ccgQuest+ (Game+) setup screen. Reached from MENU when the
+  // ccgQuest+ toggle is on and the player presses Play. Currently a
+  // placeholder — gathers Game+ options (TBD) and routes into the
+  // standard CHARACTER_SELECT flow with the gamePlus flag set.
+  GAME_PLUS_SETUP: 'GAME_PLUS_SETUP',
 });
 
 // === Card Enums ===

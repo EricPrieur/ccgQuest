@@ -29,7 +29,7 @@ import {
   createFrogNursery, createFrogSkinBoots, createToxicFrogExtract, createPlayerBabyFrogCreature,
   createLuringSong, createHarpyCreature,
   createFeatherCloak, createHarpyFeather, createHarpyEggOmelette, createHarpyTalonBlade, createHarpyScreamingCharm,
-  createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createInkCloud,
+  createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createKrakenWhip, createInkCloud,
   createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
   createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
   createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish,
@@ -51,7 +51,7 @@ import {
   createWhiteDragonWyrmling,
   createHeroicStrike, createHolyLight, createShieldOfFaith, createFlashHeal,
   createFireBurst, createIceBolt, createMagicMissiles, createArcaneShield,
-  createVialOfPoison, createSneakAttack, createPetSpider, createCarefulStrike,
+  createVialOfPoison, createSneakAttack, createPetSpider, createCarefulStrike, createHeroicTumble,
   createGreaterCleave, createCharge, createRecklessStrike, createShieldBash,
   createMultiShot, createAimedShotCard, createGoodberries, createGoodberry, createTamedRat,
   createFireToken, createIceToken, createCatFormToken, createBearFormToken,
@@ -120,7 +120,7 @@ import {
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
 } from './power.js';
-import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, getSaveInfo, deleteSave, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
+import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
 import { initAnalytics, track as trackEvent } from './analytics.js';
 
@@ -153,6 +153,735 @@ resizeCanvas();
 
 // === Game State ===
 let state = GameState.MENU;
+// ccgQuest+ (Game+) toggle on the title screen. Visible only when
+// either debugMode is on OR the player has at least one Part 1
+// completion save (`part1_complete_<class>` slot). When ON, the
+// New Game button routes into the GAME_PLUS_SETUP screen first.
+// Reset every time the player lands back on the menu (no persistence
+// across sessions for now — the unlock check fires live).
+let gamePlusToggle = false;
+// Last-rendered ccgQuest+ button rect (set every frame the toggle is
+// visible). Lets the tutorial arrow point at the live button location
+// without drawMenu having to expose btnY across functions.
+let _gamePlusBtnRect = null;
+// Set when CHARACTER_SELECT was reached via the ccgQuest+ Fresh
+// Deck+ flow. Back-button from char-select honors this so the
+// player returns to the GAME_PLUS_SETUP screen instead of dropping
+// all the way back to the main menu. Cleared on any successful
+// game start (so a future Back from a normal new game still
+// returns to the menu).
+let _fromGamePlusSetup = false;
+// Scroll offset for the Option 2 save list on the GAME_PLUS_SETUP
+// screen. Multiple class completions could pile up, so the list is
+// clipped to ~4 visible rows with mouse-wheel scrolling.
+let _gamePlusSavesScrollY = 0;
+// ccgQuest+ progression — highest monster tier offset the player has
+// ever finished a run at. Persisted to localStorage so the unlock
+// survives across sessions. Finishing the base game (offset 0)
+// unlocks offset 1; finishing at offset 1 unlocks offset 2; etc.
+// Cap at 9 defensively so a bug can't run it away.
+const GAMEPLUS_UNLOCK_LS_KEY = 'cq_gameplus_unlock_v1';
+let _gamePlusMaxUnlocked = 0;
+// Runtime tier-offset picks for the current ccgQuest+ run. Stamped
+// when the player starts a Game+ run; consumed by downstream systems
+// (player starter deck tier, enemy scaling) once those hooks land.
+let playerTierOffset = 0;
+let monsterTierOffset = 0;
+// In-screen toggle picks on the GAME_PLUS_SETUP screen — default to
+// 1 each when the unlock allows it, otherwise stay at 0.
+let _setupPlayerOffsetPick = 0;
+let _setupMonsterOffsetPick = 0;
+
+function loadGamePlusUnlock() {
+  try {
+    const raw = localStorage.getItem(GAMEPLUS_UNLOCK_LS_KEY);
+    const n = Number.parseInt(raw, 10);
+    if (Number.isFinite(n) && n >= 0) _gamePlusMaxUnlocked = Math.min(9, n);
+  } catch (e) { /* private mode / corrupt storage falls back to 0 */ }
+}
+// Effective max unlock for ccgQuest+ offset toggles. Debug mode
+// short-circuits to 9 so the developer doesn't need to grind the
+// base game just to test higher-offset behavior.
+function effectiveGamePlusMaxUnlocked() {
+  return debugMode ? 9 : _gamePlusMaxUnlocked;
+}
+// Card-name suffix for a ccgQuest+ tier offset. Hits "+" for 1, "++"
+// for 2, "+++" for 3, then switches to numeric "+4" .. "+9" so the
+// suffix doesn't run away into "++++++". Returns '' for offset 0.
+function gamePlusNameSuffix(n) {
+  if (!n || n <= 0) return '';
+  if (n <= 3) return '+'.repeat(n);
+  return `+${n}`;
+}
+// Build a tier-offset preview clone of a Card so codex / future
+// loot drops can show the upgraded name + tier without mutating the
+// original. Keeps rarity, subtype, effects untouched — only the
+// display fields shift. Cards without `copy()` (powers, creatures)
+// fall through to a shallow clone that still gets the new name +
+// tier, enough for the codex preview to render. Non-card entries
+// (e.g. raw strings) are returned as-is.
+function applyTierOffsetToCardPreview(card, offset) {
+  if (!card || !offset || offset <= 0) return card;
+  let c;
+  if (typeof card.copy === 'function') {
+    c = card.copy();
+  } else {
+    c = Object.assign(Object.create(Object.getPrototypeOf(card)), card);
+  }
+  // Delegate to the in-place helper so the codex preview and the
+  // runtime starter-deck / enemy-deck scaling share one rule set.
+  // The helper also rescales c.previewCreature(s) into new clones,
+  // so the codex hover for cards like Pet Slime shows the scaled
+  // (2/2 instead of 1/1) summon. Master previewCreature is untouched
+  // because Card.copy() above puts a fresh container around the
+  // shared reference, and the helper REPLACES the reference rather
+  // than mutating the master object.
+  applyGamePlusOffsetInPlace(c, offset);
+  return c;
+  // (Legacy preview-only blocks below are reachable only if the
+  // in-place helper missed something — kept for diff safety.)
+  // eslint-disable-next-line no-unreachable
+  const suffix = gamePlusNameSuffix(offset);
+  if (typeof c.name === 'string') c.name = `${c.name}${suffix}`;
+  if (typeof c.tier === 'number') c.tier += offset;
+  // Power-style scaling (no CardEffect objects, just text). For each
+  // tagged scaling key, find the matching number in effectDescription
+  // / shortDesc and bump it. Only Cleave's "damage" is wired today.
+  if (c.gamePlusOffset && typeof c.effectDescription === 'string' && !Array.isArray(c.effects)) {
+    const POWER_PATTERNS = {
+      damage: [
+        /Deal\s+(\d+)\s+Damage/,
+        /(\d+)\s+Dmg/,
+      ],
+    };
+    for (const [tag, per] of Object.entries(c.gamePlusOffset)) {
+      const patterns = POWER_PATTERNS[tag];
+      if (!patterns) continue;
+      const swap = (s, re) => {
+        if (typeof s !== 'string') return s;
+        return s.replace(re, (full, num) => {
+          const next = (parseInt(num, 10) || 0) + per * offset;
+          return full.replace(num, String(next));
+        });
+      };
+      for (const re of patterns) {
+        c.effectDescription = swap(c.effectDescription, re);
+        c.shortDesc = swap(c.shortDesc, re);
+      }
+    }
+  }
+  // Apply per-effect offset bumps when the card defines a
+  // gamePlusOffset rule. Each entry is `effectType: bumpPerOffset`,
+  // so a 2-offset Flash Heal { heal: 3 } adds +6 to every heal
+  // effect on the card. Updates both the live `effects` array and
+  // (when present) `upgradeEffects` so the displayed value matches
+  // whichever path drawCard renders.
+  if (c.gamePlusOffset && Array.isArray(c.effects)) {
+    const bump = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const e of list) {
+        if (!e || !e.effectType) continue;
+        const per = c.gamePlusOffset[e.effectType];
+        if (typeof per === 'number') {
+          e.value = (e.value || 0) + per * offset;
+        } else if (per && typeof per === 'object' && e.effectType === 'armor_bonus_damage') {
+          // armor_bonus_damage encodes `base * 10 + vsArmorTotal`.
+          // The { base, bonus } rule bumps base by `base*offset` and
+          // the BONUS over base by `bonus*offset` (so the "+X vs
+          // Armor/Shield" tail in the description tracks separately).
+          const encoded = e.value || 0;
+          const baseNow = Math.floor(encoded / 10);
+          const vsArmorNow = encoded % 10;
+          const bonusNow = Math.max(0, vsArmorNow - baseNow);
+          const newBase = baseNow + (per.base || 0) * offset;
+          const newBonus = bonusNow + (per.bonus || 0) * offset;
+          e.value = newBase * 10 + (newBase + newBonus);
+        }
+      }
+    };
+    bump(c.effects);
+    bump(c.upgradeEffects);
+    // Patch the description and shortDesc so the displayed numbers
+    // match the bumped values. Each rule lists the original effect
+    // value the description was written against; we substitute the
+    // first occurrence of that integer with the new value. Cards
+    // can ship a `gamePlusDescriptionBase` map for explicit base
+    // values when a card has multiple numbers and the auto-find
+    // would be ambiguous. Falls back to leaving the description
+    // alone when the swap can't be done safely.
+    for (const [etype, per] of Object.entries(c.gamePlusOffset)) {
+      const ref = (c.effects || []).find(e => e && e.effectType === etype);
+      if (!ref) continue;
+      if (typeof per === 'number') {
+        const newVal = ref.value;
+        const oldVal = newVal - per * offset;
+        const swap = (s) => {
+          if (typeof s !== 'string') return s;
+          const re = new RegExp(`\\b${oldVal}\\b`);
+          return re.test(s) ? s.replace(re, String(newVal)) : s;
+        };
+        c.description = swap(c.description);
+        c.shortDesc = swap(c.shortDesc);
+      } else if (per && typeof per === 'object' && etype === 'armor_bonus_damage') {
+        // Two-number swap: the base damage AND the BONUS-vs-armor.
+        // The rule's `base` and `bonus` give the bump per offset;
+        // we reverse them off the post-bump effect value to get the
+        // ORIGINAL numbers, then rewrite the two number tokens in
+        // the description / shortDesc independently.
+        const encoded = ref.value;
+        const baseNew = Math.floor(encoded / 10);
+        const vsArmorNew = encoded % 10;
+        const bonusNew = Math.max(0, vsArmorNew - baseNew);
+        const baseOld = baseNew - (per.base || 0) * offset;
+        const bonusOld = bonusNew - (per.bonus || 0) * offset;
+        const swapBase = (s) => {
+          if (typeof s !== 'string') return s;
+          return s.replace(/Deal\s+(\d+)/, (m, n) => parseInt(n, 10) === baseOld ? `Deal ${baseNew}` : m)
+                  .replace(/(\d+)\s+Dmg/, (m, n) => parseInt(n, 10) === baseOld ? `${baseNew} Dmg` : m);
+        };
+        const swapBonus = (s) => {
+          if (typeof s !== 'string') return s;
+          return s.replace(/\+(\d+)\s+vs\s+Arm/i, (m, n) => parseInt(n, 10) === bonusOld ? `+${bonusNew} vs Arm` : m);
+        };
+        c.description = swapBonus(swapBase(c.description));
+        c.shortDesc = swapBonus(swapBase(c.shortDesc));
+      }
+    }
+  }
+  return c;
+}
+// In-place variant — mutates the given card / power directly. Used
+// at runtime when an actual deck card needs to carry the offset
+// effects (not just a codex preview clone). The PREVIEW function
+// above also funnels through here after cloning.
+// Context-aware regex patterns for description swaps in the
+// effects-array branch. Without these, `\b{old}\b` matches the
+// FIRST occurrence of the old value in the description — which
+// breaks for cards where two effects share the same number (e.g.
+// Short Staff's "Recharge +1 Card -> Deal 4 Damage, Gain 1 Shield":
+// gain_shield 1→2 would hit the "+1 Card" first). Each pattern's
+// first capture group is what gets replaced.
+const EFFECT_DESC_PATTERNS = {
+  damage: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i, /(\d+)\s+damage\b/],
+  multi_damage: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  charge_attack: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  feral_swipe_damage: [/Deal\s+(\d+)\s+damage/i, /(\d+)\s+Dmg\b/i],
+  block: [/Block\s+(\d+)/i, /(\d+)\s+Block/i],
+  heal: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
+  gain_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  apply_fire: [/(\d+)\s+Fire\b/i],
+  apply_fire_all: [/(\d+)\s+Fire\b/i],
+  apply_ice: [/(\d+)\s+Ice\b/i],
+  gain_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
+  apply_poison: [/(\d+)\s+Poison/i],
+  apply_poison_self: [/Gain\s+(\d+)\s+Poison/i],
+  apply_poison_vs_armor: [/\+(\d+)\s+Poison/i, /(\d+)\s+Poison/i],
+  scry_pick: [/Scry\s+(\d+)/i],
+  unpreventable_damage: [/Deal\s+(\d+)\s+Unpreventable/i, /(\d+)\s+True\s+Dmg/i, /(\d+)\s+Unpreventable/i],
+  grant_unpreventable_buff: [/next\s+(\d+)\s+attack/i, /Next\s+(\d+)/i],
+};
+function swapInDescription(s, oldVal, newVal, etype) {
+  if (typeof s !== 'string') return s;
+  const patterns = EFFECT_DESC_PATTERNS[etype];
+  if (patterns) {
+    for (const re of patterns) {
+      const m = s.match(re);
+      if (m && parseInt(m[1], 10) === oldVal) {
+        // Replace the first capture only (avoid touching other digits)
+        const idx = s.indexOf(m[0]);
+        const inside = m[0].replace(m[1], String(newVal));
+        return s.slice(0, idx) + inside + s.slice(idx + m[0].length);
+      }
+    }
+  }
+  // Fallback: generic word-boundary swap.
+  const re = new RegExp(`\\b${oldVal}\\b`);
+  return re.test(s) ? s.replace(re, String(newVal)) : s;
+}
+function applyGamePlusOffsetInPlace(c, offset) {
+  if (!c || !offset || offset <= 0) return c;
+  const suffix = gamePlusNameSuffix(offset);
+  if (typeof c.name === 'string') c.name = `${c.name}${suffix}`;
+  if (typeof c.tier === 'number') c.tier += offset;
+  // Scale previewCreature(s) — the in-hand hover preview reads the
+  // card's previewCreature directly, so without rescaling here a
+  // Pet Slime in your hand would show the base 1/1 even after the
+  // card itself scaled.
+  if (c.previewCreature) {
+    c.previewCreature = applyTierOffsetToCreaturePreview(c.previewCreature, offset);
+  }
+  if (Array.isArray(c.previewCreatures) && c.previewCreatures.length) {
+    c.previewCreatures = c.previewCreatures.map(cr => applyTierOffsetToCreaturePreview(cr, offset));
+  }
+  if (c.gamePlusOffset && Array.isArray(c.effects)) {
+    // Fractional `per` (e.g. 1.5 for Wooden Axe) is floored AFTER
+    // multiplication so +1 offset = +1 dmg, +2 offset = +3 dmg, etc.
+    const scaledInc = (per) => Math.floor(per * offset);
+    // armor_bonus_damage encoding: < 100 uses base*10 + vsArmorTotal
+    // (single-digit each); >= 100 uses base*100 + vsArmorTotal so
+    // vsArmorTotal can spill past 9. Mirrors the runtime decoder in
+    // case 'armor_bonus_damage'.
+    const decodeAbd = (encoded) => {
+      if (encoded >= 100) return { base: Math.floor(encoded / 100), vsArmor: encoded % 100 };
+      return { base: Math.floor(encoded / 10), vsArmor: encoded % 10 };
+    };
+    const encodeAbd = (base, vsArmor) => vsArmor >= 10 ? (base * 100 + vsArmor) : (base * 10 + vsArmor);
+    const bump = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const e of list) {
+        if (!e || !e.effectType) continue;
+        const per = c.gamePlusOffset[e.effectType];
+        if (typeof per === 'number') {
+          e.value = (e.value || 0) + scaledInc(per);
+        } else if (per && typeof per === 'object' && e.effectType === 'armor_bonus_damage') {
+          const dec = decodeAbd(e.value || 0);
+          const bonusNow = Math.max(0, dec.vsArmor - dec.base);
+          const newBase = dec.base + (per.base || 0) * offset;
+          const newBonus = bonusNow + (per.bonus || 0) * offset;
+          e.value = encodeAbd(newBase, newBase + newBonus);
+        } else if (per && typeof per === 'object' && e.effectType === 'enemy_damage_succession') {
+          // Rock Barrage / similar succession attacks: bump value
+          // (per-shot damage) AND maxTargets (shot count). per is
+          // { value: N, maxTargets: M }.
+          if (typeof per.value === 'number') e.value = (e.value || 0) + scaledInc(per.value);
+          if (typeof per.maxTargets === 'number') e.maxTargets = (e.maxTargets || 1) + scaledInc(per.maxTargets);
+        }
+      }
+    };
+    bump(c.effects);
+    bump(c.upgradeEffects);
+    for (const [etype, per] of Object.entries(c.gamePlusOffset)) {
+      const ref = (c.effects || []).find(e => e && e.effectType === etype);
+      if (!ref) continue;
+      if (typeof per === 'number') {
+        const newVal = ref.value;
+        const oldVal = newVal - scaledInc(per);
+        c.description = swapInDescription(c.description, oldVal, newVal, etype);
+        c.shortDesc = swapInDescription(c.shortDesc, oldVal, newVal, etype);
+      } else if (per && typeof per === 'object' && etype === 'armor_bonus_damage') {
+        const dec = decodeAbd(ref.value);
+        const baseNew = dec.base;
+        const vsArmorNew = dec.vsArmor;
+        const bonusNew = Math.max(0, vsArmorNew - baseNew);
+        const baseOld = baseNew - (per.base || 0) * offset;
+        const bonusOld = bonusNew - (per.bonus || 0) * offset;
+        const swapBase = (s) => {
+          if (typeof s !== 'string') return s;
+          return s.replace(/Deal\s+(\d+)/, (m, n) => parseInt(n, 10) === baseOld ? `Deal ${baseNew}` : m)
+                  .replace(/(\d+)\s+Dmg/, (m, n) => parseInt(n, 10) === baseOld ? `${baseNew} Dmg` : m);
+        };
+        const swapBonus = (s) => {
+          if (typeof s !== 'string') return s;
+          return s.replace(/\+(\d+)\s+vs\s+Arm/i, (m, n) => parseInt(n, 10) === bonusOld ? `+${bonusNew} vs Arm` : m);
+        };
+        c.description = swapBonus(swapBase(c.description));
+        c.shortDesc = swapBonus(swapBase(c.shortDesc));
+      }
+    }
+    // Magic Missiles — two damage numbers (initial + per-shot) and
+    // a shot count derived from `barrage + 1`. Rebuild the
+    // description from scaled values so both damages and the shot
+    // count read cleanly.
+    if (c.id === 'magic_missiles') {
+      const dmg = (c.effects.find(e => e.effectType === 'damage')?.value) || 0;
+      const barrage = (c.effects.find(e => e.effectType === 'barrage')?.value) || 0;
+      const shots = barrage + 1;
+      c.description = `Recharge -> Deal ${dmg} Damage, Draw.\nOptional: Recharge 1 more -> ${shots} shots of ${dmg} damage each.`;
+      c.shortDesc = `R->${dmg} Dmg, Draw\nOpt R+1->${shots}x${dmg} Dmg`;
+    }
+    // Rock Barrage — per-shot damage + shot count both scale. The
+    // description carries two numbers ("1 Damage 2 times") that
+    // overlap with each other under generic swap; rebuild cleanly.
+    if (c.id === 'rock_barrage') {
+      const eff = c.effects.find(e => e.effectType === 'enemy_damage_succession');
+      if (eff) {
+        const dmg = eff.value || 0;
+        const shots = eff.maxTargets || 1;
+        c.description = `Recharge -> Deal ${dmg} Damage ${shots} times, Draw.`;
+        c.shortDesc = `R->${dmg} Dmg x${shots}, Draw`;
+      }
+    }
+    // Bone Wand — special-case: poison scales as floor(0.5 * offset)
+    // and the self-poison effect is removed entirely at offset >= 1.
+    // Description has no leading numbers (just "Deal Poison and Gain
+    // Poison"), so we rebuild it from the scaled poison count.
+    if (c.id === 'bone_wand') {
+      const poison = 1 + Math.floor(0.5 * offset);
+      // Bump apply_poison effect value
+      const poisonEff = c.effects.find(e => e.effectType === 'apply_poison');
+      if (poisonEff) poisonEff.value = poison;
+      // Strip apply_poison_self at any offset >= 1
+      c.effects = c.effects.filter(e => e.effectType !== 'apply_poison_self');
+      c.description = `Deal ${poison} Poison.\nStays in hand.`;
+      c.shortDesc = `${poison} Poison\nStays`;
+    }
+    // Pet Slime — 1-N slime summons per offset (mirrors Loose Bone's
+    // pattern). The previewCreature is rescaled via CREATURE_TIER_OFFSET
+    // automatically in applyTierOffsetToCardPreview.
+    if (c.id === 'pet_slime' && c.gamePlusOffset?.pet_slime_summon) {
+      const maxRoll = 1 + (c.gamePlusOffset.pet_slime_summon * offset);
+      c.description = `Recharge -> Summon 1-${maxRoll} Pet Slimes!`;
+      c.shortDesc = `R->1-${maxRoll} Slimes`;
+    }
+    // Wand of Fire — base description has no number ("Deal Fire"),
+    // so inject the scaled Fire stack count into both lines.
+    if (c.id === 'wand_of_fire') {
+      const fireEff = c.effects.find(e => e.effectType === 'apply_fire');
+      const n = fireEff?.value || 1;
+      c.description = `Deal ${n} Fire.\nStays in hand.`;
+      c.shortDesc = `${n} Fire, Stays`;
+    }
+    // Bad Rations — heal bumps via the generic swap (Heal 4 → 6),
+    // but the Meal duration is a provision field outside the effects
+    // array, so bump it explicitly and re-emit the duration in the
+    // description tail.
+    if (c.id === 'bad_rations' && c.gamePlusOffset?.bad_rations_turns) {
+      const dT = c.gamePlusOffset.bad_rations_turns * offset;
+      if (c.provision) c.provision.turnsPerCombat = (c.provision.turnsPerCombat || 0) + dT;
+      const newTurns = c.provision?.turnsPerCombat || 2;
+      c.description = (c.description || '').replace(/for\s+\d+\s+turns/i, `for ${newTurns} turns`);
+      if (c.provision?.description) {
+        c.provision.description = c.provision.description.replace(/for\s+\d+\s+turns/i, `for ${newTurns} turns`);
+      }
+    }
+    // Goodberry — sync the provision's sustenance value with the
+    // scaled effect so the meal tick also rolls multiple times. Heal
+    // number is already swapped by the generic loop ("Heal 1" via
+    // heal pattern → "Heal 2").
+    if (c.id === 'goodberry') {
+      const sustEff = c.effects.find(e => e.effectType === 'goodberry_sustenance');
+      if (sustEff && c.provision) c.provision.value = sustEff.value;
+    }
+    // Regrowth — two heal numbers (the on-play heal and the per-turn
+    // regen). Generic swap can only hit one before the other
+    // collides. Rebuild the full description from the scaled values.
+    if (c.id === 'regrowth') {
+      const healOnPlay = (c.effects.find(e => e.effectType === 'heal')?.value) || 0;
+      const turns = (c.effects.find(e => e.effectType === 'regen_buff')?.value) || 0;
+      const healPerTurn = 1 + offset;
+      c.description = `Recharge -> Heal ${healOnPlay}. Heal ${healPerTurn} at start of turn for ${turns} turns.`;
+      c.shortDesc = `R->Heal ${healOnPlay}\n+Regen ${healPerTurn}/${turns}t`;
+    }
+    // Rat Taming — description has no numbers (just "Summon Rats"),
+    // so add an explicit annotation summarizing the scaling so the
+    // codex makes the offset legible.
+    if (c.id === 'tamed_rat') {
+      const off = offset;
+      const direN = 1 + off;
+      const tamedMax = 3 + off;
+      c.description = `Recharge -> Summon Rats.\n50%: 1-${tamedMax} Tamed Rats.\n50%: ${direN} Dire Rat${direN > 1 ? 's' : ''}.`;
+      c.shortDesc = `R->Summon Rats\n1-${tamedMax} Tamed\nor ${direN} Dire`;
+    }
+    // Goodberries — bumped cap (3 + offset). The description has no
+    // number ("Create some Goodberries"), so just rebuild it with
+    // an explicit range now that the cap is meaningful.
+    if (c.id === 'goodberries') {
+      const cap = (c.effects.find(e => e.effectType === 'create_goodberries')?.value) || 3;
+      c.description = `Recharge -> Create 1-${cap} Goodberries (scaled).`;
+      c.shortDesc = `R->1-${cap}\nGoodberries+`;
+    }
+    // Sneak Attack — base damage is X (attacks this turn). The
+    // gamePlusOffset adds a flat bonus on top (sneak_attack.value
+    // carries the bonus, 0 base → 2 → 4…). Rebuild the description
+    // to reflect the new formula.
+    if (c.id === 'sneak_attack') {
+      const flat = (c.effects.find(e => e.effectType === 'sneak_attack')?.value) || 0;
+      if (flat > 0) {
+        c.description = `Recharge -> Deal X+${flat} Damage.\nX = attacks this turn (counts itself).`;
+        c.shortDesc = `R->X+${flat} Dmg\nX = # attacks`;
+      }
+    }
+    // Heroic Tumble — block amount is hard-coded in the runtime
+    // handler, NOT stored as the tumble_block effect value (which
+    // carries the percent chance). Rebuild the description from the
+    // scaled block value so the codex preview matches the runtime
+    // BLOCK_GAIN = 6 + 4 * playerTierOffset.
+    if (c.id === 'heroic_tumble') {
+      const block = 6 + 4 * offset;
+      c.description = `Recharge -> 50% to gain ${block} Block.\nUnused Block becomes Heroism.\nDraw.`;
+      c.shortDesc = `R->50% +${block} Block\nLeftover->Heroism\nDraw`;
+    }
+    // Sturdy Boots — dual-mode (attack effects[0] + defense modes[0]).
+    // Top-level damage and mode block / damage_random all scale, but
+    // the description weaves both modes into one block with multiple
+    // "N Dmg" / "Block N" matches. Rebuild cleanly from the scaled
+    // effect values.
+    if (c.id === 'sturdy_boots') {
+      const atkDmg = (c.effects.find(e => e.effectType === 'damage')?.value) || 0;
+      const defBlock = (c.modes?.[0]?.effects.find(e => e.effectType === 'block')?.value) || 0;
+      const defDmg = (c.modes?.[0]?.effects.find(e => e.effectType === 'damage_random')?.value) || 0;
+      c.description = `Attack: ${atkDmg} Dmg\nDefense: Block ${defBlock},\n${defDmg} Dmg random, Draw`;
+      c.shortDesc = `R->${atkDmg} Dmg / Def:\nBlock ${defBlock} +${defDmg} rand\nDraw`;
+      if (c.modes?.[0]) {
+        c.modes[0].description = `Block ${defBlock}, ${defDmg} Dmg random, Draw`;
+      }
+    }
+  }
+  // Power-style scaling (text-only effectDescription / shortDesc).
+  if (c.gamePlusOffset && typeof c.effectDescription === 'string' && !Array.isArray(c.effects)) {
+    const POWER_PATTERNS = {
+      damage: [/Deal\s+(\d+)\s+Damage/, /(\d+)\s+Dmg/],
+      armor_power: [/by\s+(\d+)\b/, /Block\s+(\d+)/],
+      gain_heroism: [/(\d+)\s+Heroism/i],
+      gain_shield: [/(\d+)\s+Shield/i],
+      apply_fire: [/(\d+)\s+Fire/i],
+      apply_ice: [/(\d+)\s+Ice/i],
+      // Dire Fury (Rats): "Gain 1 Rage" / "+1 Rage" both swap.
+      dire_fury_rage: [/(\d+)\s+Rage/i],
+    };
+    for (const [tag, per] of Object.entries(c.gamePlusOffset)) {
+      const patterns = POWER_PATTERNS[tag];
+      if (!patterns) continue;
+      const swap = (s, re) => {
+        if (typeof s !== 'string') return s;
+        return s.replace(re, (full, num) => {
+          const next = (parseInt(num, 10) || 0) + per * offset;
+          return full.replace(num, String(next));
+        });
+      };
+      for (const re of patterns) {
+        c.effectDescription = swap(c.effectDescription, re);
+        c.shortDesc = swap(c.shortDesc, re);
+      }
+    }
+    // Battle Fury — base text omits the "1"s ("Gain Heroism,
+    // Shield"). At offset > 0, INSERT the numbers so the codex
+    // preview reads "Gain N Heroism, N Shield" cleanly.
+    if (c.id === 'battle_fury') {
+      const heroismPer = c.gamePlusOffset.gain_heroism || 0;
+      const shieldPer = c.gamePlusOffset.gain_shield || 0;
+      const hVal = 1 + heroismPer * offset;
+      const sVal = 1 + shieldPer * offset;
+      const insertNums = (s) => {
+        if (typeof s !== 'string') return s;
+        return s
+          .replace(/Gain\s+Heroism,\s*Shield/i, `Gain ${hVal} Heroism, ${sVal} Shield`)
+          .replace(/\+Heroism\b/, `+${hVal} Heroism`)
+          .replace(/\+Shield\b/, `+${sVal} Shield`);
+      };
+      c.effectDescription = insertNums(c.effectDescription);
+      c.shortDesc = insertNums(c.shortDesc);
+    }
+    // Split (slime power) — base 1 slime on hit, +1 max per offset
+    // (1-2 at T1, 1-3 at T2). Description / shortDesc get an explicit
+    // range annotation so the codex preview reads cleanly.
+    if (c.id === 'split' && c.gamePlusOffset?.split_summon) {
+      const maxRoll = 1 + (c.gamePlusOffset.split_summon * offset);
+      c.effectDescription = `Splits when damaged (1-${maxRoll} slimes).`;
+      c.shortDesc = `Split on hit\n1-${maxRoll}`;
+    }
+    // Wolf Pack — base summon list bumps by N per offset. Add an
+    // explicit "(+N)" annotation so the codex shows the scaling.
+    if (c.id === 'wolf_pack' && c.gamePlusOffset?.wolf_pack_extra) {
+      const extra = c.gamePlusOffset.wolf_pack_extra * offset;
+      c.effectDescription = `Start of Turn: Summon Wolves (+${extra}).`;
+      c.shortDesc = `Summon\nWolves +${extra}`;
+    }
+    // Quick Strike — barrage scaling. Base 1 attack, +1 per offset.
+    // Rewrites "Deal 1 Damage" to "Deal 1 Damage N times" so the
+    // codex shows the swing count without needing a hit-count field.
+    if (c.id === 'quick_strike') {
+      const attacks = 1 + (c.gamePlusOffset.quick_strike_attacks || 0) * offset;
+      if (attacks > 1) {
+        const tagText = (s) => {
+          if (typeof s !== 'string') return s;
+          return s
+            .replace(/Deal\s+1\s+Damage/i, `Deal 1 Damage ${attacks} times`)
+            .replace(/1\s+Dmg/i, `1 Dmg x${attacks}`);
+        };
+        c.effectDescription = tagText(c.effectDescription);
+        c.shortDesc = tagText(c.shortDesc);
+      }
+    }
+    // Armor power — also bump the live armorLevel + display name so
+    // the codex thumbnail header reads "Armor: N" with the upgraded
+    // value, matching the body text.
+    if (typeof c.armorLevel === 'number' && c.gamePlusOffset.armor_power) {
+      const bump = c.gamePlusOffset.armor_power * offset;
+      c.armorLevel += bump;
+      if (typeof c.name === 'string') {
+        // The suffix (+ / ++ / +N) was already appended by the helper
+        // earlier — strip it from the "Armor: N" name and let the
+        // updated number speak. Cosmetic only.
+        c.name = `Armor: ${c.armorLevel}${suffix}`;
+      }
+    }
+  }
+  // Modal cards (Wrath etc.): per-mode bump dicts under
+  // gamePlusOffset.modes = [{ damage: 3 }, { damage: 1 }]. The
+  // per-mode keys mirror normal effectType bumps but scope to one
+  // mode at a time so two damage modes can scale differently.
+  if (c.gamePlusOffset && Array.isArray(c.modes) && Array.isArray(c.gamePlusOffset.modes)) {
+    const scaledInc2 = (per) => Math.floor(per * offset);
+    for (let mi = 0; mi < c.modes.length; mi++) {
+      const mode = c.modes[mi];
+      const modeBump = c.gamePlusOffset.modes[mi];
+      if (!mode || !modeBump || !Array.isArray(mode.effects)) continue;
+      for (const e of mode.effects) {
+        if (!e || !e.effectType) continue;
+        const per = modeBump[e.effectType];
+        if (typeof per === 'number') e.value = (e.value || 0) + scaledInc2(per);
+      }
+      if (typeof mode.description === 'string') {
+        for (const [etype, per] of Object.entries(modeBump)) {
+          if (typeof per !== 'number') continue;
+          const ref = mode.effects.find(e => e && e.effectType === etype);
+          if (!ref) continue;
+          const newVal = ref.value;
+          const oldVal = newVal - scaledInc2(per);
+          mode.description = swapInDescription(mode.description, oldVal, newVal, etype);
+        }
+      }
+    }
+    // Wrath rebuilds its multi-line description from the scaled
+    // mode damage values so the codex preview reads cleanly.
+    if (c.id === 'wrath') {
+      const d0 = (c.modes[0]?.effects || []).find(e => e?.effectType === 'damage')?.value || 0;
+      const d1 = (c.modes[1]?.effects || []).find(e => e?.effectType === 'damage')?.value || 0;
+      c.description = `Choose 1:\n${d0} Damage\nOR ${d1} Damage, Draw.`;
+      c.shortDesc = `R->${d0} Dmg\nOR ${d1} Dmg, Draw`;
+    }
+  }
+  // Description-only annotations that don't tie to a CardEffect
+  // value swap. Loose Bone's summon-count bump is just a tail line
+  // on the description so the codex preview hints at the new range
+  // without forcing the player to read the spawn code.
+  if (c.gamePlusOffset && typeof c.gamePlusOffset.loose_bone_summon === 'number') {
+    const maxRoll = 1 + c.gamePlusOffset.loose_bone_summon * offset;
+    if (typeof c.description === 'string' && c.description.includes('Restless Bone')) {
+      c.description = c.description.replace(
+        /Summon a Restless Bone\./,
+        `Summon 1-${maxRoll} Restless Bones.`
+      );
+    }
+    if (typeof c.shortDesc === 'string') {
+      c.shortDesc = c.shortDesc.replace(/\+Restless Bone/, `+1-${maxRoll} R.Bone`);
+    }
+  }
+}
+// Apply monster tier offset to the currently-spawned enemy: scale
+// HP (duplicate every card in the deck N times), apply gamePlusOffset
+// to every card + power, scale starting creatures, and wrap
+// enemy.addCreature so creatures spawned mid-fight also get scaled.
+function applyMonsterTierOffsetToEnemy() {
+  if (!enemy || !enemy.deck || !monsterTierOffset || monsterTierOffset <= 0) return;
+  // 1. Apply gamePlusOffset to every starter card.
+  for (const card of enemy.deck.masterDeck) {
+    if (card && card.gamePlusOffset) applyGamePlusOffsetInPlace(card, monsterTierOffset);
+  }
+  // 2. Duplicate the deck monsterTierOffset times so total HP scales
+  //    linearly. Offset 1 = 2× HP, offset 2 = 3× HP, etc.
+  const original = [...enemy.deck.masterDeck];
+  for (let k = 0; k < monsterTierOffset; k++) {
+    for (const c of original) {
+      enemy.deck.addCard(c.copy ? c.copy() : c);
+    }
+  }
+  // 3. Apply gamePlusOffset to every power.
+  for (const p of (enemy.powers || [])) {
+    if (p && p.gamePlusOffset) applyGamePlusOffsetInPlace(p, monsterTierOffset);
+  }
+  // 4. Scale all currently-on-field starting creatures.
+  for (const c of (enemy.creatures || [])) {
+    scaleEnemyCreature(c);
+  }
+  // 5. Wrap addCreature so future mid-fight summons also scale.
+  if (!enemy._addCreatureWrappedForOffset) {
+    const original = enemy.addCreature.bind(enemy);
+    enemy.addCreature = function (creature) {
+      scaleEnemyCreature(creature);
+      return original(creature);
+    };
+    enemy._addCreatureWrappedForOffset = true;
+  }
+}
+// Scale a single enemy creature for the active monster tier offset.
+// Universal rule: HP × (1 + offset). Per-name overrides stack on top
+// — Rats get +1/+1 (attack + HP) per offset to match the user's spec.
+// Per-creature-name tier-offset stat bumps. Each entry: { attack, hp }
+// per offset point. The boss-character "double HP" rule is the deck
+// duplication in applyMonsterTierOffsetToEnemy — creatures only
+// stack their named offset, so a Rat at +1 reads as 2/2, not 2/3.
+// Codex helpers (creatureHasOffsetRules, scaleCreaturePreview) read
+// this table to surface which creatures still need rules.
+const CREATURE_TIER_OFFSET = {
+  'Rat':           { attack: 1, hp: 1 },
+  'Restless Bone': { attack: 1, hp: 2 },
+  'Wolf':          { attack: 2, hp: 2 },
+  'Pet Slime':     { attack: 1, hp: 1 },
+  'Slime':         { attack: 1, hp: 1 },
+  'Pet Spider':    { attack: 1, hp: 1 },
+  'Tamed Rat':     { attack: 1, hp: 1 },
+  'Dire Rat':      { attack: 2, hp: 2 },
+};
+function scaleEnemyCreature(creature) {
+  if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
+  scaleCreatureWithOffset(creature, monsterTierOffset);
+}
+function scaleCreatureWithOffset(creature, offset) {
+  if (!creature || !offset || offset <= 0) return;
+  const rule = CREATURE_TIER_OFFSET[creature.name];
+  if (!rule) return;
+  const dA = (rule.attack || 0) * offset;
+  const dH = (rule.hp || 0) * offset;
+  if (dA) creature.attack = (creature.attack || 0) + dA;
+  if (dH) {
+    creature.maxHp = (creature.maxHp || 0) + dH;
+    creature.currentHp = (creature.currentHp || 0) + dH;
+  }
+}
+// True when the creature has an offset rule wired (codex hides the
+// red "+N?" badge in that case). Mirrors cardHasOffsetRules.
+// `noTierOffset === true` on the creature counts as "intentionally
+// no offset" and also hides the badge.
+function creatureHasOffsetRules(creature, offset) {
+  if (!offset || offset <= 0) return true;
+  if (!creature || !creature.name) return false;
+  if (creature.noTierOffset === true) return true;
+  return !!CREATURE_TIER_OFFSET[creature.name];
+}
+// Codex preview clone — non-mutating variant of scaleCreatureWithOffset
+// so the live source-cache creature stays at its base stats.
+function applyTierOffsetToCreaturePreview(creature, offset) {
+  if (!creature || !offset || offset <= 0) return creature;
+  const rule = CREATURE_TIER_OFFSET[creature.name];
+  if (!rule) return creature;
+  // Shallow clone — preserves prototype + all fields so the codex
+  // creature card renderer reads the same shape.
+  const clone = Object.assign(Object.create(Object.getPrototypeOf(creature)), creature);
+  scaleCreatureWithOffset(clone, offset);
+  return clone;
+}
+// True when the card already has tier-up rules wired for the given
+// offset (i.e. the codex can preview it accurately). Used by the
+// codex grid to hide the red "needs rules" badge once a card is
+// scaled cleanly.
+function cardHasOffsetRules(card, offset) {
+  if (!offset || offset <= 0) return true;
+  if (!card) return false;
+  // Explicit opt-out: cards / powers that deliberately don't scale
+  // with tier (Overwhelm, Vanish, etc.) set noTierOffset so the codex
+  // doesn't paint the red "needs rules" badge over them.
+  if (card.noTierOffset === true) return true;
+  if (!card.gamePlusOffset) return false;
+  return Object.keys(card.gamePlusOffset).length > 0;
+}
+function saveGamePlusUnlock() {
+  try { localStorage.setItem(GAMEPLUS_UNLOCK_LS_KEY, String(_gamePlusMaxUnlocked)); }
+  catch (e) { /* quota / private mode — silently skip */ }
+}
+// Called from the post-Varimatras credits trigger. Bumps the unlock
+// to MAX(current, monsterTierOffset + 1) so finishing the game at
+// monster tier N opens up tier N+1 for the next run.
+function bumpGamePlusUnlock() {
+  const cleared = Math.max(0, monsterTierOffset || 0);
+  const next = Math.min(9, Math.max(_gamePlusMaxUnlocked, cleared + 1));
+  if (next > _gamePlusMaxUnlocked) {
+    _gamePlusMaxUnlocked = next;
+    saveGamePlusUnlock();
+  }
+}
 let mouseX = 0;
 let mouseY = 0;
 let lastTime = 0;
@@ -802,6 +1531,17 @@ const TUTORIAL_BOXES = {
     title: 'Welcome to CCG Quest',
     body: 'Welcome to CCG Quest, an RPG where you fight enemies using a deck of cards! You will find cards on your journey which will allow you to improve your deck.',
   },
+  game_plus_unlocked: {
+    title: 'ccgQuest+ Unlocked!',
+    body: "You've finished Part 1 — ccgQuest+ is now available. It's a second-run mode with extra options that build on the run you just finished. Click the ccgQuest+ banner below to turn it on, then press Play to set up your next adventure.",
+    arrow: () => {
+      if (_gamePlusBtnRect) {
+        return { x: _gamePlusBtnRect.x + _gamePlusBtnRect.w / 2,
+                 y: _gamePlusBtnRect.y + _gamePlusBtnRect.h / 2 };
+      }
+      return { x: SCREEN_WIDTH / 2, y: 500 };
+    },
+  },
   hp_explained: {
     title: 'Your Cards Are Your Life',
     body: 'Cards in your deck and hand are your lifeforce — your HP. When you take damage from enemies, or when a card is discarded by other means, you lose HP. When your HP reach 0, you die.',
@@ -1379,8 +2119,10 @@ let feralSwipeShieldGranted = 0;
 let barrageMode = false;          // true = in barrage flow
 let barrageShotsLeft = 0;         // remaining shots (0 = pre-pay phase)
 let barrageShotsFired = 0;        // how many shots already fired (for cancel check)
+let barrageShotsTotal = 0;        // total shots this barrage (barrage value + 1)
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
+let barrageShotDamage = 1;        // per-shot base damage from the MM card
 
 // Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
 // element shots, each picks its own target — same enemy or different).
@@ -1435,6 +2177,7 @@ const CARD_REGISTRY = {
   magic_missiles: createMagicMissiles, arcane_shield: createArcaneShield,
   vial_of_poison: createVialOfPoison, sneak_attack: createSneakAttack,
   pet_spider: createPetSpider, careful_strike: createCarefulStrike,
+  heroic_tumble: createHeroicTumble,
   greater_cleave: createGreaterCleave, charge: createCharge, reckless_strike: createRecklessStrike,
   shield_bash: createShieldBash, multi_shot: createMultiShot,
   aimed_shot_card: createAimedShotCard,
@@ -1476,6 +2219,7 @@ const CARD_REGISTRY = {
   kraken_tentacle: createKrakenTentacleCard,
   kraken_tentacle_block: createKrakenTentacleBlock,
   swallowing_bite: createSwallowingBite,
+  kraken_whip: createKrakenWhip,
   ink_cloud: createInkCloud,
   // Kraken Spawn loot drops (pick-2 epic table).
   bloody_eye_patch: createBloodyEyePatch, harpoon_of_the_deep: createHarpoonOfTheDeep,
@@ -2375,6 +3119,15 @@ canvas.addEventListener('click', (e) => {
   _ctrlClickActive = false;
 });
 
+// Right-click — suppresses the browser context menu and dispatches a
+// dedicated handler. Used to "step down" stepper widgets that step
+// UP on left-click (codex TOffset, ccgQuest+ setup tier offsets).
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  const { x, y } = canvasPosFromEvent(e);
+  handleRightClick(x, y);
+});
+
 document.addEventListener('keydown', (e) => {
   // Ctrl+C in combat: copy full combat log to clipboard
   if (e.ctrlKey && e.key === 'c' && combatLog.length > 0) {
@@ -2474,6 +3227,9 @@ canvas.addEventListener('wheel', (e) => {
   if (state === GameState.LOAD_GAME || state === GameState.SAVE_GAME) {
     loadScrollY = Math.max(0, loadScrollY + scrollAmount);
   }
+  if (state === GameState.GAME_PLUS_SETUP) {
+    _gamePlusSavesScrollY = Math.max(0, _gamePlusSavesScrollY + scrollAmount);
+  }
 }, { passive: false });
 
 // === Utility ===
@@ -2563,6 +3319,45 @@ function getPlayerHandSize() {
 }
 
 // === Click Dispatch ===
+// Right-click dispatcher. Routes to per-state right-click handlers
+// that step DOWN stepper widgets (codex TOffset, ccgQuest+ setup
+// tier offsets). Anything else falls through to a no-op so the
+// rest of the UI ignores right-clicks cleanly.
+function handleRightClick(x, y) {
+  if (state === GameState.CODEX) {
+    for (const a of codexClickAreas) {
+      if (!hitTest(x, y, a)) continue;
+      if (a.kind === 'toffset') {
+        codexTierOffset = (codexTierOffset + 9) % 10; // step down with wrap
+        playSound('click');
+        return;
+      }
+    }
+    return;
+  }
+  if (state === GameState.GAME_PLUS_SETUP) {
+    // Mirror the menuButton lookup but step the offset toggles down
+    // instead of up. The toggles register a regular menuButton so we
+    // can detect their hit boxes by re-running the same coords.
+    for (const btn of menuButtons) {
+      if (!hitTest(x, y, btn)) continue;
+      if (btn._offsetKind === 'player') {
+        const max = effectiveGamePlusMaxUnlocked();
+        _setupPlayerOffsetPick = (_setupPlayerOffsetPick + max) % (max + 1);
+        playSound('click');
+        return;
+      }
+      if (btn._offsetKind === 'monster') {
+        const max = effectiveGamePlusMaxUnlocked();
+        _setupMonsterOffsetPick = (_setupMonsterOffsetPick + max) % (max + 1);
+        playSound('click');
+        return;
+      }
+    }
+    return;
+  }
+}
+
 function handleClick(x, y) {
   // Tutorial modal eats the click before any state handler so the
   // player can dismiss it on top of any screen. No-op when there's
@@ -2582,6 +3377,9 @@ function handleClick(x, y) {
   switch (state) {
     case GameState.MENU:
       handleMenuClick(x, y);
+      break;
+    case GameState.GAME_PLUS_SETUP:
+      handleGamePlusSetupClick(x, y);
       break;
     case GameState.CHARACTER_SELECT:
       handleCharSelectClick(x, y);
@@ -3063,6 +3861,249 @@ function handleMenuClick(x, y) {
   }
 }
 
+// ccgQuest+ setup screen — placeholder scaffold reached from the
+// title screen when the ccgQuest+ toggle is on and the player presses
+// Play. Real options (modifier picks, starting state, etc.) get
+// dropped in here later; for now Continue routes through the standard
+// new-game flow and Back returns to the title screen. The active
+// gamePlus run is signaled by the gamePlusToggle being true when
+// startNewGame is eventually called, so downstream systems can read
+// that flag to branch behavior.
+function drawGamePlusSetup() {
+  if (images.menu_bg) {
+    ctx.drawImage(images.menu_bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  } else {
+    ctx.fillStyle = '#0e0e14';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  menuButtons.length = 0;
+
+  const panelW = 820;
+  const panelH = 800;
+  const panelX = (SCREEN_WIDTH - panelW) / 2;
+  const panelY = (SCREEN_HEIGHT - panelH) / 2;
+  ctx.fillStyle = 'rgba(28, 22, 16, 0.92)';
+  ctx.fillRect(panelX, panelY, panelW, panelH);
+  ctx.strokeStyle = '#ffc060';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+  // Title
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = '#ffc060';
+  ctx.font = 'bold 56px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ccgQuest+', SCREEN_WIDTH / 2, panelY + 80);
+  ctx.restore();
+
+  ctx.fillStyle = '#e8d59a';
+  ctx.font = 'italic 20px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Carry your finished Part 1 run into a fresh playthrough.', SCREEN_WIDTH / 2, panelY + 120);
+
+  // --- Tier offset toggles ---
+  // Two side-by-side toggle pills above the options. Each cycles
+  // 0..maxUnlocked on click. Player offset → starter deck tier;
+  // monster offset → enemy scaling. Both 0 → normal game (warned
+  // below). Default 1 each when unlocked.
+  const maxOff = effectiveGamePlusMaxUnlocked();
+  const togRowY = panelY + 152;
+  const togW = 340;
+  const togH = 56;
+  const togGap = 24;
+  const togRowX = (SCREEN_WIDTH - (togW * 2 + togGap)) / 2;
+  const drawOffsetToggle = (x, y, label, value, kind, onClick) => {
+    drawStyledButton(x, y, togW, togH, '', onClick, 'banner', 16);
+    // Tag the just-pushed menuButton so right-click can find it and
+    // step the matching offset down.
+    const btn = menuButtons[menuButtons.length - 1];
+    if (btn) btn._offsetKind = kind;
+    ctx.save();
+    ctx.fillStyle = '#3a2818';
+    ctx.font = 'bold 16px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + togW / 2, y + togH / 2 - 10);
+    ctx.fillStyle = value > 0 ? '#5a2a08' : '#3a2818';
+    ctx.font = 'bold 18px serif';
+    const valueLabel = value === 0 ? '0 (base)' : `+${value}`;
+    ctx.fillText(valueLabel, x + togW / 2, y + togH / 2 + 12);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.restore();
+  };
+  drawOffsetToggle(togRowX, togRowY, 'Player Tier Offset', _setupPlayerOffsetPick, 'player', () => {
+    _setupPlayerOffsetPick = (_setupPlayerOffsetPick + 1) % (maxOff + 1);
+  });
+  drawOffsetToggle(togRowX + togW + togGap, togRowY, 'Monster Tier Offset', _setupMonsterOffsetPick, 'monster', () => {
+    _setupMonsterOffsetPick = (_setupMonsterOffsetPick + 1) % (maxOff + 1);
+  });
+  // Notes under each toggle — small italic descriptions of what the
+  // offset actually does in-game so the player picks knowingly.
+  {
+    ctx.save();
+    ctx.fillStyle = '#c8b890';
+    ctx.font = 'italic 13px serif';
+    ctx.textAlign = 'center';
+    const noteY = togRowY + togH + 14;
+    ctx.fillText('Loot will be better when offset is not 0.',
+      togRowX + togW / 2, noteY);
+    ctx.fillText('Each +1 multiplies monster HP (12 HP rat → 24, 36, 48...).',
+      togRowX + togW + togGap + togW / 2, noteY);
+    ctx.fillText('Abilities scale too.',
+      togRowX + togW + togGap + togW / 2, noteY + 16);
+    ctx.restore();
+  }
+
+  // Warning row when both offsets are 0 (i.e. the player is about
+  // to start what's effectively the base game from the + screen).
+  // Pushed below the per-toggle notes so it doesn't overlap them.
+  if (_setupPlayerOffsetPick === 0 && _setupMonsterOffsetPick === 0) {
+    ctx.fillStyle = '#ff9a70';
+    ctx.font = 'italic 15px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Both offsets are 0 — this is a normal game. Push at least one above 0 for a true ccgQuest+ run.',
+      SCREEN_WIDTH / 2, togRowY + togH + 50);
+  }
+
+  // --- Option 1: Fresh Deck+ ---
+  ctx.fillStyle = '#ffd884';
+  ctx.font = 'bold 22px serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Option 1 — Fresh Deck+', panelX + 40, panelY + 270);
+  ctx.fillStyle = '#c8b890';
+  ctx.font = '15px serif';
+  ctx.fillText('Start a brand-new run. Picks a class, then an ability, with the offsets above applied.',
+    panelX + 40, panelY + 294);
+  // Fresh Deck+ banner button.
+  {
+    const fdW = panelW - 80;
+    const fdH = 56;
+    const fdX = panelX + 40;
+    const fdY = panelY + 308;
+    drawStyledButton(fdX, fdY, fdW, fdH, '', () => {
+      startGamePlusFreshDeck();
+    }, 'banner', 16);
+    ctx.save();
+    ctx.fillStyle = '#3a2818';
+    ctx.font = 'bold 20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Start a Fresh ccgQuest+ Run', fdX + fdW / 2, fdY + fdH / 2);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  // --- Option 2: continue from a Part 1 completion save ---
+  ctx.fillStyle = '#ffd884';
+  ctx.font = 'bold 22px serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Option 2 — Continue from a finished run', panelX + 40, panelY + 408);
+  ctx.fillStyle = '#c8b890';
+  ctx.font = '15px serif';
+  ctx.fillText('Class / deck / backpack / perks / level / gold carry over; every story flag resets.',
+    panelX + 40, panelY + 432);
+  // Bonus rule unique to Option 2: per-type deck cap bumps by +2 for
+  // each ccgQuest+ run started this way (base 3 → 5 in the + run).
+  ctx.fillStyle = '#ffd884';
+  ctx.font = 'italic 14px serif';
+  ctx.fillText('Bonus: max card type +2 (base 3 → 5 per type for this + run).',
+    panelX + 40, panelY + 452);
+
+  // Scrollable save list. Clip to a fixed visible area so longer
+  // lists (one Part 1 completion per class — up to 6) scroll cleanly
+  // via the mouse wheel handler at canvas-scroll site.
+  const listX = panelX + 40;
+  const listY = panelY + 468;
+  const listW = panelW - 80;
+  const rowH = 52;
+  const rowGap = 8;
+  const visibleRows = 3;
+  const listH = visibleRows * (rowH + rowGap) - rowGap;
+
+  const saves = listGamePlusSaveOptions();
+  if (saves.length === 0) {
+    ctx.fillStyle = '#8c7860';
+    ctx.font = 'italic 16px serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('No Part 1 completion saves found yet.', listX, listY + 30);
+  } else {
+    // Clamp scroll to the actual content height.
+    const totalH = saves.length * (rowH + rowGap) - rowGap;
+    const maxScroll = Math.max(0, totalH - listH);
+    if (_gamePlusSavesScrollY > maxScroll) _gamePlusSavesScrollY = maxScroll;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(listX, listY, listW, listH);
+    ctx.clip();
+    for (let i = 0; i < saves.length; i++) {
+      const s = saves[i];
+      const ry = listY + i * (rowH + rowGap) - _gamePlusSavesScrollY;
+      // Skip rows fully outside the clip; partially visible rows draw
+      // normally because the clip handles their edges.
+      if (ry + rowH < listY || ry > listY + listH) continue;
+      drawStyledButton(listX, ry, listW, rowH, '', () => {
+        startGamePlusFromSave(s.slot);
+      }, 'banner', 16);
+      // Centered label: class + level — with the timestamp tagged
+      // on the end so the player can spot the most recent run.
+      ctx.save();
+      ctx.fillStyle = '#3a2818';
+      ctx.font = 'bold 19px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lvl = s.info && s.info.level || 1;
+      const dt = formatSaveShortDate(s.info && s.info.timestamp);
+      const label = dt
+        ? `End of Part 1 — ${s.displayClass}, Lv ${lvl} — ${dt}`
+        : `End of Part 1 — ${s.displayClass}, Lv ${lvl}`;
+      ctx.fillText(label, listX + listW / 2, ry + rowH / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // Scrollbar (only when content overflows).
+    if (maxScroll > 0) {
+      const sbW = 8;
+      const sbX = listX + listW + 6;
+      ctx.fillStyle = 'rgba(30,22,16,0.85)';
+      ctx.fillRect(sbX, listY, sbW, listH);
+      const thumbRatio = listH / totalH;
+      const thumbH = Math.max(24, listH * thumbRatio);
+      const thumbY = listY + (_gamePlusSavesScrollY / maxScroll) * (listH - thumbH);
+      ctx.fillStyle = '#a08c64';
+      ctx.fillRect(sbX, thumbY, sbW, thumbH);
+      ctx.strokeStyle = '#ffc060';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sbX + 0.5, thumbY + 0.5, sbW - 1, thumbH - 1);
+    }
+  }
+
+  // Back button.
+  const btnW = 220, btnH = 56;
+  const rowYBtns = panelY + panelH - btnH - 24;
+  const backX = panelX + (panelW - btnW) / 2;
+  drawStyledButton(backX, rowYBtns, btnW, btnH, '< Back', () => {
+    state = GameState.MENU;
+    _gamePlusSavesScrollY = 0;
+  }, 'large');
+}
+
+function handleGamePlusSetupClick(x, y) {
+  for (const btn of menuButtons) {
+    if (hitTest(x, y, btn)) { playSound('click'); btn.action(); return; }
+  }
+}
+
 // Pre-combat menu music + scene-driven ambience. The heroic theme
 // plays through menu/character-select. Once chapter 1 begins the
 // prison ambience takes over (via crossfadeMusic at startGameWithAbility).
@@ -3327,6 +4368,194 @@ function updateMusicForCurrentScene() {
   else stopMusic();
 }
 
+// Title-screen Play handler. Routes through GAME_PLUS_SETUP when the
+// ccgQuest+ toggle is active and the unlock check passes; otherwise
+// drops straight into the standard new-game / character-select flow.
+function onPlayClicked() {
+  // Gated to debug mode only while the ccgQuest+ flow is still
+  // being built out. Once the save-based + fresh-deck options are
+  // both wired and tested, swap this back to:
+  //   const gamePlusUnlocked = debugMode || hasPart1CompleteSave();
+  const gamePlusUnlocked = debugMode;
+  if (gamePlusUnlocked && gamePlusToggle) {
+    // Default the toggle picks to 1 each if the player has unlocked
+    // it; debug mode lifts the cap to 9 automatically so a developer
+    // doesn't have to finish the base game just to test offsets.
+    const max = effectiveGamePlusMaxUnlocked();
+    const def = max >= 1 ? 1 : 0;
+    _setupPlayerOffsetPick = def;
+    _setupMonsterOffsetPick = def;
+    _gamePlusSavesScrollY = 0;
+    state = GameState.GAME_PLUS_SETUP;
+    return;
+  }
+  startNewGame();
+}
+
+// Build a list of `part1_complete_<class>` saves available to use as
+// a ccgQuest+ basis. Returns [{ slot, info, displayClass }, ...].
+function listGamePlusSaveOptions() {
+  const classes = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
+  const out = [];
+  for (const cls of classes) {
+    const slot = `part1_complete_${cls.toLowerCase()}`;
+    if (!hasSave(slot)) continue;
+    const info = getSaveInfo(slot);
+    out.push({ slot, info, displayClass: cls });
+  }
+  // Sort newest first so the most recent Part 1 completion sits at
+  // the top of the picker.
+  out.sort((a, b) => {
+    const ta = (a.info && a.info.timestamp) || 0;
+    const tb = (b.info && b.info.timestamp) || 0;
+    return tb - ta;
+  });
+  return out;
+}
+
+// Format a save timestamp for the picker row — short day + month so
+// the date sits next to the level without crowding the banner.
+// Example: "Jun 4". Falls back to empty string when missing.
+function formatSaveShortDate(ts) {
+  if (!ts) return '';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch (e) { return ''; }
+}
+
+// Stamp the in-screen toggle picks onto the runtime ccgQuest+
+// offset globals. Called by both Game+ entry points (save-based and
+// Fresh Deck+) so downstream systems can read the offsets.
+function commitGamePlusOffsets() {
+  const max = effectiveGamePlusMaxUnlocked();
+  playerTierOffset = Math.max(0, Math.min(max, _setupPlayerOffsetPick || 0));
+  monsterTierOffset = Math.max(0, Math.min(max, _setupMonsterOffsetPick || 0));
+}
+
+// Start a ccgQuest+ run with a Fresh Deck+. Routes through the
+// standard character-select → ability-select flow (so the player
+// picks a class + ability fresh) but with the tier offsets stamped
+// for downstream consumption. For now the offsets are just tracked;
+// hooks into starter deck tiering / enemy scaling land later.
+function startGamePlusFreshDeck() {
+  commitGamePlusOffsets();
+  _fromGamePlusSetup = true;
+  // Run through the normal new-game reset — same flag wipes, same
+  // route to CHARACTER_SELECT. Back-button from there honors the
+  // _fromGamePlusSetup flag and routes back to GAME_PLUS_SETUP.
+  startNewGame();
+  trackEvent('game_plus_fresh_start', {
+    version: GAME_VERSION,
+    player_offset: playerTierOffset,
+    monster_offset: monsterTierOffset,
+  });
+}
+
+// Start a ccgQuest+ run from a saved Part 1 completion. Carries over
+// the player's class, deck, backpack, perks, level, and gold; resets
+// every story / quest / one-time flag and drops the party back into
+// the prison cell (chapter 1 start) with their hard-earned kit.
+function startGamePlusFromSave(slot) {
+  commitGamePlusOffsets();
+  const data = loadFromSlot(slot);
+  if (!data) {
+    showToast('Save data missing — could not start ccgQuest+.');
+    return;
+  }
+  // Hydrate everything from the save (player, deck, perks, gold,
+  // backpack, level, the works).
+  restoreFromSave(data);
+  // Wipe the story / map state so the run RE-runs chapter 1.
+  resetStoryFlags();
+  // Drop the player back at the chapter 1 entry node with the
+  // carried-over deck. visitedNodes wipe so the map fog resets.
+  currentMap = createPrisonCellMap();
+  visitedNodes = new Set();
+  currentEncounter = null;
+  // Re-arm the menu music handoff (heroic main theme → prison
+  // ambience) the same way startGameWithAbility does for a fresh run.
+  crossfadeMusic('Music/ambience_prison_01', 1500, 2500);
+  _lastMusicArea = 'prison_cell';
+  _menuMusicStarted = false;
+  _hasEnteredCombat = true; // bypass the menu-music re-arm
+  trackEvent('game_plus_start', {
+    version: GAME_VERSION,
+    class: selectedClass,
+    level: player ? player.level : 1,
+    source_slot: slot,
+  });
+  showTitleCard('ccgQuest+: The White Claw, Again', '', () => {
+    startNodeEncounter('bed');
+  });
+}
+
+// Reset every chapter / quest / one-time flag back to "fresh run"
+// state. Shared between startNewGame (which then drops the player at
+// CHARACTER_SELECT) and startGamePlusFromSave (which loads a Part 1
+// completion save and runs this to clear the story so the carried-
+// over deck + perks restart at chapter 1 cleanly).
+function resetStoryFlags() {
+  kitchenChoiceMade = null;
+  prisonBarrelLooted = false;
+  shownDeckTutorial = false;
+  calmGroveRaenaJoined = false;
+  calmGroveBreadTaken = false;
+  antiquityShopCleared = false;
+  soldCardsHistory = [];
+  forestLoopLevel = 1;
+  forestCorrectPath = 'left';
+  forestCleared = false;
+  siegeProgress = 0;
+  siegeComplete = false;
+  throneAudienceComplete = false;
+  quartersRested = false;
+  dragonSlain = false;
+  dragonEggDamage = 0;
+  heroesOfQualibaf = false;
+  volcanoChoiceCompleted = false;
+  _encounterBgOverride = null;
+  valdrisaJoined = false;
+  upperStairsReturnSeen = false;
+  tharnagExitSeen = false;
+  completedEncounters = new Set();
+  labyrinthGenerated = false;
+  labyrinthSeed = 0;
+  labyrinthEncounterChance = 0.15;
+  labyrinthComplete = false;
+  wastesNorthRestDone = false;
+  volcanoEncounterChance = 0.34;
+  undergroundEncounterChance = 0.07;
+  chapter8SlybladeSeen = false;
+  cozySpotFishingCaught = false;
+  _cozySpotFishAttempts = 0;
+  outpostTentRested = false;
+  supplyPileTaken = false;
+  _lakeFrogRocks = null;
+  _currentFrogRockId = null;
+  harpiesDefeated = false;
+  krakenDefeated = false;
+  krakenLevelUpClaimed = false;
+  forgeUsed = false;
+  forgeRested = false;
+  volcanoHeartSacrificed = false;
+  volcanoBuffType = '';
+  volcanoBuffTurns = 0;
+  cathedralPrayed = false;
+  cathedralRested = false;
+  ancestorSpiritsDefeated = false;
+  ancestorRested = false;
+  workbenchRested = false;
+  workbenchUsed = false;
+  mapTableCopied = false;
+  mapTableRested = false;
+  caveEntranceDoubledBack = false;
+  corridorEntranceDoubledBack = false;
+  _backwardRefoggedOnce = new Set();
+  forgePickerMode = 'weapon';
+  for (const k of Object.keys(_mapCache)) delete _mapCache[k];
+}
+
 function startNewGame() {
   trackEvent('game_start', { version: GAME_VERSION });
   player = null;
@@ -3414,12 +4643,11 @@ function drawMenu() {
   }
 
   // Semi-transparent black panel behind title and buttons. Tall
-  // enough to cover the title, New Game / Load Game CTAs, the
-  // Discord banner, AND the Ko-fi banner below it. Bumping the
-  // height (was 540) keeps the bottom button from sticking out
-  // past the panel edge.
+  // enough to cover the title, New Game + ccgQuest+ toggle (when
+  // unlocked) + Load Game CTAs, the Discord banner, AND the Ko-fi
+  // banner below it.
   const panelW = 540;
-  const panelH = 620;
+  const panelH = 700;
   const panelX = (SCREEN_WIDTH - panelW) / 2;
   const panelY = 130;
   ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
@@ -3507,9 +4735,61 @@ function drawMenu() {
   const btnX = (SCREEN_WIDTH - btnW) / 2;
   let btnY = 340;
 
-  // New Game button (uses PlayButton sprite with "PLAY" baked in)
-  drawStyledButton(btnX, btnY, btnW, btnH, 'New Game', startNewGame, 'play');
-  btnY += 110;
+  // New Game button (uses PlayButton sprite with "PLAY" baked in).
+  // Routed through onPlayClicked so the ccgQuest+ toggle can divert
+  // a Play press into the GAME_PLUS_SETUP screen when on.
+  drawStyledButton(btnX, btnY, btnW, btnH, 'New Game', onPlayClicked, 'play');
+  btnY += 90;
+
+  // ccgQuest+ toggle — only visible if the player has ever finished
+  // Part 1 (any `part1_complete_<class>` save exists) or debug mode
+  // is on. Sits centered vertically between the New Game and Load
+  // Game CTAs using the same wooden BannerLarge sprite the Discord /
+  // Ko-fi CTAs use. Click toggles; toggle state is in-session only
+  // (no persistence yet — we re-check eligibility live).
+  const gamePlusUnlocked = debugMode || hasPart1CompleteSave();
+  if (gamePlusUnlocked) {
+    const togW = 360;
+    const togH = 60;
+    const togX = (SCREEN_WIDTH - togW) / 2;
+    const togY = btnY;
+    const on = !!gamePlusToggle;
+    // Stamp the live rect so the ccgQuest+ tutorial arrow can find
+    // the button. Cleared on menu exit / when toggle goes invisible
+    // (in the else branch below).
+    _gamePlusBtnRect = { x: togX, y: togY, w: togW, h: togH };
+    // First-time-only tutorial pop: explain what ccgQuest+ is and
+    // nudge the player to click it before pressing Play. showTutorial
+    // is idempotent + skips already-seen ids, so it auto-runs only on
+    // the first menu visit after Part 1 unlocks the toggle.
+    showTutorial('game_plus_unlocked');
+    drawStyledButton(togX, togY, togW, togH, '', () => {
+      gamePlusToggle = !gamePlusToggle;
+      playSound('click');
+    }, 'banner', 18);
+    // Label overlay on top of the pale wooden banner — dark warm
+    // brown reads crisply against the plank, with an amber glow
+    // pulse when toggled on so "lit" still pops.
+    ctx.save();
+    ctx.fillStyle = on ? '#5a2a08' : '#3a2818';
+    ctx.font = 'bold 22px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (on) {
+      ctx.shadowColor = 'rgba(255, 192, 96, 0.85)';
+      ctx.shadowBlur = 6;
+    }
+    ctx.fillText(on ? 'ccgQuest+  ✓' : 'ccgQuest+', togX + togW / 2, togY + togH / 2);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.restore();
+    btnY += 70;
+  } else {
+    // Eligibility was lost (debug toggled off, etc.) — wipe the flag
+    // so the player doesn't carry a stale toggle into a future visit.
+    gamePlusToggle = false;
+    _gamePlusBtnRect = null;
+  }
 
   // Load Game button (always visible, uses ButtonLarge wooden plank)
   const hasSaves = hasAnySave();
@@ -3534,7 +4814,7 @@ function drawMenu() {
   // Load Game so the primary New Game / Load Game CTAs stay prominent.
   // Render the sprite via drawStyledButton (no label) and lay out icon +
   // label as a single centered group on top, so they never overlap.
-  btnY += 110;
+  btnY += 95;
   const dscW = 360, dscH = 60;
   const dscX = (SCREEN_WIDTH - dscW) / 2;
   drawStyledButton(dscX, btnY, dscW, dscH, '', () => {
@@ -3724,11 +5004,17 @@ function getClassRects() {
 }
 
 function handleCharSelectClick(x, y) {
-  // Back button
+  // Back button — routes back to GAME_PLUS_SETUP if we got here via
+  // the ccgQuest+ Fresh Deck+ flow, otherwise drops to the main menu.
   const backBtn = { x: 40, y: SCREEN_HEIGHT - 100, w: 200, h: 70 };
   if (hitTest(x, y, backBtn)) {
     playSound('click');
-    state = GameState.MENU;
+    if (_fromGamePlusSetup) {
+      _fromGamePlusSetup = false;
+      state = GameState.GAME_PLUS_SETUP;
+    } else {
+      state = GameState.MENU;
+    }
     return;
   }
   // Help icon button (bottom-right)
@@ -3759,10 +5045,20 @@ function selectClass(className) {
   // random ones at the start. Mid-run picks (shrine, church, level-
   // up) keep the 3-random sampling so the choice still feels rolled.
   abilityChoices = getAbilityChoices(className, 10);
+  // ccgQuest+ — when the player tier offset is set, every ability
+  // option gets the tier-up clone so the deck-bound card reflects the
+  // upgrade immediately (the picked card carries through to the
+  // starter deck via startGameWithAbility).
+  if (playerTierOffset > 0) {
+    abilityChoices = abilityChoices.map(c => applyTierOffsetToCardPreview(c, playerTierOffset));
+  }
   state = GameState.ABILITY_SELECT;
 }
 
 function startGameWithAbility(ability) {
+  // The character-select Back flag is consumed at game start so a
+  // future Back from a non-+ run still falls back to the main menu.
+  _fromGamePlusSetup = false;
   // Create player with starter deck + chosen ability
   player = new Character(selectedClass);
   player.deck = new Deck();
@@ -3775,7 +5071,17 @@ function startGameWithAbility(ability) {
     Druid: getDruidStarterDeck,
   };
   const cards = deckFns[selectedClass]();
-  for (const c of cards) player.deck.addCard(c);
+  // ccgQuest+ player scaling — bump every starter card's
+  // gamePlusOffset values in place so the deck the player begins
+  // with reflects the chosen tier. The picked ability was already
+  // pre-offset on the ability_select pass; double-apply guard is
+  // unnecessary here because that card is a fresh clone.
+  for (const c of cards) {
+    if (playerTierOffset > 0 && c.gamePlusOffset) {
+      applyGamePlusOffsetInPlace(c, playerTierOffset);
+    }
+    player.deck.addCard(c);
+  }
   player.deck.addCard(ability);
   // (Removed: debug-seeded Gnikan's Staff copies. The staff is now
   // handed to the player by Raena during the P2→P3 transition in
@@ -3942,7 +5248,14 @@ function drawCharacterSelect() {
   // Back button
   const backBtn = { x: 40, y: SCREEN_HEIGHT - 100, w: 200, h: 70 };
   menuButtons.length = menuButtons.length; // keep menuButtons in scope
-  drawStyledButton(backBtn.x, backBtn.y, backBtn.w, backBtn.h, '< Back', () => { state = GameState.MENU; }, 'large', 22);
+  drawStyledButton(backBtn.x, backBtn.y, backBtn.w, backBtn.h, '< Back', () => {
+    if (_fromGamePlusSetup) {
+      _fromGamePlusSetup = false;
+      state = GameState.GAME_PLUS_SETUP;
+    } else {
+      state = GameState.MENU;
+    }
+  }, 'large', 22);
 
   // Help icon button (bottom-right, same icon as combat H button)
   const helpRect = { x: SCREEN_WIDTH - 52, y: SCREEN_HEIGHT - 52, w: 36, h: 36 };
@@ -4274,9 +5587,15 @@ function drawAbilitySelect() {
     ctx.textAlign = 'center';
     ctx.fillText('Class Power', leftX + panelW / 2, headerY);
     try {
-      const power = getClassPower(selectedClass);
+      let power = getClassPower(selectedClass);
       if (power) {
         power.exhausted = false;
+        // ccgQuest+ — show the offset-applied power on the
+        // class-select screen so the player previews the actual
+        // Cleave/etc. damage they'll have in the run.
+        if (playerTierOffset > 0) {
+          power = applyTierOffsetToCardPreview(power, playerTierOffset);
+        }
         drawPowerPreviewCard(power, leftX, contentY, panelW, panelH);
       }
     } catch (e) { /* defensive — should always resolve to a power */ }
@@ -9300,6 +10619,10 @@ function setupEnemyForCombat(enemyId) {
       return c;
     };
     for (let i = 0; i < 10; i++) enemy.deck.addCard(withPriority(createSwallowingBite, 35));
+    // Tentacle Whip — high-priority AoE swing sitting just under
+    // Swallowing Bite. Hits the whole party for 1 + grants every
+    // alive tentacle +1 Heroism so the follow-up swings hurt more.
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(withPriority(createKrakenWhip, 30));
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createTentacleGrab());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createKrakenTentacleCard());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createKrakenTentacleBlock());
@@ -9994,6 +11317,15 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     for (let i = 0; i < 6; i++) enemy.deck.addCard(createBite());
     for (let i = 0; i < 4; i++) enemy.deck.addCard(createToughHide());
+  }
+
+  // ccgQuest+ monster scaling — duplicate the deck for extra HP,
+  // bump every card/power's gamePlusOffset values, and scale every
+  // starting + future creature's HP / stats. Skipped during codex
+  // sandbox scans so the cached card references don't carry
+  // mutated "+" names back into the codex view.
+  if (!_codexSandboxRunning) {
+    applyMonsterTierOffsetToEnemy();
   }
 
   // Store hand size + enemy id for this fight. The id lets the
@@ -10885,6 +12217,10 @@ function handleEncounterChoiceClick(x, y) {
           } catch (err) {
             console.warn('Part 1 save failed:', err);
           }
+          // ccgQuest+ unlock — finishing a run bumps the ceiling
+          // the player can pick from. Base run = monster offset 0 →
+          // unlocks offset 1; offset 1 finish → unlocks 2; etc.
+          bumpGamePlusUnlock();
           // (No fadeOutMusic — the alter-hero crossfade above keeps
           // playing through the screen fade and under the scrolling
           // credits.)
@@ -15372,7 +16708,7 @@ function drawCombat() {
       ctx.font = 'bold 16px Georgia, serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`Done (${barrageShotsFired}/3)`, doneR.x + doneR.w / 2, doneR.y + doneR.h / 2);
+      ctx.fillText(`Done (${barrageShotsFired}/${barrageShotsTotal || 3})`, doneR.x + doneR.w / 2, doneR.y + doneR.h / 2);
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'left';
     } else if (fireBarrageMode && fireBarrageShotsLeft > 0 && fireBarrageCardIndex >= 0 && fireBarrageCardIndex < player.deck.hand.length) {
@@ -18167,7 +19503,11 @@ function handleCombatClick(x, y) {
           barrageRechargedCard = null;
           _handOrderSnapshot = [...player.deck.hand];
           state = GameState.TARGETING;
-          showStyledToast('Recharge 1 card for 3 shots, or click enemy for 1 shot', 'recharge');
+          {
+            const barrageEff = (card.effects || []).find(e => e.effectType === 'barrage');
+            const totalShots = ((barrageEff?.value) || 2) + 1;
+            showStyledToast(`Recharge 1 card for ${totalShots} shots, or click enemy for 1 shot`, 'recharge');
+          }
           return;
         }
         // Check for Arcane Beam — click cards to charge (+N dmg each),
@@ -18515,6 +19855,44 @@ function handleDefendingClick(x, y) {
         player.ignite = (player.ignite || 0) + eff.value;
         addLog(`  +${eff.value} Ignite (Ignite:${player.ignite})`, Colors.ORANGE);
         spawnTokenOnTarget(player, eff.value, 'Ignite', Colors.ORANGE);
+      } else if (eff.effectType === 'tumble_block') {
+        // Heroic Tumble — roll eff.value% to gain 6 Block. Whatever
+        // chunk of that block isn't needed to soak the pending swing
+        // converts into Heroism on the spot, so a clean roll vs a
+        // small attack pays off as a setup for the next swing. The
+        // standard absorb path still drains block normally; the
+        // leftover-as-Heroism is computed BEFORE the absorb runs.
+        const chance = Math.max(0, Math.min(100, eff.value));
+        const roll = Math.random() * 100;
+        if (roll < chance) {
+          // +4 block per playerTierOffset (6 → 10 → 14…). The
+          // codex preview reads this same formula from a custom
+          // heroic_tumble handler in applyGamePlusOffsetInPlace.
+          const BLOCK_GAIN = 6 + 4 * (playerTierOffset || 0);
+          player.addBlock(BLOCK_GAIN);
+          // Vanish poof sells the dodge — same key the Slyblade's
+          // Vanish power uses so the tumble reads as the player
+          // flickering out of the swing's path.
+          playSound('vanish_poof_01', 0.75);
+          addLog(`  ${card.name}: +${BLOCK_GAIN} Block! (${Math.round(chance)}%)`, Colors.GOLD);
+          spawnTokenOnTarget(player, BLOCK_GAIN, 'Block', BLOCK_BLUE);
+          const incoming = Math.max(0, pendingIncomingDamage || 0);
+          const leftover = Math.max(0, BLOCK_GAIN - incoming);
+          if (leftover > 0) {
+            player.heroism = (player.heroism || 0) + leftover;
+            addLog(`  Tumble! +${leftover} Heroism (H:${player.heroism})`, Colors.GOLD);
+            spawnTokenOnTarget(player, leftover, 'Heroism', Colors.GOLD);
+            // Heroic cue piggybacks on Heroic Strike's cast sample —
+            // already the codebase's "you got Heroism" cue.
+            setTimeout(() => playSound('heroic_strike_cast', 0.65), 180);
+          }
+        } else {
+          addLog(`  ${card.name}: Failed to tumble (${Math.round(chance)}%)`, Colors.GRAY);
+          // Pain grunt on miss — class-appropriate (male/female low
+          // tier). `playHeroPainSound` early-returns on damage <= 0,
+          // so feed it 1 to force the low-tier cue.
+          playHeroPainSound(1);
+        }
       } else if (eff.effectType === 'block_chance_10') {
         // Shadow Cloak — roll eff.value% to grant 10 Block on the
         // player. Block soaks the incoming swing through the normal
@@ -18909,9 +20287,14 @@ function handleTargetingClick(x, y) {
       selectedCardIndex = barrageCardIndex;
       barrageRechargedCard = payCard;
       addLog(`  Recharge: ${payCard.name}`, Colors.GRAY, payCard);
-      barrageShotsLeft = 3;
+      const mmCard = player.deck.hand[barrageCardIndex];
+      const barrageEff = (mmCard?.effects || []).find(e => e.effectType === 'barrage');
+      const dmgEff = (mmCard?.effects || []).find(e => e.effectType === 'damage');
+      barrageShotsTotal = ((barrageEff?.value) || 2) + 1;
+      barrageShotDamage = (dmgEff?.value) || 1;
+      barrageShotsLeft = barrageShotsTotal;
       barrageShotsFired = 0;
-      showStyledToast(`Magic Missiles: 3 shots left — click a target (or Done)`, 'multi');
+      showStyledToast(`Magic Missiles: ${barrageShotsTotal} shots left — click a target (or Done)`, 'multi');
       return;
     }
     // Clicked an enemy: single shot, fall through to normal targeting below
@@ -19097,7 +20480,7 @@ function resolveBarrageShot(target) {
   if (barrageCardIndex >= 0 && barrageCardIndex < player.deck.hand.length) {
     _activePlayCard = player.deck.hand[barrageCardIndex];
   }
-  let dmg = 1 + player.heroism + (player.rage || 0) + getDamageModifier(player);
+  let dmg = (barrageShotDamage || 1) + player.heroism + (player.rage || 0) + getDamageModifier(player);
   if (player.heroism > 0) {
     addLog(`  (Heroism +${player.heroism})`, Colors.GOLD);
     player.heroism = 0;
@@ -19148,6 +20531,8 @@ function finishBarrage() {
   barrageMode = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
+  barrageShotsTotal = 0;
+  barrageShotDamage = 1;
   barrageCardIndex = -1;
   selectedCardIndex = -1;
   state = GameState.COMBAT;
@@ -19177,6 +20562,8 @@ function cancelBarrage() {
   barrageMode = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
+  barrageShotsTotal = 0;
+  barrageShotDamage = 1;
   barrageCardIndex = -1;
 }
 
@@ -19558,13 +20945,21 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         playStaggeredSfx('spider_scuttle', count, 120, 0.6);
       }
     }
-    // Loose Bone: spawn a Restless Bone when it blocks
+    // Loose Bone: spawn a Restless Bone when it blocks. ccgQuest+
+    // monster offset bumps the max — base 1, each offset adds +1 to
+    // the cap so a +1 run rolls 1-2, +2 rolls 1-3, etc.
     if (card.id === 'loose_bone') {
-      const bone = new Creature({ name: 'Restless Bone', attack: 1, maxHp: 2 });
-      enemy.addCreature(bone);
-      addLog(`  Restless Bone rises!`, Colors.ORANGE);
+      const maxRoll = 1 + Math.max(0, monsterTierOffset || 0);
+      const count = maxRoll <= 1 ? 1 : (1 + Math.floor(Math.random() * maxRoll));
+      let lastBone = null;
+      for (let i = 0; i < count; i++) {
+        const bone = new Creature({ name: 'Restless Bone', attack: 1, maxHp: 2 });
+        enemy.addCreature(bone);
+        lastBone = bone;
+      }
+      addLog(`  ${count} Restless Bone${count > 1 ? 's rise' : ' rises'}!`, Colors.ORANGE);
       const lastEntry = combatLog[combatLog.length - 1];
-      if (lastEntry) lastEntry.creature = bone;
+      if (lastEntry && lastBone) lastEntry.creature = lastBone;
     }
     // Stop playing defense cards once incoming damage is fully absorbed
     if (landingDmg !== null && landingDmg <= 0) break;
@@ -19959,9 +21354,13 @@ function resolveEffect(eff, caster, target) {
     }
     case 'sneak_attack': {
       attacksThisTurn++; // count itself first
-      let dmg = attacksThisTurn + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      // eff.value carries the flat damage bonus baked in by
+      // gamePlusOffset (sneak_attack: 2 per offset point). Base
+      // value is 0, so non-Game+ runs add nothing on top.
+      const flatBonus = eff.value || 0;
+      let dmg = attacksThisTurn + flatBonus + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
-      addLog(`  Sneak Attack x${attacksThisTurn}!`, Colors.GOLD);
+      addLog(`  Sneak Attack x${attacksThisTurn}${flatBonus ? ` +${flatBonus}` : ''}!`, Colors.GOLD);
       // Sahuagin Eye buff consumes on any attack; +1 if target damaged.
       const sneakTargetDamaged = target instanceof Creature
         ? (target.currentHp || 0) < (target.maxHp || 0)
@@ -21414,19 +22813,23 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'regen_buff': {
+      // +1 heal per turn per playerTierOffset (1 base → 2 → 3…). The
+      // codex preview reads this same formula from a custom regrowth
+      // handler in applyGamePlusOffsetInPlace.
+      const healPerTurn = 1 + (playerTierOffset || 0);
       const buff = new CombatBuff({
         id: 'regrowth_regen',
         name: 'Regrowth',
-        description: `Heal 1 at start of turn (${eff.value} turns)`,
+        description: `Heal ${healPerTurn} at start of turn (${eff.value} turns)`,
         imageId: 'regrowth',
         effectType: 'heal',
-        effectValue: 1,
+        effectValue: healPerTurn,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
         turnsRemaining: eff.value,
       });
       caster.addCombatBuff(buff);
-      addLog(`  Regrowth: Heal 1 for ${eff.value} turns`, Colors.GREEN);
+      addLog(`  Regrowth: Heal ${healPerTurn} for ${eff.value} turns`, Colors.GREEN);
       break;
     }
     case 'grant_potency_buff': {
@@ -21860,31 +23263,48 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_tamed_rat': {
-      // Rat Taming: 50% chance summon 1 Dire Rat (2/2, armor 1,
-      // Bloodfrenzy), otherwise summon 1-3 Tamed Rats. Both branches
-      // route through the shared field-full / lastEntry plumbing so
-      // the codex preview-card hover still works.
+      // Rat Taming: 50% chance summon Dire Rat(s) (2/2, armor 1,
+      // Bloodfrenzy), otherwise summon Tamed Rats. Per playerTierOffset:
+      //   Dire branch: 1 + offset Dire Rats (1 → 2 → 3…), each scaled
+      //     via CREATURE_TIER_OFFSET['Dire Rat'] (+2/+2 per offset).
+      //   Tamed branch: 1 + offset bumps the max roll (1-3 → 1-4 → 1-5…),
+      //     each Tamed Rat scaled via CREATURE_TIER_OFFSET['Tamed Rat']
+      //     (+1/+1 per offset).
+      const off = playerTierOffset || 0;
       const summonDire = Math.random() < 0.5;
       if (summonDire) {
-        const dire = new Creature({
-          name: 'Dire Rat', attack: 2, maxHp: 2, armor: 1,
-          bloodfrenzy: 1,
-          description: 'Bloodfrenzy: +1 Rage after attacking.',
-        });
-        if (player.addCreature(dire)) {
-          playCreaturePlaySfx(dire);
-          addLog(`  A Dire Rat answers the call!`, Colors.ORANGE);
-          const lastEntry = combatLog[combatLog.length - 1];
-          if (lastEntry) lastEntry.creature = dire;
-        } else {
+        const direCount = 1 + off;
+        let summoned = 0;
+        let lastDire;
+        for (let i = 0; i < direCount; i++) {
+          const dire = new Creature({
+            name: 'Dire Rat', attack: 2, maxHp: 2, armor: 1,
+            bloodfrenzy: 1,
+            description: 'Bloodfrenzy: +1 Rage after attacking.',
+          });
+          scaleCreatureWithOffset(dire, off);
+          if (!player.addCreature(dire)) break;
+          if (summoned === 0) playCreaturePlaySfx(dire);
+          lastDire = dire;
+          summoned++;
+        }
+        if (summoned === 0) {
           addLog(`  No room for a Dire Rat (field is full).`, Colors.GRAY);
+        } else {
+          addLog(`  ${summoned} Dire Rat${summoned > 1 ? 's answer' : ' answers'} the call!`, Colors.ORANGE);
+          if (lastDire) {
+            const lastEntry = combatLog[combatLog.length - 1];
+            if (lastEntry) lastEntry.creature = lastDire;
+          }
         }
       } else {
-        const want = 1 + Math.floor(Math.random() * 3); // 1..3
+        const cap = 3 + off;
+        const want = 1 + Math.floor(Math.random() * cap);
         let summoned = 0;
         let lastRat;
         for (let i = 0; i < want; i++) {
           const rat = new Creature({ name: 'Tamed Rat', attack: 1, maxHp: 1 });
+          scaleCreatureWithOffset(rat, off);
           if (!player.addCreature(rat)) break; // hit the 12-ally cap
           lastRat = rat;
           summoned++;
@@ -22045,11 +23465,20 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_pet_slime': {
-      const slime = new Creature({ name: 'Pet Slime', attack: 1, maxHp: 1, unpreventable: true });
-      caster.addCreature(slime);
-      addLog(`  Pet Slime summoned!`, Colors.ORANGE);
+      // 1-N slimes per playerTierOffset (1 → 1-2 → 1-3 …). Each
+      // spawned slime gets the stat bump via CREATURE_TIER_OFFSET.
+      const maxRoll = 1 + (playerTierOffset || 0);
+      const num = 1 + Math.floor(Math.random() * maxRoll);
+      let lastSlime = null;
+      for (let i = 0; i < num; i++) {
+        const slime = new Creature({ name: 'Pet Slime', attack: 1, maxHp: 1, unpreventable: true });
+        scaleCreatureWithOffset(slime, playerTierOffset || 0);
+        caster.addCreature(slime);
+        lastSlime = slime;
+      }
+      addLog(num === 1 ? `  Pet Slime summoned!` : `  ${num} Pet Slimes summoned!`, Colors.ORANGE);
       const lastEntry = combatLog[combatLog.length - 1];
-      if (lastEntry) lastEntry.creature = slime;
+      if (lastEntry) lastEntry.creature = lastSlime;
       break;
     }
     case 'summon_player_baby_frogs': {
@@ -22079,14 +23508,16 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_small_spider': {
       // Summon 1 spider when value=1 (legacy / enemy slyblade), or roll
-      // 1-2 when value=2 (player Pet Spider card after the tier-1
-      // ability buff). Each spider entry shows up as its own combat-log
-      // line + portrait so the player can hover-preview each one.
+      // 1-N when value=N (player Pet Spider card; bumps with player
+      // tier offset via gamePlusOffset.summon_small_spider). Each
+      // spider scales via CREATURE_TIER_OFFSET['Pet Spider'] for the
+      // +1/+1 per offset stat bump.
       const maxRoll = Math.max(1, eff.value || 1);
       const count = 1 + Math.floor(Math.random() * maxRoll);
       let lastSpider = null;
       for (let i = 0; i < count; i++) {
         const spider = new Creature({ name: 'Pet Spider', attack: 0, maxHp: 1, poisonAttack: true });
+        scaleCreatureWithOffset(spider, playerTierOffset || 0);
         caster.addCreature(spider);
         addLog(`  Pet Spider joins the fight!`, Colors.GREEN);
         const lastEntry = combatLog[combatLog.length - 1];
@@ -22160,27 +23591,34 @@ function resolveEffect(eff, caster, target) {
       // 50% chance to grant one random buff: Shield / Heroism / Draw / Heal.
       // Fires AFTER the base heal so the player feels the always-on
       // heal first; the rider lands as a "lucky bite" on top.
-      if (Math.random() >= 0.5) {
-        addLog(`  Sustenance: nothing extra this time.`, Colors.GRAY);
-        break;
-      }
-      const roll = Math.floor(Math.random() * 4); // 0..3
-      if (roll === 0) {
-        player.shield = (player.shield || 0) + 1;
-        addLog(`  Sustenance: +1 Shield (S:${player.shield})`, Colors.ALLY_BLUE);
-        spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
-      } else if (roll === 1) {
-        player.heroism = (player.heroism || 0) + 1;
-        addLog(`  Sustenance: +1 Heroism (H:${player.heroism})`, Colors.GOLD);
-        spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
-      } else if (roll === 2) {
-        const drawn = player.deck.draw(1, MAX_HAND_SIZE);
-        for (const d of drawn) addLog(`  Sustenance: Draw ${d.name}`, Colors.BLUE, d);
-        if (drawn.length === 0) addLog(`  Sustenance: (no cards to draw)`, Colors.GRAY);
-      } else {
-        // Extra heal
-        healPlayer(1);
-        addLog(`  Sustenance: Heal 1 more`, Colors.GREEN);
+      // eff.value carries the number of rolls (1 base, +1 per offset
+      // via Goodberry's gamePlusOffset.goodberry_sustenance). Each
+      // roll is independent: a scaled berry may grant zero, one, or
+      // multiple bites in the same chomp.
+      const rolls = Math.max(1, eff.value || 1);
+      for (let r = 0; r < rolls; r++) {
+        if (Math.random() >= 0.5) {
+          addLog(`  Sustenance: nothing extra this time.`, Colors.GRAY);
+          continue;
+        }
+        const roll = Math.floor(Math.random() * 4); // 0..3
+        if (roll === 0) {
+          player.shield = (player.shield || 0) + 1;
+          addLog(`  Sustenance: +1 Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+          spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
+        } else if (roll === 1) {
+          player.heroism = (player.heroism || 0) + 1;
+          addLog(`  Sustenance: +1 Heroism (H:${player.heroism})`, Colors.GOLD);
+          spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
+        } else if (roll === 2) {
+          const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+          for (const d of drawn) addLog(`  Sustenance: Draw ${d.name}`, Colors.BLUE, d);
+          if (drawn.length === 0) addLog(`  Sustenance: (no cards to draw)`, Colors.GRAY);
+        } else {
+          // Extra heal
+          healPlayer(1);
+          addLog(`  Sustenance: Heal 1 more`, Colors.GREEN);
+        }
       }
       break;
     }
@@ -22207,13 +23645,17 @@ function resolveEffect(eff, caster, target) {
       // Roll 1..eff.value Goodberry tokens (Ranger ability text:
       // "Create some Goodberries"). Tokens go straight to hand
       // capped at MAX_HAND_SIZE; the rolled count is shown so the
-      // player knows whether the harvest was lucky or thin.
+      // player knows whether the harvest was lucky or thin. Each
+      // spawned berry is scaled via applyGamePlusOffsetInPlace so it
+      // inherits the player tier offset (+1 heal, +1 tier, double
+      // sustenance roll, etc.) — Goodberries+ produces Goodberry+.
       const cap = Math.max(1, eff.value || 1);
       const rolled = 1 + Math.floor(Math.random() * cap);
       let added = 0;
       for (let i = 0; i < rolled; i++) {
         if (player.deck.hand.length >= MAX_HAND_SIZE) break;
         const berry = createGoodberry();
+        applyGamePlusOffsetInPlace(berry, playerTierOffset || 0);
         player.deck.hand.push(berry);
         added++;
       }
@@ -24272,7 +25714,10 @@ function resolvePowerTargeting() {
 
   if (power.id === 'cleave') {
     attacksThisTurn++;
-    let dmg = 1 + player.heroism;
+    // Cleave base damage scales with the ccgQuest+ player tier
+    // offset (+1 per offset point). Base 1 → 2 at offset 1, 3 at
+    // offset 2, etc. Heroism stacks on top as usual.
+    let dmg = 1 + (playerTierOffset || 0) + player.heroism;
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
     const unpreventable = consumeUnpreventableBuff(player);
@@ -24356,57 +25801,60 @@ function resolvePowerTargeting() {
       if (drawn.length === 0) addLog(`  Cleave! (no cards to draw)`, Colors.GRAY);
     }
   } else if (power.id === 'elemental_infusion') {
-    // Apply Fire or Ice based on the picked choice. Status is tweaked
-    // directly here (not via case 'apply_*'), so play the apply cue
-    // inline. Only when the stack actually lands (not cancel-first).
+    // Apply Fire or Ice based on the picked choice. Player tier
+    // offset bumps the stack count (1 base + offset). Cancellation
+    // chews opposite element first, remainder lands as self element.
     const t = targets[0];
     const isIce = chosenPowerEffect === 'ice_token';
+    const totalStacks = 1 + (playerTierOffset || 0);
     let landed = false;
     if (isIce) {
       addLog(`  Mode: Ice`);
+      let rem = totalStacks;
       if (t === enemy) {
         const fire = enemy.getStatus('FIRE') || 0;
-        if (fire > 0) { enemy.removeStatus('FIRE', 1); addLog(`  Ice cancels 1 Fire on ${enemy.name}`, Colors.ICE_BLUE); }
-        else { enemy.applyStatus('ICE', 1); addLog(`  +1 Ice on ${enemy.name}`, Colors.ICE_BLUE); landed = true; }
+        const cancel = Math.min(fire, rem);
+        if (cancel > 0) { enemy.removeStatus('FIRE', cancel); addLog(`  Ice cancels ${cancel} Fire on ${enemy.name}`, Colors.ICE_BLUE); rem -= cancel; }
+        if (rem > 0) { enemy.applyStatus('ICE', rem); addLog(`  +${rem} Ice on ${enemy.name}`, Colors.ICE_BLUE); landed = true; }
       } else if (t === player) {
-        // Self-target: use the player's status-effect API (mirrors
-        // the enemy branch above). Lets the wizard chill themselves
-        // to wipe a Fire DoT.
         const fire = player.getStatus('FIRE') || 0;
-        if (fire > 0) { player.removeStatus('FIRE', 1); addLog(`  Ice cancels 1 Fire on you`, Colors.ICE_BLUE); }
-        else { player.applyStatus('ICE', 1); addLog(`  +1 Ice on you`, Colors.ICE_BLUE); landed = true; }
+        const cancel = Math.min(fire, rem);
+        if (cancel > 0) { player.removeStatus('FIRE', cancel); addLog(`  Ice cancels ${cancel} Fire on you`, Colors.ICE_BLUE); rem -= cancel; }
+        if (rem > 0) { player.applyStatus('ICE', rem); addLog(`  +${rem} Ice on you`, Colors.ICE_BLUE); landed = true; }
       } else {
-        // Creature target — route through applyIceToTarget so
-        // _iceAbsorb (player-side Ice Elementals from Gnikan's
-        // Staff) grows +1/+1 instead of just stacking Ice. Same
-        // Fire-cancel logic still fires inside applyIceToTarget.
-        applyIceToTarget(t, 1);
+        for (let i = 0; i < totalStacks; i++) applyIceToTarget(t, 1);
         landed = true;
       }
       if (landed) playSound('ice_apply', 0.7);
       if (landed) firePowerSurgeIfArmed(player, 'ice');
     } else {
       addLog(`  Mode: Fire`);
+      let rem = totalStacks;
       if (t === enemy) {
         const ice = enemy.getStatus('ICE') || 0;
-        if (ice > 0) { enemy.removeStatus('ICE', 1); addLog(`  Fire cancels 1 Ice on ${enemy.name}`, Colors.ORANGE); }
-        else { enemy.applyStatus('FIRE', 1); addLog(`  +1 Fire on ${enemy.name}`, Colors.RED); landed = true; }
+        const cancel = Math.min(ice, rem);
+        if (cancel > 0) { enemy.removeStatus('ICE', cancel); addLog(`  Fire cancels ${cancel} Ice on ${enemy.name}`, Colors.ORANGE); rem -= cancel; }
+        if (rem > 0) { enemy.applyStatus('FIRE', rem); addLog(`  +${rem} Fire on ${enemy.name}`, Colors.RED); landed = true; }
       } else if (t === player) {
-        // Self-target: heat yourself to wipe an Ice slow.
         const ice = player.getStatus('ICE') || 0;
-        if (ice > 0) { player.removeStatus('ICE', 1); addLog(`  Fire cancels 1 Ice on you`, Colors.ORANGE); }
-        else { player.applyStatus('FIRE', 1); addLog(`  +1 Fire on you`, Colors.RED); landed = true; }
+        const cancel = Math.min(ice, rem);
+        if (cancel > 0) { player.removeStatus('ICE', cancel); addLog(`  Fire cancels ${cancel} Ice on you`, Colors.ORANGE); rem -= cancel; }
+        if (rem > 0) { player.applyStatus('FIRE', rem); addLog(`  +${rem} Fire on you`, Colors.RED); landed = true; }
       } else {
-        if (t.iceStacks > 0) { t.iceStacks--; addLog(`  Fire cancels 1 Ice on ${t.name}`, Colors.ORANGE); }
-        else { t.fireStacks = (t.fireStacks || 0) + 1; addLog(`  +1 Fire on ${t.name}`, Colors.RED); landed = true; }
+        const cancel = Math.min(t.iceStacks || 0, rem);
+        if (cancel > 0) { t.iceStacks -= cancel; addLog(`  Fire cancels ${cancel} Ice on ${t.name}`, Colors.ORANGE); rem -= cancel; }
+        if (rem > 0) { t.fireStacks = (t.fireStacks || 0) + rem; addLog(`  +${rem} Fire on ${t.name}`, Colors.RED); landed = true; }
       }
       if (landed) playSound('fire_apply', 0.7);
       if (landed) firePowerSurgeIfArmed(player, 'fire');
     }
     chosenPowerEffect = null;
   } else if (power.id === 'quick_strike') {
-    // Quick Strike counts as an attack (so Sneak Attack can tally it, Split triggers, etc.)
-    attacksThisTurn++;
+    // Quick Strike — barrage: 1 base swing, +1 per player offset.
+    // The whole loop is wrapped below; the per-swing damage stays
+    // base 1 + heroism (heroism consumed once before the chain).
+    const qsAttacks = 1 + (playerTierOffset || 0);
+    attacksThisTurn += qsAttacks;
     let dmg = 1 + player.heroism;
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
@@ -24422,43 +25870,50 @@ function resolvePowerTargeting() {
     const qsObs = consumeObsidianBuff(player, t);
     if (qsObs > 0) dmg += qsObs;
     let dmgLanded = 0;
-    if (t === enemy) {
-      if (unpreventable) {
-        enemy.takeDamageFromDeck(dmg);
-        triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
-        addLog(`  ${enemy.name}: ${dmg} true dmg`, Colors.ORANGE);
-        consumePoisonBuff(player, t, dmg);
-        dmgLanded = dmg;
+    // Barrage loop — repeat the same swing on the same target
+    // `qsAttacks` times. Each shot routes through the standard
+    // damage path so block/shield/armor and split triggers fire
+    // per-swing; the heroism / ice / eye / obs buffs are consumed
+    // ONCE before the chain so they don't multi-apply.
+    for (let shotIdx = 0; shotIdx < qsAttacks; shotIdx++) {
+      if (!t.isAlive && shotIdx > 0) break; // stop if target died mid-chain
+      if (t === enemy) {
+        if (unpreventable) {
+          enemy.takeDamageFromDeck(dmg);
+          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          addLog(`  Shot ${shotIdx + 1}: ${enemy.name} ${dmg} true dmg`, Colors.ORANGE);
+          consumePoisonBuff(player, t, dmg);
+          dmgLanded = dmg;
+        } else {
+          enemyAutoPlayDefenses(dmg);
+          const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
+          triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
+          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  Shot ${shotIdx + 1}: ${enemy.name} ${taken} dmg${blockedSuffix}`, Colors.RED);
+          consumePoisonBuff(player, t, taken);
+          dmgLanded = taken;
+        }
       } else {
-        enemyAutoPlayDefenses(dmg);
-        const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-        triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
-        const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
-        addLog(`  ${enemy.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
-        consumePoisonBuff(player, t, taken);
-        dmgLanded = taken;
+        if (unpreventable) {
+          t.takeUnpreventableDamage(dmg);
+          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          addLog(`  Shot ${shotIdx + 1}: ${t.name} ${dmg} true dmg`, Colors.ORANGE);
+          consumePoisonBuff(player, t, dmg);
+          if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
+          dmgLanded = dmg;
+        } else {
+          const shieldBefore = t.shield || 0;
+          const actual = t.takeDamage(dmg);
+          triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
+          addLog(`  Shot ${shotIdx + 1}: ${t.name} ${actual} dmg${absSuffix}`, Colors.RED);
+          consumePoisonBuff(player, t, actual);
+          if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
+          dmgLanded = actual;
+        }
       }
-    } else {
-      if (unpreventable) {
-        t.takeUnpreventableDamage(dmg);
-        triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
-        addLog(`  ${t.name}: ${dmg} true dmg`, Colors.ORANGE);
-        consumePoisonBuff(player, t, dmg);
-        if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
-        dmgLanded = dmg;
-      } else {
-        const shieldBefore = t.shield || 0;
-        const actual = t.takeDamage(dmg);
-        triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
-        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
-        addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
-        consumePoisonBuff(player, t, actual);
-        if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
-        dmgLanded = actual;
-      }
+      playAttackHitSfx(dmg, dmgLanded, shotIdx * 120);
     }
-    // Dagger swing — quick_strike id override routes to dagger sounds.
-    playAttackHitSfx(dmg, dmgLanded);
     consumeIgniteOnAttack(player, t, dmg);
     countAndRemoveDeadCreatures();
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
@@ -24481,7 +25936,7 @@ function executePower(power) {
   switch (power.id) {
     case 'cleave': {
       // (Cleave is handled via the targeting flow; this branch is a fallback.)
-      const dmg = 1 + player.heroism;
+      const dmg = 1 + (playerTierOffset || 0) + player.heroism;
       if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
       let hits = 0;
       for (const c of [...enemy.creatures]) {
@@ -24507,48 +25962,63 @@ function executePower(power) {
       break;
     }
     case 'aimed_shot': {
-      player.heroism += 1;
-      addLog(`  +1 Heroism (H:${player.heroism})`, Colors.GOLD);
-      spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
+      const hGain = 1 + (playerTierOffset || 0);
+      player.heroism += hGain;
+      addLog(`  +${hGain} Heroism (H:${player.heroism})`, Colors.GOLD);
+      spawnTokenOnTarget(player, hGain, 'Heroism', Colors.GOLD);
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       if (drawn.length > 0) playDrawSounds(drawn.length);
       break;
     }
     case 'elemental_infusion': {
-      // Apply 1 fire with ice cancellation
-      const ice = enemy.getStatus('ICE') || 0;
+      // Apply N fire with ice cancellation. Player offset bumps the
+      // amount (1 base + offset). Each cancel pulls 1 ice; remainder
+      // lands as fire.
+      const fireGain = 1 + (playerTierOffset || 0);
       let landed = false;
-      if (ice > 0) {
-        enemy.removeStatus('ICE', 1);
-        addLog(`  Fire cancels 1 Ice on ${enemy.name}`, Colors.ORANGE);
-      } else {
-        enemy.applyStatus('FIRE', 1);
-        addLog(`  +1 Fire on ${enemy.name}`, Colors.RED);
+      let remaining = fireGain;
+      const ice0 = enemy.getStatus('ICE') || 0;
+      if (ice0 > 0 && remaining > 0) {
+        const cancel = Math.min(ice0, remaining);
+        enemy.removeStatus('ICE', cancel);
+        addLog(`  Fire cancels ${cancel} Ice on ${enemy.name}`, Colors.ORANGE);
+        remaining -= cancel;
+      }
+      if (remaining > 0) {
+        enemy.applyStatus('FIRE', remaining);
+        addLog(`  +${remaining} Fire on ${enemy.name}`, Colors.RED);
         landed = true;
       }
       if (landed) firePowerSurgeIfArmed(player, 'fire');
       break;
     }
     case 'quick_strike': {
-      const dmg = 1 + player.heroism;
-      if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
-      const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-      triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
-      if (blocked > 0) addLog(`  (${blocked} blocked)`, Colors.BLUE);
-      addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
-      // Dagger swing SFX (the quick_strike id override routes here).
-      playAttackHitSfx(dmg, taken);
+      // Quick Strike — barrage: 1 base attack, +1 per player offset.
+      // Each swing is its own damage application + log line so the
+      // sfx + screen flash read naturally.
+      const attacks = 1 + (playerTierOffset || 0);
+      const heroismBonus = player.heroism;
+      if (heroismBonus > 0) { addLog(`  (Heroism +${heroismBonus})`, Colors.GOLD); player.heroism = 0; }
+      const dmg = 1 + heroismBonus;
+      for (let i = 0; i < attacks; i++) {
+        const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
+        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        if (blocked > 0) addLog(`  Shot ${i + 1}: (${blocked} blocked)`, Colors.BLUE);
+        addLog(`  Shot ${i + 1}: ${taken} dmg to ${enemy.name}`, Colors.RED);
+        playAttackHitSfx(dmg, taken, i * 120);
+      }
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       break;
     }
     case 'battle_fury': {
-      player.heroism += 1;
-      player.shield += 1;
-      addLog(`  +1 Heroism, +1 Shield`, Colors.GOLD);
-      spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
-      spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
+      const gain = 1 + (playerTierOffset || 0);
+      player.heroism += gain;
+      player.shield += gain;
+      addLog(`  +${gain} Heroism, +${gain} Shield`, Colors.GOLD);
+      spawnTokenOnTarget(player, gain, 'Heroism', Colors.GOLD);
+      spawnTokenOnTarget(player, gain, 'Shield', Colors.ALLY_BLUE);
       const drawn = player.deck.draw(2, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       break;
@@ -24560,10 +26030,20 @@ function executePower(power) {
       const isBear = chosenPowerEffect === 'bear_form_token';
       playSound(isBear ? 'bear_form_attack' : 'cat_form_attack', 0.7);
       addLog(`  Mode: ${isBear ? 'Bear Form' : 'Feline Form'}`);
-      // Simplified: gain 1 heroism + draw 1 (cat form default)
-      player.heroism += 1;
-      addLog(`  +1 Heroism`, Colors.GOLD);
-      spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
+      // Simplified: gain heroism (or shield via Bear Form) + draw 1.
+      // Offset bumps the gain. The actual bear/cat token routes
+      // through their own effect handlers; this fallback only fires
+      // when the power resolves without a token-driven flow.
+      const ffGain = 1 + (playerTierOffset || 0);
+      if (isBear) {
+        player.shield += ffGain;
+        addLog(`  +${ffGain} Shield`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(player, ffGain, 'Shield', Colors.ALLY_BLUE);
+      } else {
+        player.heroism += ffGain;
+        addLog(`  +${ffGain} Heroism`, Colors.GOLD);
+        spawnTokenOnTarget(player, ffGain, 'Heroism', Colors.GOLD);
+      }
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       chosenPowerEffect = null;
@@ -26142,15 +27622,16 @@ function startEnemyTurn() {
         // whole fight (started in startCombat when lava_floor is in
         // the boss's power list, stopped at combatVictory). One-shot
         // per-tick play removed so the bed isn't doubled up.
+        const fireStacks = 1 + (monsterTierOffset || 0);
         showcasePower(power);
-        addLog(`  Lava Floor! The ground erupts with 1 Fire!`, Colors.ORANGE);
-        applyFireToTarget(player, 1);
+        addLog(`  Lava Floor! The ground erupts with ${fireStacks} Fire!`, Colors.ORANGE);
+        applyFireToTarget(player, fireStacks);
         for (const ally of [...(player.creatures || [])]) {
-          if (ally.isAlive) applyFireToTarget(ally, 1);
+          if (ally.isAlive) applyFireToTarget(ally, fireStacks);
         }
-        if (!enemy._invulnerable) applyFireToTarget(enemy, 1);
+        if (!enemy._invulnerable) applyFireToTarget(enemy, fireStacks);
         for (const c of [...(enemy.creatures || [])]) {
-          if (c.isAlive) applyFireToTarget(c, 1);
+          if (c.isAlive) applyFireToTarget(c, fireStacks);
         }
       } else if (power.id === 'blizzard') {
         // Overseer Gnikan phase-2 — Ice mirror of Lava Floor. Every
@@ -26162,16 +27643,17 @@ function startEnemyTurn() {
         // buff instead of stacking Ice on them — the storm visibly
         // GROWS the elementals each round. Gnikan's own Ice stacks
         // feed the next Gnikan's Staff burst.
+        const iceStacks = 1 + (monsterTierOffset || 0);
         showcasePower(power);
-        addLog(`  Blizzard! The storm howls — 1 Ice on everyone!`, Colors.ICE_BLUE);
+        addLog(`  Blizzard! The storm howls — ${iceStacks} Ice on everyone!`, Colors.ICE_BLUE);
         playSound('ice_elemental', 0.6);
-        applyIceToTarget(player, 1);
+        applyIceToTarget(player, iceStacks);
         for (const ally of [...(player.creatures || [])]) {
-          if (ally.isAlive) applyIceToTarget(ally, 1);
+          if (ally.isAlive) applyIceToTarget(ally, iceStacks);
         }
-        if (!enemy._invulnerable) applyIceToTarget(enemy, 1);
+        if (!enemy._invulnerable) applyIceToTarget(enemy, iceStacks);
         for (const c of [...(enemy.creatures || [])]) {
-          if (c.isAlive) applyIceToTarget(c, 1);
+          if (c.isAlive) applyIceToTarget(c, iceStacks);
         }
       } else if (power.id === 'kobold_army_swarm') {
         // Kobold Drake Rider escalating swarm. Mirrors PY game.py:14063-
@@ -26236,9 +27718,10 @@ function startEnemyTurn() {
         // (5+ alive) only 1-2 trickle in to keep pressure up without
         // overwhelming the screen.
         const aliveWolves = enemy.creatures.filter(c => c.isAlive).length;
-        const num = aliveWolves < 5
+        const baseNum = aliveWolves < 5
           ? 3 + Math.floor(Math.random() * 2)  // 3..4
           : 1 + Math.floor(Math.random() * 2); // 1..2
+        const num = baseNum + (monsterTierOffset || 0);
         for (let i = 0; i < num; i++) {
           enemy.addCreature(new Creature({ name: 'Wolf', attack: 2, maxHp: 2 }));
         }
@@ -26374,53 +27857,85 @@ function startEnemyTurn() {
     enemyActions.push({ type: 'use_power', power: ogreRam });
   }
 
-  // Track how many hand cards are available to pay recharge_extra costs.
-  // Each card played uses itself + any recharge_extra from the remaining pool.
-  let availableForCost = hand.length; // total hand cards
-  let hasAttackOrSummon = false;
   // If the Ram is firing this turn, skip playing additional cards from
   // hand — they'll be the ones the power recharges as cost. The ogre's
   // turn becomes: passive sapper summon → power → creature attacks.
   const skipHandPlays = enemyActions.some(a => a.type === 'use_power' && a.power && a.power.id === 'massive_ogre_ram');
-  if (skipHandPlays) hasAttackOrSummon = true;
-  for (const card of hand) {
-    if (skipHandPlays) break; // Massive Ogre Ram queued — skip ability/attack plays
-    if (card.cardType === CardType.DEFENSE) continue; // defense cards are reactive, not queued
-    // Backstab restriction (PY game.py:13245-13261, but stricter):
-    // skip queueing if the player is already damaged, OR any ally
-    // is below max HP, OR any damage is already queued against the
-    // player this turn (enemyDamageAccumulator). Without the last
-    // check the slyblade could land a 6-damage backstab AFTER its
-    // other cards have stacked damage in the queue but BEFORE the
-    // defense phase applied it — treating an about-to-be-bloodied
-    // player as still "undamaged".
-    const hasBackstabRestriction = (card.effects || []).some(e => e.effectType === 'backstab_restriction');
-    if (hasBackstabRestriction && !hasUndamagedPlayerTarget()) continue;
-    const isStays = (card.effects || []).some(e => e.effectType === 'stays_in_hand');
-    // Check recharge_extra cost
-    let extraCost = 0;
-    for (const eff of card.effects || []) {
-      if (eff.effectType === 'recharge_extra') extraCost += eff.value;
-    }
-    // Need: extraCost from remaining hand. Stays-in-hand cards aren't
-    // consumed by the play, so they don't subtract themselves from the
-    // available pool (their cost is just the recharge_extra, if any).
-    const selfCost = isStays ? 0 : 1;
-    if (availableForCost < selfCost + extraCost) continue; // can't afford
-    availableForCost -= (selfCost + extraCost); // reserve cards
+  // Planning core — iterates the priority-sorted hand and queues
+  // attacks/summons/abilities. Returns true if at least one play was
+  // queued. Extracted so the safeguard pass below can re-run it after
+  // recharging stuck reactive cards.
+  const planHandPlays = () => {
+    if (skipHandPlays) return true;
+    let availableForCost = enemy.deck.hand.length;
+    let any = false;
+    // Re-sort fresh in case we re-entered after a safeguard redraw.
+    const local = [...enemy.deck.hand];
+    local.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    for (const card of local) {
+      if (card.cardType === CardType.DEFENSE) continue;
+      const hasBackstabRestriction = (card.effects || []).some(e => e.effectType === 'backstab_restriction');
+      if (hasBackstabRestriction && !hasUndamagedPlayerTarget()) continue;
+      const isStays = (card.effects || []).some(e => e.effectType === 'stays_in_hand');
+      let extraCost = 0;
+      for (const eff of card.effects || []) {
+        if (eff.effectType === 'recharge_extra') extraCost += eff.value;
+      }
+      const selfCost = isStays ? 0 : 1;
+      if (availableForCost < selfCost + extraCost) continue;
+      availableForCost -= (selfCost + extraCost);
 
-    if (card.cardType === CardType.ATTACK) {
-      enemyActions.push({ type: 'play', card, action: 'attack' });
-      hasAttackOrSummon = true;
-    } else if (card.cardType === CardType.CREATURE) {
-      enemyActions.push({ type: 'play', card, action: 'summon' });
-      hasAttackOrSummon = true;
-    } else if (card.cardType === CardType.ABILITY) {
-      // Buff/utility cards (Defensive Formation, etc.) — enemy plays them
-      // for self-shield / team-shield / heroism / draw side effects.
-      enemyActions.push({ type: 'play', card, action: 'ability' });
-      hasAttackOrSummon = true;
+      if (card.cardType === CardType.ATTACK) {
+        enemyActions.push({ type: 'play', card, action: 'attack' });
+        any = true;
+      } else if (card.cardType === CardType.CREATURE) {
+        enemyActions.push({ type: 'play', card, action: 'summon' });
+        any = true;
+      } else if (card.cardType === CardType.ABILITY) {
+        enemyActions.push({ type: 'play', card, action: 'ability' });
+        any = true;
+      }
     }
+    return any;
+  };
+
+  let hasAttackOrSummon = planHandPlays();
+
+  // Stuck-hand safeguard — fires ONCE per enemy turn. If the planning
+  // pass queued nothing AND the hand still has at least 2 cards, the
+  // enemy recharges half the hand (rounded up, defense cards first so
+  // reactive duds rotate out) and draws the same number to refill,
+  // then re-runs the planner. Without this, a hand full of Block /
+  // Tentacle Block / Defensive Formation could leave the enemy with
+  // zero attacks all turn.
+  if (!hasAttackOrSummon && !skipHandPlays && enemy.deck && enemy.deck.hand.length >= 2) {
+    const handLen = enemy.deck.hand.length;
+    const toRecharge = Math.ceil(handLen / 2);
+    // Sort hand so defense cards rotate out first; ties keep priority
+    // order so any high-priority attack we'd LIKE to keep stays put.
+    const order = enemy.deck.hand
+      .map((c, idx) => ({ c, idx }))
+      .sort((a, b) => {
+        const ad = a.c.cardType === CardType.DEFENSE ? 0 : 1;
+        const bd = b.c.cardType === CardType.DEFENSE ? 0 : 1;
+        if (ad !== bd) return ad - bd;
+        return (b.c.priority || 0) - (a.c.priority || 0);
+      });
+    const rechargeIdxs = order.slice(0, toRecharge).map(o => o.idx).sort((a, b) => b - a);
+    const recharged = [];
+    for (const idx of rechargeIdxs) {
+      const card = enemy.deck.hand.splice(idx, 1)[0];
+      enemy.deck.addToRechargePile(card);
+      recharged.push(card);
+    }
+    const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
+    const drawn = enemy.deck.draw(recharged.length, cap);
+    addLog(`${enemy.name} can't act — recycles ${recharged.length} card${recharged.length > 1 ? 's' : ''}.`, Colors.GRAY);
+    if (debugMode) {
+      for (const c of recharged) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+      for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
+    }
+    hasAttackOrSummon = planHandPlays();
   }
 
   // Fallback: if no attack/summon was queued, try to use an active recharge-cost power
@@ -28371,7 +29886,8 @@ function completePlayerTurnTransition() {
   if (enemy && Array.isArray(enemy.powers)) {
     for (const power of enemy.powers) {
       if (power.id === 'dire_fury') {
-        enemy.rage = (enemy.rage || 0) + 1;
+        const rageGain = 1 + (monsterTierOffset || 0);
+        enemy.rage = (enemy.rage || 0) + rageGain;
         addLog(`  ${enemy.name}'s fury grows! (R:${enemy.rage})`, Colors.RED);
       }
     }
@@ -29094,9 +30610,14 @@ function triggerSplitPower(character, damageLanded = true) {
   if (!character || !character.powers) return;
   for (const power of character.powers) {
     if (power.id === 'split') {
-      const slime = new Creature({ name: 'Slime', attack: 1, maxHp: 1, unpreventable: true });
-      character.addCreature(slime);
-      addLog(`  -> ${character.name} splits! Slime spawns!`, Colors.ORANGE);
+      // +1 max slimes per monster tier offset (base 1 → 1-2 → 1-3…).
+      const maxRoll = 1 + (monsterTierOffset || 0);
+      const num = 1 + Math.floor(Math.random() * maxRoll);
+      for (let i = 0; i < num; i++) {
+        character.addCreature(new Creature({ name: 'Slime', attack: 1, maxHp: 1, unpreventable: true }));
+      }
+      const lbl = num === 1 ? 'Slime spawns' : `${num} Slimes spawn`;
+      addLog(`  -> ${character.name} splits! ${lbl}!`, Colors.ORANGE);
       playSound('ooze_attack', 0.7);
       break;
     }
@@ -31079,7 +32600,14 @@ function getCardSellPrice(card) {
 function canSellAtShop(card) {
   if (!shopMode || !shopCards.length) return false;
   if (card.isUnique) return false;
-  if (Array.isArray(card.characterClass) && card.characterClass.length > 0) return false;
+  // Class restriction — normally blocks selling. Sellable-opt-in
+  // cards (Vial of Poison, Wand of Fire) bypass this so the player
+  // can offload them despite the lock.
+  if (!card.sellable
+      && Array.isArray(card.characterClass)
+      && card.characterClass.length > 0) {
+    return false;
+  }
   // Dwarven Scout exception — the Dwarven Tavern recruits scouts back,
   // so the companion lock is waived there only. Any other shop still
   // rejects companion summon cards (Thorb, Raena, Valdrisa, etc.).
@@ -31091,7 +32619,10 @@ function canSellAtShop(card) {
     // Grimbold takes anything (tokens included; tokens just sell for 0).
     return true;
   }
-  if (card.isToken) return false;
+  // Token gate — sellable-opt-in cards (the spider's Vial of Poison)
+  // bypass this so they fetch a normal consumable price at any shop
+  // whose stock carries the right category.
+  if (card.isToken && !card.sellable) return false;
   const myCat = getCardFilterType(card);
   return shopCards.some(item => getCardFilterType(item.card) === myCat);
 }
@@ -33955,6 +35486,9 @@ function draw() {
     case GameState.MENU:
       drawMenu();
       break;
+    case GameState.GAME_PLUS_SETUP:
+      drawGamePlusSetup();
+      break;
     case GameState.CHARACTER_SELECT:
       drawCharacterSelect();
       break;
@@ -36581,6 +38115,12 @@ let codexLootRollResults = {};     // tableId -> { card, ts } (last roll, for "T
 let codexFilter = 'all';
 let codexSelectedCard = null;      // selected card or pseudo-card object
 let codexShowFull = false;         // false = small format, true = full preview
+// ccgQuest+ codex preview — Tier Offset selector. 0 = base game
+// rules (the only ones currently defined); 1..9 represent future
+// tier-up rule sets. While the codex sits at offset > 0, EVERY card
+// in the grid gets a red "needs rules" overlay so a designer can
+// instantly spot what still needs offset rules wired.
+let codexTierOffset = 0;
 let codexScrollY = 0;
 let codexClickAreas = [];          // refilled each frame (cards, tabs, filters, toggles)
 
@@ -37015,6 +38555,25 @@ function drawCodexFilters(L) {
       ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
       codexClickAreas.push({ ...r, kind: 'format', value: val });
     }
+    // TOffset stepper — sits right of Full. Click to advance the
+    // preview tier offset (0..9, wraps). While offset > 0, every
+    // card in the grid gets a red "needs offset rules" overlay
+    // (no card currently has tier-up rules wired, so all of them
+    // light up — that's the point: a visual checklist for what
+    // needs ccgQuest+ scaling rules).
+    const offW = 110;
+    const trOff = { x: trFull.x + tw + 12, y: L.filterY + 4, w: offW, h: CODEX_FILTER_H - 8 };
+    const offActive = codexTierOffset > 0;
+    ctx.fillStyle = offActive ? 'rgba(140, 40, 40, 0.85)' : 'rgba(20, 20, 35, 0.7)';
+    ctx.fillRect(trOff.x, trOff.y, trOff.w, trOff.h);
+    ctx.strokeStyle = offActive ? '#ff7060' : '#666';
+    ctx.lineWidth = offActive ? 2 : 1;
+    ctx.strokeRect(trOff.x, trOff.y, trOff.w, trOff.h);
+    ctx.fillStyle = offActive ? '#ffd0c0' : '#cdd';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`TOffset +${codexTierOffset}`, trOff.x + trOff.w / 2, trOff.y + trOff.h / 2);
+    codexClickAreas.push({ ...trOff, kind: 'toffset' });
   }
   ctx.textBaseline = 'alphabetic';
 }
@@ -37053,7 +38612,20 @@ function drawCodexCardGrid(L) {
     const x = L.gridX + col * (cardW + gap);
     const y = L.gridY + row * (cardH + gap) - codexScrollY;
     if (y + cardH < L.gridY || y > L.gridY + L.gridH) continue; // off-screen, skip
-    const entry = visible[i];
+    const rawEntry = visible[i];
+    // ccgQuest+ codex preview — when the TOffset is > 0, every card
+    // / power gets a tier-up clone (name + suffix, tier + offset,
+    // any scaled effect values). Creatures get an attack/HP clone
+    // via the per-name CREATURE_TIER_OFFSET table.
+    let previewCard = rawEntry.card;
+    if (codexTierOffset > 0) {
+      if (rawEntry.kind === 'card' || rawEntry.kind === 'power') {
+        previewCard = applyTierOffsetToCardPreview(rawEntry.card, codexTierOffset);
+      } else if (rawEntry.kind === 'creature') {
+        previewCard = applyTierOffsetToCreaturePreview(rawEntry.card, codexTierOffset);
+      }
+    }
+    const entry = { ...rawEntry, card: previewCard };
     const hovered = hitTest(mouseX, mouseY, { x, y, w: cardW, h: cardH });
     // Skip hover-preview reassignment while Shift-frozen so the pinned
     // preview survives mouse moves over other cards.
@@ -37076,6 +38648,40 @@ function drawCodexCardGrid(L) {
       if (hovered && canHoverSet) hoveredCreaturePreview = entry.card;
     }
     codexClickAreas.push({ x, y, w: cardW, h: cardH, kind: 'select-card', entry });
+    // ccgQuest+ TOffset preview — red border + "+N?" badge flag
+    // that no offset RULES are wired yet (the card's name + tier
+    // already show the upgrade above). When real per-card offset
+    // rules land, gate this on whether the current card actually
+    // has a rule for codexTierOffset and drop the badge once it
+    // does.
+    const hasRules = rawEntry.kind === 'creature'
+      ? creatureHasOffsetRules(rawEntry.card, codexTierOffset)
+      : cardHasOffsetRules(rawEntry.card, codexTierOffset);
+    if (codexTierOffset > 0
+        && (rawEntry.kind === 'card' || rawEntry.kind === 'power' || rawEntry.kind === 'creature')
+        && !hasRules) {
+      ctx.save();
+      ctx.strokeStyle = '#ff4040';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x + 1.5, y + 1.5, cardW - 3, cardH - 3);
+      const bw = codexShowFull ? 44 : 28;
+      const bh = codexShowFull ? 22 : 16;
+      const bx = x + cardW - bw - 4;
+      const by = y + 4;
+      ctx.fillStyle = 'rgba(120, 20, 20, 0.92)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = '#ff8080';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.fillStyle = '#ffd8d8';
+      ctx.font = `bold ${codexShowFull ? 14 : 11}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`+${codexTierOffset}?`, bx + bw / 2, by + bh / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
   }
   ctx.restore();
 
@@ -37469,8 +39075,21 @@ function drawCodexLootGrid(L) {
         const fullyOrPartiallyVisible = cx + cardW > rowX && cx < rowX + rowW;
         const hovered = fullyOrPartiallyVisible &&
           hitTest(mouseX, mouseY, { x: cx, y: rowY, w: cardW, h: cardH });
-        drawCard(card, cx, rowY, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
-        if (hovered && !isShiftFrozen()) hoveredCardPreview = card;
+        // ccgQuest+ TOffset preview clone — same treatment as the
+        // Player / Enemy and Decks tabs so the loot table listing
+        // reflects the offset slider.
+        const _previewCard = codexTierOffset > 0
+          ? applyTierOffsetToCardPreview(card, codexTierOffset)
+          : card;
+        drawCard(_previewCard, cx, rowY, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
+        if (hovered && !isShiftFrozen()) hoveredCardPreview = _previewCard;
+        if (codexTierOffset > 0 && !cardHasOffsetRules(card, codexTierOffset)) {
+          ctx.save();
+          ctx.strokeStyle = '#ff4040';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cx + 1.5, rowY + 1.5, cardW - 3, cardH - 3);
+          ctx.restore();
+        }
 
         ctx.fillStyle = Colors.GOLD;
         ctx.font = 'bold 13px sans-serif';
@@ -37562,8 +39181,21 @@ function drawCodexLootGrid(L) {
         const fullyOrPartiallyVisible = cx + cardW > rowX && cx < rowX + rowW;
         const hovered = fullyOrPartiallyVisible &&
           hitTest(mouseX, mouseY, { x: cx, y: rowY, w: cardW, h: cardH });
-        drawCard(card, cx, rowY, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
-        if (hovered && !isShiftFrozen()) hoveredCardPreview = card;
+        // ccgQuest+ TOffset preview clone — same treatment as the
+        // Player / Enemy and Decks tabs so the loot table listing
+        // reflects the offset slider.
+        const _previewCard = codexTierOffset > 0
+          ? applyTierOffsetToCardPreview(card, codexTierOffset)
+          : card;
+        drawCard(_previewCard, cx, rowY, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
+        if (hovered && !isShiftFrozen()) hoveredCardPreview = _previewCard;
+        if (codexTierOffset > 0 && !cardHasOffsetRules(card, codexTierOffset)) {
+          ctx.save();
+          ctx.strokeStyle = '#ff4040';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(cx + 1.5, rowY + 1.5, cardW - 3, cardH - 3);
+          ctx.restore();
+        }
 
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 13px sans-serif';
@@ -38277,8 +39909,21 @@ function drawCodexDecksGrid(L) {
       const x = L.gridX + innerPadX + col * (cardW + gap);
       const y = sy + headerH + row * (cardH + gap);
       const hovered = hitTest(mouseX, mouseY, { x, y, w: cardW, h: cardH });
-      drawCard(entry.card, x, y, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
-      if (hovered && !isShiftFrozen()) hoveredCardPreview = entry.card;
+      // ccgQuest+ TOffset preview clone — same treatment as the
+      // Player / Enemy tab grids so the deck listing matches.
+      const previewCard = codexTierOffset > 0
+        ? applyTierOffsetToCardPreview(entry.card, codexTierOffset)
+        : entry.card;
+      drawCard(previewCard, x, y, cardW, cardH, false, hovered, codexShowFull ? 'full' : 'small');
+      if (hovered && !isShiftFrozen()) hoveredCardPreview = previewCard;
+      // Red "needs rules" border for cards still missing offset rules.
+      if (codexTierOffset > 0 && !cardHasOffsetRules(entry.card, codexTierOffset)) {
+        ctx.save();
+        ctx.strokeStyle = '#ff4040';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x + 1.5, y + 1.5, cardW - 3, cardH - 3);
+        ctx.restore();
+      }
       // Stack-count badge (matches the inventory backpack style)
       if (entry.count > 1) {
         const bx = x + cardW - 24, by = y + 2;
@@ -38567,6 +40212,42 @@ function buildCodexSourceCache() {
     }
   }
 
+  // Per-class ability tables — every level-up pick / Lost Shrine
+  // choice draws from one of these. One deck per class per tier so
+  // the Decks tab shows them side-by-side with starter decks and the
+  // per-card source line ("Tier N Ability: Paladin") can link back.
+  const classAbilityChoices = [
+    ['Paladin', getPaladinAbilityChoices],
+    ['Ranger',  getRangerAbilityChoices],
+    ['Wizard',  getWizardAbilityChoices],
+    ['Rogue',   getRogueAbilityChoices],
+    ['Warrior', getWarriorAbilityChoices],
+    ['Druid',   getDruidAbilityChoices],
+  ];
+  for (const [cls, fn] of classAbilityChoices) {
+    const all = fn();
+    for (const tier of [1, 2]) {
+      const tierCards = all
+        .filter(c => (c.tier || 1) === tier)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      if (!tierCards.length) continue;
+      const deckId = `abilities_${cls.toLowerCase()}_t${tier}`;
+      const deckLabel = `${cls} — Tier ${tier} Abilities`;
+      cache.decks.push({
+        id: deckId,
+        label: deckLabel,
+        side: 'player',
+        entries: tierCards.map(c => ({ card: c, count: 1 })),
+      });
+      for (const c of tierCards) {
+        addCard(c.id, {
+          text: `Tier ${tier} Ability: ${cls}`,
+          link: { type: 'deck', id: deckId },
+        });
+      }
+    }
+  }
+
   // Player-summon creatures via cards' previewCreature field (Pet Spider,
   // Tamed Rat, Pet Slime, etc.). This populates the Summons tab and stamps
   // both _sourceRarity (frame asset) and _sourceSubtype (frame tint) so the
@@ -38605,6 +40286,19 @@ function buildCodexSourceCache() {
   thorbCreature._sourceRarity = 'rare'; // thorb_card is rare
   thorbCreature._sourceSubtype = 'allies';
   addCreature(thorbCreature, 'Summoned by: Thorb (recruit)');
+
+  // Slime — spawned by the enemy Split passive (Slime Brute /
+  // Mega Slime). Add an explicit entry so the codex Summons tab
+  // shows the creature even though no enemy starter pushes it via
+  // setupEnemyForCombat.
+  const slimeSummon = new Creature({
+    name: 'Slime', attack: 1, maxHp: 1, unpreventable: true,
+    description: 'Deals Unpreventable Damage.',
+  });
+  slimeSummon._codexSide = 'enemy';
+  slimeSummon._sourceRarity = 'common';
+  slimeSummon._sourceSubtype = 'allies';
+  addCreature(slimeSummon, 'Summoned by: Split (on hit)');
 
   // Rat Taming now uses previewCreatures: [Tamed Rat, Dire Rat] —
   // both are auto-picked up by the previewCreatures scan above, so
@@ -38905,7 +40599,19 @@ function drawCodexStatsPanel(L) {
     ctx.fillText('Click a card or character to inspect.', L.rightX + 12, L.rightY + 56);
     return;
   }
-  const sel = codexSelectedCard;
+  let sel = codexSelectedCard;
+  // ccgQuest+ stats panel preview — apply the codex tier offset to
+  // the right-side thumbnail so the "selected card" matches the
+  // grid below. Wrapped in a clone so the cached source-cache
+  // reference stays at base values. Characters and perks fall
+  // through untouched (no tier rules yet).
+  if (codexTierOffset > 0 && !sel._isCharacter && !sel._isPerk) {
+    if (sel._isCreature) {
+      sel = applyTierOffsetToCreaturePreview(sel, codexTierOffset);
+    } else {
+      sel = applyTierOffsetToCardPreview(sel, codexTierOffset);
+    }
+  }
   let py = L.rightY + 56;
   ctx.fillStyle = Colors.WHITE;
   ctx.font = 'bold 16px Georgia, serif';
@@ -38968,6 +40674,62 @@ function drawCodexStatsPanel(L) {
     py += btnH + 16; // extra gap so the Sources header doesn't kiss the button
   }
 
+  // Creature tier-offset rule (Rat / Restless Bone / future per-name
+  // entries). Stat bumps come from the CREATURE_TIER_OFFSET table.
+  if (sel && sel._isCreature && CREATURE_TIER_OFFSET[sel.name]) {
+    const rule = CREATURE_TIER_OFFSET[sel.name];
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.fillText('Tier Offset (+N)', L.rightX + 12, py);
+    py += 16;
+    ctx.textBaseline = 'top';
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#cdd';
+    ctx.fillText(`Attack: +${rule.attack || 0} per tier`, L.rightX + 18, py); py += 16;
+    ctx.fillText(`HP: +${rule.hp || 0} per tier`, L.rightX + 18, py); py += 16;
+    ctx.textBaseline = 'alphabetic';
+    py += 6;
+  }
+  // Tier Offset rules — surfaced under the card so a designer can
+  // see at a glance what each +1 of the offset gives the card.
+  // Only shows when the card has a gamePlusOffset block wired.
+  if (sel && sel.gamePlusOffset && !sel._isCharacter && !sel._isPerk) {
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.fillText('Tier Offset (+N)', L.rightX + 12, py);
+    py += 16;
+    ctx.textBaseline = 'top';
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#cdd';
+    const lineH = 16;
+    const OFFSET_LABELS = {
+      damage: 'Damage',
+      heal: 'Heal',
+      block: 'Block',
+      gain_shield: 'Shield',
+      gain_heroism: 'Heroism',
+      shield_bash: 'Shield (Bash)',
+      damage_draw_on_hit: 'Damage',
+      summon_random: 'Summon Max',
+      armor_power: 'Armor',
+      loose_bone_summon: 'Restless Bone Max',
+    };
+    for (const [key, val] of Object.entries(sel.gamePlusOffset)) {
+      const label = OFFSET_LABELS[key] || _titleCase(key);
+      let text;
+      if (typeof val === 'number') {
+        text = `${label}: +${val} per tier`;
+      } else if (val && typeof val === 'object' && key === 'armor_bonus_damage') {
+        text = `Damage: +${val.base || 0} / Bonus vs Arm/Shd: +${val.bonus || 0} per tier`;
+      } else {
+        text = `${label}: ${JSON.stringify(val)}`;
+      }
+      ctx.fillText(text, L.rightX + 18, py);
+      py += lineH;
+    }
+    ctx.textBaseline = 'alphabetic';
+    py += 6;
+  }
   // Sources section — where this card/power appears in the game.
   // Skip for character and perk entries (perks show their own details
   // block via drawCodexPerkDetails, not the card-sources scan).
@@ -39367,7 +41129,14 @@ function handleCodexClick(x, y) {
     if (a.kind === 'add-card-to-game') {
       const creator = CARD_REGISTRY[a.cardId];
       if (creator && player && player.deck) {
-        const card = creator();
+        let card = creator();
+        // ccgQuest+ — when the codex TOffset is > 0, the card the
+        // player adds to their hand picks up the offset rules. Lets
+        // a designer spawn the upgraded version straight from the
+        // codex instead of the always-base creator output.
+        if (codexTierOffset > 0) {
+          card = applyTierOffsetToCardPreview(card, codexTierOffset);
+        }
         const handHasRoom = player.deck.hand.length < MAX_HAND_SIZE;
         player.deck.addCard(card, handHasRoom);
         showToast(handHasRoom ? `+1 ${card.name} (hand)` : `+1 ${card.name} (deck)`, 1500);
@@ -39396,6 +41165,10 @@ function handleCodexClick(x, y) {
     if (a.kind === 'format') {
       codexShowFull = a.value;
       codexScrollY = 0;
+      return;
+    }
+    if (a.kind === 'toffset') {
+      codexTierOffset = (codexTierOffset + 1) % 10;
       return;
     }
     if (a.kind === 'select-card') {
@@ -39515,6 +41288,7 @@ function handleCodexClick(x, y) {
 
 // === Init ===
 loadTutorialState();
+loadGamePlusUnlock();
 loadOptionsFromStorage();
 loadAssets().then(() => {
   requestAnimationFrame(gameLoop);

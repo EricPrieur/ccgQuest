@@ -315,3 +315,16 @@ export function hasAnySave() {
   }
   return false;
 }
+
+// True when the player has ever finished Part 1 — checked via the
+// class-keyed end-of-Part-1 snapshot slots (`part1_complete_<class>`).
+// One slot is written per class on the after-credits autosave so a
+// player who has cleared the dragon on ANY class qualifies for the
+// ccgQuest+ unlock.
+export function hasPart1CompleteSave() {
+  const classes = ['paladin', 'ranger', 'wizard', 'rogue', 'warrior', 'druid'];
+  for (const cls of classes) {
+    if (hasSave(`part1_complete_${cls}`)) return true;
+  }
+  return false;
+}

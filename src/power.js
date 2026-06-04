@@ -16,6 +16,8 @@ export class Power {
     choices = null,
     costIsDiscard = false,
     maxUsesPerTurn = 1,
+    gamePlusOffset = null,
+    noTierOffset = false,
   }) {
     this.id = id;
     this.name = name;
@@ -33,6 +35,15 @@ export class Power {
     // counter hits the cap; ready() resets it at turn start.
     this.maxUsesPerTurn = maxUsesPerTurn;
     this.usesThisTurn = 0;
+    // Optional ccgQuest+ tier-offset scaling, mirroring the same
+    // field on Card. Keys are short tags matching a regex in the
+    // codex preview helper (e.g. "damage" swaps the "X" in
+    // "Deal X Damage"). Cleave is the first wired example.
+    this.gamePlusOffset = gamePlusOffset;
+    // Explicit "this power does not scale with tier offset" marker —
+    // suppresses the codex red "+N?" badge for powers like Overwhelm
+    // and Vanish that intentionally stay flat.
+    this.noTierOffset = noTierOffset;
   }
 
   get fullDescription() {
@@ -81,6 +92,9 @@ export function createCleave() {
     effectDescription: 'Deal 1 Damage to up to 2 Creatures. 2 Targets: Draw.',
     rechargeCost: 1,
     shortDesc: 'R1->1 Dmg\nto 2 targets\n2 Targets: Draw',
+    // Base damage 1, +1 per player tier offset. Codex preview reads
+    // this and rewrites "Deal X Damage" / "X Dmg" in the descriptions.
+    gamePlusOffset: { damage: 1 },
   });
 }
 
@@ -93,6 +107,7 @@ export function createAimedShot() {
     effectDescription: 'Gain 1 Heroism, Draw.',
     rechargeCost: 1,
     shortDesc: 'R1->+1 Heroism\nDraw',
+    gamePlusOffset: { gain_heroism: 1 },
   });
 }
 
@@ -105,6 +120,10 @@ export function createElementalInfusion() {
     rechargeCost: 1,
     shortDesc: 'R1->1 Fire/Ice',
     choices: [createFireToken(), createIceToken()],
+    // Bumps Fire and Ice values together per offset point. Codex
+    // text rewrites both "1 Fire" and "1 Ice" via a custom branch
+    // in applyGamePlusOffsetInPlace.
+    gamePlusOffset: { apply_fire: 1, apply_ice: 1 },
   });
 }
 
@@ -116,6 +135,10 @@ export function createQuickStrike() {
     effectDescription: 'Deal 1 Damage, Draw.',
     rechargeCost: 1,
     shortDesc: 'R1->1 Dmg\nDraw',
+    // Offset transforms Quick Strike into a barrage — +1 swing per
+    // offset point (always 1 damage each). The codex text rewrites
+    // "Deal 1 Damage" → "Deal 1 Damage N times" via a custom branch.
+    gamePlusOffset: { quick_strike_attacks: 1 },
   });
 }
 
@@ -124,10 +147,14 @@ export function createBattleFury() {
     id: 'battle_fury',
     name: 'Battle Fury',
     costDescription: 'Discard 1 Card',
-    effectDescription: 'Gain 1 Heroism, 1 Shield, Draw 2.',
+    effectDescription: 'Gain Heroism, Shield, Draw 2.',
     rechargeCost: 1,
     costIsDiscard: true,
-    shortDesc: 'D1->+1 Heroism\n+Shield, Draw 2',
+    shortDesc: 'D1->+Heroism\n+Shield, Draw 2',
+    // Base grants 1 Heroism + 1 Shield (numbers omitted from the
+    // text for cleanliness). Offset bumps each by +1 per step —
+    // the codex preview inserts "N Heroism, N Shield" when offset > 0.
+    gamePlusOffset: { gain_heroism: 1, gain_shield: 1 },
   });
 }
 
@@ -143,6 +170,9 @@ export function createFeralForm() {
     // Forced to 2 lines so the small card's frame doesn't overlap the text.
     shortDesc: 'R1->Heroism\nor Shield, Draw',
     choices: [createCatFormToken(), createBearFormToken()],
+    // Cat Form (Heroism) and Bear Form (Shield) each gain +1 per
+    // offset point. Codex rewrites both numbers in the text.
+    gamePlusOffset: { gain_heroism: 1, gain_shield: 1 },
   });
 }
 
@@ -156,6 +186,8 @@ export function createChunkyBite() {
     effectDescription: 'Deal 3 Damage.',
     rechargeCost: 2,
     shortDesc: 'R2->3 Dmg',
+    // Monster-side power scaling — bites harder per monster offset.
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -168,6 +200,9 @@ export function createDireFury() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Turn End:\n+1 Rage',
+    // +1 Rage per monster tier offset (1 → 2 → 3 …). Runtime is
+    // scaled below in scaleEnemyPowerForOffset.
+    gamePlusOffset: { dire_fury_rage: 1 },
   });
 }
 
@@ -214,6 +249,8 @@ export function createOverwhelm() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Overflow\n->You',
+    // Doesn't scale with tier — overflow rule is binary, not numeric.
+    noTierOffset: true,
   });
 }
 
@@ -226,6 +263,9 @@ export function createSplit() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Split on hit',
+    // +1 max slimes summoned per offset (base 1, offset 1 = 1-2,
+    // offset 2 = 1-3, etc). Runtime is the on-hit split handler.
+    gamePlusOffset: { split_summon: 1 },
   });
 }
 
@@ -238,6 +278,10 @@ export function createArmorPower(level = 1) {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: `Block ${level}`,
+    // Monster offset: +1 base armor per step. Codex preview reads
+    // this and rewrites the displayed text; runtime scaling lives
+    // in applyMonsterTierOffsetToEnemy which bumps p.armorLevel too.
+    gamePlusOffset: { armor_power: 1 },
   });
   p.armorLevel = level;
   return p;
@@ -310,6 +354,9 @@ export function createWolfPack() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Summon\nWolves',
+    // +1 extra wolf summoned per monster tier offset (handler bumps
+    // the target roster size at the start of each enemy turn).
+    gamePlusOffset: { wolf_pack_extra: 1 },
   });
 }
 
@@ -339,6 +386,9 @@ export function createLavaFloor() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: '1 Fire\nto ALL',
+    // +1 Fire per offset (2 stacks at T1, 3 at T2…). Handler reads
+    // the scaled value on each tick.
+    gamePlusOffset: { apply_fire: 1 },
   });
 }
 
@@ -359,6 +409,8 @@ export function createBlizzard() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: '1 Ice\nto ALL',
+    // +1 Ice per monster tier offset.
+    gamePlusOffset: { apply_ice: 1 },
   });
 }
 
@@ -509,6 +561,8 @@ export function createVanish() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'On Hit:\n50% Vanish',
+    // Doesn't scale — the 50%/invulnerable rule is binary, not numeric.
+    noTierOffset: true,
   });
 }
 

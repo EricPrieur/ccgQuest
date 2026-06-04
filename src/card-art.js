@@ -48,6 +48,7 @@ export const CARD_ART_MAP = {
   multi_shot: 'MultiShotAbility.jpg',
   aimed_shot_card: 'AimedShot2.jpg',
   careful_strike: 'CarefulStrikeAbility.jpg',
+  heroic_tumble: 'HeroicTumble.jpg',
   hunters_mark: 'HunterMark.jpg',
   animal_companion: 'AnimalCompanion.jpg',
   piercing_shot: 'PiercingShot.jpg',
@@ -325,6 +326,7 @@ export const CARD_ART_MAP = {
   swallowing_bite:    'KrakenSpawn.jpg',
   kraken_tentacle:    'KrakenSpawnTentacle.jpg',
   kraken_tentacle_block: 'KrakenSpawnTentacle.jpg',
+  kraken_whip:           'KrakenSpawnTentacle.jpg',
   ink_cloud:             'InkCloud.jpg',
   // Kraken loot drops (pick-2 epics after the fight).
   bloody_eye_patch:        'BloodyEyePatch.jpg',

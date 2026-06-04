@@ -61,6 +61,7 @@ export function createWoodenSword() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage', 3, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -77,6 +78,7 @@ export function createLeatherArmor() {
       new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 2 },
   });
 }
 
@@ -90,6 +92,7 @@ export function createScraps() {
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
     effects: [new CardEffect('heal', 3, TargetType.SELF)],
+    gamePlusOffset: { heal: 2 },
   });
 }
 
@@ -107,6 +110,8 @@ export function createWoodenAxe() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 2)],
+    // Fractional per: floor(1.5 * offset) → +1 at T1, +3 at T2, +4 at T3.
+    gamePlusOffset: { multi_damage: 1.5 },
   });
 }
 
@@ -123,6 +128,7 @@ export function createWoodenGreatsword() {
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -138,6 +144,12 @@ export function createRockMace() {
     effects: [
       new CardEffect('armor_bonus_damage', 24, TargetType.SINGLE_ENEMY),
     ],
+    // armor_bonus_damage encodes `base * 10 + vsArmorTotal`. Offset
+    // adds +1 to base AND +2 to the BONUS-vs-armor (i.e. the extra
+    // over base). Custom code in applyTierOffsetToCardPreview reads
+    // this { base, bonus } shape and re-encodes the value + rewrites
+    // the description numbers.
+    gamePlusOffset: { armor_bonus_damage: { base: 1, bonus: 2 } },
   });
 }
 
@@ -145,8 +157,8 @@ export function createCrackedBuckler() {
   return new Card({
     id: 'cracked_buckler',
     name: 'Cracked Buckler',
-    description: 'Recharge -> Gain Shield.\nFirst Shield: Draw.',
-    shortDesc: 'R->+Shield\n1st Shield: Draw',
+    description: 'Recharge -> Gain 1 Shield.\nFirst Shield: Draw.',
+    shortDesc: 'R->+1 Shield\n1st Shield: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -154,6 +166,7 @@ export function createCrackedBuckler() {
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
     ],
+    gamePlusOffset: { gain_shield: 2 },
   });
 }
 
@@ -188,6 +201,7 @@ export function createShortBow() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -195,7 +209,7 @@ export function createShortStaff() {
   return new Card({
     id: 'short_staff',
     name: 'Short Staff',
-    description: 'Recharge +1 Card -> Deal 4 Damage, Gain Shield.',
+    description: 'Recharge +1 Card -> Deal 4 Damage, Gain 1 Shield.',
     shortDesc: 'R+1->4 Dmg, Shield',
     subtype: 'staff',
     cardType: CardType.ATTACK,
@@ -205,6 +219,7 @@ export function createShortStaff() {
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 2, gain_shield: 1 },
   });
 }
 
@@ -218,6 +233,7 @@ export function createSmallPouch() {
     cardType: CardType.ITEM,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('scry_pick', 2, TargetType.SELF)],
+    gamePlusOffset: { scry_pick: 1 },
   });
 }
 
@@ -272,6 +288,7 @@ export function createBoneDagger() {
       new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 1 },
   });
 }
 
@@ -284,8 +301,8 @@ export function createBoneDagger() {
 export function createWhiteDragonscaleShield() {
   return new Card({
     id: 'white_dragonscale_shield', name: 'White Dragonscale Shield',
-    description: 'Recharge -> Gain 4 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.',
-    shortDesc: 'R->+4 Shield\nIce -> Shield\nDmg = Shield',
+    description: 'Recharge -> Gain 4 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.\nLose Half Shield.',
+    shortDesc: 'R->+4 Shield\nIce -> Shield\nDmg = Shield\nLose 1/2 Shield',
     subtype: 'light_armor',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
@@ -484,6 +501,7 @@ export function createClothArmor() {
       new CardEffect('block', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 1 },
   });
 }
 
@@ -500,6 +518,7 @@ export function createFireBurst() {
       new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_fire', 2, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 2, apply_fire: 1 },
     characterClass: ['wizard'],
     tier: 1,
   });
@@ -519,6 +538,7 @@ export function createIceBolt() {
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 1 },
     characterClass: ['wizard'],
     tier: 1,
   });
@@ -539,6 +559,11 @@ export function createMagicMissiles() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('barrage', 2, TargetType.SELF),
     ],
+    // +1 per-shot damage AND +1 barrage shot on the recharge-extra.
+    // Description is rebuilt by applyGamePlusOffsetInPlace from the
+    // scaled values (regex swap can't handle two damage numbers + a
+    // shot count derived from barrage+1).
+    gamePlusOffset: { damage: 1, barrage: 1 },
     characterClass: ['wizard'],
     tier: 1,
   });
@@ -560,6 +585,7 @@ export function createArcaneShield() {
       new CardEffect('block', 4, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 3 },
     characterClass: ['wizard'],
     tier: 1,
   });
@@ -586,6 +612,10 @@ export function createVialOfPoison() {
     // Counted in the deck (added to masterDeck by the handler) so the
     // inventory shows it and the player can rebalance it normally.
     isToken: true,
+    // Sellable everywhere despite the token + class-restriction
+    // gates — player should be able to offload a vial back to the
+    // city's general store / arcane emporium for a couple of gold.
+    sellable: true,
   });
 }
 
@@ -601,6 +631,9 @@ export function createSneakAttack() {
     effects: [new CardEffect('sneak_attack', 0, TargetType.SINGLE_ENEMY)],
     characterClass: ['rogue', 'druid'],
     tier: 1,
+    // +2 base damage per offset. Effect value carries the flat bonus
+    // (0 by default → 2 → 4…); runtime adds it on top of the X count.
+    gamePlusOffset: { sneak_attack: 2 },
   });
 }
 
@@ -632,6 +665,10 @@ export function createPetSpider() {
     tier: 1,
     previewCreature: createSmallSpiderCreature(),
     previewCard: createVialOfPoison(),
+    // +1 max spiders summoned per offset (1-2 → 1-3 → 1-4…). Each
+    // spider is +1/+1 via CREATURE_TIER_OFFSET['Pet Spider']; the
+    // hover preview rescales the creature automatically.
+    gamePlusOffset: { summon_small_spider: 1 },
   });
 }
 
@@ -651,6 +688,7 @@ export function createHeroicStrike() {
     effects: [new CardEffect('gain_heroism', 4, TargetType.SELF)],
     characterClass: ['paladin', 'warrior'],
     tier: 1,
+    gamePlusOffset: { gain_heroism: 3 },
   });
 }
 
@@ -666,6 +704,7 @@ export function createCharge() {
     effects: [new CardEffect('charge_attack', 3, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
+    gamePlusOffset: { charge_attack: 2 },
   });
 }
 
@@ -688,14 +727,17 @@ export function createRecklessStrike() {
   return new Card({
     id: 'reckless_strike',
     name: 'Reckless Strike',
-    description: 'Discard -> Deal 8 Damage.',
-    shortDesc: 'D->8 Dmg',
+    // Base damage drops from 8 to 6 — the +4 offset bump (10 at +1,
+    // 14 at +2…) is the real reward, so the base sits a tier lower.
+    description: 'Discard -> Deal 6 Damage.',
+    shortDesc: 'D->6 Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.DISCARD,
-    effects: [new CardEffect('damage', 8, TargetType.SINGLE_ENEMY)],
+    effects: [new CardEffect('damage', 6, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
+    gamePlusOffset: { damage: 4 },
   });
 }
 
@@ -703,14 +745,15 @@ export function createShieldBash() {
   return new Card({
     id: 'shield_bash',
     name: 'Shield Bash',
-    description: 'Recharge -> Gain Shield, Deal damage = Shield.\nLose Half Shield.',
-    shortDesc: 'R->+Shield\nDmg=Shield\nLose 1/2 Shield',
+    description: 'Recharge -> Gain 1 Shield,\nDeal damage = Shield.\nLose Half Shield.',
+    shortDesc: 'R->+1 Shield\nDmg=Shield\nLose 1/2 Shield',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('shield_bash', 1, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior', 'paladin'],
     tier: 1,
+    gamePlusOffset: { shield_bash: 1 },
   });
 }
 
@@ -740,8 +783,8 @@ export function createShieldOfFaith() {
   return new Card({
     id: 'shield_of_faith',
     name: 'Shield of Faith',
-    description: 'Recharge -> Gain Shield, Draw.',
-    shortDesc: 'R->Shield, Draw',
+    description: 'Recharge -> Gain 1 Shield, Draw.',
+    shortDesc: 'R->+1 Shield\nDraw',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -751,6 +794,7 @@ export function createShieldOfFaith() {
     ],
     characterClass: ['paladin'],
     tier: 1,
+    gamePlusOffset: { gain_shield: 2 },
   });
 }
 
@@ -772,6 +816,35 @@ export function createCarefulStrike() {
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
+  });
+}
+
+// Heroic Tumble — Tier 1 Rogue / Ranger DEFENSE ability. Replaces
+// Careful Strike on those classes' starter ability picks. Coin-flip
+// on play: 50% to gain 6 Block; leftover Block (after the incoming
+// hit lands) converts to Heroism so the swing-after pays off. Always
+// draws a card on play.
+export function createHeroicTumble() {
+  return new Card({
+    id: 'heroic_tumble',
+    name: 'Heroic Tumble',
+    description: 'Recharge -> 50% to gain 6 Block.\nUnused Block becomes Heroism.\nDraw.',
+    shortDesc: 'R->50% +6 Block\nLeftover->Heroism\nDraw',
+    subtype: 'ability',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('tumble_block', 50, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    characterClass: ['ranger', 'rogue'],
+    tier: 1,
+    // +4 block per offset (6 → 10 → 14…). Block amount lives in the
+    // runtime handler (tumble_block.value carries the percent
+    // chance), so the custom heroic_tumble branch in
+    // applyGamePlusOffsetInPlace rewrites the description and the
+    // runtime reads playerTierOffset directly.
+    gamePlusOffset: { heroic_tumble_block: 4 },
   });
 }
 
@@ -813,6 +886,7 @@ export function createAimedShotCard() {
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -847,6 +921,11 @@ export function createGoodberry() {
       description: 'Basic sustenance for 2 turns each combat (if no other meal).',
     },
     isToken: true,
+    // +1 heal per offset, +1 sustenance roll per offset. Helper also
+    // bumps tier (name suffix) automatically. The provision's own
+    // sustenance value mirrors the effect bump in a custom goodberry
+    // handler in applyGamePlusOffsetInPlace.
+    gamePlusOffset: { heal: 1, goodberry_sustenance: 1 },
   });
 }
 
@@ -1011,6 +1090,11 @@ export function createGoodberries() {
     characterClass: ['ranger'],
     tier: 1,
     previewCard: createGoodberry(),
+    // +1 max Goodberry per offset (3 → 4 → 5…). Each spawned berry
+    // is also scaled in the create_goodberries runtime via
+    // applyGamePlusOffsetInPlace so a Tier+1 Goodberries+ produces
+    // Tier+1 Goodberry+ tokens.
+    gamePlusOffset: { create_goodberries: 1 },
   });
 }
 
@@ -1037,6 +1121,7 @@ export function createWrath() {
         new CardEffect('draw', 1, TargetType.SELF),
       ]),
     ],
+    gamePlusOffset: { modes: [{ damage: 3 }, { damage: 1 }] },
     characterClass: ['druid'],
     tier: 1,
   });
@@ -1057,6 +1142,10 @@ export function createRegrowth() {
     ],
     characterClass: ['druid'],
     tier: 1,
+    // +2 on-play heal per offset. Per-turn regen bumps in the runtime
+    // (regen_buff handler reads playerTierOffset → healPerTurn).
+    // Custom regrowth handler rebuilds the dual-heal description.
+    gamePlusOffset: { heal: 2, regen_per_turn: 1 },
   });
 }
 
@@ -1075,6 +1164,7 @@ export function createFeralSwipe() {
     ],
     characterClass: ['druid'],
     tier: 1,
+    gamePlusOffset: { gain_shield: 1, feral_swipe_damage: 1 },
   });
 }
 
@@ -1202,6 +1292,7 @@ export function createFlashHeal() {
     effects: [new CardEffect('heal', 4, TargetType.SINGLE_ALLY)],
     characterClass: ['paladin'],
     tier: 1,
+    gamePlusOffset: { heal: 3 },
   });
 }
 
@@ -1243,6 +1334,12 @@ export function createTamedRat() {
     // Both possible summons render in the hover side-preview
     // (50/50: 1-3 Tamed Rats vs 1 Dire Rat).
     previewCreatures: [createTamedRatCreature(), createDireRatCreature()],
+    // Tamed branch: +1 to max roll per offset (1-3 → 1-4 → 1-5…).
+    // Dire branch: +1 Dire Rat per offset (1 → 2 → 3…). Stats scale
+    // via CREATURE_TIER_OFFSET (Tamed Rat +1/+1, Dire Rat +2/+2).
+    // Custom tamed_rat handler rebuilds the description with the
+    // explicit ranges; runtime reads playerTierOffset directly.
+    gamePlusOffset: { tamed_rat_summon: 1 },
   });
 }
 
@@ -1754,7 +1851,7 @@ export function getPaladinAbilityChoices() {
 }
 
 export function getRangerAbilityChoices() {
-  return [createTamedRat(), createGoodberries(), createAimedShotCard(), createCarefulStrike(),
+  return [createTamedRat(), createGoodberries(), createAimedShotCard(), createHeroicTumble(),
           createHuntersMark(), createAnimalCompanion(), createPiercingShot(), createExplosiveShot()];
 }
 
@@ -1764,7 +1861,7 @@ export function getWizardAbilityChoices() {
 }
 
 export function getRogueAbilityChoices() {
-  return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createCarefulStrike(),
+  return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createHeroicTumble(),
           createFanOfBlades(), createBackstab(), createPoisonedDagger(), createSprint()];
 }
 
@@ -1816,6 +1913,7 @@ export function createBite() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage', 1, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -1832,6 +1930,7 @@ export function createToughHide() {
       new CardEffect('block', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 2 },
   });
 }
 
@@ -1848,6 +1947,7 @@ export function createBigBone() {
       new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -1855,8 +1955,8 @@ export function createLooseBone() {
   return new Card({
     id: 'loose_bone',
     name: 'Loose Bone',
-    description: 'Recharge -> Block 1, Draw.',
-    shortDesc: 'R->Block 1, Draw',
+    description: 'Recharge -> Block 1, Draw.\nSummon a Restless Bone.',
+    shortDesc: 'R->Block 1, Draw\n+Restless Bone',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -1864,6 +1964,10 @@ export function createLooseBone() {
       new CardEffect('block', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    // Offset: +2 Block AND each +1 bumps the random-summon max by 1
+    // (base 1, +1 → 1-2, +2 → 1-3...). The summon happens in
+    // enemyAutoPlayDefenses keyed off `card.id === 'loose_bone'`.
+    gamePlusOffset: { block: 2, loose_bone_summon: 1 },
   });
 }
 
@@ -1877,6 +1981,9 @@ export function createSkreeeeeeeek() {
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random', 3, TargetType.SUMMON)],
+    // Offset bumps the max rats summoned by 1 per step (1-3 → 1-4 → 1-5…).
+    // The description's "3" is the swap target; the range floor stays at 1.
+    gamePlusOffset: { summon_random: 1 },
   });
 }
 
@@ -1894,6 +2001,7 @@ export function createSlimeAppendage() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('unpreventable_damage', 1, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { unpreventable_damage: 1 },
   });
 }
 
@@ -1910,6 +2018,7 @@ export function createPartiallyDigestedBone() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('unpreventable_damage', 2, TargetType.SINGLE_ENEMY)],
     rarity: 'uncommon',
+    gamePlusOffset: { unpreventable_damage: 2 },
   });
 }
 
@@ -1926,6 +2035,7 @@ export function createCorrodedArmor() {
       new CardEffect('block', 6, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 4 },
   });
 }
 
@@ -1951,6 +2061,13 @@ export function createPetSlimeCard() {
     effects: [new CardEffect('summon_pet_slime', 1, TargetType.SUMMON)],
     rarity: 'rare',
     previewCreature: createPetSlimeCreature(),
+    // +1 max Pet Slimes summoned per offset (1 → 1-2 → 1-3 …). The
+    // pet_slime branch in applyGamePlusOffsetInPlace rebuilds the
+    // description; the previewCreature's stats scale via
+    // CREATURE_TIER_OFFSET['Pet Slime'] (clones in
+    // applyTierOffsetToCardPreview). Runtime spawn loop in
+    // case 'summon_pet_slime' reads the bumped value.
+    gamePlusOffset: { pet_slime_summon: 1 },
   });
 }
 
@@ -1965,6 +2082,7 @@ export function createSlimeJar() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('grant_unpreventable_buff', 3, TargetType.SELF)],
     rarity: 'uncommon',
+    gamePlusOffset: { grant_unpreventable_buff: 1 },
   });
 }
 
@@ -2016,6 +2134,7 @@ export function createDireRatBite() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage', 2, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -2029,6 +2148,9 @@ export function createDireRatScreech() {
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random', 2, TargetType.SUMMON)],
+    // +1 max rats per offset (1-2 → 1-3 → 1-4…). Swap target is the
+    // "2" in the description.
+    gamePlusOffset: { summon_random: 1 },
   });
 }
 
@@ -2054,6 +2176,12 @@ export function createBoneWand() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    // Custom bone_wand handler in applyGamePlusOffsetInPlace:
+    //   - poison scales by floor(0.5 * offset) so +1 every 2 tiers
+    //   - apply_poison_self is REMOVED at any offset >= 1 (no more
+    //     self-poison backlash) — net trade-off: slower scaling, no
+    //     downside.
+    gamePlusOffset: { bone_wand: 0.5 },
   });
 }
 
@@ -2073,6 +2201,7 @@ export function createBoneClub() {
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 2, apply_poison_vs_armor: 1 },
   });
 }
 
@@ -2094,6 +2223,7 @@ export function createBoneMace() {
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 2, apply_poison_vs_armor: 1 },
   });
 }
 
@@ -2143,6 +2273,10 @@ export function createBadRations() {
       ],
       description: 'Heal 1-2 and Discard 0-1 for 2 turns each combat (until rest)',
     },
+    // +2 heal per offset (4 → 6 → 8…), +1 Meal turn per offset
+    // (2 → 3 → 4…). Custom bad_rations handler rewrites the
+    // "for N turns" tail from the bumped provision.turnsPerCombat.
+    gamePlusOffset: { heal: 2, bad_rations_turns: 1 },
   });
 }
 
@@ -2169,6 +2303,10 @@ export function createSturdyBoots() {
       ]),
     ],
     rarity: 'uncommon',
+    // Attack mode: +1.5 dmg per offset (floor). Defense mode:
+    // +1 block + +1.5 random-dmg per offset. Custom sturdy_boots
+    // handler rebuilds description from scaled values.
+    gamePlusOffset: { damage: 1.5, modes: [{ block: 1, damage_random: 1.5 }] },
   });
 }
 
@@ -2186,6 +2324,7 @@ export function createTorch() {
       new CardEffect('scry_pick', 3, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { apply_fire_all: 1, scry_pick: 1 },
   });
 }
 
@@ -2245,6 +2384,7 @@ export function createSharpRock() {
     effects: [
       new CardEffect('damage_draw_on_hit', 1, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage_draw_on_hit: 1 },
   });
 }
 
@@ -2265,6 +2405,11 @@ export function createRockBarrage() {
       new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 2),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    // +1 per-shot damage AND +1 extra shot per monster tier offset.
+    // applyGamePlusOffsetInPlace bumps both value AND maxTargets on
+    // the enemy_damage_succession effect from this { value, maxTargets }
+    // shape and rebuilds the description from the scaled values.
+    gamePlusOffset: { enemy_damage_succession: { value: 1, maxTargets: 1 } },
   });
 }
 
@@ -2706,6 +2851,28 @@ export function createSwallowingBite() {
   });
 }
 
+// Tentacle Whip (Kraken enemy card) — AoE 1 damage to the player +
+// every alive ally, then every alive Tentacle gains 1 Heroism so the
+// next swing lands harder. High-priority enemy play right under
+// Swallowing Bite. Uses the same KrakenSpawnTentacle.jpg art as the
+// passive Tentacle card so the family stays visually consistent.
+export function createKrakenWhip() {
+  return new Card({
+    id: 'kraken_whip',
+    name: 'Tentacle Whip',
+    description: 'Recharge ->\nDeal 1 Damage to all enemies.\nAllies gain 1 Heroism.',
+    shortDesc: 'R->1 Dmg All\nAllies +1 H',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+  });
+}
+
 // ============================================================
 // Kraken Spawn loot drops (post-fight pick-2 from the wreck).
 // All tier-1 epics, all themed around the sea / bleed / heroism.
@@ -2781,8 +2948,8 @@ export function createSailorsLuckyCompass() {
   return new Card({
     id: 'sailors_lucky_compass',
     name: "Sailor's Lucky Compass",
-    description: 'On Draw: Gain 1 Heroism.',
-    shortDesc: 'On Draw:\n+1 Heroism',
+    description: 'On Draw: Gain Heroism.',
+    shortDesc: 'On Draw:\nHeroism',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
@@ -2845,7 +3012,7 @@ export function createHarpyCreature() {
   return new Creature({
     name: 'Harpy', attack: 2, maxHp: 6,
     onDeathDiscardOrDamage: 5,
-    description: 'On Death: Enemies discard their hand or take 5 damage.',
+    description: 'On Death: Enemies discard their hand, or take 5 damage if empty.',
   });
 }
 
@@ -3406,6 +3573,7 @@ export function createScrollOfPotency() {
       new CardEffect('grant_potency_buff', 3, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { gain_heroism: 1 },
   });
 }
 
@@ -3420,6 +3588,7 @@ export function createMinorHealingPotion() {
     costType: CostType.BANISH,
     effects: [new CardEffect('heal', 5, TargetType.SELF)],
     rarity: 'rare',
+    gamePlusOffset: { heal: 3 },
   });
 }
 
@@ -3441,6 +3610,13 @@ export function createWandOfFire() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    // Sellable in the Arcane Emporium (wand stock) — bypasses the
+    // wizard-class lock so the player can offload an unused copy.
+    sellable: true,
+    // +1 Fire per offset. Base description has no number ("Deal
+    // Fire") — the custom wand_of_fire handler injects the scaled
+    // count into the rebuilt description.
+    gamePlusOffset: { apply_fire: 1 },
   });
 }
 
