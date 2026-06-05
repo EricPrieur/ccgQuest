@@ -62,6 +62,10 @@ export function saveGame(state, saveName = '') {
     level: state.player.level || 1,
     perks: (state.player.perks || []).map(p => p.id),
     deckLimitBonuses: state.player.deckLimitBonuses || {},
+    // ccgQuest+ level-up cap bonus. Game+ from save bumps the per-
+    // category cap from +3 to +5; persisted so a save/reload mid-
+    // Game+ keeps the extra headroom.
+    deckLimitCapBonus: state.player.deckLimitCapBonus || 0,
     // Backpack
     backpack: (state.backpack || []).map(serializeCard),
     // Story flags that drive later encounters (kitchen choice gates the

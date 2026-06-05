@@ -175,6 +175,10 @@ let _gamePlusBtnRect = null;
 // game start (so a future Back from a normal new game still
 // returns to the menu).
 let _fromGamePlusSetup = false;
+// Set by startGamePlusFromSave to defer the first node encounter
+// until the player exits the rebalance rest (exitInventory consumes
+// the hook).
+let _gamePlusPendingStartNode = null;
 // Scroll offset for the Option 2 save list on the GAME_PLUS_SETUP
 // screen. Multiple class completions could pile up, so the list is
 // clipped to ~4 visible rows with mouse-wheel scrolling.
@@ -1774,7 +1778,7 @@ const TUTORIAL_BOXES = {
   },
   inventory_deck_limits: {
     title: 'Deck Limits',
-    body: 'Each gear category has a cap on how many copies you can equip. Blue numbers mean room, red means over, white means balanced. On level-up you also add +1 to one category (max +3 per category).',
+    body: 'Each gear category has a cap on how many copies you can equip. Blue numbers mean room, red means over, white means balanced. On level-up you also add +1 to one category (max +3 per category, or +5 in a ccgQuest+ run from a saved game).',
     arrow: () => {
       const s = (typeof getInvSections === 'function') ? getInvSections() : null;
       if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 360 };
@@ -4148,7 +4152,7 @@ function drawGamePlusSetup() {
   // each ccgQuest+ run started this way (base 3 → 5 in the + run).
   ctx.fillStyle = '#ffd884';
   ctx.font = 'italic 14px serif';
-  ctx.fillText('Bonus: max card type +2 (base 3 → 5 per type for this + run).',
+  ctx.fillText('Bonus: level-up cap +2 (cap 3 → 5 per type — earn the +1s by leveling).',
     panelX + 40, panelY + 482);
 
   // Scrollable save list. Clip to a fixed visible area so longer
@@ -4646,8 +4650,26 @@ function startGamePlusFromSave(slot) {
     level: player ? player.level : 1,
     source_slot: slot,
   });
-  showTitleCard('ccgQuest+: The White Claw, Again', '', () => {
-    startNodeEncounter('bed');
+  // ccgQuest+ rebalance bonus — bumps the LEVEL-UP CAP by +2 (from
+  // 3 to 5 per category). The player still earns the +1s by leveling
+  // up; they just have more headroom to spend them. Game+ from save
+  // is the only path that bumps this; fresh runs (Game+ or base)
+  // keep the standard +3 cap.
+  if (player) {
+    player.deckLimitCapBonus = (player.deckLimitCapBonus || 0) + 2;
+  }
+  // Drop into restMode after the title card so the player can
+  // rebalance their carried-over deck against the new +2 limits
+  // BEFORE the bed encounter fires. exitInventory checks the
+  // _gamePlusPendingStartNode hook and routes to bed when set.
+  _gamePlusPendingStartNode = 'bed';
+  showTitleCard('ccgQuest+: The White Claw, Again', 'Rebalance your deck — level-up cap +2 per category (3 → 5).', () => {
+    restMode = true;
+    _restBonusCat = null;
+    _levelUpBonusPending = false;
+    _restErrorMsg = '';
+    previousState = state;
+    state = GameState.INVENTORY;
   });
 }
 
@@ -33527,6 +33549,15 @@ function exitInventory() {
     _restBonusCat = null;
     _levelUpBonusPending = false;
     _restErrorMsg = '';
+    // ccgQuest+ rebalance — startGamePlusFromSave parked the bed
+    // encounter behind a rest. Player has just finished rebalancing
+    // their carried-over deck; fire the start node now.
+    if (_gamePlusPendingStartNode) {
+      const nodeId = _gamePlusPendingStartNode;
+      _gamePlusPendingStartNode = null;
+      startNodeEncounter(nodeId);
+      return;
+    }
     // Chapter 2 transition — the leave-prison flow funnels through here
     // after the level-up / perk / deck-tutorial / rest inventory sequence.
     // Now we finally fade out to Chapter 2 and load the mountain path map.
@@ -34740,7 +34771,7 @@ function drawInventoryCharacter(rect) {
         ctx.textBaseline = 'middle';
         ctx.fillText('−', btnX + btnSize / 2, btnY + btnSize / 2);
         _deckLimitBtnRects.push({ x: btnX, y: btnY, w: btnSize, h: btnSize, kind: 'minus', catId: cat.id });
-      } else if (!_restBonusCat && bonus < 3) {
+      } else if (!_restBonusCat && bonus < (3 + (player.deckLimitCapBonus || 0))) {
         ctx.fillStyle = 'rgba(80,130,80,0.85)';
         ctx.fillRect(btnX, btnY, btnSize, btnSize);
         ctx.strokeStyle = '#9c9';
@@ -35690,6 +35721,7 @@ function restoreFromSave(data) {
   // Restore level, perks, and deck-limit bonuses.
   player.level = data.level || 1;
   player.deckLimitBonuses = data.deckLimitBonuses || {};
+  player.deckLimitCapBonus = typeof data.deckLimitCapBonus === 'number' ? data.deckLimitCapBonus : 0;
   for (const perkId of (data.perks || [])) {
     const perk = recreatePerkFromId(perkId);
     if (perk) player.perks.push(perk);
