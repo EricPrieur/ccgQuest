@@ -178,6 +178,7 @@ export function saveGame(state, saveName = '') {
     throneAudienceComplete: !!state.throneAudienceComplete,
     quartersRested: !!state.quartersRested,
     dragonSlain: !!state.dragonSlain,
+    staircaseTopDragonDialogSeen: !!state.staircaseTopDragonDialogSeen,
     dragonEggDamage: typeof state.dragonEggDamage === 'number' ? state.dragonEggDamage : 0,
     heroesOfQualibaf: !!state.heroesOfQualibaf,
     volcanoChoiceCompleted: !!state.volcanoChoiceCompleted,
@@ -319,7 +320,27 @@ export function getSaveInfo(slot = 'manual_1') {
     timestamp: data.timestamp,
     date: new Date(data.timestamp).toLocaleString(),
     saveName: data.saveName || '',
+    consumedForGamePlus: !!data.consumedForGamePlus,
   };
+}
+
+// Stamp a save slot as "already used to launch a ccgQuest+ run".
+// The Game+ picker filters consumed slots out; the player must
+// finish another Part 1 (killing the dragon overwrites the
+// part1_complete_<class> slot with a fresh data blob, clearing
+// the flag) before they can launch another Game+ run from the
+// same class.
+export function markSlotConsumedForGamePlus(slot) {
+  const data = loadFromSlot(slot);
+  if (!data) return false;
+  data.consumedForGamePlus = true;
+  try {
+    localStorage.setItem(slotKey(slot), JSON.stringify(data));
+    return true;
+  } catch (e) {
+    console.error('Mark-consumed failed:', e);
+    return false;
+  }
 }
 
 // Check if any save exists (manual or auto)

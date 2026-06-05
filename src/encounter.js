@@ -1596,6 +1596,60 @@ export function createOutpostMeetingEncounter() {
 // dialog the FIRST time the player walks into the outpost after
 // surviving the Kraken Spawn. The party tells Gontran what
 // happened — embellished into a tall tale of total carnage — and he
+// Mithril Remedies (post-dragon, artisan district) — empty shop
+// dialog. Party finds a worn-out note tacked to the door from the
+// dwarven apothecary Olbrim Goldbalm, then talks over whether to
+// chase him into the mountain. Side-quest seed for the
+// Stairs of the Infinite content. WIP — debug-only for now.
+export function createMithrilRemediesEncounter() {
+  return new Encounter('mithril_remedies', 'Mithril Remedies',
+    'A small workshop tucked between two larger forges, dark glass jars stacked behind the counter.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("You push the door open. Dust motes drift in the slant of furnace-light. The counter is empty, the shelves half-stocked — vials of clouded liquid, a bowl of dried moss, a single pestle laid neatly across an open ledger.", '!'),
+          new EncounterText("A note is tacked to the inside of the door, written in the careful, looping hand of someone who hates being interrupted.", '!'),
+          new EncounterText("\"Gone into the mountain to get supplies after the siege. Back soon. — Olbrim Goldbalm\"", '!'),
+          new EncounterText("Valdrisa peers at the note, then at the door, then at the note again. \"The corners are curled. The ink's gone brown. This has been here a while.\"", 'Valdrisa'),
+          new EncounterText("\"How long?\" you ask.", '!'),
+          new EncounterText("\"Days. The siege has been over for days, and Olbrim is still 'back soon'? Something's wrong.\"", 'Valdrisa'),
+          new EncounterText("Thorb crosses his arms. \"Wasn't there s'posed t'be a doctor here? Sittin' behind the counter, askin' too many questions about yer bowels?\"", 'Thorb'),
+          new EncounterText("\"That's the one. Olbrim. Apothecary. Best balm man on the mountain.\" Valdrisa lifts the ledger. The last entry is dated weeks ago. \"He wouldn't just walk off. Not without telling someone.\"", 'Valdrisa'),
+          new EncounterText("Raena — for once not scowling — actually leans in to read over Val's shoulder. The dragon is dead. Raena's mood, against all odds, is improving.", 'Raena'),
+          new EncounterText("\"Side quest,\" Raena says. \"Save a dwarf, get on the good side of the locals. Better than another throne audience. I'm in.\"", 'Raena'),
+          new EncounterText("\"Out the main door, then up the mountain,\" Thorb says, already moving. \"Stairs of the Infinite — that's the supply route. He'll be up there if he's anywhere.\"", 'Thorb'),
+          new EncounterText("(The Stairs of the Infinite have unlocked from the Grand Hall's Main Entrance.)", '!'),
+        ],
+      }),
+    ]);
+}
+
+// Post-dragon dialog — Thorb + Val fire off about the volcano
+// stirring back to life and what that means for the great forge.
+// Raena plays the long-suffering grown-up. Fires once when the
+// player walks onto staircase_top with dragonSlain = true; the
+// staircaseTopDragonDialogSeen flag latches it so revisits stay
+// quiet. No combat, no loot — pure flavor + nudge toward the
+// dwarven forge shops.
+export function createPostDragonStaircaseDialogEncounter() {
+  return new Encounter('post_dragon_staircase', 'Top of the Staircase',
+    'The landing thrums faintly underfoot — somewhere far below, the mountain is stirring.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Thorb stops mid-stride, head tilted toward the floor. He puts a palm flat on the stone and grins like a kid who just heard the ice-cream cart.', 'Thorb'),
+          new EncounterText('"Ye feel that? The mountain\'s warmin\' up. The VOLCANO is warmin\' up!"', 'Thorb'),
+          new EncounterText('Valdrisa lights up. "That means the great forge is roaring again. The OBSIDIAN FORGE, Thorb. Do you have any idea what they\'ll have on the racks now?"', 'Valdrisa'),
+          new EncounterText('"Hammers!" Thorb counts on his fingers. "Axes! New axes! Hammer-axes! Pointy-end-of-everything!"', 'Thorb'),
+          new EncounterText('"I want to see what\'s on the rack," Valdrisa says, already bouncing on the balls of her feet. "We have to go. We have to."', 'Valdrisa'),
+          new EncounterText('Raena pinches the bridge of her nose. "Gods. They\'re children. We just killed a DRAGON and you\'re drooling over a toy store."', 'Raena'),
+          new EncounterText('"It\'s not a TOY STORE, Raena, it\'s a FORGE," Thorb says, in the exact tone of a child explaining that no, it\'s not just any toy, it\'s a LIMITED EDITION toy.', 'Thorb'),
+          new EncounterText('Raena sighs. "Fine. Forge it is. Try not to spend all our gold on hammers."', 'Raena'),
+        ],
+      }),
+    ]);
+}
+
 // hastily writes them a Letter of Commendation with a hand-pressed
 // (clearly not-quite-official) seal. Triggers the post-Kraken tier-1
 // level-up via the empty LOOT phase (noLoot + triggersLevelUp routes
@@ -1622,12 +1676,14 @@ export function createOutpostKrakenReportEncounter() {
       ],
     }),
     // Empty LOOT phase → noLoot branch routes straight into the
-    // tier-1 level-up flow (ABILITY_SELECT). No card / no gold to
-    // show — the Letter is narrative-only.
+    // tier-2 level-up flow (ABILITY_SELECT). No card / no gold to
+    // show — the Letter is narrative-only. The kraken kill is a
+    // capstone moment, so the offered abilities pull from each
+    // class's tier-2 pool to mark the milestone.
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       triggersLevelUp: true,
-      levelUpTier: 1,
+      levelUpTier: 2,
     }),
   ]);
 }
@@ -4693,6 +4749,8 @@ export const ENCOUNTER_REGISTRY = {
   south_trail: createSouthTrailEncounter,
   outpost_meeting: createOutpostMeetingEncounter,
   outpost_kraken_report: createOutpostKrakenReportEncounter,
+  post_dragon_staircase: createPostDragonStaircaseDialogEncounter,
+  mithril_remedies: createMithrilRemediesEncounter,
   watchtower_check: createWatchtowerCheckEncounter,
   supply_pile: createSupplyPileEncounter,
   outpost_tent: createOutpostTentEncounter,

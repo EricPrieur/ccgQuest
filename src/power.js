@@ -200,9 +200,11 @@ export function createDireFury() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Turn End:\n+1 Rage',
-    // +1 Rage per monster tier offset (1 → 2 → 3 …). Runtime is
-    // scaled below in scaleEnemyPowerForOffset.
-    gamePlusOffset: { dire_fury_rage: 1 },
+    // +0.5 Rage per monster tier offset (floor — +0 at +1, +1 at +2,
+    // +1 at +3, +2 at +4…). Same gentle ramp as Armor power; the
+    // base 1-Rage-per-turn already snowballs fast across a long
+    // fight, so the offset bump stays modest.
+    gamePlusOffset: { dire_fury_rage: 0.5 },
   });
 }
 
@@ -278,10 +280,11 @@ export function createArmorPower(level = 1) {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: `Block ${level}`,
-    // Monster offset: +1 base armor per step. Codex preview reads
+    // Monster offset: +0.5 base armor per step (floor — so +0 at
+    // tier +1, +1 at +2, +1 at +3, +2 at +4…). Codex preview reads
     // this and rewrites the displayed text; runtime scaling lives
     // in applyMonsterTierOffsetToEnemy which bumps p.armorLevel too.
-    gamePlusOffset: { armor_power: 1 },
+    gamePlusOffset: { armor_power: 0.5 },
   });
   p.armorLevel = level;
   return p;
@@ -316,6 +319,11 @@ export function createAmalgam() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Create\nAmalgam',
+    // +2/+2 per monster offset — fresh amalgams spawn that much
+    // bigger AND each per-turn buff tick bumps the same amount.
+    // The per-card Bone Amalgam creature does NOT get a
+    // CREATURE_TIER_OFFSET rule (we'd double-dip with this power).
+    gamePlusOffset: { amalgam_growth: 2 },
   });
 }
 

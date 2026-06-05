@@ -1054,6 +1054,11 @@ export function createLambasBread() {
       description: 'Heal 1 or Heroism each turn for 3 turns (each combat, until rest)',
     },
     rarity: 'uncommon',
+    // +3 on-play heal per offset. Meal duration bumps by +1 turn
+    // per offset via a custom lambas_bread handler in
+    // applyGamePlusOffsetInPlace (the per-turn random_pick value
+    // stays at 1 — it's a flavor option, not a numeric scale).
+    gamePlusOffset: { heal: 3, lambas_bread_turns: 1 },
   });
 }
 
@@ -1105,6 +1110,7 @@ export function createSmallFaery() {
     effects: [new CardEffect('heal_all', 3, TargetType.SELF)],
     rarity: 'rare',
     tier: 1,
+    gamePlusOffset: { heal_all: 3 },
   });
 }
 
@@ -2447,11 +2453,10 @@ export function createRockBarrage() {
       new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 2),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    // +1 per-shot damage AND +1 extra shot per monster tier offset.
-    // applyGamePlusOffsetInPlace bumps both value AND maxTargets on
-    // the enemy_damage_succession effect from this { value, maxTargets }
-    // shape and rebuilds the description from the scaled values.
-    gamePlusOffset: { enemy_damage_succession: { value: 1, maxTargets: 1 } },
+    // +2 per-shot damage per offset (shot count stays at 2). The
+    // { value: 2 } shape uses the same bump helper but skips the
+    // maxTargets bump that the earlier wiring added.
+    gamePlusOffset: { enemy_damage_succession: { value: 2 } },
   });
 }
 
@@ -2713,22 +2718,23 @@ export function createHarpyEggOmelette() {
   });
 }
 
-// Harpy Talon Blade — rare simple weapon. Discards 1 random hand
-// card as cost, deals 6 damage, stays in hand. Each discarded card
-// fires its own on_discard rider so chaining the blade with feather
-// cloaks / Harpy Feather is the design payoff.
+// Harpy Talon Blade — rare simple weapon. Auto-discards the top card
+// of the draw pile as cost, deals 5 damage, stays in hand. The
+// discarded card fires its own on_discard rider so chaining the blade
+// with feather cloaks / Harpy Feather is the design payoff (no
+// player pick — top of deck only).
 export function createHarpyTalonBlade() {
   return new Card({
     id: 'harpy_talon_blade',
     name: 'Harpy Talon Blade',
-    description: 'Discard a card -> Deal 6 Damage.\nStays in hand.',
-    shortDesc: 'D 1 Card->6 Dmg\nStays',
+    description: 'Discard the top card -> Deal 5 Damage.\nStays in hand.',
+    shortDesc: 'D Top->5 Dmg\nStays',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.FREE,
     effects: [
-      new CardEffect('discard_extra', 1, TargetType.SELF),
-      new CardEffect('damage', 6, TargetType.SINGLE_ENEMY),
+      new CardEffect('discard_top_card', 1, TargetType.SELF),
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'rare',
@@ -3095,6 +3101,7 @@ export function createZhostsBuckler() {
       new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
     ],
     rarity: 'rare',
+    gamePlusOffset: { damage: 2, apply_ice: 1, gain_shield: 1 },
   });
 }
 
@@ -3374,6 +3381,13 @@ export function createLargeBoulder() {
         description: 'Self-Destruct: explodes after attacking.',
       }),
     ],
+    // +0.5 extra boulder per offset (floor — so the first +1
+    // shows up at offset 2). Runtime reads
+    // monsterTierOffset to bump both branches of the random
+    // summon roll. Per-creature stat bumps come from
+    // CREATURE_TIER_OFFSET (Small Boulder +1/+1, Large Boulder
+    // +2/+2 +1 armor).
+    gamePlusOffset: { summon_boulders_random: 0.5 },
   });
 }
 
@@ -3752,6 +3766,7 @@ export function createWhiteClaw() {
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'rare',
+    gamePlusOffset: { damage: 3, apply_ice: 1 },
   });
 }
 
@@ -4969,6 +4984,7 @@ export function createDefensiveFormation() {
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('team_shield', 1, TargetType.SELF)],
+    gamePlusOffset: { team_shield: 1 },
   });
 }
 
@@ -5007,6 +5023,10 @@ export function createBoneStorm() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('bone_storm', 1, TargetType.ALL_ENEMIES)],
     priority: 15,
+    // +2 storm damage, +1 atk/hp/shield to allies per monster offset
+    // (runtime reads monsterTierOffset to apply the ally buff bumps;
+    // the damage portion bumps the bone_storm effect value).
+    gamePlusOffset: { bone_storm: 2 },
   });
 }
 

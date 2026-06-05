@@ -698,6 +698,16 @@ export class Character {
         const aliveAllies = (this.creatures || []).filter(c => c.isAlive).length;
         if (aliveAllies < 6) {
           const elf = new Creature({ name: 'Elf Warrior', attack: 2, maxHp: 2 });
+          // ccgQuest+ scaling — main.js stamps the player tier
+          // offset on the buff when adding it; bump +1/+1 per tier
+          // here so the per-turn elf matches the up-front spawn
+          // (CREATURE_TIER_OFFSET['Elf Warrior'] = { attack:1, hp:1 }).
+          const tOff = buff._tierOffset || 0;
+          if (tOff > 0) {
+            elf.attack += tOff;
+            elf.maxHp += tOff;
+            elf.currentHp = elf.maxHp;
+          }
           if (this.addCreature(elf)) {
             logs.push({ text: `  ${buff.name}: Elf Warrior reinforces!`, color: '#3cc83c', creature: elf, buff });
           }

@@ -111,7 +111,7 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
 } from './cards.js';
 import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter } from './encounter.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -124,7 +124,7 @@ import {
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
 } from './power.js';
-import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
+import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, markSlotConsumedForGamePlus, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
 import { initAnalytics, track as trackEvent } from './analytics.js';
 
@@ -411,7 +411,9 @@ const EFFECT_DESC_PATTERNS = {
   feral_swipe_damage: [/Deal\s+(\d+)\s+damage/i, /(\d+)\s+Dmg\b/i],
   block: [/Block\s+(\d+)/i, /(\d+)\s+Block/i],
   heal: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
+  heal_all: [/for\s+(\d+)/i, /Heal\s+(\d+)/i, /(\d+)\s+Heal/i, /All\s+(\d+)/i],
   gain_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  team_shield: [/gain\s+(\d+)\s+Shield/i, /Shield\s+(\d+)/i, /(\d+)\s+Shield/i],
   apply_fire: [/(\d+)\s+Fire\b/i],
   apply_fire_all: [/(\d+)\s+Fire\b/i],
   apply_ice: [/(\d+)\s+Ice\b/i],
@@ -589,6 +591,20 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.description = `Deal ${n} Fire.\nStays in hand.`;
       c.shortDesc = `${n} Fire, Stays`;
     }
+    // Lambas Bread — base on-play heal scales via the generic swap
+    // (Heal 6 → 9). The Meal duration also bumps by +1 turn per
+    // offset; rebuild the meal description + the inline tail of
+    // the play description so the new turn count is visible.
+    if (c.id === 'lambas_bread' && c.gamePlusOffset?.lambas_bread_turns) {
+      const dT = c.gamePlusOffset.lambas_bread_turns * offset;
+      if (c.provision) c.provision.turnsPerCombat = (c.provision.turnsPerCombat || 0) + dT;
+      const turns = c.provision?.turnsPerCombat || 3;
+      c.description = (c.description || '').replace(/for\s+\d+\s+turns/i, `for ${turns} turns`);
+      c.shortDesc = (c.shortDesc || '').replace(/(\d+)T\b/, `${turns}T`);
+      if (c.provision?.description) {
+        c.provision.description = c.provision.description.replace(/for\s+\d+\s+turns/i, `for ${turns} turns`);
+      }
+    }
     // Chicken Leg — base on-play heal scales via the generic swap
     // (heal 5 → 7 → 9…). The Meal field also bumps per offset so
     // the per-turn tick scales too (2 → 3 → 4…). Rebuild the meal
@@ -702,7 +718,10 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const swap = (s, re) => {
         if (typeof s !== 'string') return s;
         return s.replace(re, (full, num) => {
-          const next = (parseInt(num, 10) || 0) + per * offset;
+          // Fractional `per` (e.g. armor_power: 0.5) floors AFTER
+          // multiplication so the description reads integer values.
+          const bump = Math.floor(per * offset);
+          const next = (parseInt(num, 10) || 0) + bump;
           return full.replace(num, String(next));
         });
       };
@@ -771,7 +790,9 @@ function applyGamePlusOffsetInPlace(c, offset) {
     // the codex thumbnail header reads "Armor: N" with the upgraded
     // value, matching the body text.
     if (typeof c.armorLevel === 'number' && c.gamePlusOffset.armor_power) {
-      const bump = c.gamePlusOffset.armor_power * offset;
+      // Fractional `per` (0.5 for Armor power) is floored AFTER
+      // multiplication so +0 at +1, +1 at +2, +1 at +3, +2 at +4…
+      const bump = Math.floor(c.gamePlusOffset.armor_power * offset);
       c.armorLevel += bump;
       if (typeof c.name === 'string') {
         // The suffix (+ / ++ / +N) was already appended by the helper
@@ -888,6 +909,9 @@ const CREATURE_TIER_OFFSET = {
   'Tamed Rat':     { attack: 1, hp: 1 },
   'Dire Rat':      { attack: 2, hp: 2 },
   'Kobold Guard':  { attack: 1, hp: 1, shield: 1 },
+  'Small Boulder': { attack: 1, hp: 1 },
+  'Large Boulder': { attack: 2, hp: 2, armor: 1 },
+  'Elf Warrior':   { attack: 1, hp: 1 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
@@ -900,12 +924,14 @@ function scaleCreatureWithOffset(creature, offset) {
   const dA = (rule.attack || 0) * offset;
   const dH = (rule.hp || 0) * offset;
   const dS = (rule.shield || 0) * offset;
+  const dAr = (rule.armor || 0) * offset;
   if (dA) creature.attack = (creature.attack || 0) + dA;
   if (dH) {
     creature.maxHp = (creature.maxHp || 0) + dH;
     creature.currentHp = (creature.currentHp || 0) + dH;
   }
   if (dS) creature.shield = (creature.shield || 0) + dS;
+  if (dAr) creature.armor = (creature.armor || 0) + dAr;
 }
 // True when the creature has an offset rule wired (codex hides the
 // red "+N?" badge in that case). Mirrors cardHasOffsetRules.
@@ -1176,6 +1202,10 @@ let quartersRested = false;
 // straight into the end-of-game fade-to-menu instead of the normal
 // rebalance. Reset on startNewGame; saved via save.js below.
 let dragonSlain = false;
+// Post-dragon staircase chatter (Thorb + Val fanboying over the
+// volcano warming the great forge). One-shot; persists across save
+// so revisits don't replay it.
+let staircaseTopDragonDialogSeen = false;
 // Latches once the player has completed the volcano_choice encounter
 // (Point of No Return) at least once. Subsequent visits use the
 // volcano_choice_revisit encounter — simpler dialog, no level-up, and
@@ -2582,6 +2612,17 @@ const LOOT_TABLES = {
   overseer_gnikan_loot: [
     { creator: createGnikansStaff, weight: 1.0 },
   ],
+  // Varimatras (White Dragon) loot — pick 2 distinct tier-2 epics
+  // from the dragon's hoard after the summit fight. Mirrors the
+  // pickN handler the kraken_spawn_loot table uses so the codex
+  // tab reads as a "pick any two" list.
+  varimatras_loot: Object.assign([
+    { creator: createDragonToothDagger,     weight: 1.0 },
+    { creator: createWhiteDragonscaleShield, weight: 1.0 },
+    { creator: createWhiteDragonscaleArmor,  weight: 1.0 },
+    { creator: createDragonBoneBow,          weight: 1.0 },
+    { creator: createDragonEyeMace,          weight: 1.0 },
+  ], { pickCount: 2, distinct: true }),
   // Lucky Pebble — guaranteed drop from the River Crossing 25% bonus.
   // Mirrors PY get_lucky_pebble_loot.
   lucky_pebble_loot: [
@@ -2730,6 +2771,7 @@ const LOOT_TABLE_LABELS = {
   kobold_slyblade_loot:   'Kobold Slyblade',
   dwarven_specter_loot:   'Dwarven Specter',
   overseer_gnikan_loot:   'Overseer Gnikan',
+  varimatras_loot:        'Varimatras (Dragon)',
 };
 
 // Wired below in CARD_SFX_OVERRIDES so the drake rider's roar plays at
@@ -2764,6 +2806,7 @@ const LOOT_TABLE_NOTES = {
   kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common, Lockpick Set rare.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
   overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
+  varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace.",
 };
 
 function rollLootTable(id) {
@@ -4171,7 +4214,14 @@ function drawGamePlusSetup() {
     ctx.fillStyle = '#8c7860';
     ctx.font = 'italic 16px serif';
     ctx.textAlign = 'left';
-    ctx.fillText('No Part 1 completion saves found yet.', listX, listY + 30);
+    // A previously-listed save can disappear when it's been used
+    // as a Game+ basis (consumed). Surface that case separately
+    // from "never finished Part 1" so the player knows why.
+    const anyExist = hasPart1CompleteSave();
+    const msg = anyExist
+      ? 'Every Part 1 save has already launched a ccgQuest+ run. Finish Part 1 again to unlock one for re-use.'
+      : 'No Part 1 completion saves found yet.';
+    ctx.fillText(msg, listX, listY + 30);
   } else {
     // Clamp scroll to the actual content height.
     const totalH = saves.length * (rowH + rowGap) - rowGap;
@@ -4536,6 +4586,11 @@ function listGamePlusSaveOptions() {
     const slot = `part1_complete_${cls.toLowerCase()}`;
     if (!hasSave(slot)) continue;
     const info = getSaveInfo(slot);
+    // Save was already used as a Game+ basis — gone from the picker
+    // until the player kills the dragon AGAIN in some run (the next
+    // part1_complete write overwrites the slot with a fresh data
+    // blob, clearing consumedForGamePlus).
+    if (info && info.consumedForGamePlus) continue;
     out.push({ slot, info, displayClass: cls });
   }
   // Sort newest first so the most recent Part 1 completion sits at
@@ -4650,6 +4705,11 @@ function startGamePlusFromSave(slot) {
     level: player ? player.level : 1,
     source_slot: slot,
   });
+  // One-shot consumption — stamp the source slot so it's hidden
+  // from the Game+ picker until the player kills the dragon again
+  // (the part1_complete_<class> writer overwrites the slot with a
+  // fresh blob, clearing the consumedForGamePlus flag).
+  markSlotConsumedForGamePlus(slot);
   // ccgQuest+ rebalance bonus — bumps the LEVEL-UP CAP by +2 (from
   // 3 to 5 per category). The player still earns the +1s by leveling
   // up; they just have more headroom to spend them. Game+ from save
@@ -4694,6 +4754,7 @@ function resetStoryFlags() {
   throneAudienceComplete = false;
   quartersRested = false;
   dragonSlain = false;
+  staircaseTopDragonDialogSeen = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
@@ -4773,6 +4834,7 @@ function startNewGame() {
   throneAudienceComplete = false;
   quartersRested = false;
   dragonSlain = false;
+  staircaseTopDragonDialogSeen = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
@@ -7782,6 +7844,34 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     transitionToTharnagSideDoor(nodeId);
     return;
   }
+  // Grand Hall Main Entrance — cross-map exit to the Tharnag
+  // exterior's Main Door. WIP / debug-only (the node carries
+  // wip:true so it's only rendered in debug). Pattern mirrors the
+  // side-door teleport above.
+  if (!skipEncounter && nodeId === 'grand_hall_main_entrance'
+      && currentMap.id === 'tharnag_interior') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag', createTharnagMap);
+    visitedNodes.add('tharnag_main_door');
+    const target = currentMap.getNode('tharnag_main_door');
+    if (target) { target.isDone = true; target.isLocked = false; target.hiddenName = ''; }
+    currentMap.currentNodeId = 'tharnag_main_door';
+    state = GameState.MAP;
+    return;
+  }
+  // Tharnag Main Door (exterior) — cross-map back into the city's
+  // Main Entrance. Same WIP gating; pairs with the intercept above.
+  if (!skipEncounter && nodeId === 'tharnag_main_door'
+      && currentMap.id === 'tharnag') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+    visitedNodes.add('grand_hall_main_entrance');
+    const target = currentMap.getNode('grand_hall_main_entrance');
+    if (target) { target.isDone = true; target.isLocked = false; target.hiddenName = ''; }
+    currentMap.currentNodeId = 'grand_hall_main_entrance';
+    state = GameState.MAP;
+    return;
+  }
   // Tharnag siege reset: any time the party stands at tharnag_entry
   // without having finished all three siege lines, the gauntlet
   // resets. Mirrors PY parity (game.py:2308) — you have to clear the
@@ -8067,6 +8157,25 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
         return;
       }
     }
+  }
+  // Post-dragon staircase chatter — staircase_top has no real
+  // encounterId, so the standard `if (canRunEncounter)` gate below
+  // skips startNodeEncounter (and the intercept inside it) on
+  // arrival. Fire the dialog here instead so walking onto the
+  // landing after killing the dragon plays the Thorb+Val toy-store
+  // beat exactly once.
+  if (!skipEncounter
+      && dragonSlain
+      && nodeId === 'staircase_top'
+      && !staircaseTopDragonDialogSeen) {
+    staircaseTopDragonDialogSeen = true;
+    currentEncounter = createPostDragonStaircaseDialogEncounter();
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    visitedNodes.add(nodeId);
+    advanceEncounterPhase();
+    return;
   }
   if (canRunEncounter) {
     startNodeEncounter(nodeId);
@@ -8512,6 +8621,8 @@ const ENCOUNTER_BG_MAP = {
   south_trail: 'bg_south_of_qualibaf',
   // South Outpost — Gontran the Guard greeting + Merchant Boat task.
   outpost_meeting: 'bg_south_outpost',
+  // Mithril Remedies — apothecary shop dialog (artisan district).
+  mithril_remedies: 'bg_mithril_remedies',
   outpost_kraken_report: 'bg_south_outpost',
   // Watchtower check-in reuses the same outpost-gate backdrop so the
   // dialog reads as continuous with the first meeting rather than
@@ -8685,6 +8796,8 @@ const ENCOUNTER_BG_FILES = {
   bg_grand_stairs_city:'Maps/DwarvenCityGrandStairs.jpg',
   bg_deeper_tunnels:   'Maps/DwarvenCityDeeperTunnels.jpg',
   bg_artisan_district: 'Maps/DwarvenCityArtisanDistrict.jpg',
+  // Mithril Remedies — apothecary shop interior, post-dragon WIP node.
+  bg_mithril_remedies: 'MithrilRemediesBG.jpg',
   bg_tomb_of_ancestor: 'Maps/DwarvenCityTombOfAncestor.jpg',
   bg_dwarven_throne_room: 'Maps/DwarvenCityThroneRoom.jpg',
   bg_map_room: 'Maps/DwarvenCityMapRoom.jpg',
@@ -9477,6 +9590,19 @@ function startNodeEncounter(nodeId) {
       && completedEncounters.has('gate_guardroom')) {
     currentMap.completeCurrentNode();
     state = GameState.MAP;
+    return;
+  }
+  // Post-dragon staircase chatter — fires once when the player walks
+  // onto staircase_top with the dragon dead. Thorb + Val are way
+  // too excited about the volcano stirring back to life; Raena
+  // grumbles about the toy-store energy. Latches via the
+  // staircaseTopDragonDialogSeen flag so revisits stay quiet.
+  if (dragonSlain
+      && nodeId === 'staircase_top'
+      && !staircaseTopDragonDialogSeen) {
+    staircaseTopDragonDialogSeen = true;
+    currentEncounter = createPostDragonStaircaseDialogEncounter();
+    state = GameState.ENCOUNTER_TEXT;
     return;
   }
   // The Ridge — post-dragon "leave?" offer. After Varimatras drops
@@ -11145,14 +11271,22 @@ function setupEnemyForCombat(enemyId) {
       const hasRaena = player.creatures.some(c => c.name === 'Raena');
       const elfCount = player.creatures.filter(c => c.name === 'Elf Warrior').length;
       const elvesNeeded = Math.max(0, 4 - elfCount);
+      const off = playerTierOffset || 0;
       for (let i = 0; i < elvesNeeded; i++) {
-        player.addCreature(new Creature({ name: 'Elf Warrior', attack: 2, maxHp: 2 }));
+        const elf = new Creature({ name: 'Elf Warrior', attack: 2, maxHp: 2 });
+        scaleCreatureWithOffset(elf, off);
+        player.addCreature(elf);
       }
       if (!hasRaena) {
-        const raena = new Creature({
-          name: 'Raena', attack: 2, maxHp: 3, multiAttack: 2, isCompanion: true,
-          description: 'Attacks 2 targets.',
-        });
+        // ccgQuest+ — Raena's mid-fight stats follow the same tier
+        // chain as her rescue card: T1 base (2/3), T2 at +1 (3/4),
+        // T3 at +2 (5/5). Match the card the player picks up at
+        // Calm Grove so the in-fight ally and the looted card stay
+        // in sync.
+        let raena;
+        if (off >= 2)      raena = createRaenaTier3Creature();
+        else if (off >= 1) raena = createRaenaUpgradedCreature();
+        else               raena = createRaenaCreature();
         // Stamp the source rarity / subtype so the full-card preview uses the
         // ornate rare frame, matching the Raena ally card the player can pick
         // up later in the game.
@@ -12440,7 +12574,7 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
@@ -13155,7 +13289,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
   } catch (err) {
     console.warn('Autosave failed:', err);
@@ -13611,12 +13745,15 @@ function resolveStreamDrink(choice) {
 }
 
 // Calm Stream — Search: 2-4 random Goodberries added to hand (matches PY).
+// ccgQuest+ — each spawned berry picks up the player tier offset
+// (Goodberry+ with +1 heal etc.) so the meal scales with the run.
 function resolveStreamSearch(choice) {
   if (!player) return;
   const count = 2 + Math.floor(Math.random() * 3); // 2..4
   const items = [];
   for (let i = 0; i < count; i++) {
     const berry = createGoodberry();
+    if (playerTierOffset > 0) applyGamePlusOffsetInPlace(berry, playerTierOffset);
     if (player.deck.hand.length < MAX_HAND_SIZE) {
       player.deck.hand.push(berry);
     } else {
@@ -13633,6 +13770,9 @@ function resolveStreamSearch(choice) {
 function resolveStreamBathe(choice) {
   if (!player) return;
   const faery = createSmallFaery();
+  // ccgQuest+ — stamp the Faery so its banish-heal scales with the
+  // player tier offset.
+  if (playerTierOffset > 0) applyGamePlusOffsetInPlace(faery, playerTierOffset);
   player.deck.addCard(faery);
   const handCopy = faery.copy();
   if (player.deck.hand.length < MAX_HAND_SIZE) {
@@ -15642,7 +15782,11 @@ function tokenizeKeywordText(text, opts = {}) {
   // keyword. In perk mode we drop "Armor" from the list so the word
   // stays as literal text (refers to card category).
   const isPerk = !!opts.asPerk;
-  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
+  // 'Heal' alone (no digit) is a fallback so phrases like "Heal
+  // yourself" / "Heal a random ally" still get the keyword tooltip.
+  // Order matters: the numbered form is listed first so "Heal 3"
+  // matches the X-binding entry, not the bare "Heal".
+  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Ignite', 'Sentinel', 'Haste',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
@@ -23184,6 +23328,20 @@ function resolveEffect(eff, caster, target) {
       else if (before === 0) addLog(`  (no cards in deck to discard)`, Colors.GRAY);
       break;
     }
+    case 'discard_top_card': {
+      // Harpy Talon Blade — pulls the TOP card off the draw pile and
+      // discards it (firing any on_discard riders via Deck.discardCard).
+      // Auto-pick: no player prompt, no hand cards consumed. If the
+      // draw pile is empty we silently no-op so the swing still lands.
+      const n = Math.max(1, eff.value || 1);
+      for (let i = 0; i < n; i++) {
+        if (player.deck.drawPile.length === 0) break;
+        const top = player.deck.drawPile.pop();
+        addLog(`  Talon Blade discards ${top.name}`, Colors.GRAY, top);
+        player.deck.discardCard(top);
+      }
+      break;
+    }
     case 'regen_buff': {
       // +1 heal per turn per playerTierOffset (1 base → 2 → 3…). The
       // codex preview reads this same formula from a custom regrowth
@@ -28024,25 +28182,34 @@ function startEnemyTurn() {
         // Per PY: if any living Bone Amalgam ally exists, buff each by
         // +1 atk and +1 max HP (also healing the new HP). Otherwise
         // summon a fresh 3/3 Bone Amalgam (with summoning sickness).
+        // ccgQuest+ — both the spawn stats AND the buff tick scale
+        // by +2 per monster offset so the amalgam grows visibly
+        // faster as the run gets harder. (The Bone Amalgam creature
+        // intentionally has no CREATURE_TIER_OFFSET rule — the
+        // growth power IS the scaling vector to avoid double-dip.)
+        const amalgamBump = 1 + 2 * (monsterTierOffset || 0);
         const existing = enemy.creatures.filter(
           c => c.isAlive && c.name === 'Bone Amalgam'
         );
         if (existing.length > 0) {
           for (const c of existing) {
-            c.attack = (c.attack || 0) + 1;
-            c.maxHp = (c.maxHp || 0) + 1;
-            c.currentHp = Math.min(c.maxHp, (c.currentHp || 0) + 1);
-            spawnTokenOnTarget(c, 1, 'Atk', Colors.RED);
+            c.attack = (c.attack || 0) + amalgamBump;
+            c.maxHp = (c.maxHp || 0) + amalgamBump;
+            c.currentHp = Math.min(c.maxHp, (c.currentHp || 0) + amalgamBump);
+            spawnTokenOnTarget(c, amalgamBump, 'Atk', Colors.RED);
           }
-          addLog(`  Amalgam grows! Bone Amalgam allies +1 Atk / +1 HP.`, Colors.ORANGE);
+          addLog(`  Amalgam grows! Bone Amalgam allies +${amalgamBump} Atk / +${amalgamBump} HP.`, Colors.ORANGE);
           playSound('bones_clatter', 0.7);
         } else {
+          const baseAmalgamBump = 2 * (monsterTierOffset || 0);
+          const atk = 3 + baseAmalgamBump;
+          const hp  = 3 + baseAmalgamBump;
           const fresh = new Creature({
-            name: 'Bone Amalgam', attack: 3, maxHp: 3,
+            name: 'Bone Amalgam', attack: atk, maxHp: hp,
             description: 'A mass of fused bones.',
           });
           enemy.addCreature(fresh);
-          addLog(`  Bone Amalgam rises! (3/3)`, Colors.ORANGE);
+          addLog(`  Bone Amalgam rises! (${atk}/${hp})`, Colors.ORANGE);
           playSound('bones_clatter', 0.85);
         }
       } else if (power.id === 'dark_vision') {
@@ -30125,17 +30292,22 @@ function updateEnemyTurn(dt) {
           addLog(`  ${actual} dmg to ${a.name}`, Colors.RED);
         }
         countAndRemoveDeadCreatures();
+        // ccgQuest+ — the ally buff scales with monsterTierOffset:
+        // +1 atk / +1 hp / +1 shield base, plus +1 of each per offset
+        // point so the storm escalates alongside the rest of the
+        // bone-amalgam fight at higher tiers.
+        const bsBump = 1 + (monsterTierOffset || 0);
         let buffed = 0;
         for (const c of enemy.creatures) {
           if (!c.isAlive) continue;
-          c.attack = (c.attack || 0) + 1;
-          c.maxHp = (c.maxHp || 0) + 1;
-          c.currentHp = Math.min(c.maxHp, (c.currentHp || 0) + 1);
-          c.shield = (c.shield || 0) + 1;
-          spawnTokenOnTarget(c, 1, 'Shield', Colors.ALLY_BLUE);
+          c.attack = (c.attack || 0) + bsBump;
+          c.maxHp = (c.maxHp || 0) + bsBump;
+          c.currentHp = Math.min(c.maxHp, (c.currentHp || 0) + bsBump);
+          c.shield = (c.shield || 0) + bsBump;
+          spawnTokenOnTarget(c, bsBump, 'Shield', Colors.ALLY_BLUE);
           buffed++;
         }
-        if (buffed > 0) addLog(`  Allies gain +1 Atk / +1 HP / +1 Shield.`, Colors.ORANGE);
+        if (buffed > 0) addLog(`  Allies gain +${bsBump} Atk / +${bsBump} HP / +${bsBump} Shield.`, Colors.ORANGE);
       }
     }
   } else if (action.action === 'defend') {
@@ -30269,17 +30441,28 @@ function updateEnemyTurn(dt) {
             if (lastEntry) lastEntry.creature = lb;
           }
         };
+        // ccgQuest+ — both branches get +floor(0.5 * offset) extra
+        // boulders (so +1 only kicks in at offset 2). Per-creature
+        // stat bumps come from CREATURE_TIER_OFFSET via the
+        // wrapped enemy.addCreature.
+        const offBoulders = Math.floor(0.5 * (monsterTierOffset || 0));
         if (Math.random() < 0.5) {
           // Small-boulder shower: 2 + 0..2 → 2-4 total.
-          const count = 2 + Math.floor(Math.random() * 3);
+          const count = 2 + Math.floor(Math.random() * 3) + offBoulders;
           addLog(`  ${count} Small Boulder${count === 1 ? '' : 's'} roll in!`, Colors.ORANGE);
           summonSmall(count);
         } else {
           addLog(`  Large Boulder rolls in!`, Colors.ORANGE);
           summonLarge();
+          // Extra rider: base 50% adds one Small Boulder, +offBoulders
+          // additional Smalls drop guaranteed.
           if (Math.random() < 0.5) {
             addLog(`  A Small Boulder tumbles after it!`, Colors.ORANGE);
             summonSmall(1);
+          }
+          if (offBoulders > 0) {
+            addLog(`  ${offBoulders} more Small Boulder${offBoulders > 1 ? 's tumble' : ' tumbles'} after it!`, Colors.ORANGE);
+            summonSmall(offBoulders);
           }
         }
       } else if (eff.effectType === 'gain_rage') {
@@ -30362,7 +30545,10 @@ function completePlayerTurnTransition() {
   if (enemy && Array.isArray(enemy.powers)) {
     for (const power of enemy.powers) {
       if (power.id === 'dire_fury') {
-        const rageGain = 1 + (monsterTierOffset || 0);
+        // +0.5 Rage per offset (floor) — matches the gamePlusOffset
+        // rule + the codex description swap. Base 1 Rage/turn stays
+        // intact; offset only bumps the gain at +2 and above.
+        const rageGain = 1 + Math.floor(0.5 * (monsterTierOffset || 0));
         enemy.rage = (enemy.rage || 0) + rageGain;
         addLog(`  ${enemy.name}'s fury grows! (R:${enemy.rage})`, Colors.RED);
       }
@@ -32392,7 +32578,7 @@ function applyStartOfCombatBuffs() {
   if (currentEncounter && currentEncounter.id === 'general_zhost' && enemy && enemy._killTarget) {
     const hasBuff = (player.combatBuffs || []).some(b => b.id === 'elf_reinforcements');
     if (!hasBuff) {
-      player.addCombatBuff(new CombatBuff({
+      const buff = new CombatBuff({
         id: 'elf_reinforcements',
         name: 'Elf Reinforcements',
         description: 'Start of Turn: Summon 1 Elf Warrior.',
@@ -32401,7 +32587,12 @@ function applyStartOfCombatBuffs() {
         effectValue: 1,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
-      }));
+      });
+      // Stash the current playerTierOffset so the per-turn summon
+      // handler in character.js can bump the spawned elf's stats
+      // without crossing module boundaries.
+      buff._tierOffset = playerTierOffset || 0;
+      player.addCombatBuff(buff);
     }
   }
   // Giant Frog swim drag — mandatory recharge of 1 hand card at the
@@ -35111,7 +35302,7 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
@@ -35753,6 +35944,7 @@ function restoreFromSave(data) {
   throneAudienceComplete = !!data.throneAudienceComplete;
   quartersRested = !!data.quartersRested;
   dragonSlain = !!data.dragonSlain;
+  staircaseTopDragonDialogSeen = !!data.staircaseTopDragonDialogSeen;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
   // Back-compat: pre-fix saves don't have volcanoChoiceCompleted.
