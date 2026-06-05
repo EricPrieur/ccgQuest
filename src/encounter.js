@@ -512,8 +512,8 @@ export function createPrisonEntranceEncounter() {
       lootGoldDice: [2, 6],
       // Two drops: the guaranteed Warden's Whip + one roll from the
       // prison-warden loot table (matches PY's
-      // `lootCards=["wardens_whip", "prison_warden_loot"]`).
-      lootCards: ['wardens_whip', 'prison_warden_loot'],
+      // `lootCards=["wardens_whip", "kobold_base_loot"]`).
+      lootCards: ['wardens_whip', 'kobold_base_loot'],
     }),
     // Post-combat barrel choice — resolved via `loot_barrel` effect. Skipped
     // entirely if the barrel was already looted via the sneak/talk pre-fight
@@ -672,7 +672,7 @@ export function createMountainCampEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['kobold_patrol_loot'],
+      lootCards: ['kobold_base_loot'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -805,7 +805,7 @@ export function createGeneralZhostEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['kobold_patrol_loot'],
+      lootCards: ['kobold_base_loot'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,

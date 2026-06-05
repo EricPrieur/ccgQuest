@@ -251,6 +251,7 @@ export function createKoboldSpear() {
       new CardEffect('draw_on_kill', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -272,6 +273,10 @@ export function createKoboldShield() {
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
+    // +1 dmg, +0.5 shield (floor) per offset. At +1 shield stays at 1,
+    // +2 bumps to 2, etc. Stays-in-hand means it pings every turn,
+    // so even the fractional shield matters over a long fight.
+    gamePlusOffset: { damage: 1, gain_shield: 0.5 },
   });
 }
 
@@ -989,6 +994,35 @@ export function createRaenaCard2() {
     isUnique: true,
     tier: 2,
     previewCreature: createRaenaUpgradedCreature(),
+  });
+}
+
+// Raena tier 3 — ccgQuest+ rescue version at offset 2+. Summons a
+// 5/5 multi-attack Raena (see createRaenaTier3Creature). On-call
+// arrow scales to 4 to match her bumped power.
+export function createRaenaCardTier3() {
+  return new Card({
+    id: 'raena_card_3',
+    name: 'Raena',
+    description: 'Recharge a card ->\nCall Raena to the battle!\nCalled: Deal 4 Damage.',
+    shortDesc: 'Call Raena\nCalled: 4 Dmg',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: (() => {
+      const arrow = new CardEffect('damage', 4, TargetType.SINGLE_ENEMY);
+      arrow.optional = true;
+      arrow.noAttackCount = true;
+      return [
+        arrow,
+        new CardEffect('summon_raena_tier3', 1, TargetType.SUMMON),
+        new CardEffect('recharge_extra', 1, TargetType.SELF),
+      ];
+    })(),
+    rarity: 'rare',
+    isUnique: true,
+    tier: 3,
+    previewCreature: createRaenaTier3Creature(),
   });
 }
 
@@ -2100,6 +2134,7 @@ export function createGuards() {
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random', 2, TargetType.SUMMON)],
+    gamePlusOffset: { summon_random: 1 },
   });
 }
 
@@ -2117,6 +2152,7 @@ export function createHideInCorner() {
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 2, gain_shield: 1 },
   });
 }
 
@@ -2369,6 +2405,9 @@ export function createWardensWhip() {
       new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    // +1 dmg, +0.5 ally heroism (floor) per offset. At +1 ally heroism
+    // stays at 1, +2 makes it 2, etc.
+    gamePlusOffset: { damage: 1, buff_allies_heroism: 0.5 },
   });
 }
 
@@ -4389,6 +4428,7 @@ export function createChainShirt() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { block: 2 },
   });
 }
 
@@ -4977,6 +5017,20 @@ export function createValdrisaCreature() {
   });
 }
 
+// Valdrisa tier 3 — ccgQuest+ rescue version (offset 1+, since base
+// Val is already tier 2). +1/+1 over tier 2, +1 to the end-of-turn
+// heal (2 → 3), and +1 to the obsidian-family armor bonus (+2 → +3
+// vs Armor/Shield). The endTurnHealRandomAlly and armorBonusOverride
+// fields are read by the runtime tick + applyObsidianAllyBonus.
+export function createValdrisaTier3Creature() {
+  return new Creature({
+    name: 'Valdrisa', attack: 3, maxHp: 5, isCompanion: true,
+    endTurnHealRandomAlly: 3,
+    armorBonusOverride: 3,
+    description: '+3 vs Armor/Shield. Turn End: Heal 3 a random damaged ally.',
+  });
+}
+
 export function createValdrisaCard() {
   return new Card({
     id: 'valdrisa_card',
@@ -4994,6 +5048,37 @@ export function createValdrisaCard() {
     tier: 2,
     isUnique: true,
     previewCreature: createValdrisaCreature(),
+  });
+}
+
+// Valdrisa tier 3 — ccgQuest+ rescue version at offset 1+. Summons
+// a 3/5 Valdrisa with +1 heal per turn (see createValdrisaTier3Creature)
+// AND fires a 3-heal on-call onto a chosen ally — mirrors Raena's
+// optional on-call arrow but on the heal side. The heal is marked
+// optional so the play still resolves cleanly when no ally needs it
+// (the card still summons Val).
+export function createValdrisaCardTier3() {
+  return new Card({
+    id: 'valdrisa_card_3',
+    name: 'Valdrisa Emberforge',
+    description: 'Recharge a card ->\nCall Valdrisa to the battle!\nCalled: Heal 3 (optional).',
+    shortDesc: 'Call Valdrisa\nCalled: Heal 3',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: (() => {
+      const callHeal = new CardEffect('heal', 3, TargetType.SINGLE_ALLY);
+      callHeal.optional = true;
+      return [
+        callHeal,
+        new CardEffect('summon_valdrisa_tier3', 1, TargetType.SUMMON),
+        new CardEffect('recharge_extra', 1, TargetType.SELF),
+      ];
+    })(),
+    rarity: 'rare',
+    tier: 3,
+    isUnique: true,
+    previewCreature: createValdrisaTier3Creature(),
   });
 }
 
@@ -5179,6 +5264,22 @@ export function createThorbUpgradedCreature() {
   });
 }
 
+// Thorb tier 3 — ccgQuest+ rescue version (offset 2+). +1/+2 over
+// tier 2, sentinel, and the end-of-turn shield extends to every ally
+// (player + all alive creatures). shieldsAllAllies flag is read in
+// endPlayerTurn's Thorb tick.
+export function createThorbTier3Creature() {
+  return new Creature({
+    name: 'Thorb',
+    attack: 3,
+    maxHp: 7,
+    sentinel: true,
+    isCompanion: true,
+    shieldsAllAllies: true,
+    description: 'Sentinel. Turn End: +Shield to ALL allies.',
+  });
+}
+
 // Raena base creature — recruited at Calm Grove. Attacks 2 targets.
 export function createRaenaCreature() {
   return new Creature({
@@ -5191,6 +5292,15 @@ export function createRaenaCreature() {
 export function createRaenaUpgradedCreature() {
   return new Creature({
     name: 'Raena', attack: 3, maxHp: 4, multiAttack: 2, isCompanion: true,
+    description: 'Attacks 2 targets.',
+  });
+}
+
+// Raena tier 3 — ccgQuest+ rescue version (offset 2+). +2 attack,
+// +1 max HP over tier 2. Multi-attack count is unchanged.
+export function createRaenaTier3Creature() {
+  return new Creature({
+    name: 'Raena', attack: 5, maxHp: 5, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
   });
 }
@@ -5232,6 +5342,28 @@ export function createThorbUpgradedCard() {
     isUnique: true,
     tier: 2,
     previewCreature: createThorbUpgradedCreature(),
+  });
+}
+
+// Thorb tier 3 — ccgQuest+ rescue version at offset 2+. Summons a
+// 3/7 sentinel Thorb (see createThorbTier3Creature).
+export function createThorbTier3Card() {
+  return new Card({
+    id: 'thorb_card_3',
+    name: 'Thorb',
+    description: 'Recharge a card ->\nCall Thorb to the battle!',
+    shortDesc: 'Call Thorb',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_thorb_tier3', 1, TargetType.SUMMON),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    isUnique: true,
+    tier: 3,
+    previewCreature: createThorbTier3Creature(),
   });
 }
 

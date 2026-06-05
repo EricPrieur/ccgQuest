@@ -808,7 +808,7 @@ export function createPreparedPerk() {
 export function createFlashOfGeniusPerk() {
   return new Perk({
     id: 'flash_of_genius', name: 'Flash of Genius',
-    description: 'Combat Start: You may recharge a card to draw.',
+    description: 'Combat Start: Recharge a card to draw 1 (optional).',
     imageId: 'flash_of_genius_perk', effectType: 'combat_start_flash', effectValue: 1,
   });
 }
@@ -959,7 +959,32 @@ export const PERK_REGISTRY = {
 // Pick `count` unique perks via weighted random without replacement from
 // the class + tier pool. Falls back to tier 1 when the requested tier is
 // empty for this class. Filters out unique perks the player already owns.
-export function getPerkChoices(existingPerks = [], count = 2, characterClass = '', tier = 1) {
+// Append a ccgQuest+ tier suffix to a perk so it counts as a distinct
+// perk from its base-tier sibling (Tough vs Tough+ vs Tough++ etc.).
+// id becomes `<base>_p<N>` so save/load can parse the offset back out
+// and the unique / stack-cap filter treats the variants independently.
+// Stats are unchanged — perks gain new identity, not new power.
+export function stampPerkOffset(perk, offset) {
+  if (!perk || !offset || offset <= 0) return perk;
+  const suffix = offset === 1 ? '+' : offset === 2 ? '++' : offset === 3 ? '+++' : `+${offset}`;
+  perk.id = `${perk.id}_p${offset}`;
+  perk.name = `${perk.name}${suffix}`;
+  return perk;
+}
+// Save/load helper — rebuild a perk from a serialized id. Handles
+// both base ids (tough) and stamped ones (tough_p1).
+export function recreatePerkFromId(perkId) {
+  if (!perkId) return null;
+  const m = perkId.match(/^(.*)_p(\d+)$/);
+  if (m) {
+    const fn = PERK_REGISTRY[m[1]];
+    if (fn) return stampPerkOffset(fn(), parseInt(m[2], 10));
+  }
+  const fn = PERK_REGISTRY[perkId];
+  return fn ? fn() : null;
+}
+
+export function getPerkChoices(existingPerks = [], count = 2, characterClass = '', tier = 1, tierOffset = 0) {
   let weights = (CLASS_PERK_WEIGHTS[tier] || {})[characterClass];
   if (!weights && tier > 1) weights = (CLASS_PERK_WEIGHTS[1] || {})[characterClass];
   if (!weights) {
@@ -968,6 +993,11 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
     weights = {};
     for (const id of Object.keys(PERK_REGISTRY)) weights[id] = 1.0;
   }
+  // ccgQuest+ stamp — at offset > 0, the perks offered get an id +
+  // name suffix so they count as distinct from the base versions in
+  // the unique / stack-cap filter. Owned base perks DON'T block the
+  // stamped variants (player can stack Tough+ on top of 5x Tough).
+  const idSuffix = tierOffset > 0 ? `_p${tierOffset}` : '';
   const ownedUniqueIds = new Set(existingPerks.filter(p => p.unique).map(p => p.id));
   // Count current stacks per perk id so non-unique (common/repeatable)
   // perks cap at 5 — once the player has 5 copies the perk drops out
@@ -983,8 +1013,9 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
     const creator = PERK_REGISTRY[id];
     if (!creator) return false;
     const sample = creator();
-    if (sample.unique) return !ownedUniqueIds.has(id);
-    return (stackCount[id] || 0) < STACK_CAP;
+    const fullId = id + idSuffix;
+    if (sample.unique) return !ownedUniqueIds.has(fullId);
+    return (stackCount[fullId] || 0) < STACK_CAP;
   });
   let w = ids.map(id => weights[id]);
   const chosen = [];
@@ -997,7 +1028,7 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
       roll -= w[j];
       if (roll <= 0) { picked = j; break; }
     }
-    chosen.push(PERK_REGISTRY[ids[picked]]());
+    chosen.push(stampPerkOffset(PERK_REGISTRY[ids[picked]](), tierOffset));
     ids.splice(picked, 1);
     w.splice(picked, 1);
   }

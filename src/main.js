@@ -4,6 +4,7 @@ import { GAME_VERSION, SCREEN_WIDTH, SCREEN_HEIGHT, GameState, Colors, CARD_COLO
 const BASE = import.meta.env.BASE_URL || '/';
 import {
   Character, CombatBuff, PersistentBuff, getPerkChoices, CLASS_PERK_WEIGHTS, PERK_REGISTRY,
+  recreatePerkFromId,
   createToughPerk, createPreparedPerk, createGritPerk, createArsenalPerk,
   createTalentedPerk, createFirstStrikePerk, createFlashOfGeniusPerk,
   createSecondWindPerk, createAmbushPerk, createArmoredPerk,
@@ -33,7 +34,9 @@ import {
   createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
   createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
   createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish,
-  createThorbCreature, createThorbUpgradedCreature, createRaenaCreature, createRaenaUpgradedCreature,
+  createThorbCreature, createThorbUpgradedCreature, createThorbTier3Creature,
+  createRaenaCreature, createRaenaUpgradedCreature, createRaenaTier3Creature,
+  createValdrisaTier3Creature,
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
   createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffElfReinforcements,
@@ -85,7 +88,8 @@ import {
   createMephitSkinSandals, createMephitSkinGloves, createMagmaTablet,
   createDefensiveFormation, createMimicBite, createMimicTongue, createBoneStorm,
   createGoblinRocketBoots, createGoblinSapperCharges, createOgreMaul,
-  createThorbCard, createThorbUpgradedCard,
+  createThorbCard, createThorbUpgradedCard, createThorbTier3Card,
+  createRaenaCardTier3, createValdrisaCardTier3,
   createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createDwarvenScoutCard, createWhiteWolfCloak, createWolfFang,
   createCaveShroom,
   createSahuaginTridentLoot, createFishScaleBoots, createSahuaginEye,
@@ -373,6 +377,7 @@ const EFFECT_DESC_PATTERNS = {
   apply_fire_all: [/(\d+)\s+Fire\b/i],
   apply_ice: [/(\d+)\s+Ice\b/i],
   gain_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  buff_allies_heroism: [/Allies\s+gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Ally\s+Heroism/i, /(\d+)\s+Heroism/i],
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
   apply_poison: [/(\d+)\s+Poison/i],
   apply_poison_self: [/Gain\s+(\d+)\s+Poison/i],
@@ -866,6 +871,57 @@ function cardHasOffsetRules(card, offset) {
   if (card.noTierOffset === true) return true;
   if (!card.gamePlusOffset) return false;
   return Object.keys(card.gamePlusOffset).length > 0;
+}
+// Companion tier chains — used by the corner_cell / calm_grove /
+// personal_quarters loot intercept to swap base companion cards for
+// their ccgQuest+ tier-up versions. Each chain is ordered low → high
+// so chain[targetTierIdx] gives the id to award. If the player
+// already owns the same-or-higher tier in any deck pile, the swap
+// returns `null` to skip the award (no duplicates).
+const COMPANION_TIER_CHAINS = {
+  thorb_card:    ['thorb_card', 'thorb_card_2', 'thorb_card_3'],
+  thorb_card_2:  ['thorb_card', 'thorb_card_2', 'thorb_card_3'],
+  thorb_card_3:  ['thorb_card', 'thorb_card_2', 'thorb_card_3'],
+  raena_card:    ['raena_card', 'raena_card_2', 'raena_card_3'],
+  raena_card_2:  ['raena_card', 'raena_card_2', 'raena_card_3'],
+  raena_card_3:  ['raena_card', 'raena_card_2', 'raena_card_3'],
+  // Valdrisa has no tier 1 — base card is already tier 2, so the
+  // chain is shorter and offset shifts straight from 2 → 3.
+  valdrisa_card:   ['valdrisa_card', 'valdrisa_card_3'],
+  valdrisa_card_3: ['valdrisa_card', 'valdrisa_card_3'],
+};
+function resolveCompanionCardForTierOffset(cardId) {
+  const chain = COMPANION_TIER_CHAINS[cardId];
+  if (!chain) return cardId;
+  const baseIdx = chain.indexOf(cardId);
+  // Cap at the highest available tier — offsets past the chain end
+  // just keep the top variant. Adding more chain entries later (T4+)
+  // would extend the cap automatically.
+  const targetIdx = Math.min(chain.length - 1, baseIdx + (playerTierOffset || 0));
+  const targetId = chain[targetIdx];
+  // Dedup: if the player already has any chain card at >= targetIdx,
+  // skip the award (the upgradeCompanions story beat will handle in-
+  // deck upgrades separately when needed).
+  if (player && player.deck) {
+    const piles = [player.deck.masterDeck, player.deck.hand, player.deck.drawPile,
+                   player.deck.discardPile, player.deck.rechargePile, player.deck.playPile];
+    for (const pile of piles) {
+      if (!Array.isArray(pile)) continue;
+      for (const c of pile) {
+        if (!c) continue;
+        const ownedIdx = chain.indexOf(c.id);
+        if (ownedIdx >= targetIdx) return null;
+      }
+    }
+    if (Array.isArray(backpack)) {
+      for (const c of backpack) {
+        if (!c) continue;
+        const ownedIdx = chain.indexOf(c.id);
+        if (ownedIdx >= targetIdx) return null;
+      }
+    }
+  }
+  return targetId;
 }
 function saveGamePlusUnlock() {
   try { localStorage.setItem(GAMEPLUS_UNLOCK_LS_KEY, String(_gamePlusMaxUnlocked)); }
@@ -2075,6 +2131,14 @@ let selectedPower = null;
 
 // Card recharge state (for cards with recharge_extra cost like Bow, Bone Club)
 let cardRechargeMode = false;
+// Flash of Genius perk — once at combat start, the player may
+// recharge one card from their hand to draw 1 (per perk stack).
+// flashOfGeniusMode gates clicks: Skip exits early, hand cards
+// pay the recharge. Reset every startCombat so it never bleeds
+// into the next fight.
+let flashOfGeniusMode = false;
+let flashOfGeniusRechargesLeft = 0;
+let _flashSkipRect = null;
 let cardRechargeNeeded = 0;
 let cardRechargedCards = []; // cards already paid as recharge cost
 let pendingRechargeNames = []; // names to log after the card resolves
@@ -2255,7 +2319,8 @@ const CARD_REGISTRY = {
   mephit_skin_gloves: createMephitSkinGloves,
   magma_tablet: createMagmaTablet,
   greatclub: createGreatclub, quarterstaff: createQuarterstaff, ale: createAle,
-  thorb_card: createThorbCard, thorb_card_2: createThorbUpgradedCard,
+  thorb_card: createThorbCard, thorb_card_2: createThorbUpgradedCard, thorb_card_3: createThorbTier3Card,
+  raena_card_3: createRaenaCardTier3, valdrisa_card_3: createValdrisaCardTier3,
   dwarven_crossbow: createDwarvenCrossbow, dwarven_tower_shield: createDwarvenTowerShield,
   runeforged_buckler: createRuneforgedBuckler,
   chain_shirt: createChainShirt, ironforge_chainmail: createIronforgeChainmail,
@@ -2349,20 +2414,12 @@ const LOOT_TABLES = {
     { creator: createShortStaff,      weight: 1.0 },
     { creator: createCrackedBuckler,  weight: 1.0 },
   ],
-  // Prison Warden body loot — picked once after the prison_guards combat.
-  // Matches PY's `get_prison_warden_loot()`. Awarded *in addition* to the
-  // guaranteed Warden's Whip drop.
-  prison_warden_loot: [
-    { creator: createBadRations,    weight: 1.0 },
-    { creator: createKoboldSpear,   weight: 1.0 },
-    { creator: createKoboldShield,  weight: 1.0 },
-    { creator: createSmallPouch,    weight: 1.0 },
-    { creator: createChainShirt,    weight: 0.5 },
-  ],
-  // Kobold Patrol loot — same pool as the prison warden (PY shares the
-  // same `get_kobold_patrol_loot()` entries). Dropped after the mountain
-  // camp patrol fight and other kobold encounters.
-  kobold_patrol_loot: [
+  // Kobold base loot — shared by the Prison Warden body, the
+  // mountain Kobold Patrols, and every other kobold encounter that
+  // drops generic gear. Previously split into prison_warden_loot +
+  // kobold_patrol_loot (same contents); collapsed into one table so
+  // the codex Loot Tables tab shows a single entry.
+  kobold_base_loot: [
     { creator: createBadRations,    weight: 1.0 },
     { creator: createKoboldSpear,   weight: 1.0 },
     { creator: createKoboldShield,  weight: 1.0 },
@@ -2579,8 +2636,7 @@ const LOOT_TABLE_LABELS = {
   slime_loot:          'Slime',
   abandoned_camp_loot: 'Abandoned Camp',
   gear_barrel_loot:    'Prison Gear Barrel',
-  prison_warden_loot:  'Prison Warden',
-  kobold_patrol_loot:  'Kobold Patrol',
+  kobold_base_loot:    'Kobold Base Loot',
   stone_giant_loot:    'Stone Giant',
   giant_frog_loot:     'Giant Frog',
   harpies_loot:        'Harpies',
@@ -2614,8 +2670,7 @@ const LOOT_TABLE_NOTES = {
   slime_loot:          'Dropped after defeating Slime encounters.',
   abandoned_camp_loot: 'Camp search picks 2 distinct items without replacement.',
   gear_barrel_loot:    'Snatched from the prison warden\'s barrel of confiscated gear.',
-  prison_warden_loot:  'Looted from the warden\'s body after the prison-entrance fight.',
-  kobold_patrol_loot:  'Dropped after defeating Kobold Patrol encounters.',
+  kobold_base_loot:    'Shared loot pool for kobold encounters — Prison Warden body, mountain Kobold Patrols, etc.',
   stone_giant_loot:    'Survived after the Stone Giant fight. Pick-one: Sharp Rock or (rarely) Lucky Pebble.',
   giant_frog_loot:     'Dropped after defeating the Giant Frog reef ambush. Pick-one — Toxic Frog Extract common, Frog Skin Boots uncommon, Frog Nursery rare.',
   harpies_loot:        'Dropped after every Harpy fight on the wrecked cog (resets on rest). Pick TWO distinct — Egg Omelette uncommon meal, Feather Cloak/Talon Blade/Screaming Charm rare, Harpy Feather epic relic.',
@@ -4372,11 +4427,7 @@ function updateMusicForCurrentScene() {
 // ccgQuest+ toggle is active and the unlock check passes; otherwise
 // drops straight into the standard new-game / character-select flow.
 function onPlayClicked() {
-  // Gated to debug mode only while the ccgQuest+ flow is still
-  // being built out. Once the save-based + fresh-deck options are
-  // both wired and tested, swap this back to:
-  //   const gamePlusUnlocked = debugMode || hasPart1CompleteSave();
-  const gamePlusUnlocked = debugMode;
+  const gamePlusUnlocked = debugMode || hasPart1CompleteSave();
   if (gamePlusUnlocked && gamePlusToggle) {
     // Default the toggle picks to 1 each if the player has unlocked
     // it; debug mode lifts the cap to 9 automatically so a developer
@@ -5452,7 +5503,7 @@ function handleAbilitySelectClick(x, y) {
         // their tier-2 forms way too early.
         // If level 2+, offer perk selection
         if (player.level >= 2) {
-          perkChoices = getPerkChoices(player.perks, 2, selectedClass, 1);
+          perkChoices = getPerkChoices(player.perks, 2, selectedClass, 1, playerTierOffset || 0);
           state = GameState.PERK_SELECT;
         } else {
           // Return to encounter
@@ -10354,7 +10405,14 @@ function advanceEncounterPhase() {
         'kobold_slyblade_loot', 'dwarven_specter_loot',
       ]);
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
-      for (const cardId of phase.lootCards) {
+      for (const rawCardId of phase.lootCards) {
+        // ccgQuest+ companion swap — at higher offsets the rescue
+        // gives a tier-up version of the companion. If the player
+        // already has the swapped-to (or higher) tier in their deck,
+        // skip awarding so they never get duplicates.
+        const swapped = resolveCompanionCardForTierOffset(rawCardId);
+        if (swapped === null) continue;
+        const cardId = swapped;
         if (GATED_LOOT.has(cardId) && !isThroneSpecter && Math.random() >= 0.5) {
           continue;
         }
@@ -14440,6 +14498,9 @@ function startCombat() {
   feralSwipeShieldGranted = 0;
   powerRechargeMode = false;
   cardRechargeMode = false;
+  flashOfGeniusMode = false;
+  flashOfGeniusRechargesLeft = 0;
+  _flashSkipRect = null;
   cardDiscardPickMode = false;
   cardDiscardPickNeeded = 0;
   pendingDiscardNames = [];
@@ -14765,59 +14826,78 @@ function continueCombatPhase2() {
 }
 
 function upgradeCompanions() {
-  // Swap Thorb / Raena base cards for their tier-2 versions. Triggered
+  // Swap Thorb / Raena base cards for their tier-up versions. Triggered
   // by the tier-2 level-up flow (Welcome to Tharnag, Cathedral Shrine).
   // Mirrors PY upgrade_companions(). Returns the list of upgrades as
   // { name, oldCreature, newCreature } tuples so the caller can render
   // the side-by-side preview screen.
-  // Use the same factories the codex / summon paths use so the upgrade
-  // page renders the exact creature card the player has been seeing
-  // (matching End-of-Turn pill etc.).
-  const upgrades = {
-    thorb_card: {
-      creator: createThorbUpgradedCard, name: 'Thorb',
-      oldCreature: createThorbCreature,
-      newCreature: createThorbUpgradedCreature,
+  // ccgQuest+ scaling: target tier = base upgrade tier (2) + playerTierOffset.
+  // If the player already has a same-or-higher tier in their deck (e.g.
+  // a +1 rescue handed them T2 directly), the upgrade is a no-op for
+  // that companion — no duplicates added, no in-place change.
+  const off = playerTierOffset || 0;
+  // Each chain is { ids: [T1, T2, T3], creators: [..], creatures: [..] }
+  // so we can index by target tier. Upgrade picks chain[1 + off] (T2 in
+  // vanilla, T3 at +1, capped at chain length).
+  const upgrades = [
+    {
+      name: 'Thorb',
+      chain: ['thorb_card', 'thorb_card_2', 'thorb_card_3'],
+      creators: [createThorbCard, createThorbUpgradedCard, createThorbTier3Card],
+      creatures: [createThorbCreature, createThorbUpgradedCreature, createThorbTier3Creature],
     },
-    raena_card: {
-      creator: createRaenaCard2, name: 'Raena',
-      oldCreature: createRaenaCreature,
-      newCreature: createRaenaUpgradedCreature,
+    {
+      name: 'Raena',
+      chain: ['raena_card', 'raena_card_2', 'raena_card_3'],
+      // raena_card creator lives in cards.js (re-exported in the
+      // top-of-file imports) — same `createRaenaCard` used for the
+      // Calm Grove rescue.
+      creators: [createRaenaCard, createRaenaCard2, createRaenaCardTier3],
+      creatures: [createRaenaCreature, createRaenaUpgradedCreature, createRaenaTier3Creature],
     },
-  };
+  ];
   const upgraded = [];
-  for (const [oldId, info] of Object.entries(upgrades)) {
-    let didUpgrade = false;
-    const deckIdx = player.deck.masterDeck.findIndex(c => c.id === oldId);
-    if (deckIdx !== -1) {
-      player.deck.masterDeck[deckIdx] = info.creator();
-      didUpgrade = true;
-    }
-    const bpIdx = backpack.findIndex(c => c.id === oldId);
-    if (bpIdx !== -1) {
-      backpack[bpIdx] = info.creator();
-      didUpgrade = true;
-    }
-    for (const pile of [player.deck.hand, player.deck.drawPile, player.deck.discardPile, player.deck.rechargePile, player.deck.playPile]) {
-      for (let i = 0; i < pile.length; i++) {
-        if (pile[i] && pile[i].id === oldId) {
-          pile[i] = info.creator();
-          didUpgrade = true;
-        }
+  for (const info of upgrades) {
+    const targetIdx = Math.min(info.chain.length - 1, 1 + off);
+    const targetId = info.chain[targetIdx];
+    // Find the current owned tier across all piles. Skip if it's
+    // already at or above target.
+    const piles = [player.deck.masterDeck, player.deck.hand, player.deck.drawPile,
+                   player.deck.discardPile, player.deck.rechargePile, player.deck.playPile,
+                   backpack];
+    let ownedIdx = -1;
+    for (const pile of piles) {
+      if (!Array.isArray(pile)) continue;
+      for (const c of pile) {
+        if (!c) continue;
+        const idx = info.chain.indexOf(c.id);
+        if (idx > ownedIdx) ownedIdx = idx;
       }
     }
-    if (didUpgrade) {
-      const oldC = info.oldCreature();
-      oldC._codexSide = 'player';
-      oldC._sourceRarity = 'rare';
-      oldC._sourceSubtype = 'allies';
-      const newC = info.newCreature();
-      newC._codexSide = 'player';
-      newC._sourceRarity = 'rare';
-      newC._sourceSubtype = 'allies';
-      upgraded.push({ name: info.name, oldCreature: oldC, newCreature: newC });
-      addLog(`  Companion upgraded: ${info.name}!`, Colors.GOLD);
-    }
+    if (ownedIdx === -1) continue;       // doesn't have this companion
+    if (ownedIdx >= targetIdx) continue; // already at target or higher
+    // In-place swap every instance of any lower-tier id to the target.
+    const newCardFactory = info.creators[targetIdx];
+    const swap = (pile) => {
+      if (!Array.isArray(pile)) return;
+      for (let i = 0; i < pile.length; i++) {
+        const c = pile[i];
+        if (!c) continue;
+        const idx = info.chain.indexOf(c.id);
+        if (idx >= 0 && idx < targetIdx) pile[i] = newCardFactory();
+      }
+    };
+    for (const pile of piles) swap(pile);
+    const oldC = info.creatures[ownedIdx]();
+    oldC._codexSide = 'player';
+    oldC._sourceRarity = 'rare';
+    oldC._sourceSubtype = 'allies';
+    const newC = info.creatures[targetIdx]();
+    newC._codexSide = 'player';
+    newC._sourceRarity = 'rare';
+    newC._sourceSubtype = 'allies';
+    upgraded.push({ name: info.name, oldCreature: oldC, newCreature: newC });
+    addLog(`  Companion upgraded: ${info.name}!`, Colors.GOLD);
   }
   return upgraded;
 }
@@ -14914,6 +14994,28 @@ function applyPerksCombatStart() {
     player.heroism += heroismStacks;
     addLog(`  Prepared: +${heroismStacks} Heroism!`, Colors.GOLD, perkToCardLike(createPreparedPerk()));
     spawnTokenOnTarget(player, heroismStacks, 'Heroism', Colors.GOLD);
+  }
+  // Ambush — "Combat Start: Your first attack this combat is
+  // unpreventable." Reuses the unpreventableBuff slot (same field
+  // Slime Jar charges); _ambushUnpreventable hints at the log
+  // attribution in consumeUnpreventableBuff.
+  const ambushStacks = player.getPerkStacks('combat_first_unpreventable');
+  if (ambushStacks > 0) {
+    player.unpreventableBuff = Math.max(player.unpreventableBuff || 0, 1);
+    player._ambushUnpreventable = true;
+    addLog(`  Ambush armed — first attack is Unpreventable.`, Colors.GOLD, perkToCardLike(createAmbushPerk()));
+  }
+  // Flash of Genius — at combat start the player may recharge N
+  // cards from hand to draw N (1 per perk stack). Optional: a Skip
+  // button bails out of the picker and forfeits unused recharges.
+  // The click + Skip handling lives in handleFlashOfGeniusClick, and
+  // the Skip button + status banner render in drawCombatButtons.
+  const flashStacks = player.getPerkStacks('combat_start_flash');
+  if (flashStacks > 0) {
+    flashOfGeniusMode = true;
+    flashOfGeniusRechargesLeft = flashStacks;
+    addLog(`  Flash of Genius! Click a card to recharge it for +1 Draw (×${flashStacks}), or Skip.`,
+      Colors.GOLD, perkToCardLike(createFlashOfGeniusPerk()));
   }
   // First Strike perk
   const firstStrike = player.getPerkStacks('combat_start_first_strike');
@@ -18873,10 +18975,34 @@ function drawCombatMenuButton(rect, action) {
 
 function drawCombatButtons() {
   const rects = getCombatButtonRects();
-  const enabled = isPlayerTurn && !powerRechargeMode && combatIntroTimer <= 0;
+  const enabled = isPlayerTurn && !powerRechargeMode && !flashOfGeniusMode && combatIntroTimer <= 0;
 
-  // End Turn button (LEFT, large)
-  if (enabled) {
+  // End Turn button (LEFT, large) — replaced by a "Skip" button
+  // while the Flash of Genius picker is active, so the player has
+  // an obvious way out of the picker without having to recharge.
+  if (flashOfGeniusMode) {
+    const label = `Skip Flash (${flashOfGeniusRechargesLeft} left)`;
+    drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, label, () => {
+      flashOfGeniusMode = false;
+      flashOfGeniusRechargesLeft = 0;
+      _flashSkipRect = null;
+      hideToast();
+      addLog(`  Flash of Genius: skipped.`, Colors.GRAY);
+      playSound('click');
+    }, 'large', 16);
+    _flashSkipRect = { x: rects.endTurn.x, y: rects.endTurn.y, w: rects.endTurn.w, h: rects.endTurn.h };
+    // Sticky violet prompt (matches the recharge motif). Hold the
+    // toast until the combat-intro showcase has cleared so the two
+    // panels don't stack on top of each other — without this gate
+    // the showStyledToast call would render mid-splash and overlap
+    // the enemy-name banner.
+    if (combatIntroTimer <= 0) {
+      showStyledToast(
+        `Flash of Genius: click a card to recharge for +1 Draw (${flashOfGeniusRechargesLeft} left), or Skip`,
+        'recharge'
+      );
+    }
+  } else if (enabled) {
     drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'End Turn', endPlayerTurn, 'large', 20);
   } else {
     ctx.globalAlpha = 0.4;
@@ -19284,6 +19410,14 @@ function handleCombatClick(x, y) {
   // Power recharge mode: clicking hand cards to recharge
   if (powerRechargeMode) {
     handlePowerRechargeClick(x, y);
+    return;
+  }
+
+  // Flash of Genius — combat-start picker. Click a hand card to
+  // recharge it + draw 1, click Skip to bail. Gates all other clicks
+  // until resolved or skipped.
+  if (flashOfGeniusMode) {
+    handleFlashOfGeniusClick(x, y);
     return;
   }
 
@@ -19720,6 +19854,54 @@ function handleCardRechargeClick(x, y) {
   }
   // Clicked elsewhere — cancel and refund recharged cards
   cancelCardRecharge();
+}
+
+// === Flash of Genius perk: combat-start "recharge for draw" picker ===
+function handleFlashOfGeniusClick(x, y) {
+  // Skip button takes precedence — sits in the End Turn slot so it's
+  // always at the same spot regardless of hand state.
+  if (_flashSkipRect && hitTest(x, y, _flashSkipRect)) {
+    flashOfGeniusMode = false;
+    flashOfGeniusRechargesLeft = 0;
+    _flashSkipRect = null;
+    hideToast();
+    addLog(`  Flash of Genius: skipped.`, Colors.GRAY);
+    playSound('click');
+    return;
+  }
+  const handRects = getHandCardRects(player.deck.hand);
+  for (let i = handRects.length - 1; i >= 0; i--) {
+    if (!hitTest(x, y, getHandCardHoverRect(handRects, i))) continue;
+    const card = player.deck.hand[i];
+    card._preRechargeExhausted = !!card.exhausted;
+    player.deck.hand.splice(i, 1);
+    player.deck.addToRechargePile(card);
+    // On-recharge perks / triggers (Dwarven Greaves, Wolf Fang, etc.)
+    // still fire on the recharge spend — same hook the cardRechargeMode
+    // payment path uses.
+    applyOnRechargeShield(card);
+    addLog(`  Flash recharges ${card.name}`, Colors.GRAY, card);
+    const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  Flash: Draw ${d.name}`, Colors.BLUE, d);
+    if (drawn.length === 0) addLog(`  Flash: (no cards to draw)`, Colors.GRAY);
+    flashOfGeniusRechargesLeft--;
+    playSound('click');
+    if (flashOfGeniusRechargesLeft <= 0) {
+      flashOfGeniusMode = false;
+      _flashSkipRect = null;
+      hideToast();
+    }
+    return;
+  }
+  // Click anywhere else (battlefield, log, character panel, etc.) —
+  // treat as Skip. Matches the cardRechargeMode "click outside to
+  // cancel" pattern so the player isn't trapped by the picker.
+  flashOfGeniusMode = false;
+  flashOfGeniusRechargesLeft = 0;
+  _flashSkipRect = null;
+  hideToast();
+  addLog(`  Flash of Genius: skipped.`, Colors.GRAY);
+  playSound('click');
 }
 
 // === DEFENDING phase: prompt player to play defense cards reactively ===
@@ -23156,6 +23338,36 @@ function resolveEffect(eff, caster, target) {
       addLog(`  Thorb (Sentinel) joins the fight!`, Colors.GREEN);
       break;
     }
+    case 'summon_thorb_tier3': {
+      const thorb = createThorbTier3Creature();
+      thorb.sourceCard = _activePlayCard || null;
+      thorb._sourceRarity = 'rare';
+      thorb._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      player.addCreature(thorb);
+      addLog(`  Thorb (Sentinel) joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_raena_tier3': {
+      const raena = createRaenaTier3Creature();
+      raena.sourceCard = _activePlayCard || null;
+      raena._sourceRarity = 'rare';
+      raena._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      player.addCreature(raena);
+      addLog(`  Raena joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_valdrisa_tier3': {
+      const val = createValdrisaTier3Creature();
+      val.sourceCard = _activePlayCard || null;
+      val._sourceRarity = 'rare';
+      val._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      player.addCreature(val);
+      addLog(`  Valdrisa joins the fight!`, Colors.GREEN);
+      break;
+    }
     case 'summon_dwarven_scout': {
       const scout = new Creature({
         name: 'Dwarven Scout', attack: 2, maxHp: 2, shield: 1,
@@ -23618,6 +23830,25 @@ function resolveEffect(eff, caster, target) {
           // Extra heal
           healPlayer(1);
           addLog(`  Sustenance: Heal 1 more`, Colors.GREEN);
+        }
+      }
+      break;
+    }
+    case 'create_barnacle': {
+      // Spawn 1..eff.value Barnacle tokens into the player's hand
+      // (banish-heal-1 token). Used by Barnacle-Covered Buckler when
+      // played from hand on the player's turn — the defense-loop
+      // copy in finishIncomingDamage handles the Barnacle Plate path.
+      const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+      for (let n = 0; n < rolled; n++) {
+        const barnacle = createBarnacle();
+        player.deck.masterDeck.push(barnacle);
+        if (player.deck.hand.length < MAX_HAND_SIZE) {
+          player.deck.hand.push(barnacle);
+          addLog(`  Barnacle created in hand!`, Colors.GREEN);
+        } else {
+          player.deck.addToRechargePile(barnacle);
+          addLog(`  Barnacle recharged (hand full)`, Colors.GREEN);
         }
       }
       break;
@@ -26338,20 +26569,36 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   decayBleedAtTurnEnd(player, 'You');
   if (checkCombatEnd()) return;
 
-  // Thorb gains +1 Shield at end of player's turn (matches PY behavior).
+  // Thorb gains +1 Shield at end of player's turn (matches PY).
+  // Tier 3 Thorb (ccgQuest+ offset 2+) carries shieldsAllAllies and
+  // grants +1 Shield to the player AND every living ally too — the
+  // sentinel becomes a proper warden once the run is hot.
   for (const ally of player.creatures) {
-    if (ally.isAlive && ally.name === 'Thorb') {
-      ally.shield += 1;
-      addLog(`  Thorb gains +1 Shield (S:${ally.shield})`, Colors.ALLY_BLUE);
-      spawnTokenOnTarget(ally, 1, 'Shield', Colors.ALLY_BLUE);
+    if (!ally.isAlive || ally.name !== 'Thorb') continue;
+    ally.shield += 1;
+    addLog(`  Thorb gains +1 Shield (S:${ally.shield})`, Colors.ALLY_BLUE);
+    spawnTokenOnTarget(ally, 1, 'Shield', Colors.ALLY_BLUE);
+    if (ally.shieldsAllAllies) {
+      player.shield = (player.shield || 0) + 1;
+      addLog(`  Thorb shields you (S:${player.shield})`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
+      for (const other of player.creatures) {
+        if (!other.isAlive || other === ally) continue;
+        other.shield += 1;
+        addLog(`  Thorb shields ${other.name} (S:${other.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(other, 1, 'Shield', Colors.ALLY_BLUE);
+      }
     }
   }
 
-  // Valdrisa — Turn End: heal 1 HP on a random damaged ally (player or
-  // any living ally creature). Player counts as damaged when there are
-  // cards in the discard pile or any Poison stacks.
+  // Valdrisa — Turn End: heal N HP on a random damaged ally (player or
+  // any living ally creature). N defaults to 2; the tier-3 Valdrisa
+  // (ccgQuest+) carries endTurnHealRandomAlly = 3 for the bumped heal.
+  // Player counts as damaged when there are cards in the discard pile
+  // or any Poison stacks.
   for (const valdrisa of player.creatures) {
     if (!valdrisa.isAlive || valdrisa.name !== 'Valdrisa') continue;
+    const healAmt = valdrisa.endTurnHealRandomAlly || 2;
     const candidates = [];
     const playerDamaged =
       player.deck.discardPile.length > 0 || (player.getStatus('POISON') || 0) > 0;
@@ -26366,18 +26613,18 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
     playSound('heal_spell', 0.7);
     if (tgt === player) {
       addLog(`  Valdrisa heals you`, Colors.GREEN);
-      healPlayer(2);
+      healPlayer(healAmt);
     } else {
       let healed = 0;
-      // Clear up to 2 Poison first, then top up HP for any remainder.
+      // Clear up to N Poison first, then top up HP for any remainder.
       if (tgt.poisonStacks > 0) {
-        const cleared = Math.min(tgt.poisonStacks, 2);
+        const cleared = Math.min(tgt.poisonStacks, healAmt);
         tgt.poisonStacks -= cleared;
         healed += cleared;
       }
-      if (healed < 2) {
+      if (healed < healAmt) {
         const before = tgt.currentHp;
-        tgt.currentHp = Math.min(tgt.maxHp, tgt.currentHp + (2 - healed));
+        tgt.currentHp = Math.min(tgt.maxHp, tgt.currentHp + (healAmt - healed));
         healed += tgt.currentHp - before;
       }
       if (healed > 0) {
@@ -26787,8 +27034,11 @@ function applyObsidianAllyBonus(ally, target, dmg) {
   const armor = (target.armor || 0) + (target.baseArmor || 0);
   const shield = target.shield || 0;
   if (armor <= 0 && shield <= 0) return dmg;
-  addLog(`  ${ally.name}: +2 vs Armor/Shield`, Colors.GOLD);
-  return dmg + 2;
+  // Tier 3 Val carries armorBonusOverride (set in createValdrisaTier3Creature)
+  // for the bumped +3 vs Armor/Shield. Other obsidian allies stay at +2.
+  const bonus = ally.armorBonusOverride || 2;
+  addLog(`  ${ally.name}: +${bonus} vs Armor/Shield`, Colors.GOLD);
+  return dmg + bonus;
 }
 
 // --- Player Ally Attacks ---
@@ -27233,6 +27483,15 @@ function hatchWhiteDragonEgg(egg) {
       description: 'Attacks apply 1 Ice.',
     });
     wyrmling.ready();
+    // Inherit the egg's slot + owner so the row layout stays stable.
+    // Without this the fresh wyrmling has slot=-1 (Creature default),
+    // and the next addCreature() call assigns slot 0 to a NEW ally —
+    // colliding with the egg's original slot and rendering the new
+    // ally on top of the wyrmling. Reported as "the dragon disappears
+    // when ancestors are summoned" (wyrmling visually replaced by the
+    // ancestor at slot 0, hover still hits the wyrmling underneath).
+    wyrmling.slot = egg.slot;
+    wyrmling.owner = egg.owner || player;
     player.creatures[idx] = wyrmling;
     addLog(`  A White Dragon Wyrmling rises from the shell!`, Colors.ALLY_BLUE);
     playCreaturePlaySfx(wyrmling);
@@ -30485,10 +30744,22 @@ function checkCombatEnd() {
 function consumeUnpreventableBuff(caster) {
   if (!caster || !(caster.unpreventableBuff > 0)) return false;
   caster.unpreventableBuff = 0;
+  // The Slime Jar combat buff is the original carrier; Ambush perk
+  // sets unpreventableBuff directly without a backing combatBuff, so
+  // strip the slime_jar_buff only if present and pick the log line
+  // accordingly.
+  let source = 'Unpreventable';
   if (Array.isArray(caster.combatBuffs)) {
-    caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'slime_jar_buff');
+    const hadSlimeJar = caster.combatBuffs.some(b => b.id === 'slime_jar_buff');
+    if (hadSlimeJar) {
+      caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'slime_jar_buff');
+      source = 'Slime Jar';
+    } else if (caster._ambushUnpreventable) {
+      source = 'Ambush';
+      caster._ambushUnpreventable = false;
+    }
   }
-  addLog(`  Slime Jar! Attack is Unpreventable`, Colors.ORANGE);
+  addLog(`  ${source}! Attack is Unpreventable`, Colors.ORANGE);
   return true;
 }
 
@@ -31348,11 +31619,11 @@ function handleModalSelectClick(x, y) {
       // Huffer) need the creature cap check + play-pile routing.
       // Mirrors PY game.py:12068-12107.
       const ALLY_SUMMON_EFFECTS = new Set([
-        'summon_thorb', 'summon_thorb_upgraded',
-        'summon_raena', 'summon_raena_upgraded',
+        'summon_thorb', 'summon_thorb_upgraded', 'summon_thorb_tier3',
+        'summon_raena', 'summon_raena_upgraded', 'summon_raena_tier3',
         'summon_misha', 'summon_huffer',
         'summon_obsidian_construct', 'summon_obsidian_slime',
-        'summon_treants', 'summon_valdrisa',
+        'summon_treants', 'summon_valdrisa', 'summon_valdrisa_tier3',
         'summon_dwarven_scout', 'summon_pet_slime',
       ]);
       const hasSummon = chosen.effects.some(e => ALLY_SUMMON_EFFECTS.has(e.effectType));
@@ -32212,8 +32483,10 @@ function drawModalOverlay() {
   // render the actual creature card instead of a synthesized mode
   // preview, so the player picks by looking at the ally's stats.
   const SUMMON_FX = new Set([
-    'summon_misha', 'summon_huffer', 'summon_thorb', 'summon_thorb_upgraded',
-    'summon_raena', 'summon_raena_upgraded', 'summon_valdrisa',
+    'summon_misha', 'summon_huffer',
+    'summon_thorb', 'summon_thorb_upgraded', 'summon_thorb_tier3',
+    'summon_raena', 'summon_raena_upgraded', 'summon_raena_tier3',
+    'summon_valdrisa', 'summon_valdrisa_tier3',
     'summon_obsidian_construct', 'summon_obsidian_slime',
     'summon_treants',
   ]);
@@ -35191,8 +35464,8 @@ function restoreFromSave(data) {
   player.level = data.level || 1;
   player.deckLimitBonuses = data.deckLimitBonuses || {};
   for (const perkId of (data.perks || [])) {
-    const fn = PERK_REGISTRY[perkId];
-    if (fn) player.perks.push(fn());
+    const perk = recreatePerkFromId(perkId);
+    if (perk) player.perks.push(perk);
   }
 
   // Restore backpack
@@ -38198,6 +38471,14 @@ const CODEX_SUBTYPE_TO_CATEGORY = {
 // Heroes / monsters for the second tab.
 const HERO_NAMES = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
 
+// Enemy-only card ids whose creator lives in CARD_REGISTRY but
+// whose play side is the monster (Kraken boss combat cards). Default
+// classification from CARD_REGISTRY would put them under Player
+// Cards in the codex; this set overrides them to the Enemy tab.
+const FORCE_ENEMY_CARD_IDS = new Set([
+  'tentacle_grab', 'swallowing_bite', 'kraken_tentacle_block',
+  'kraken_whip', 'ink_cloud',
+]);
 function getCodexCardEntries() {
   // Build a rich list from CARD_REGISTRY (cards) + token cards + powers.
   const entries = [];
@@ -38215,9 +38496,15 @@ function getCodexCardEntries() {
     seenIds.add(card.id);
     entries.push({ kind: 'card', id: card.id, card, side: 'player' });
   }
-  // Mark CARD_REGISTRY entries as player-side (they're collected first above
-  // without a side tag — patch them now).
-  for (const e of entries) if (e.kind === 'card' && !e.side) e.side = 'player';
+  // Mark CARD_REGISTRY entries as player-side by default — they're
+  // collected first above without a side tag. Cards explicitly used
+  // ONLY by the enemy (Kraken boss attack / defense set) get force-
+  // classified as enemy so the codex filters them under Enemy Cards.
+  for (const e of entries) {
+    if (e.kind === 'card' && !e.side) {
+      e.side = FORCE_ENEMY_CARD_IDS.has(e.id) ? 'enemy' : 'player';
+    }
+  }
 
   const cache = buildCodexSourceCache();
 
@@ -41144,9 +41431,8 @@ function handleCodexClick(x, y) {
       return;
     }
     if (a.kind === 'add-perk-to-game') {
-      const fn = PERK_REGISTRY[a.perkId];
-      if (fn && player) {
-        const perk = fn();
+      const perk = recreatePerkFromId(a.perkId);
+      if (perk && player) {
         // Unique perks: skip if already owned. Repeatable perks stack.
         const hasUnique = perk.unique && player.perks.some(p => p.id === perk.id);
         if (!hasUnique) {

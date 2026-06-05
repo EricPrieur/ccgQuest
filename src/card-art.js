@@ -364,9 +364,12 @@ export const CARD_ART_MAP = {
   // === Ally Cards ===
   raena_card: 'RaenaAlly.jpg',
   raena_card_2: 'RaenaAlly.jpg',
+  raena_card_3: 'RaenaAlly.jpg',
   thorb_card: 'ThorbAlly.jpg',
   thorb_card_2: 'ThorbAlly.jpg',
+  thorb_card_3: 'ThorbAlly.jpg',
   valdrisa_card: 'ValdrisaEmberforge.jpg',
+  valdrisa_card_3: 'ValdrisaEmberforge.jpg',
   pet_slime: 'SlimeSummon.jpg',
   dwarven_scout: 'DwarvenScoutAlly.jpg',
   summon_ancestor: 'DurinStoneheart.jpg',
