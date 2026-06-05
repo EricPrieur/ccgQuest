@@ -177,6 +177,14 @@ export class Card {
     if (Array.isArray(this._enchants) && this._enchants.length > 0) {
       c._enchants = [...this._enchants];
     }
+    // Carry the ccgQuest+ offset stamp on the copy. copy() above
+    // already preserves the stamped name / tier / effect values
+    // (it reads `this.name`, `this.tier`, `this.effects.map(...)`),
+    // so the only thing left to forward is the bookkeeping field
+    // serializeCard reads to persist the offset across save/load.
+    if (typeof this._tierOffset === 'number' && this._tierOffset > 0) {
+      c._tierOffset = this._tierOffset;
+    }
     return c;
   }
 

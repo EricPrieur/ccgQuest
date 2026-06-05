@@ -23,10 +23,18 @@ function slotKey(slot) {
 // only cards that actually have enchants — everything else stays as
 // a string so existing saves load unchanged.
 function serializeCard(c) {
-  if (Array.isArray(c._enchants) && c._enchants.length > 0) {
-    return { id: c.id, enchants: c._enchants.slice() };
-  }
-  return c.id;
+  const hasEnchants = Array.isArray(c._enchants) && c._enchants.length > 0;
+  const hasOffset = typeof c._tierOffset === 'number' && c._tierOffset > 0;
+  if (!hasEnchants && !hasOffset) return c.id;
+  // ccgQuest+ offset travels alongside enchants so a card looted at
+  // tier 3 stays at tier 3 on reload, even if the run's current
+  // offset has since dropped. Card identity is its (id + offset);
+  // newly-looted cards in a +1 run carry offset=1, base cards stay
+  // at offset 0 (the bare-id form, no wrapper).
+  const out = { id: c.id };
+  if (hasEnchants) out.enchants = c._enchants.slice();
+  if (hasOffset) out.offset = c._tierOffset;
+  return out;
 }
 
 export function saveGame(state, saveName = '') {
@@ -36,6 +44,11 @@ export function saveGame(state, saveName = '') {
     saveName: saveName,
     selectedClass: state.selectedClass,
     gold: state.gold,
+    // ccgQuest+ tier offsets — persisted so a reload keeps the run's
+    // scaling intact (without these the loaded run silently reverts
+    // to base, Take Aim+ drops the suffix, loot stops scaling, etc.).
+    playerTierOffset: state.playerTierOffset || 0,
+    monsterTierOffset: state.monsterTierOffset || 0,
     // Player deck (master deck card IDs)
     masterDeck: state.player.deck.masterDeck.map(serializeCard),
     // Persistent piles (survive between combats)

@@ -444,6 +444,12 @@ function applyGamePlusOffsetInPlace(c, offset) {
   const suffix = gamePlusNameSuffix(offset);
   if (typeof c.name === 'string') c.name = `${c.name}${suffix}`;
   if (typeof c.tier === 'number') c.tier += offset;
+  // Track the accumulated offset on the card so save/load can
+  // re-apply it on reload (the saved blob only carries the id by
+  // default — without this stamp, loaded cards would revert to
+  // base). serializeCard reads this; createCardFromSaveEntry pipes
+  // it back through this helper.
+  c._tierOffset = (c._tierOffset || 0) + offset;
   // Scale previewCreature(s) — the in-hand hover preview reads the
   // card's previewCreature directly, so without rescaling here a
   // Pet Slime in your hand would show the base 1/1 even after the
@@ -4582,6 +4588,8 @@ function startGamePlusFreshDeck() {
 // every story / quest / one-time flag and drops the party back into
 // the prison cell (chapter 1 start) with their hard-earned kit.
 function startGamePlusFromSave(slot) {
+  const pickedPlayer = _setupPlayerOffsetPick || 0;
+  const pickedMonster = _setupMonsterOffsetPick || 0;
   commitGamePlusOffsets();
   const data = loadFromSlot(slot);
   if (!data) {
@@ -4589,8 +4597,36 @@ function startGamePlusFromSave(slot) {
     return;
   }
   // Hydrate everything from the save (player, deck, perks, gold,
-  // backpack, level, the works).
+  // backpack, level, the works). restoreFromSave overwrites the
+  // tier offsets with whatever the source save carried (typically
+  // 0/0 for a Part 1 completion run), so we re-commit the Game+
+  // picks afterwards. The loaded deck / backpack stay UNTOUCHED —
+  // user rule: "don't manipulate cards in an already existing deck".
+  // Only NEW loot during this Game+ run will pick up playerTierOffset
+  // via addLootedCard. The class power is still re-stamped below
+  // since it's rebuilt fresh from getClassPower each load, not
+  // serialized from the save.
   restoreFromSave(data);
+  playerTierOffset = pickedPlayer;
+  monsterTierOffset = pickedMonster;
+  // Rebuild the class power at the Game+ pick — restoreFromSave
+  // stamped it at the SAVED offset (0 for a Part 1 completion save),
+  // which would leave a +1 Game+ run without Take Aim+ etc. Use
+  // addPower so the new power gets its owner reference (canUse
+  // reads owner.deck.hand.length — without an owner the power
+  // refuses to fire and shows "Need N card(s) in hand").
+  if (player) {
+    const oldPower = player.powers && player.powers[0];
+    const newPower = getClassPower(selectedClass);
+    if (newPower) {
+      if (pickedPlayer > 0 && newPower.gamePlusOffset) {
+        applyGamePlusOffsetInPlace(newPower, pickedPlayer);
+      }
+      if (oldPower) newPower.exhausted = oldPower.exhausted;
+      player.powers = [];
+      player.addPower(newPower);
+    }
+  }
   // Wipe the story / map state so the run RE-runs chapter 1.
   resetStoryFlags();
   // Drop the player back at the chapter 1 entry node with the
@@ -4686,6 +4722,18 @@ function startNewGame() {
   player = null;
   currentMap = null;
   currentEncounter = null;
+  // ccgQuest+ tier offsets — defensive reset so a non-Game+ run
+  // doesn't inherit the offsets a previous Game+ session committed.
+  // Game+ entry points (startGamePlusFreshDeck / startGamePlusFromSave)
+  // call commitGamePlusOffsets AFTER routing through this reset:
+  // they set _fromGamePlusSetup first, run startNewGame, then stamp
+  // playerTierOffset / monsterTierOffset from the setup picks. So
+  // wiping here is safe for both flows — base runs always start at
+  // 0/0, Game+ runs get their real offsets stamped right after.
+  if (!_fromGamePlusSetup) {
+    playerTierOffset = 0;
+    monsterTierOffset = 0;
+  }
   // Reset story flags so a fresh run doesn't inherit kitchen/barrel state
   // from a previous save-state snapshot.
   kitchenChoiceMade = null;
@@ -11709,7 +11757,14 @@ function drawMap() {
     ctx.fillText(currentNode.displayDescription, SCREEN_WIDTH / 2, panelY + 55);
     ctx.fillStyle = Colors.GRAY;
     ctx.font = '13px sans-serif';
-    ctx.fillText(`Gold: ${gold}  |  Deck: ${player.deck.masterDeck.length} cards`, SCREEN_WIDTH / 2, panelY + 80);
+    // Tier offset gets folded inline when the run is a ccgQuest+ run
+    // so the player has a constant reminder of the scaling without
+    // adding another row to the map footer.
+    const offsetSuffix = (playerTierOffset > 0 || monsterTierOffset > 0)
+      ? `  |  ccgQuest+ P+${playerTierOffset} / M+${monsterTierOffset}`
+      : '';
+    ctx.fillText(`Gold: ${gold}  |  Deck: ${player.deck.masterDeck.length} cards${offsetSuffix}`,
+      SCREEN_WIDTH / 2, panelY + 80);
     ctx.fillStyle = '#aaa';
     ctx.fillText('Click node to move  |  S: Save  |  L: Load  |  I: Inventory', SCREEN_WIDTH / 2, panelY + 100);
   }
@@ -12373,6 +12428,7 @@ function handleEncounterChoiceClick(x, y) {
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
               mapTableRested, caveEntranceDoubledBack,
               mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize,
+              playerTierOffset, monsterTierOffset,
             }, `part1_complete_${classKey}`, `End of Part 1 — ${selectedClass}`);
           } catch (err) {
             console.warn('Part 1 save failed:', err);
@@ -13077,7 +13133,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
   } catch (err) {
     console.warn('Autosave failed:', err);
@@ -25093,7 +25149,11 @@ function powerNeedsTargets(power) {
 function powerTargetCount(power) {
   if (power.id === 'cleave') return 2;
   if (power.id === 'elemental_infusion') return 1;
-  if (power.id === 'quick_strike') return 1;
+  // Quick Strike scales with player tier offset — 1 swing base,
+  // +1 per offset, each swing picks its own target (Magic-Missile
+  // style). At base offset the picker still asks for 1 target, so
+  // the UX matches the original single-target behavior.
+  if (power.id === 'quick_strike') return 1 + (playerTierOffset || 0);
   return 0;
 }
 
@@ -25989,6 +26049,11 @@ function handlePowerTargetingClick(x, y) {
       }
     }
   }
+  // Quick Strike+ is a barrage power — each click on the same enemy
+  // fires another swing on that enemy (Magic-Missile semantics).
+  // Other multi-target powers (Cleave etc.) still dedupe so they
+  // spread the picks across distinct targets.
+  const allowDuplicateTargets = selectedPower && selectedPower.id === 'quick_strike';
   // Click on enemy character → add as target
   const enemyCardRect = getCharacterCardRect(false);
   if (hitTest(x, y, enemyCardRect)) {
@@ -25997,7 +26062,7 @@ function handlePowerTargetingClick(x, y) {
       return;
     }
     if (sentinelLockActive) { triggerSentinelFlash(); return; }
-    if (!powerTargets.includes(enemy)) {
+    if (allowDuplicateTargets || !powerTargets.includes(enemy)) {
       powerTargets.push(enemy);
       checkPowerTargetingComplete();
     }
@@ -26009,7 +26074,7 @@ function handlePowerTargetingClick(x, y) {
     if (hitTest(x, y, creatureRects[i])) {
       const c = enemy.creatures[i];
       if (sentinelLockActive && !c.sentinel) { triggerSentinelFlash(); return; }
-      if (!powerTargets.includes(c)) {
+      if (allowDuplicateTargets || !powerTargets.includes(c)) {
         powerTargets.push(c);
         checkPowerTargetingComplete();
       }
@@ -26029,16 +26094,22 @@ function checkPowerTargetingComplete() {
     resolvePowerTargeting();
     return;
   }
-  // Auto-fire if no more unpicked targets remain (e.g. only 1 creature and
-  // cleave normally wants 2 — don't force the player to "click elsewhere").
-  let availableCount = 0;
-  if (enemy.isAlive && !powerTargets.includes(enemy)) availableCount++;
-  for (const c of enemy.creatures) {
-    if (c.isAlive && !powerTargets.includes(c)) availableCount++;
-  }
-  if (availableCount === 0 && powerTargets.length > 0) {
-    resolvePowerTargeting();
-    return;
+  // Quick Strike+ allows duplicate picks (one shot per pick), so
+  // skip the "no unpicked targets" auto-fire — the player can keep
+  // stacking shots on the same enemy.
+  const allowDup = selectedPower && selectedPower.id === 'quick_strike';
+  if (!allowDup) {
+    // Auto-fire if no more unpicked targets remain (e.g. only 1 creature and
+    // cleave normally wants 2 — don't force the player to "click elsewhere").
+    let availableCount = 0;
+    if (enemy.isAlive && !powerTargets.includes(enemy)) availableCount++;
+    for (const c of enemy.creatures) {
+      if (c.isAlive && !powerTargets.includes(c)) availableCount++;
+    }
+    if (availableCount === 0 && powerTargets.length > 0) {
+      resolvePowerTargeting();
+      return;
+    }
   }
   showStickyToast(`${selectedPower.name}: Click target (${powerMaxTargets - powerTargets.length} left, click elsewhere to finish)`);
 }
@@ -26199,33 +26270,28 @@ function resolvePowerTargeting() {
     }
     chosenPowerEffect = null;
   } else if (power.id === 'quick_strike') {
-    // Quick Strike — barrage: 1 base swing, +1 per player offset.
-    // The whole loop is wrapped below; the per-swing damage stays
-    // base 1 + heroism (heroism consumed once before the chain).
-    const qsAttacks = 1 + (playerTierOffset || 0);
-    attacksThisTurn += qsAttacks;
+    // Quick Strike — base 1 swing, +1 per player offset; each pick
+    // in `targets` is one swing on its own target (player chose
+    // per-shot via the multi-target picker). Heroism / ice / eye /
+    // obs buffs are consumed ONCE up front so they don't multi-apply.
+    attacksThisTurn += targets.length;
     let dmg = 1 + player.heroism;
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
     const unpreventable = consumeUnpreventableBuff(player);
-    const t = targets[0];
-    // Sahuagin Eye buff: consume regardless of damaged state, grant
-    // +1 if target is already wounded. Same rule as card attacks.
-    const qsTargetDamaged = t instanceof Creature
-      ? (t.currentHp || 0) < (t.maxHp || 0)
-      : !!(t && t.deck && (t.deck.discardPile || []).length > 0);
+    // Sahuagin Eye / Obsidian buffs key off the FIRST picked target.
+    const t0 = targets[0];
+    const qsTargetDamaged = t0 instanceof Creature
+      ? (t0.currentHp || 0) < (t0.maxHp || 0)
+      : !!(t0 && t0.deck && (t0.deck.discardPile || []).length > 0);
     const qsEye = consumeEyeBuff(player, qsTargetDamaged);
     if (qsEye > 0) dmg += qsEye;
-    const qsObs = consumeObsidianBuff(player, t);
+    const qsObs = consumeObsidianBuff(player, t0);
     if (qsObs > 0) dmg += qsObs;
     let dmgLanded = 0;
-    // Barrage loop — repeat the same swing on the same target
-    // `qsAttacks` times. Each shot routes through the standard
-    // damage path so block/shield/armor and split triggers fire
-    // per-swing; the heroism / ice / eye / obs buffs are consumed
-    // ONCE before the chain so they don't multi-apply.
-    for (let shotIdx = 0; shotIdx < qsAttacks; shotIdx++) {
-      if (!t.isAlive && shotIdx > 0) break; // stop if target died mid-chain
+    for (let shotIdx = 0; shotIdx < targets.length; shotIdx++) {
+      const t = targets[shotIdx];
+      if (!t || !t.isAlive) continue; // skip dead picks (target killed mid-chain by an earlier shot)
       if (t === enemy) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(dmg);
@@ -26263,7 +26329,7 @@ function resolvePowerTargeting() {
       }
       playAttackHitSfx(dmg, dmgLanded, shotIdx * 120);
     }
-    consumeIgniteOnAttack(player, t, dmg);
+    consumeIgniteOnAttack(player, t0, dmg);
     countAndRemoveDeadCreatures();
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
@@ -33905,7 +33971,11 @@ function drawInventory() {
   ctx.font = 'bold 38px Georgia, serif';
   ctx.textAlign = 'center';
   const title = shopMode ? shopMode.name : (restMode ? 'Rest — Rebalance Your Deck' : 'Inventory');
-  ctx.fillText(title, SCREEN_WIDTH / 2, 50);
+  // Title + stats line pulled up so the ccgQuest+ offset readout
+  // fits above the card grid (sections start at INV_TOP_Y = 95).
+  // Base-run runs are unaffected visually — they keep the title +
+  // stats higher but no offset row, leaving more breathing room.
+  ctx.fillText(title, SCREEN_WIDTH / 2, 38);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
@@ -33916,7 +33986,15 @@ function drawInventory() {
   const statsLine = shopMode
     ? `Gold: ${gold}  |  Deck: ${player.deck.masterDeck.length} cards  |  Backpack: ${backpack.length} cards  |  For Sale: ${shopCards.length}`
     : `Gold: ${gold}  |  Deck: ${player.deck.masterDeck.length} cards  |  Backpack: ${backpack.length} cards`;
-  ctx.fillText(statsLine, SCREEN_WIDTH / 2, 78);
+  ctx.fillText(statsLine, SCREEN_WIDTH / 2, 64);
+  // ccgQuest+ tier offset readout — only shown when the run is
+  // actually a + run so the line stays clean for base runs.
+  if (playerTierOffset > 0 || monsterTierOffset > 0) {
+    ctx.fillStyle = '#ffc060';
+    ctx.font = 'italic 13px sans-serif';
+    ctx.fillText(`ccgQuest+  ·  Player Tier +${playerTierOffset}  ·  Monster Tier +${monsterTierOffset}`,
+      SCREEN_WIDTH / 2, 84);
+  }
 
   const sections = getInvSections();
 
@@ -35020,6 +35098,7 @@ function commitSaveEditing() {
     backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
+    playerTierOffset, monsterTierOffset,
   }, saveEditingSlot, name);
   if (success) {
     addLog(`Game saved: ${name}`, Colors.GREEN);
@@ -35554,6 +35633,16 @@ function createCardFromSaveEntry(entry) {
   if (entry && typeof entry === 'object' && Array.isArray(entry.enchants)) {
     for (const eid of entry.enchants) applyCardEnchant(card, eid);
   }
+  // ccgQuest+ — each saved card carries its OWN offset (stamped at
+  // creation: starter deck / Game+ loot / etc.). Re-apply it here
+  // so a Rock Mace+ looted at tier 1 comes back as Rock Mace+ on
+  // reload, regardless of the current run's offset. Companion
+  // tier-swap ids (thorb_card_2 etc.) skip the stamp because the
+  // creator already returns the right-tier card.
+  const savedOffset = (entry && typeof entry === 'object') ? (entry.offset || 0) : 0;
+  if (savedOffset > 0 && !COMPANION_TIER_CHAINS[id]) {
+    applyGamePlusOffsetInPlace(card, savedOffset);
+  }
   return card;
 }
 
@@ -35567,6 +35656,11 @@ function restoreFromSave(data) {
   for (const k of Object.keys(_mapCache)) delete _mapCache[k];
   selectedClass = data.selectedClass;
   gold = data.gold;
+  // Restore ccgQuest+ tier offsets BEFORE rebuilding the deck /
+  // class power — applyGamePlusOffsetInPlace below reads them to
+  // re-stamp every card and the class power.
+  playerTierOffset = typeof data.playerTierOffset === 'number' ? data.playerTierOffset : 0;
+  monsterTierOffset = typeof data.monsterTierOffset === 'number' ? data.monsterTierOffset : 0;
 
   // Recreate player
   player = new Character(selectedClass);
