@@ -296,6 +296,11 @@ export function createKoboldBackup() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Summon Guard',
+    // +1 max Kobold Guard summoned per monster tier offset (base 1,
+    // then 1-2 at +1, 1-3 at +2…). The runtime reads
+    // monsterTierOffset and the custom kobold_backup branch in
+    // applyGamePlusOffsetInPlace rewrites the description.
+    gamePlusOffset: { kobold_backup_extra: 1 },
   });
 }
 

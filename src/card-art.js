@@ -564,7 +564,14 @@ const loadingSet = new Set();
 
 export function getCardArt(cardId) {
   if (imageCache[cardId]) return imageCache[cardId];
-  const filename = CARD_ART_MAP[cardId];
+  let filename = CARD_ART_MAP[cardId];
+  // ccgQuest+ perks stamp their id with a "_p<N>" suffix (tough →
+  // tough_p1). Fall back to the base id so the suffix variant reuses
+  // the original art instead of rendering a brown placeholder.
+  if (!filename) {
+    const m = cardId && cardId.match(/^(.*)_p(\d+)$/);
+    if (m) filename = CARD_ART_MAP[m[1]];
+  }
   if (!filename) return null;
   if (loadingSet.has(cardId)) return null;
 

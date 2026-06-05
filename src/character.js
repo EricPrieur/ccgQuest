@@ -969,6 +969,11 @@ export function stampPerkOffset(perk, offset) {
   const suffix = offset === 1 ? '+' : offset === 2 ? '++' : offset === 3 ? '+++' : `+${offset}`;
   perk.id = `${perk.id}_p${offset}`;
   perk.name = `${perk.name}${suffix}`;
+  // Bump the tier so the perk card's tier badge matches the rest of
+  // the ccgQuest+ run. Stats stay flat (per spec) — the tier label
+  // is just visual to make the variant feel distinct from the base
+  // perk in the picker.
+  perk.tier = (perk.tier || 1) + offset;
   return perk;
 }
 // Save/load helper — rebuild a perk from a serialized id. Handles

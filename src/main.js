@@ -186,6 +186,19 @@ let _gamePlusSavesScrollY = 0;
 // Cap at 9 defensively so a bug can't run it away.
 const GAMEPLUS_UNLOCK_LS_KEY = 'cq_gameplus_unlock_v1';
 let _gamePlusMaxUnlocked = 0;
+// Persisted ccgQuest+ toggle state. Once a player flips the toggle ON
+// from the menu it sticks across reloads so they don't have to re-arm
+// it every session. Saved alongside the unlock key.
+const GAMEPLUS_TOGGLE_LS_KEY = 'cq_gameplus_toggle_v1';
+function loadGamePlusToggle() {
+  try {
+    gamePlusToggle = localStorage.getItem(GAMEPLUS_TOGGLE_LS_KEY) === '1';
+  } catch (e) { /* private mode / corrupt storage falls back to false */ }
+}
+function saveGamePlusToggle() {
+  try { localStorage.setItem(GAMEPLUS_TOGGLE_LS_KEY, gamePlusToggle ? '1' : '0'); }
+  catch (e) { /* quota / private mode — silently skip */ }
+}
 // Runtime tier-offset picks for the current ccgQuest+ run. Stamped
 // when the player starts a Game+ run; consumed by downstream systems
 // (player starter deck tier, enemy scaling) once those hooks land.
@@ -202,6 +215,15 @@ function loadGamePlusUnlock() {
     const n = Number.parseInt(raw, 10);
     if (Number.isFinite(n) && n >= 0) _gamePlusMaxUnlocked = Math.min(9, n);
   } catch (e) { /* private mode / corrupt storage falls back to 0 */ }
+  // Back-compat: players who finished the base game BEFORE bumpGamePlusUnlock
+  // existed have no localStorage entry, so the toggle would lock them to +0
+  // even though they've earned the run. If any part1_complete_<class>
+  // save exists, treat it as a tier-1 clear and persist the bump so
+  // subsequent loads keep the unlock.
+  if (_gamePlusMaxUnlocked < 1 && hasPart1CompleteSave()) {
+    _gamePlusMaxUnlocked = 1;
+    saveGamePlusUnlock();
+  }
 }
 // Effective max unlock for ccgQuest+ offset toggles. Debug mode
 // short-circuits to 9 so the developer doesn't need to grind the
@@ -216,6 +238,19 @@ function gamePlusNameSuffix(n) {
   if (!n || n <= 0) return '';
   if (n <= 3) return '+'.repeat(n);
   return `+${n}`;
+}
+// Roll the ability choice list for the current class/tier and stamp
+// every option with the player's tier offset (ccgQuest+ scaling).
+// Used by every mid-run picker — character creation, Lost Shrine,
+// Chapel of Light, Old God Statue, Cathedral Shrine, and the
+// level-up bonus pick — so the rolled abilities match the rest of
+// the run's scaling.
+function getOffsetAbilityChoices(className, count, tier = 1) {
+  let choices = getAbilityChoices(className, count, tier);
+  if (playerTierOffset > 0) {
+    choices = choices.map(c => applyTierOffsetToCardPreview(c, playerTierOffset));
+  }
+  return choices;
 }
 // Build a tier-offset preview clone of a Card so codex / future
 // loot drops can show the upgraded name + tier without mutating the
@@ -419,6 +454,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
   if (Array.isArray(c.previewCreatures) && c.previewCreatures.length) {
     c.previewCreatures = c.previewCreatures.map(cr => applyTierOffsetToCreaturePreview(cr, offset));
   }
+  // Same idea for previewCard — Goodberries' side preview shows the
+  // Goodberry token, Pet Spider's shows the Vial of Poison, etc.
+  // Without this rescale the mini would render the base card while
+  // the parent's own thumbnail reads as scaled.
+  if (c.previewCard) {
+    c.previewCard = applyTierOffsetToCardPreview(c.previewCard, offset);
+  }
   if (c.gamePlusOffset && Array.isArray(c.effects)) {
     // Fractional `per` (e.g. 1.5 for Wooden Axe) is floored AFTER
     // multiplication so +1 offset = +1 dmg, +2 offset = +3 dmg, etc.
@@ -537,6 +579,22 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.description = `Deal ${n} Fire.\nStays in hand.`;
       c.shortDesc = `${n} Fire, Stays`;
     }
+    // Chicken Leg — base on-play heal scales via the generic swap
+    // (heal 5 → 7 → 9…). The Meal field also bumps per offset so
+    // the per-turn tick scales too (2 → 3 → 4…). Rebuild the meal
+    // description to surface the new value.
+    if (c.id === 'chicken_leg' && c.gamePlusOffset?.chicken_leg_meal) {
+      const bump = c.gamePlusOffset.chicken_leg_meal * offset;
+      if (c.provision) {
+        c.provision.value = (c.provision.value || 0) + bump;
+        const v = c.provision.value;
+        const turns = c.provision.turnsPerCombat || 2;
+        c.provision.description = `Heal ${v} each turn for ${turns} turns (each combat, until rest)`;
+        c.description = c.description.replace(/Meal:\s+Heal\s+\d+\s+for\s+\d+\s+turns\./i,
+          `Meal: Heal ${v} for ${turns} turns.`);
+        c.shortDesc = c.shortDesc.replace(/Meal:\s+Heal\s+\d+\/\d+T/i, `Meal: Heal ${v}/${turns}T`);
+      }
+    }
     // Bad Rations — heal bumps via the generic swap (Heal 4 → 6),
     // but the Meal duration is a provision field outside the effects
     // array, so bump it explicitly and re-emit the duration in the
@@ -568,23 +626,16 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.description = `Recharge -> Heal ${healOnPlay}. Heal ${healPerTurn} at start of turn for ${turns} turns.`;
       c.shortDesc = `R->Heal ${healOnPlay}\n+Regen ${healPerTurn}/${turns}t`;
     }
-    // Rat Taming — description has no numbers (just "Summon Rats"),
-    // so add an explicit annotation summarizing the scaling so the
-    // codex makes the offset legible.
-    if (c.id === 'tamed_rat') {
-      const off = offset;
-      const direN = 1 + off;
-      const tamedMax = 3 + off;
-      c.description = `Recharge -> Summon Rats.\n50%: 1-${tamedMax} Tamed Rats.\n50%: ${direN} Dire Rat${direN > 1 ? 's' : ''}.`;
-      c.shortDesc = `R->Summon Rats\n1-${tamedMax} Tamed\nor ${direN} Dire`;
-    }
-    // Goodberries — bumped cap (3 + offset). The description has no
-    // number ("Create some Goodberries"), so just rebuild it with
-    // an explicit range now that the cap is meaningful.
+    // Rat Taming — keep the base "Summon Rats" wording even at
+    // offset (the bumped counts only matter mid-fight). The card's
+    // name suffix already telegraphs the upgrade.
+    // Goodberries — same idea: surface only the new cap; no need to
+    // tag "(scaled)" since the "+" suffix on the card name already
+    // signals the ccgQuest+ variant.
     if (c.id === 'goodberries') {
       const cap = (c.effects.find(e => e.effectType === 'create_goodberries')?.value) || 3;
-      c.description = `Recharge -> Create 1-${cap} Goodberries (scaled).`;
-      c.shortDesc = `R->1-${cap}\nGoodberries+`;
+      c.description = `Recharge -> Create 1-${cap} Goodberries.`;
+      c.shortDesc = `R->1-${cap}\nGoodberries`;
     }
     // Sneak Attack — base damage is X (attacks this turn). The
     // gamePlusOffset adds a flat bonus on top (sneak_attack.value
@@ -675,6 +726,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const maxRoll = 1 + (c.gamePlusOffset.split_summon * offset);
       c.effectDescription = `Splits when damaged (1-${maxRoll} slimes).`;
       c.shortDesc = `Split on hit\n1-${maxRoll}`;
+    }
+    // Kobold Backup — base 1 guard/turn, +1 max per offset (1-2 at
+    // +1, 1-3 at +2…). Rewrite the description to surface the range.
+    if (c.id === 'kobold_backup' && c.gamePlusOffset?.kobold_backup_extra) {
+      const maxRoll = 1 + (c.gamePlusOffset.kobold_backup_extra * offset);
+      c.effectDescription = `Start of Turn: Summon 1-${maxRoll} Kobold Guards.`;
+      c.shortDesc = `Summon\n1-${maxRoll} Guards`;
     }
     // Wolf Pack — base summon list bumps by N per offset. Add an
     // explicit "(+N)" annotation so the codex shows the scaling.
@@ -819,6 +877,7 @@ const CREATURE_TIER_OFFSET = {
   'Pet Spider':    { attack: 1, hp: 1 },
   'Tamed Rat':     { attack: 1, hp: 1 },
   'Dire Rat':      { attack: 2, hp: 2 },
+  'Kobold Guard':  { attack: 1, hp: 1, shield: 1 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
@@ -830,11 +889,13 @@ function scaleCreatureWithOffset(creature, offset) {
   if (!rule) return;
   const dA = (rule.attack || 0) * offset;
   const dH = (rule.hp || 0) * offset;
+  const dS = (rule.shield || 0) * offset;
   if (dA) creature.attack = (creature.attack || 0) + dA;
   if (dH) {
     creature.maxHp = (creature.maxHp || 0) + dH;
     creature.currentHp = (creature.currentHp || 0) + dH;
   }
+  if (dS) creature.shield = (creature.shield || 0) + dS;
 }
 // True when the creature has an offset rule wired (codex hides the
 // red "+N?" badge in that case). Mirrors cardHasOffsetRules.
@@ -2744,6 +2805,14 @@ const MAX_HAND_SIZE = 10;
 // gate, looting at a full hand silently overflows past MAX_HAND_SIZE.
 function addLootedCard(card) {
   if (!player || !player.deck) return;
+  // ccgQuest+ loot scaling — apply playerTierOffset to the looted
+  // card so kills in a + run drop offset-up gear (a Rat at +1 hands
+  // out tier-2 versions of the base loot). Skipped for companion
+  // cards that were already swapped to a higher-tier creator by
+  // resolveCompanionCardForTierOffset (no double bump).
+  if (playerTierOffset > 0 && !card._companionTierSwapped) {
+    applyGamePlusOffsetInPlace(card, playerTierOffset);
+  }
   player.deck.masterDeck.push(card);
   if (player.deck.hand.length < MAX_HAND_SIZE) {
     player.deck.hand.push(card.copy ? card.copy() : card);
@@ -4027,20 +4096,23 @@ function drawGamePlusSetup() {
   }
 
   // --- Option 1: Fresh Deck+ ---
+  // Title pushed down by 30 px so the "both offsets are 0" warning
+  // sits clear of it (the warning anchors to togRowY + togH + 50
+  // ≈ panelY + 258, which used to crash into the Option 1 heading).
   ctx.fillStyle = '#ffd884';
   ctx.font = 'bold 22px serif';
   ctx.textAlign = 'left';
-  ctx.fillText('Option 1 — Fresh Deck+', panelX + 40, panelY + 270);
+  ctx.fillText('Option 1 — Fresh Deck+', panelX + 40, panelY + 300);
   ctx.fillStyle = '#c8b890';
   ctx.font = '15px serif';
   ctx.fillText('Start a brand-new run. Picks a class, then an ability, with the offsets above applied.',
-    panelX + 40, panelY + 294);
+    panelX + 40, panelY + 324);
   // Fresh Deck+ banner button.
   {
     const fdW = panelW - 80;
     const fdH = 56;
     const fdX = panelX + 40;
-    const fdY = panelY + 308;
+    const fdY = panelY + 338;
     drawStyledButton(fdX, fdY, fdW, fdH, '', () => {
       startGamePlusFreshDeck();
     }, 'banner', 16);
@@ -4056,26 +4128,28 @@ function drawGamePlusSetup() {
   }
 
   // --- Option 2: continue from a Part 1 completion save ---
+  // Shifted in lockstep with Option 1 so the two sections keep the
+  // same vertical rhythm.
   ctx.fillStyle = '#ffd884';
   ctx.font = 'bold 22px serif';
   ctx.textAlign = 'left';
-  ctx.fillText('Option 2 — Continue from a finished run', panelX + 40, panelY + 408);
+  ctx.fillText('Option 2 — Continue from a finished run', panelX + 40, panelY + 438);
   ctx.fillStyle = '#c8b890';
   ctx.font = '15px serif';
   ctx.fillText('Class / deck / backpack / perks / level / gold carry over; every story flag resets.',
-    panelX + 40, panelY + 432);
+    panelX + 40, panelY + 462);
   // Bonus rule unique to Option 2: per-type deck cap bumps by +2 for
   // each ccgQuest+ run started this way (base 3 → 5 in the + run).
   ctx.fillStyle = '#ffd884';
   ctx.font = 'italic 14px serif';
   ctx.fillText('Bonus: max card type +2 (base 3 → 5 per type for this + run).',
-    panelX + 40, panelY + 452);
+    panelX + 40, panelY + 482);
 
   // Scrollable save list. Clip to a fixed visible area so longer
   // lists (one Part 1 completion per class — up to 6) scroll cleanly
   // via the mouse wheel handler at canvas-scroll site.
   const listX = panelX + 40;
-  const listY = panelY + 468;
+  const listY = panelY + 498;
   const listW = panelW - 80;
   const rowH = 52;
   const rowGap = 8;
@@ -4816,6 +4890,7 @@ function drawMenu() {
     showTutorial('game_plus_unlocked');
     drawStyledButton(togX, togY, togW, togH, '', () => {
       gamePlusToggle = !gamePlusToggle;
+      saveGamePlusToggle();
       playSound('click');
     }, 'banner', 18);
     // Label overlay on top of the pale wooden banner — dark warm
@@ -4838,7 +4913,10 @@ function drawMenu() {
   } else {
     // Eligibility was lost (debug toggled off, etc.) — wipe the flag
     // so the player doesn't carry a stale toggle into a future visit.
-    gamePlusToggle = false;
+    if (gamePlusToggle) {
+      gamePlusToggle = false;
+      saveGamePlusToggle();
+    }
     _gamePlusBtnRect = null;
   }
 
@@ -5095,14 +5173,7 @@ function selectClass(className) {
   // class anyway, so there's no reason to gate the choice down to 3
   // random ones at the start. Mid-run picks (shrine, church, level-
   // up) keep the 3-random sampling so the choice still feels rolled.
-  abilityChoices = getAbilityChoices(className, 10);
-  // ccgQuest+ — when the player tier offset is set, every ability
-  // option gets the tier-up clone so the deck-bound card reflects the
-  // upgrade immediately (the picked card carries through to the
-  // starter deck via startGameWithAbility).
-  if (playerTierOffset > 0) {
-    abilityChoices = abilityChoices.map(c => applyTierOffsetToCardPreview(c, playerTierOffset));
-  }
+  abilityChoices = getOffsetAbilityChoices(className, 10);
   state = GameState.ABILITY_SELECT;
 }
 
@@ -5138,8 +5209,13 @@ function startGameWithAbility(ability) {
   // handed to the player by Raena during the P2→P3 transition in
   // the Varimatras encounter, so the starter deck no longer needs
   // the placeholder pile.)
-  // Add class power
+  // Add class power. ccgQuest+ also bumps the power so Take Aim+
+  // / Cleave+ / etc. carry the upgraded name suffix AND the
+  // gamePlusOffset rewrite (e.g. "Gain 2 Heroism" at offset 1).
   const power = getClassPower(selectedClass);
+  if (playerTierOffset > 0 && power && power.gamePlusOffset) {
+    applyGamePlusOffsetInPlace(power, playerTierOffset);
+  }
   player.addPower(power);
 
   // Initialize map
@@ -10413,6 +10489,7 @@ function advanceEncounterPhase() {
         const swapped = resolveCompanionCardForTierOffset(rawCardId);
         if (swapped === null) continue;
         const cardId = swapped;
+        const wasCompanionSwap = (swapped !== rawCardId);
         if (GATED_LOOT.has(cardId) && !isThroneSpecter && Math.random() >= 0.5) {
           continue;
         }
@@ -10427,6 +10504,12 @@ function advanceEncounterPhase() {
           const creator = CARD_REGISTRY[cardId];
           if (creator) {
             const card = creator();
+            // Mark companion-tier swaps so addLootedCard skips the
+            // generic playerTierOffset bump (the tier swap already
+            // moved Thorb → Thorb T2 / T3; bumping again would
+            // re-stamp a "+" on a card whose tier is set by the
+            // swap chain).
+            if (wasCompanionSwap) card._companionTierSwapped = true;
             addLootedCard(card);
             phase._lootedCards.push(card);
           }
@@ -10508,15 +10591,23 @@ function setupEnemyForCombat(enemyId) {
     prison_guards: () => {
       enemy = new Character('Kobold Warden');
       enemy.deck = new Deck();
-      enemy.shield = 4;
+      // Monster tier offset bumps the warden's setup: +4 starting
+      // Shield per offset (4 → 8 → 12…) AND +1 starting Kobold
+      // Guard per offset (2 → 3 → 4…). The Guard stat bumps come
+      // from CREATURE_TIER_OFFSET['Kobold Guard'] via the wrapped
+      // addCreature in applyMonsterTierOffsetToEnemy.
+      const off = monsterTierOffset || 0;
+      enemy.shield = 4 + 4 * off;
       for (let i = 0; i < 6; i++) enemy.deck.addCard(createGuards());
       // Warden's Whip is the single canonical warden whip — same card
       // the player loots after the fight (1 dmg + 1 ally heroism).
       for (let i = 0; i < 6; i++) enemy.deck.addCard(createWardensWhip());
       for (let i = 0; i < 4; i++) enemy.deck.addCard(createHideInCorner());
-      // 2 guard creatures
-      enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
-      enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
+      // Base 2 guard creatures, +1 per monster tier offset.
+      const guardCount = 2 + off;
+      for (let i = 0; i < guardCount; i++) {
+        enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
+      }
     },
     dire_rat: () => {
       enemy = new Character('Dire Rat');
@@ -10543,12 +10634,17 @@ function setupEnemyForCombat(enemyId) {
       // Thorb fights at the player's side in the corner-cell rescue. Matches
       // PY: `if encounter.id == "corner_cell": player.add_creature(thorb)`.
       // He arrives ready to act on the player's first turn (no summoning
-      // sickness, since he was already there waiting to be freed).
+      // sickness, since he was already there waiting to be freed). In a
+      // ccgQuest+ run the rescue grants the tier-up Thorb card via
+      // resolveCompanionCardForTierOffset — the in-fight Thorb has to
+      // match so the loot-screen card lines up with the ally you just
+      // fought beside.
       if (currentEncounter && currentEncounter.id === 'corner_cell') {
-        const thorb = new Creature({
-          name: 'Thorb', attack: 2, maxHp: 4, isCompanion: true,
-          description: 'Turn End: +Shield',
-        });
+        const off = playerTierOffset || 0;
+        let thorb;
+        if (off >= 2)      thorb = createThorbTier3Creature();
+        else if (off >= 1) thorb = createThorbUpgradedCreature();
+        else               thorb = createThorbCreature();
         thorb.exhausted = false; thorb.justSummoned = false;
         player.addCreature(thorb);
       }
@@ -10578,10 +10674,16 @@ function setupEnemyForCombat(enemyId) {
     // enemy turn. Matches PY's create_kobold_backup() power.
     enemy.addPower(createKoboldBackup());
     // Start with 1 Kobold Guard already ready to attack (matches PY).
-    const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
-    guard.exhausted = false;
-    guard.justSummoned = false;
-    enemy.addCreature(guard);
+    // ccgQuest+ adds +1 starting guard per monster tier offset (1
+    // → 2 → 3…) so the opening read scales with the rest of the
+    // monster setup.
+    const baseGuards = 1 + (monsterTierOffset || 0);
+    for (let g = 0; g < baseGuards; g++) {
+      const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
+      guard.exhausted = false;
+      guard.justSummoned = false;
+      enemy.addCreature(guard);
+    }
     // Log so the player sees the guard is present from turn 1.
     // Skip when the codex sandbox is scanning enemy setups — the
     // setTimeout would otherwise fire after the sandbox clears and
@@ -12446,7 +12548,7 @@ function handleEncounterChoiceClick(x, y) {
 
       case 'shrine_ability_card': {
         // Lost Shrine grants a class ability card. Route through ABILITY_SELECT.
-        abilityChoices = getAbilityChoices(selectedClass, 3);
+        abilityChoices = getOffsetAbilityChoices(selectedClass, 3);
         shrineAbilityMode = true;
         // Deactivate the shrine node now — praying is a one-time gift.
         const node = currentMap.getCurrentNode();
@@ -12467,7 +12569,7 @@ function handleEncounterChoiceClick(x, y) {
           gold -= cost;
           addLog(`Donated ${cost} gold at the Chapel`, Colors.GOLD);
         }
-        abilityChoices = getAbilityChoices(selectedClass, 3);
+        abilityChoices = getOffsetAbilityChoices(selectedClass, 3);
         churchAbilityMode = true;
         const node = currentMap.getCurrentNode();
         if (node) { node.isDone = true; node.canRevisit = false; }
@@ -12482,7 +12584,7 @@ function handleEncounterChoiceClick(x, y) {
         // class-specific tier-1 ability pick AND queues the Old God's
         // Blessing buff for the next combat. Statue is a one-time
         // gift — node is marked done after.
-        abilityChoices = getAbilityChoices(selectedClass, 3);
+        abilityChoices = getOffsetAbilityChoices(selectedClass, 3);
         prayStatueMode = true;
         const node = currentMap.getCurrentNode();
         if (node) { node.isDone = true; node.canRevisit = false; }
@@ -12773,7 +12875,7 @@ function handleEncounterChoiceClick(x, y) {
       if (r.choice.effectType === 'pray_cathedral') {
         cathedralPrayed = true;
         cathedralPrayMode = true;
-        abilityChoices = getAbilityChoices(selectedClass, 3, 2);
+        abilityChoices = getOffsetAbilityChoices(selectedClass, 3, 2);
         // Stamp 'pray_cathedral' as exhausted on the node so the
         // gray-out persists across saves + revisits, and on the
         // in-memory encounter so the next render reflects it.
@@ -13115,6 +13217,11 @@ function resolveSearchClearing(choice) {
   const scout = createDwarvenScoutCard();
   loot.push(scout);
   addLog('Korgan the Dwarven Scout joins your party!', Colors.GOLD);
+  // ccgQuest+ — stamp playerTierOffset on every salvaged card so the
+  // clearing search matches the rest of the run's scaling.
+  if (playerTierOffset > 0) {
+    for (const c of loot) applyGamePlusOffsetInPlace(c, playerTierOffset);
+  }
   for (const c of loot) player.deck.addCard(c, true);
   choice._lootItems = loot;
   choice._lootGold = goldAmt;
@@ -13141,6 +13248,10 @@ function resolveSearchCamp(choice) {
     }
     loot.push(available[pickedIdx].creator());
     available.splice(pickedIdx, 1);
+  }
+  // ccgQuest+ — stamp playerTierOffset on every salvaged card.
+  if (playerTierOffset > 0) {
+    for (const c of loot) applyGamePlusOffsetInPlace(c, playerTierOffset);
   }
   for (const c of loot) player.deck.addCard(c, true);
   choice._lootItems = loot;
@@ -13173,6 +13284,8 @@ function markKitchenDone() {
 function resolveKitchenTalk(choice) {
   kitchenChoiceMade = 'talk';
   const leg = createChickenLeg();
+  // ccgQuest+ — stamp the player tier offset so the meal scales.
+  if (playerTierOffset > 0) applyGamePlusOffsetInPlace(leg, playerTierOffset);
   player.deck.addCard(leg, true);
   choice._lootItems = [leg];
   playSound('gold');
@@ -13205,6 +13318,9 @@ function resolvePrisonSnatch(choice) {
     const rolled = rollLootTable('gear_barrel_loot');
     const card = rolled && rolled[0];
     if (card) {
+      // ccgQuest+ — stamp the player tier offset on the salvaged
+      // gear so the barrel keeps pace with the rest of the run.
+      if (playerTierOffset > 0) applyGamePlusOffsetInPlace(card, playerTierOffset);
       player.deck.addCard(card, true);
       choice._lootItems = [card];
       prisonBarrelLooted = true;
@@ -14326,10 +14442,11 @@ function handleEncounterLootClick() {
       _lastMusicNodeId = null;
     }
     // Level up: offer ability choices at the matching tier. Falls back
-    // to tier 1 if the class has no tier-N choices wired yet.
-    let choices = getAbilityChoices(selectedClass, 3, tier);
+    // to tier 1 if the class has no tier-N choices wired yet. Routes
+    // through getOffsetAbilityChoices so ccgQuest+ stamps the picks.
+    let choices = getOffsetAbilityChoices(selectedClass, 3, tier);
     if (choices.length < 3 && tier > 1) {
-      choices = getAbilityChoices(selectedClass, 3, 1);
+      choices = getOffsetAbilityChoices(selectedClass, 3, 1);
     }
     abilityChoices = choices;
     // Tier 2 (Tharnag arrival): upgrade Thorb / Raena cards to their
@@ -21151,15 +21268,17 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
 // Pick a valid random enemy target for RANDOM_ENEMY effects. Excludes
 // invulnerable bosses (e.g. The 3 Ancestors shell) and vanished
 // enemies (Slyblade's Vanish power flips _invulnerable on-hit).
-// Prefers alive enemy creatures; falls back to the boss character
-// only when it is itself a legal target. Returns null if there are
-// no legal targets.
+// Every legal target — the boss character AND every alive enemy
+// creature — goes into one flat pool with equal weight, so Frost
+// Drake Scale / Wand of Fire / Sturdy Boots defense / Torch scry
+// can land on the boss even when its creatures are still standing.
+// Returns null if there are no legal targets.
 function pickRandomEnemyTargetForEffect() {
   if (!enemy) return null;
   const pool = (enemy.creatures || []).filter(c => c && c.isAlive && !c._invulnerable);
-  if (pool.length > 0) return pool[Math.floor(Math.random() * pool.length)];
-  if (enemy.isAlive && !enemy._invulnerable) return enemy;
-  return null;
+  if (enemy.isAlive && !enemy._invulnerable) pool.push(enemy);
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // --- Resolve a single effect on a target ---
@@ -21648,17 +21767,10 @@ function resolveEffect(eff, caster, target) {
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
-      // Lose half the caster's shield (rounded down) AFTER the swing —
-      // 3 shields drops 1 (keeps 2), 4 drops 2 (keeps 2). The card
-      // text frames it as "Lose Half Shield" without specifying the
-      // rounding so newer players don't have to read fine print.
-      if (caster.shield > 0) {
-        const lost = Math.floor(caster.shield / 2);
-        if (lost > 0) {
-          caster.shield -= lost;
-          addLog(`  Lose ${lost} Shield (S:${caster.shield})`, Colors.GRAY);
-        }
-      }
+      // (The original "Lose Half Shield" tax after the swing was
+      // reverted — shield_bash now keeps its full stack, matching
+      // the pre-nerf behavior for both Shield Bash and the White
+      // Dragonscale Shield.)
       break;
     }
     case 'multi_damage': {
@@ -23477,15 +23589,16 @@ function resolveEffect(eff, caster, target) {
     case 'summon_tamed_rat': {
       // Rat Taming: 50% chance summon Dire Rat(s) (2/2, armor 1,
       // Bloodfrenzy), otherwise summon Tamed Rats. Per playerTierOffset:
-      //   Dire branch: 1 + offset Dire Rats (1 → 2 → 3…), each scaled
-      //     via CREATURE_TIER_OFFSET['Dire Rat'] (+2/+2 per offset).
+      //   Dire branch: random 1..(1+offset) Dire Rats (base 1, then
+      //     1-2 at +1, 1-3 at +2…), each scaled via
+      //     CREATURE_TIER_OFFSET['Dire Rat'] (+2/+2 per offset).
       //   Tamed branch: 1 + offset bumps the max roll (1-3 → 1-4 → 1-5…),
       //     each Tamed Rat scaled via CREATURE_TIER_OFFSET['Tamed Rat']
       //     (+1/+1 per offset).
       const off = playerTierOffset || 0;
       const summonDire = Math.random() < 0.5;
       if (summonDire) {
-        const direCount = 1 + off;
+        const direCount = 1 + Math.floor(Math.random() * (1 + off));
         let summoned = 0;
         let lastDire;
         for (let i = 0; i < direCount; i++) {
@@ -25408,15 +25521,20 @@ function resolveMultiTargeting() {
   }
 
   if (feralSwipeMode) {
-    // Feral Swipe: 1 damage + heroism per target. _activePlayCard was
-    // stamped in enterFeralSwipeTargeting so the SFX classifier still
-    // sees the card here.
+    // Feral Swipe: base per-hit damage comes from the card's
+    // feral_swipe_damage effect (2 base, +1 per offset via
+    // gamePlusOffset.feral_swipe_damage). Plus heroism on top.
+    // Was hardcoded to 1 here, so Feral Swipe+ at offset 1 was
+    // silently dropping back to base 1-dmg hits (e.g. "+1 heroism
+    // only deals 2 dmg" instead of the expected 4).
     let heroismBonus = player.heroism;
     if (heroismBonus > 0) {
       player.heroism = 0;
       addLog(`  Heroism! +${heroismBonus} damage per hit`, Colors.GOLD);
     }
-    let hitDmg = 1 + heroismBonus;
+    const fsEff = (card.currentEffects || []).find(e => e.effectType === 'feral_swipe_damage');
+    const fsBase = fsEff ? (fsEff.value || 1) : 1;
+    let hitDmg = fsBase + heroismBonus;
     // Ice on the player reduces the swing once + burns 1 stack
     // (same one-attack semantics as Cleave / single-target damage).
     hitDmg = consumeIceForAttack(player, hitDmg);
@@ -27799,10 +27917,21 @@ function startEnemyTurn() {
   if (enemy && Array.isArray(enemy.powers)) {
     for (const power of enemy.powers) {
       if (power.id === 'kobold_backup') {
-        const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
-        enemy.addCreature(guard);
-        addLog(`  Kobold Backup! A new guard joins the fight.`, Colors.RED);
-        playSound('kobold_attack', 0.6);
+        // Random 1..(1+offset) guards per tick (base 1, then 1-2 at +1,
+        // 1-3 at +2…). Each guard scales via CREATURE_TIER_OFFSET
+        // (the wrapped enemy.addCreature handles the +1/+1/+1 bumps).
+        const maxGuards = 1 + (monsterTierOffset || 0);
+        const numGuards = 1 + Math.floor(Math.random() * maxGuards);
+        let summoned = 0;
+        for (let g = 0; g < numGuards; g++) {
+          const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
+          if (!enemy.addCreature(guard)) break; // 12-ally cap
+          summoned++;
+        }
+        if (summoned > 0) {
+          addLog(`  Kobold Backup! ${summoned} new guard${summoned > 1 ? 's join' : ' joins'} the fight.`, Colors.RED);
+          playSound('kobold_attack', 0.6);
+        }
       } else if (power.id === 'amalgam') {
         // Per PY: if any living Bone Amalgam ally exists, buff each by
         // +1 atk and +1 max HP (also healing the new HP). Otherwise
@@ -32803,9 +32932,9 @@ function triggerDebugLevelUp() {
   // otherwise tier 1. Falls back to tier 1 if the class has no
   // tier-2 abilities yet so the picker is never empty.
   const tier = throneAudienceComplete ? 2 : 1;
-  let choices = getAbilityChoices(selectedClass, 3, tier);
+  let choices = getOffsetAbilityChoices(selectedClass, 3, tier);
   if (choices.length < 3 && tier > 1) {
-    choices = getAbilityChoices(selectedClass, 3, 1);
+    choices = getOffsetAbilityChoices(selectedClass, 3, 1);
   }
   abilityChoices = choices;
   levelUpAbilityMode = true;
@@ -35456,8 +35585,12 @@ function restoreFromSave(data) {
     if (c) player.deck.discardPile.push(c);
   }
 
-  // Add class power
+  // Add class power. Re-apply ccgQuest+ offset on load so saved
+  // runs come back with Take Aim+ etc. intact.
   const power = getClassPower(selectedClass);
+  if (playerTierOffset > 0 && power && power.gamePlusOffset) {
+    applyGamePlusOffsetInPlace(power, playerTierOffset);
+  }
   player.addPower(power);
 
   // Restore level, perks, and deck-limit bonuses.
@@ -36818,7 +36951,7 @@ function handleChapterEndClick(_x, _y) {
     // Kick off the level-up ability selection (tier 1 — matches the game
     // start). The existing handleAbilitySelectClick routes to PERK_SELECT
     // when level >= 2, and we hook the deck tutorial in at perk-pick time.
-    abilityChoices = getAbilityChoices(selectedClass, 3);
+    abilityChoices = getOffsetAbilityChoices(selectedClass, 3);
     playSound('level_up_screen', 0.7);
     state = GameState.ABILITY_SELECT;
   }
@@ -38918,7 +39051,11 @@ function drawCodexCardGrid(L) {
     // preview survives mouse moves over other cards.
     const canHoverSet = !isShiftFrozen();
     if (entry.kind === 'card') {
-      drawCard(entry.card, x, y, cardW, cardH, codexSelectedCard === entry.card, hovered, codexShowFull ? 'full' : 'small');
+      // Selection highlight compares against the RAW base card (the
+      // click area stores rawEntry, not the stamped preview). Without
+      // this the highlight breaks at offset > 0 since preview cards
+      // are fresh clones every frame.
+      drawCard(entry.card, x, y, cardW, cardH, codexSelectedCard === rawEntry.card, hovered, codexShowFull ? 'full' : 'small');
       if (hovered && canHoverSet) hoveredCardPreview = entry.card;
     } else if (entry.kind === 'power') {
       // Power: render via drawPowerCard at small, drawPowerPreviewCard at full
@@ -38934,7 +39071,10 @@ function drawCodexCardGrid(L) {
       else drawCreatureCard(entry.card, { x, y, w: cardW, h: cardH }, isPlayerSide, false, true);
       if (hovered && canHoverSet) hoveredCreaturePreview = entry.card;
     }
-    codexClickAreas.push({ x, y, w: cardW, h: cardH, kind: 'select-card', entry });
+    // Store the RAW entry (base card / power / creature) so the stats
+    // panel can apply codexTierOffset cleanly. Storing the already-
+    // stamped previewCard would double-stamp (Kobold Backup+ → ++).
+    codexClickAreas.push({ x, y, w: cardW, h: cardH, kind: 'select-card', entry: rawEntry });
     // ccgQuest+ TOffset preview — red border + "+N?" badge flag
     // that no offset RULES are wired yet (the card's name + tier
     // already show the upgrade above). When real per-card offset
@@ -39672,6 +39812,9 @@ function perkToCardLike(perk) {
     subtype: 'ability',
     cardType: CardType.ABILITY,
     rarity: perk.unique ? 'uncommon' : 'common',
+    // Mirror the perk's tier onto the pseudo-card so the tier badge in
+    // drawCard reflects the ccgQuest+ stamp (Prepared+ → tier 2 etc.).
+    tier: perk.tier || 1,
     _isPerk: true,
     _perkUnique: !!perk.unique,
     _perkOriginal: perk,
@@ -41575,6 +41718,7 @@ function handleCodexClick(x, y) {
 // === Init ===
 loadTutorialState();
 loadGamePlusUnlock();
+loadGamePlusToggle();
 loadOptionsFromStorage();
 loadAssets().then(() => {
   requestAnimationFrame(gameLoop);

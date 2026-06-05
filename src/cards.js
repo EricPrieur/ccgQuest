@@ -306,8 +306,8 @@ export function createBoneDagger() {
 export function createWhiteDragonscaleShield() {
   return new Card({
     id: 'white_dragonscale_shield', name: 'White Dragonscale Shield',
-    description: 'Recharge -> Gain 4 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.\nLose Half Shield.',
-    shortDesc: 'R->+4 Shield\nIce -> Shield\nDmg = Shield\nLose 1/2 Shield',
+    description: 'Recharge -> Gain 4 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.',
+    shortDesc: 'R->+4 Shield\nIce -> Shield\nDmg = Shield',
     subtype: 'light_armor',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
@@ -750,8 +750,8 @@ export function createShieldBash() {
   return new Card({
     id: 'shield_bash',
     name: 'Shield Bash',
-    description: 'Recharge -> Gain 1 Shield,\nDeal damage = Shield.\nLose Half Shield.',
-    shortDesc: 'R->+1 Shield\nDmg=Shield\nLose 1/2 Shield',
+    description: 'Recharge -> Gain 1 Shield,\nDeal damage = Shield.',
+    shortDesc: 'R->+1 Shield\nDmg=Shield',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -2386,6 +2386,9 @@ export function createChickenLeg() {
       turnsPerCombat: 2,
       description: 'Heal 2 each turn for 2 turns (each combat, until rest)',
     },
+    // +2 on-play heal per offset; the meal's per-turn heal is bumped
+    // by a custom chicken_leg handler in applyGamePlusOffsetInPlace.
+    gamePlusOffset: { heal: 2, chicken_leg_meal: 1 },
   });
 }
 
@@ -3695,6 +3698,7 @@ export function createSpearThrow() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     priority: 30,
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -3709,6 +3713,7 @@ export function createIcyBreath() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY)],
     priority: 10,
+    gamePlusOffset: { apply_ice: 1 },
   });
 }
 
