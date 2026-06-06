@@ -443,6 +443,8 @@ export function createAncientWhite() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Ice -> Shield',
+    // Conversion rule is binary — there's no numeric value to scale.
+    noTierOffset: true,
   });
 }
 
@@ -506,6 +508,13 @@ export function createDarkVisionPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Scry 3\nDiscard Best',
+    // ccgQuest+: per offset Scry depth grows by +2 and the
+    // number of cards forced to discard grows by +1. Custom
+    // power handler in main.js reads monsterTierOffset to
+    // resolve the actual N values at fire time; this entry
+    // only exists so the codex stops flagging the power red
+    // (cardHasOffsetRules accepts a non-null gamePlusOffset).
+    gamePlusOffset: {},
   });
 }
 
@@ -539,6 +548,8 @@ export function createEthereal() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Max 1 dmg\ntaken / hit',
+    // The 1-dmg clamp is binary, not numeric — no tier scaling.
+    noTierOffset: true,
   });
 }
 
@@ -550,6 +561,8 @@ export function createBrute() {
     id: 'brute',
     name: 'Brute',
     costDescription: 'Passive',
+    // +1 dmg taken + on-hit draw — both already binary triggers.
+    noTierOffset: true,
     // Lead with "On Hit:" so the perk-badge tokenizer in main.js
     // catches the prefix and renders the pill. The +1-damage clause
     // sits below as the passive footnote.

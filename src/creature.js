@@ -33,6 +33,11 @@ export class Creature {
     endTurnHeroismAllies = 0,
     description = '',
     sourceCard = null,
+    // Codex opt-out — flagged true on companion-chain summons
+    // (Thorb / Raena / Valdrisa) and special-scaling creatures
+    // (Ice Elemental's Ice-Absorb math) so the "needs rules" red
+    // badge in the codex stays off. Read by creatureHasOffsetRules.
+    noTierOffset = false,
   }) {
     this.name = name;
     this.attack = attack;
@@ -97,6 +102,7 @@ export class Creature {
 
     this.description = description;
     this.sourceCard = sourceCard;
+    this.noTierOffset = noTierOffset;
     this.slot = -1;
   }
 

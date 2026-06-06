@@ -416,10 +416,15 @@ export function createWhiteDragonEgg() {
       const c = new Creature({
         name: 'White Dragon Egg', attack: 0, maxHp: 3, armor: 3,
         description: 'Cannot attack. When Attacked: Attacker gains 1 Ice.',
+        noTierOffset: true,
       });
       c._cantAttack = true;
       return c;
     })(),
+    // The egg's payoff is the hatch transformation (Wyrmling), not
+    // a tier-scaling stat sheet — explicitly opt out so the codex
+    // doesn't paint the red "needs rules" badge.
+    noTierOffset: true,
   });
 }
 
@@ -672,7 +677,8 @@ export function createPetSpider() {
     previewCard: createVialOfPoison(),
     // +1 max spiders summoned per offset (1-2 → 1-3 → 1-4…). Each
     // spider is +1/+1 via CREATURE_TIER_OFFSET['Pet Spider']; the
-    // hover preview rescales the creature automatically.
+    // hover preview rescales the creature automatically. Card name
+    // / tier still get the standard "+" suffix on top.
     gamePlusOffset: { summon_small_spider: 1 },
   });
 }
@@ -966,6 +972,8 @@ export function createRaenaCard() {
     isUnique: true,
     tier: 1,
     previewCreature: createRaenaCreature(),
+    // Companion card — offset system swaps tier chain ids.
+    noTierOffset: true,
   });
 }
 
@@ -994,6 +1002,8 @@ export function createRaenaCard2() {
     isUnique: true,
     tier: 2,
     previewCreature: createRaenaUpgradedCreature(),
+    // Companion card — offset system swaps tier chain ids.
+    noTierOffset: true,
   });
 }
 
@@ -1023,6 +1033,8 @@ export function createRaenaCardTier3() {
     isUnique: true,
     tier: 3,
     previewCreature: createRaenaTier3Creature(),
+    // Top of the Raena tier chain — no further offset stamping.
+    noTierOffset: true,
   });
 }
 
@@ -1374,11 +1386,11 @@ export function createTamedRat() {
     // Both possible summons render in the hover side-preview
     // (50/50: 1-3 Tamed Rats vs 1 Dire Rat).
     previewCreatures: [createTamedRatCreature(), createDireRatCreature()],
-    // Tamed branch: +1 to max roll per offset (1-3 → 1-4 → 1-5…).
-    // Dire branch: +1 Dire Rat per offset (1 → 2 → 3…). Stats scale
-    // via CREATURE_TIER_OFFSET (Tamed Rat +1/+1, Dire Rat +2/+2).
-    // Custom tamed_rat handler rebuilds the description with the
-    // explicit ranges; runtime reads playerTierOffset directly.
+    // +1 max Tamed Rat per offset (tamed branch 1-3 → 1-4 → 1-5…),
+    // +0.5 max Dire Rats per offset (dire branch 1 → 1 → 1-2 → 1-2
+    // → 1-3…). Stats scale via CREATURE_TIER_OFFSET (+1/+1 Tamed,
+    // +2/+2 Dire). Runtime reads playerTierOffset directly for
+    // both branches; this annotation marks the card as scalable.
     gamePlusOffset: { tamed_rat_summon: 1 },
   });
 }
@@ -1558,6 +1570,8 @@ export function createIceShatter() {
     ],
     characterClass: ['wizard'], tier: 2,
     rarity: 'epic',
+    // Damage already scales with the Ice stacks consumed, not tier.
+    noTierOffset: true,
   });
 }
 
@@ -1581,6 +1595,7 @@ export function createColdBreath() {
     tier: 2,
     rarity: 'epic',
     priority: 50,
+    gamePlusOffset: { apply_ice_all: 2 },
   });
 }
 
@@ -1598,6 +1613,7 @@ export function createVarimatrasBite() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { damage: 3, apply_ice: 1 },
   });
 }
 
@@ -1615,6 +1631,7 @@ export function createVarimatrasClaw() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { damage_random_split: 2 },
   });
 }
 
@@ -1631,6 +1648,7 @@ export function createVarimatrasTail() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { damage_all: 1 },
   });
 }
 
@@ -1651,6 +1669,7 @@ export function createVarimatrasWing() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { apply_ice_creatures_all: 1 },
   });
 }
 
@@ -1674,6 +1693,7 @@ export function createVarimatrasScale() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { block: 5 },
   });
 }
 
@@ -2590,6 +2610,11 @@ export function createFrogNursery() {
     previewCreature: createPlayerBabyFrogCreature(),
     rarity: 'rare',
     tier: 1,
+    // +1 block, +1 max baby frog per offset. The Baby Giant Frog
+    // creature scales via CREATURE_TIER_OFFSET (+1/+1 atk/hp); since
+    // the explosion damage echoes the frog's own attack stat, the
+    // hp+atk bump naturally raises the AoE damage too.
+    gamePlusOffset: { block: 1, summon_player_baby_frogs: 1 },
   });
 }
 
@@ -2680,6 +2705,8 @@ export function createHarpyFeather() {
     ],
     rarity: 'epic',
     tier: 1,
+    // +0.5 draw per offset (floored): +2 base, +0 at off 1, +1 at off 2, etc.
+    gamePlusOffset: { on_discard: 0.5 },
   });
 }
 
@@ -2775,11 +2802,18 @@ export function createHarpyScreamingCharm() {
 // the snagged card returns to the player's discard pile. Hovering
 // the tentacle in combat surfaces the snagged card.
 export function createKrakenTentacleCreature() {
-  return new Creature({
+  const c = new Creature({
     name: 'Tentacle', attack: 3, maxHp: 5,
     onAttackSnagCard: true,
     description: 'On Attack: snag 1 random card from your hand.',
   });
+  // Tentacle is summoned by Kraken Spawn's deck cards (Tentacle Grab,
+  // Tentacle Block, Tentacle). Those cards live in CARD_REGISTRY for
+  // codex visibility, but the previewCreature stamper would otherwise
+  // tag this creature as a player summon. Pre-stamp the side so the
+  // codex Summons tab routes it to the enemy column.
+  c._codexSide = 'enemy';
+  return c;
 }
 
 // Tentacle Grab — Kraken card. Each play summons a fresh Tentacle
@@ -2806,6 +2840,10 @@ export function createTentacleGrab() {
     ],
     previewCreature: createKrakenTentacleCreature(),
     rarity: 'epic',
+    // Tentacles spawn at a fixed shape; the Kraken Spawn's pressure
+    // scales through deck multiplication (more Tentacle Grabs / Whip
+    // / Bite) rather than per-card bumps.
+    noTierOffset: true,
   });
 }
 
@@ -2828,6 +2866,7 @@ export function createKrakenTentacleCard() {
     ],
     previewCreature: createKrakenTentacleCreature(),
     rarity: 'epic',
+    noTierOffset: true,
   });
 }
 
@@ -2852,6 +2891,7 @@ export function createKrakenTentacleBlock() {
     ],
     previewCreature: createKrakenTentacleCreature(),
     rarity: 'epic',
+    noTierOffset: true,
   });
 }
 
@@ -2873,6 +2913,7 @@ export function createInkCloud() {
       new CardEffect('apply_ink_cloud_all', 3, TargetType.ALL_ENEMIES),
     ],
     rarity: 'epic',
+    gamePlusOffset: { apply_ink_cloud_all: 1 },
   });
 }
 
@@ -2896,6 +2937,7 @@ export function createSwallowingBite() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'epic',
+    gamePlusOffset: { damage_minus_hand_count: 3 },
   });
 }
 
@@ -2918,6 +2960,7 @@ export function createKrakenWhip() {
       new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
     ],
     rarity: 'epic',
+    gamePlusOffset: { damage_all: 1, buff_allies_heroism: 1 },
   });
 }
 
@@ -2986,6 +3029,7 @@ export function createTentacleWhip() {
     ],
     rarity: 'epic',
     tier: 1,
+    gamePlusOffset: { apply_bleed_all: 1, buff_allies_heroism: 1 },
   });
 }
 
@@ -2996,8 +3040,8 @@ export function createSailorsLuckyCompass() {
   return new Card({
     id: 'sailors_lucky_compass',
     name: "Sailor's Lucky Compass",
-    description: 'On Draw: Gain Heroism.',
-    shortDesc: 'On Draw:\nHeroism',
+    description: 'On Draw: Gain 1 Heroism.',
+    shortDesc: 'On Draw:\n+1 Heroism',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
@@ -3005,6 +3049,7 @@ export function createSailorsLuckyCompass() {
     rarity: 'epic',
     tier: 1,
     unplayable: true,
+    gamePlusOffset: { on_draw_heroism: 0.5 },
   });
 }
 
@@ -3109,8 +3154,8 @@ export function createLuckyPebble() {
   return new Card({
     id: 'lucky_pebble',
     name: 'Lucky Pebble',
-    description: 'On Discard: Draw.',
-    shortDesc: 'On Discard:\nDraw',
+    description: 'On Discard: Draw 1.',
+    shortDesc: 'On Discard:\nDraw 1',
     subtype: 'relic',
     cardType: CardType.RELIC,
     // Plays for free (Recharge cost = no effect when played, just goes into
@@ -3120,6 +3165,8 @@ export function createLuckyPebble() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('on_discard_draw', 1, TargetType.SELF)],
     rarity: 'rare',
+    // +1/3 draw per offset — at offset 3 the pebble draws 2 on discard.
+    gamePlusOffset: { on_discard_draw: 1/3 },
   });
 }
 
@@ -3690,6 +3737,8 @@ export function createMimicTongue() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
+    // +0.5 poison per offset (floored).
+    gamePlusOffset: { apply_poison: 0.5 },
   });
 }
 
@@ -3854,6 +3903,7 @@ export function createTridentThrow() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('damaged_bonus_damage', 1, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 1, damaged_bonus_damage: 1 },
   });
 }
 
@@ -3873,6 +3923,7 @@ export function createTridentThrust() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('damaged_bonus_damage', 1, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 2, damaged_bonus_damage: 1 },
   });
 }
 
@@ -3913,6 +3964,9 @@ export function createBloodInTheWater() {
       new CardEffect('gain_rage', 1, TargetType.SELF),
     ],
     priority: 8,
+    // +1 to the upper-bound shark roll (1-2 → 1-3 → 1-4 …) and
+    // +0.5 rage gained per offset (1 base → 2 at offset 2 → …).
+    gamePlusOffset: { summon_shark_random: 1, gain_rage: 0.5 },
   });
 }
 
@@ -3935,6 +3989,9 @@ export function createSahuaginStaffEnemy() {
       new CardEffect('summon_shark', 1, TargetType.SUMMON),
     ],
     priority: 2,
+    // +1 dmg, +1 ice, +0.5 max shark per offset (floor — first
+    // extra shark lands at offset 2, second at offset 4…).
+    gamePlusOffset: { damage: 1, apply_ice: 1, summon_shark: 0.5 },
   });
 }
 
@@ -3998,6 +4055,7 @@ export function createBarnacleEncrustedPlateEnemy() {
       new CardEffect('heal_random', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 3, heal_random: 1 },
   });
 }
 
@@ -4018,6 +4076,8 @@ export function createPoisonedBite() {
       new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
     ],
+    // +1 dmg, +0.5 poison (floor) per offset.
+    gamePlusOffset: { damage: 1, apply_poison: 0.5 },
   });
 }
 
@@ -4025,12 +4085,15 @@ export function createWebSpider() {
   return new Card({
     id: 'web_spider',
     name: 'Web',
-    description: 'Recharge -> Throw a Web at the enemy. Clogs their deck with a Web token.',
-    shortDesc: 'R->Web enemy\n+1 clog',
+    description: 'Recharge -> Throw 1 Web at the enemy. Clogs their deck with a Web token.',
+    shortDesc: 'R->1 Web enemy\n+1 clog',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('add_web_token', 1, TargetType.SELF)],
+    // +1 web thrown per offset (the runtime handler reads eff.value
+    // and loops; mirrors how Sticky Web's summon count scales).
+    gamePlusOffset: { add_web_token: 1 },
   });
 }
 
@@ -4153,6 +4216,7 @@ export function createKoboldLockpickSet() {
     effects: [new CardEffect('scry_pick', 3, TargetType.SELF)],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { scry_pick: 1 },
   });
 }
 
@@ -4266,6 +4330,12 @@ export function createSummonAncestor() {
         haste: true,
         description: 'Haste. Attacks ALL enemies.' }),
     ],
+    // The card has no per-effect bump — the ccgQuest+ scaling lives
+    // on the ancestor creatures (Durin / Balgrim / Thordak), each
+    // wired in CREATURE_TIER_OFFSET. Empty `{}` is the explicit
+    // opt-in so the codex stamps the name/tier bump and drops the
+    // red "needs rules" badge.
+    gamePlusOffset: {},
   });
 }
 
@@ -4289,6 +4359,7 @@ export function createSpecterEctoplasm() {
     ],
     rarity: 'rare',
     tier: 2,
+    gamePlusOffset: { heal: 2 },
   });
 }
 
@@ -4362,6 +4433,7 @@ export function createCrush() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage', 3, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -4376,6 +4448,8 @@ export function createRockyAppendage() {
     costType: CostType.RECHARGE,
     // value 12 = base 1, bonus 2 (armor_bonus_damage value < 100 is base*10+bonus).
     effects: [new CardEffect('armor_bonus_damage', 12, TargetType.SINGLE_ENEMY)],
+    // +1 base damage and +1 vs Armor/Shield per offset.
+    gamePlusOffset: { armor_bonus_damage: { base: 1, bonus: 1 } },
   });
 }
 
@@ -4399,6 +4473,10 @@ export function createPullingBackTheRam() {
       new CardEffect('gain_rage', 1, TargetType.SELF),
       new CardEffect('stays_in_hand', 1, TargetType.SELF),
     ],
+    // The Siege Ogre's hand cycle is rate-limited by hand size, not
+    // by per-card Rage scaling; tier offset already bumps the
+    // resulting ram swing via the Massive Ogre Ram offset rule.
+    noTierOffset: true,
   });
 }
 
@@ -4426,6 +4504,7 @@ export function createDrakeRiderCharge() {
       new CardEffect('drake_attack', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 2, buff_allies_heroism: 1 },
     // The drake's reptilian roar plays alongside the showcase art when
     // the enemy fires this card. Wired via CARD_SFX_OVERRIDES in main.js.
   });
@@ -4469,6 +4548,7 @@ export function createFrostDrakeScale() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { apply_ice: 1 },
   });
 }
 
@@ -4514,6 +4594,10 @@ export function createPummel() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('enemy_sneak_attack', 0, TargetType.SINGLE_ENEMY)],
     priority: 1,
+    // +2 flat bonus damage per offset (X + 2 → X + 4…). The
+    // enemy_sneak_attack runtime adds eff.value as a flat bonus on
+    // top of the per-turn X count.
+    gamePlusOffset: { enemy_sneak_attack: 2 },
   });
 }
 
@@ -4532,6 +4616,12 @@ export function createDrainEssence() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('necrotic_drain', 4, TargetType.SINGLE_ENEMY)],
     priority: 10,
+    // +1 to both ends of the 1-N roll per offset. The card-level
+    // bump moves the max (effect value) up by 1; the necrotic_drain
+    // handler reads monsterTierOffset to shift the min so 1-4 reads
+    // 2-5 at offset 1, 3-6 at offset 2, etc. Custom branch in
+    // applyGamePlusOffsetInPlace rebuilds the description range.
+    gamePlusOffset: { necrotic_drain: 1 },
   });
 }
 
@@ -4554,6 +4644,9 @@ export function createObsidianCurse() {
       new CardEffect('damage_all_shard_count', 0, TargetType.ALL_ENEMIES),
     ],
     priority: 10,
+    // +1 shard wedged into the player's deck per cast per offset
+    // (snowballs harder at higher tier — same shape, more shards).
+    gamePlusOffset: { add_obsidian_shard: 1 },
   });
 }
 
@@ -4601,6 +4694,7 @@ export function createMoltenScaleRelic() {
     ],
     rarity: 'rare',
     tier: 2,
+    gamePlusOffset: { gain_ignite: 1 },
   });
 }
 
@@ -4816,6 +4910,7 @@ export function createTailSwipe() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES)],
+    gamePlusOffset: { damage_all: 1 },
   });
 }
 
@@ -4829,6 +4924,7 @@ export function createFireBreath() {
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('apply_fire_all', 3, TargetType.ALL_ENEMIES)],
+    gamePlusOffset: { apply_fire_all: 2 },
   });
 }
 
@@ -4845,6 +4941,7 @@ export function createMoltenBite() {
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_fire', 1, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 2, apply_fire: 1 },
   });
 }
 
@@ -4852,15 +4949,20 @@ export function createMoltenScaleArmor() {
   return new Card({
     id: 'molten_scale_armor',
     name: 'Molten Scale',
-    description: 'Recharge -> Block 2 + 1 Shield.',
-    shortDesc: 'R->Block 2, Shield',
+    // Draw rider added on all tiers — the base card was missing
+    // the cantrip that the rest of the dragon-rider defenses
+    // pull through their plays.
+    description: 'Recharge -> Block 2 + 1 Shield. Draw.',
+    shortDesc: 'R->Block 2, Shield, Draw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { block: 2, gain_shield: 1 },
   });
 }
 
@@ -4874,6 +4976,8 @@ export function createMagmaMephitSummonCard() {
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random', 2, TargetType.SUMMON)],
+    // +1 to max mephits per offset (1-2 → 1-3 → 1-4…).
+    gamePlusOffset: { summon_random: 1 },
   });
 }
 
@@ -5005,6 +5109,7 @@ export function createMimicBite() {
       new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 5, apply_poison: 1 },
   });
 }
 
@@ -5039,6 +5144,7 @@ export function createValdrisaCreature() {
   return new Creature({
     name: 'Valdrisa', attack: 2, maxHp: 4, isCompanion: true,
     description: '+2 vs Armor/Shield. Turn End: Heal 2 a random damaged ally.',
+    noTierOffset: true,
   });
 }
 
@@ -5053,6 +5159,7 @@ export function createValdrisaTier3Creature() {
     endTurnHealRandomAlly: 3,
     armorBonusOverride: 3,
     description: '+3 vs Armor/Shield. Turn End: Heal 3 a random damaged ally.',
+    noTierOffset: true,
   });
 }
 
@@ -5073,6 +5180,8 @@ export function createValdrisaCard() {
     tier: 2,
     isUnique: true,
     previewCreature: createValdrisaCreature(),
+    // Companion card — offset swaps tier chain ids.
+    noTierOffset: true,
   });
 }
 
@@ -5104,6 +5213,8 @@ export function createValdrisaCardTier3() {
     tier: 3,
     isUnique: true,
     previewCreature: createValdrisaTier3Creature(),
+    // Top of the Valdrisa tier chain — no further offset stamping.
+    noTierOffset: true,
   });
 }
 
@@ -5117,14 +5228,14 @@ export function createValdrisaCardTier3() {
 export function createObsidianSlimeSummonCreature() {
   return new Creature({
     name: 'Obsidian Slime', attack: 1, maxHp: 1, armor: 5,
-    description: '1 ATK (+2 vs Armor/Shield).',
+    description: '+2 vs Armor/Shield.',
   });
 }
 
 export function createObsidianConstructCreature() {
   return new Creature({
     name: 'Obsidian Construct', attack: 2, maxHp: 4, armor: 1, sentinel: true,
-    description: 'Sentinel. 2 ATK (+2 vs Armor/Shield).',
+    description: 'Sentinel. +2 vs Armor/Shield.',
   });
 }
 
@@ -5220,18 +5331,25 @@ export function createObsidianCore() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare', tier: 2,
+    gamePlusOffset: { grant_obsidian_buff: 2 },
   });
 }
 
 export function createObsidianSlimeCard() {
   return new Card({
     id: 'obsidian_slime_card', name: 'Obsidian Slime',
-    description: 'Recharge -> Summon 1 Obsidian Slime\n(1 ATK +2 vs Armor/Shield, 1 HP).',
+    description: 'Recharge -> Summon 1 Obsidian Slime.\n+2 vs Armor/Shield.',
     shortDesc: 'R->Summon\nObsidian Slime',
     subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_obsidian_slime', 1, TargetType.SUMMON)],
     rarity: 'rare', tier: 2,
     previewCreature: createObsidianSlimeSummonCreature(),
+    // +1 max Obsidian Slime per offset. Each spawned slime scales via
+    // CREATURE_TIER_OFFSET['Obsidian Slime'] (+1 atk / +1 hp / +1
+    // armor / +1 vs Armor-Shield bonus). Custom obsidian_slime_card
+    // branch in applyGamePlusOffsetInPlace rebuilds the description
+    // so it reads "Summon 1-N Obsidian Slimes. +X vs Armor/Shield."
+    gamePlusOffset: { summon_obsidian_slime: 1 },
   });
 }
 
@@ -5257,6 +5375,12 @@ export function createQueensLocket() {
     rarity: 'rare',
     tier: 2,
     isUnique: true,
+    // No per-effect bump — the random gift roll already mixes
+    // Shield / Heroism / Heal / Draw so the card scales by
+    // breadth rather than digits. Empty `{}` is the opt-in
+    // marker so the codex still stamps the name/tier bump and
+    // drops the red "needs rules" badge.
+    gamePlusOffset: {},
   });
 }
 
@@ -5275,6 +5399,10 @@ export function createThorbCreature() {
     maxHp: 4,
     isCompanion: true,
     description: 'Turn End: +Shield',
+    // Companion-chain creature — the upgraded / Tier-3 variants are
+    // distinct factories swapped in on loot, so per-tier creature
+    // scaling stays opt-out at the codex level.
+    noTierOffset: true,
   });
 }
 
@@ -5286,6 +5414,7 @@ export function createThorbUpgradedCreature() {
     sentinel: true,
     isCompanion: true,
     description: 'Sentinel. Turn End: +Shield',
+    noTierOffset: true,
   });
 }
 
@@ -5302,6 +5431,7 @@ export function createThorbTier3Creature() {
     isCompanion: true,
     shieldsAllAllies: true,
     description: 'Sentinel. Turn End: +Shield to ALL allies.',
+    noTierOffset: true,
   });
 }
 
@@ -5310,6 +5440,7 @@ export function createRaenaCreature() {
   return new Creature({
     name: 'Raena', attack: 2, maxHp: 3, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
+    noTierOffset: true,
   });
 }
 
@@ -5318,6 +5449,7 @@ export function createRaenaUpgradedCreature() {
   return new Creature({
     name: 'Raena', attack: 3, maxHp: 4, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
+    noTierOffset: true,
   });
 }
 
@@ -5327,6 +5459,7 @@ export function createRaenaTier3Creature() {
   return new Creature({
     name: 'Raena', attack: 5, maxHp: 5, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
+    noTierOffset: true,
   });
 }
 
@@ -5347,6 +5480,9 @@ export function createThorbCard() {
     isUnique: true,
     tier: 1,
     previewCreature: createThorbCreature(),
+    // Companion card — the offset system swaps to the next tier card
+    // via COMPANION_TIER_CHAINS rather than name-stamping this one.
+    noTierOffset: true,
   });
 }
 
@@ -5367,6 +5503,9 @@ export function createThorbUpgradedCard() {
     isUnique: true,
     tier: 2,
     previewCreature: createThorbUpgradedCreature(),
+    // Companion card — the offset system swaps tier chain ids
+    // rather than name-stamping this card.
+    noTierOffset: true,
   });
 }
 
@@ -5389,6 +5528,8 @@ export function createThorbTier3Card() {
     isUnique: true,
     tier: 3,
     previewCreature: createThorbTier3Creature(),
+    // Top of the Thorb tier chain — no further offset stamping.
+    noTierOffset: true,
   });
 }
 
@@ -5443,7 +5584,10 @@ function createDwarvenScoutCreature() {
     shield: 1,
     endTurnDamage: 1,
     isCompanion: true,
-    description: 'Turn End: 1 Dmg to random enemy',
+    // Compact phrasing — "to random enemy" overflowed the small
+    // preview box (Animal-Companion-style modal pick) at base sizes;
+    // dropping the article keeps the rider on one wrapped line.
+    description: 'Turn End: 1 Random Dmg',
   });
 }
 
@@ -5460,6 +5604,11 @@ export function createDwarvenScoutCard() {
     rarity: 'common',
     tier: 2,
     previewCreature: createDwarvenScoutCreature(),
+    // Card carries no numeric effect to bump — the offset just stamps
+    // the "+" / tier suffix on the card (helps the codex preview show
+    // the upgrade). The Dwarven Scout summon is what actually scales,
+    // via CREATURE_TIER_OFFSET (+1 atk / +1 hp / +1 turn-end damage).
+    gamePlusOffset: {},
   });
 }
 
@@ -5561,6 +5710,8 @@ export function createSahuaginEye() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'epic',
+    // +0.5 damage per offset (floored): +1 base, +1 at off 1, +2 at off 2, etc.
+    gamePlusOffset: { grant_eye_buff: 0.5 },
   });
 }
 
@@ -5610,6 +5761,11 @@ export function createWhirlpool() {
     ],
     priority: 7,
     rarity: 'rare',
+    // +0.5 stacks of Whirlpool per offset (floor) — more cards the
+    // player has to recharge on resolution. The apply_whirlpool
+    // handler also reads monsterTierOffset to bump the per-stack
+    // failure damage by +3 per offset.
+    gamePlusOffset: { apply_whirlpool: 0.5 },
   });
 }
 
@@ -5654,6 +5810,10 @@ export function createGnikansStaff() {
       const c = new Creature({
         name: 'Ice Elemental', attack: 1, maxHp: 1, iceAttack: 1,
         description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+        // Ice Elemental's scaling comes from the Ice consumed at
+        // cast time, not from tier offset — opt out of the codex
+        // "needs rules" badge entirely.
+        noTierOffset: true,
       });
       c._iceAbsorb = true;
       c._codexVariableStats = true;
@@ -5740,13 +5900,14 @@ export function createWolfFang() {
   return new Card({
     id: 'wolf_teeth',
     name: 'Wolf Fang',
-    description: 'On Recharge: Gain Heroism.',
-    shortDesc: 'On Recharge:\nGain Heroism',
+    description: 'On Recharge: Gain 1 Heroism.',
+    shortDesc: 'On Recharge:\n+1 Heroism',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('on_recharge_heroism', 1, TargetType.SELF)],
     rarity: 'rare',
     unplayable: true,
+    gamePlusOffset: { on_recharge_heroism: 0.5 },
   });
 }

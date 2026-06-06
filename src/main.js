@@ -179,6 +179,14 @@ let _fromGamePlusSetup = false;
 // until the player exits the rebalance rest (exitInventory consumes
 // the hook).
 let _gamePlusPendingStartNode = null;
+// Deferred ccgQuest+ slot-consumption. Stamped when the player
+// launches a Game+ run from a part1_complete save; cleared the first
+// time autosaveNow successfully writes, which marks the source slot
+// consumed. If the player bails back to the main menu before any
+// save fires (e.g. they realize offsets aren't right), the source
+// slot stays available in the Game+ picker — fixes the "Ranger
+// vanished from Game++ list" report.
+let _pendingGamePlusConsumeSlot = null;
 // Scroll offset for the Option 2 save list on the GAME_PLUS_SETUP
 // screen. Multiple class completions could pile up, so the list is
 // clipped to ~4 visible rows with mouse-wheel scrolling.
@@ -420,12 +428,50 @@ const EFFECT_DESC_PATTERNS = {
   gain_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
   buff_allies_heroism: [/Allies\s+gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Ally\s+Heroism/i, /(\d+)\s+Heroism/i],
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
+  damage_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  damaged_bonus_damage: [/\+(\d+)\s+if/i, /(\d+)\s+if\s+damaged/i],
+  heal_random: [/Heal\s+1-(\d+)/i, /Heal\s+(\d+)/i, /1-(\d+)/],
+  // Summon-range patterns target the upper bound of a "1-N" range so
+  // the swap doesn't accidentally hit unrelated numbers earlier in
+  // the description (Frog Nursery has both "Block 1" and "1-2 Baby
+  // Frogs" — without the context-aware pattern the fallback \b2\b
+  // would rewrite the already-bumped block value).
+  summon_player_baby_frogs: [/1-(\d+)\s+Baby/i, /1-(\d+)/, /Summon\s+(\d+)/i],
+  summon_obsidian_slime: [/1-(\d+)\s+Obsidian/i, /Summon\s+(\d+)/i],
+  summon_random: [/1-(\d+)/, /Summon\s+(\d+)/i],
+  summon_small_spider: [/1-(\d+)\s+Pet\s+Spiders/i, /1-(\d+)/],
   apply_poison: [/(\d+)\s+Poison/i],
   apply_poison_self: [/Gain\s+(\d+)\s+Poison/i],
   apply_poison_vs_armor: [/\+(\d+)\s+Poison/i, /(\d+)\s+Poison/i],
   scry_pick: [/Scry\s+(\d+)/i],
   unpreventable_damage: [/Deal\s+(\d+)\s+Unpreventable/i, /(\d+)\s+True\s+Dmg/i, /(\d+)\s+Unpreventable/i],
   grant_unpreventable_buff: [/next\s+(\d+)\s+attack/i, /Next\s+(\d+)/i],
+  // Relic effect types — most have a single "N <noun>" form in the
+  // description (Gain N Ignite, +N vs Armor, etc.). Patterns target
+  // the specific noun so the swap doesn't accidentally rewrite an
+  // unrelated number (the Draw 1 rider on Sahuagin Eye, etc.).
+  gain_ignite: [/Gain\s+(\d+)\s+Ignite/i, /(\d+)\s+Ignite/i],
+  on_recharge_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  on_draw_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  grant_eye_buff: [/\+(\d+)\s+damage/i, /\+(\d+)\s+Dmg/i],
+  grant_obsidian_buff: [/\+(\d+)\s+vs\s+Armor/i, /(\d+)\s+vs\s+Armor/i],
+  on_discard: [/Draw\s+(\d+)/i],
+  on_discard_draw: [/Draw\s+(\d+)/i],
+  // Varimatras / Kraken / boss-card additions.
+  apply_ice_all: [/(\d+)\s+Ice\b/i],
+  apply_ice_creatures_all: [/(\d+)\s+Ice\b/i],
+  apply_ink_cloud_all: [/(\d+)\s+Ink\s+Cloud/i, /\+(\d+)\s+Ink/i, /(\d+)\s+Ink/i],
+  gain_rage: [/Gain\s+(\d+)\s+Rage/i, /(\d+)\s+Rage/i],
+  damage_random_split: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  damage_minus_hand_count: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i, /(\d+)-hand/i],
+  apply_bleed_all: [/(\d+)\s+Bleed/i],
+  // Web spider — "Throw a Web" → "Throw 2 Webs" at offset 1. Pattern
+  // covers both the singular base form and the bumped plural form.
+  add_web_token: [/Throw\s+(\d+)\s+Web/i, /(\d+)\s+Web\b/i],
+  // Whirlpool stack count is implicit ("Whirlpool" with no number);
+  // when bumped past 1 the card description gets a stack count
+  // prefix via the custom branch in applyGamePlusOffsetInPlace.
+  // No pattern needed here — the swap won't fire for an empty base.
 };
 function swapInDescription(s, oldVal, newVal, etype) {
   if (typeof s !== 'string') return s;
@@ -447,6 +493,27 @@ function swapInDescription(s, oldVal, newVal, etype) {
 }
 function applyGamePlusOffsetInPlace(c, offset) {
   if (!c || !offset || offset <= 0) return c;
+  // Companion / summon cards opt OUT of the standard offset system:
+  // their power comes from the summoned creature scaling (via
+  // CREATURE_TIER_OFFSET) and / or a per-id tier chain (Thorb T1 →
+  // T2 → T3). Without this guard the card itself would still pick
+  // up a "+" suffix + tier bump + effect-value rewrite even though
+  // the actual scaling lives on the spawn.
+  if (c.noTierOffset === true) {
+    // Still rescale previewCreature(s) / previewCard so the codex
+    // hover thumbnails reflect the bumped summon — only the parent
+    // card's name / tier / effects skip.
+    if (c.previewCreature) {
+      c.previewCreature = applyTierOffsetToCreaturePreview(c.previewCreature, offset);
+    }
+    if (Array.isArray(c.previewCreatures) && c.previewCreatures.length) {
+      c.previewCreatures = c.previewCreatures.map(cr => applyTierOffsetToCreaturePreview(cr, offset));
+    }
+    if (c.previewCard) {
+      c.previewCard = applyTierOffsetToCardPreview(c.previewCard, offset);
+    }
+    return c;
+  }
   const suffix = gamePlusNameSuffix(offset);
   if (typeof c.name === 'string') c.name = `${c.name}${suffix}`;
   if (typeof c.tier === 'number') c.tier += offset;
@@ -474,9 +541,12 @@ function applyGamePlusOffsetInPlace(c, offset) {
     c.previewCard = applyTierOffsetToCardPreview(c.previewCard, offset);
   }
   if (c.gamePlusOffset && Array.isArray(c.effects)) {
-    // Fractional `per` (e.g. 1.5 for Wooden Axe) is floored AFTER
-    // multiplication so +1 offset = +1 dmg, +2 offset = +3 dmg, etc.
-    const scaledInc = (per) => Math.floor(per * offset);
+    // Fractional `per` (e.g. 1.5 for Wooden Axe, 1/3 for Lucky
+    // Pebble) is floored AFTER multiplication so +1 offset = +1 dmg,
+    // +2 offset = +3 dmg, etc. Tiny epsilon guards against the
+    // `(1/3) * 3 = 0.9999...` floating-point case so threshold
+    // bumps land cleanly on their stride.
+    const scaledInc = (per) => Math.floor((per * offset) + 1e-9);
     // armor_bonus_damage encoding: < 100 uses base*10 + vsArmorTotal
     // (single-digit each); >= 100 uses base*100 + vsArmorTotal so
     // vsArmorTotal can spill past 9. Mirrors the runtime decoder in
@@ -583,6 +653,42 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.description = `Recharge -> Summon 1-${maxRoll} Pet Slimes!`;
       c.shortDesc = `R->1-${maxRoll} Slimes`;
     }
+    // Obsidian Slime card — at offset > 0 the summon goes from 1
+    // (fixed) to 1-N (random). Also bump the vs Armor/Shield tail
+    // by +1 per offset (base +2). Rebuild from the scaled effect
+    // value + offset so both the count and the bonus line stay in
+    // sync without colliding with the generic swap.
+    if (c.id === 'obsidian_slime_card') {
+      const maxRoll = (c.effects.find(e => e.effectType === 'summon_obsidian_slime')?.value) || 1;
+      const armorBonus = 2 + offset;
+      if (maxRoll > 1) {
+        c.description = `Recharge -> Summon 1-${maxRoll} Obsidian Slimes.\n+${armorBonus} vs Armor/Shield.`;
+        c.shortDesc = `R->Summon 1-${maxRoll}\nObsidian Slime`;
+      } else {
+        c.description = `Recharge -> Summon 1 Obsidian Slime.\n+${armorBonus} vs Armor/Shield.`;
+      }
+    }
+    // Drain Essence — both ends of the 1-N random roll slide up
+    // together. Card-level bump already pushed the max via
+    // necrotic_drain; rebuild the range string so the description
+    // / shortDesc display the right window.
+    if (c.id === 'drain_essence' && c.gamePlusOffset?.necrotic_drain) {
+      const max = (c.effects.find(e => e.effectType === 'necrotic_drain')?.value) || 4;
+      const min = 1 + offset;
+      c.description = `Recharge -> Deal ${min}-${max} Necrotic damage. Heal for the same amount.`;
+      c.shortDesc = `R->${min}-${max} True Dmg\nHeal same`;
+    }
+    // Dark Vision (power) — scry depth +2 / discard count +1 per
+    // offset. Rebuilds both the long effectDescription and the
+    // shortDesc so the codex / hover power preview surfaces the
+    // scaled numbers without depending on a generic swap pattern.
+    if (c.id === 'dark_vision') {
+      const scry = 3 + 2 * offset;
+      const disc = 1 + offset;
+      const bestStr = disc === 1 ? 'best card goes' : `${disc} best cards go`;
+      c.effectDescription = `Start of Turn: Scry ${scry} of your draw pile. The ${bestStr} to your discard pile.`;
+      c.shortDesc = `Scry ${scry}\nDiscard ${disc} Best`;
+    }
     // Wand of Fire — base description has no number ("Deal Fire"),
     // so inject the scaled Fire stack count into both lines.
     if (c.id === 'wand_of_fire') {
@@ -672,6 +778,16 @@ function applyGamePlusOffsetInPlace(c, offset) {
       if (flat > 0) {
         c.description = `Recharge -> Deal X+${flat} Damage.\nX = attacks this turn (counts itself).`;
         c.shortDesc = `R->X+${flat} Dmg\nX = # attacks`;
+      }
+    }
+    // Pummel — same idea as Sneak Attack, but the enemy_sneak_attack
+    // effect value holds Ruga's flat bonus. Rebuild the description
+    // so the codex preview reads the new formula cleanly.
+    if (c.id === 'pummel') {
+      const flat = (c.effects.find(e => e.effectType === 'enemy_sneak_attack')?.value) || 0;
+      if (flat > 0) {
+        c.description = `Recharge -> Deal X+${flat} Damage.\nX = attacks this turn (counts itself).`;
+        c.shortDesc = `R->X+${flat} Dmg\nX=attacks`;
       }
     }
     // Heroic Tumble — block amount is hard-coded in the runtime
@@ -912,19 +1028,88 @@ const CREATURE_TIER_OFFSET = {
   'Small Boulder': { attack: 1, hp: 1 },
   'Large Boulder': { attack: 2, hp: 2, armor: 1 },
   'Elf Warrior':   { attack: 1, hp: 1 },
+  'Baby Giant Frog': { attack: 1, hp: 1 },
+  'Dwarven Scout': { attack: 1, hp: 1, endTurnDamage: 1 },
+  'Obsidian Slime': { attack: 1, hp: 1, armor: 1, armorBonus: 1 },
+  'Obsidian Construct': { attack: 1, hp: 1, armor: 1/3, armorBonus: 1 },
+  // Summon Ancestor allies (player) — the card itself carries no
+  // per-effect bump (gamePlusOffset: {}); the scaling lives entirely
+  // on the creatures. Fractional rates bump only at the right offset
+  // threshold (heal/shield every 2 offsets, armor every 3). The
+  // boss-shell variants reuse the same name but get fatter numbers
+  // via the `_enemy` override below.
+  'Durin Stoneheart':  {
+    attack: 1, hp: 2, endTurnHealAllies: 0.5,
+    _enemy: { attack: 1, hp: 2, endTurnHealAllies: 1 },
+  },
+  'Balgrim Ironvein':  {
+    attack: 1, hp: 1, armor: 1/3, endTurnShieldAllies: 0.5,
+    _enemy: { attack: 1, hp: 2, armor: 0.5, endTurnShieldAllies: 1 },
+  },
+  'Thordak Ashmantle': {
+    attack: 1, hp: 1,
+    _enemy: { attack: 1, hp: 2, endTurnHeroismAllies: 1 },
+  },
+  // Enemy-only creatures — no player variant needed.
+  'Piranha':            { attack: 1, hp: 1 },
+  'Kobold Slinger':     { attack: 1, hp: 1 },
+  'Kobold Dragonshield': { attack: 1, hp: 2 },
+  'Deathjump Spider':   { attack: 1, hp: 1 },
+  'Frost Drake':        { attack: 2, hp: 4, armor: 0.5, iceAttackAll: 0.5 },
+  'High Priest':        { attack: 0, hp: 4 },
+  'Sahuagin Sentinel':  { attack: 1, hp: 3 },
+  // Animal Companion picks (Ranger summons). All three sit in
+  // player-side Summons; no enemy variant needed.
+  'Misha':              { attack: 2, hp: 2 },
+  'Huffer':             { attack: 2, hp: 1 },
+  'Treant':             { attack: 1, hp: 0 },
+  // Shark — player summon from Sahuagin Priest Staff +
+  // enemy summon from Sahuagin Baron's From the Deep power. Boss
+  // variant gets the chunkier +1/+2 stat bump.
+  'Shark':              {
+    attack: 1, hp: 1,
+    _enemy: { attack: 1, hp: 2 },
+  },
+  // Power-driven enemy spawns — Goblin Sapper / Magma Mephit /
+  // Harpy each bump a per-summon "max" alongside the base stat
+  // bumps. The scaler reads onDeathDamage / onDeathFireHits /
+  // onDeathDiscardOrDamage and the per-name description rebuild
+  // sweeps the new max into the rendered text.
+  'Goblin Sapper':      { attack: 1, hp: 1, onDeathDamage: 2 },
+  'Harpy':              { attack: 2, hp: 4, onDeathDiscardOrDamage: 5 },
+  'Magma Mephit':       { attack: 1, hp: 3, onDeathFireHits: 2 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
-  scaleCreatureWithOffset(creature, monsterTierOffset);
+  scaleCreatureWithOffset(creature, monsterTierOffset, 'enemy');
 }
-function scaleCreatureWithOffset(creature, offset) {
+function scaleCreatureWithOffset(creature, offset, side = 'player') {
   if (!creature || !offset || offset <= 0) return;
-  const rule = CREATURE_TIER_OFFSET[creature.name];
-  if (!rule) return;
-  const dA = (rule.attack || 0) * offset;
-  const dH = (rule.hp || 0) * offset;
-  const dS = (rule.shield || 0) * offset;
-  const dAr = (rule.armor || 0) * offset;
+  if (creature.noTierOffset === true) return;
+  const baseRule = CREATURE_TIER_OFFSET[creature.name];
+  if (!baseRule) return;
+  // Per-side override: if the rule defines `_enemy`, an enemy-side
+  // scale uses that variant (e.g. boss-shell Durin / Balgrim /
+  // Thordak get fatter HP + a different rider than the player-side
+  // ancestors from Summon Ancestor). All other entries — flat
+  // attack/hp/etc — apply to both sides identically.
+  const rule = (side === 'enemy' && baseRule._enemy) ? baseRule._enemy : baseRule;
+  // Floor with a small epsilon so fractional rates like 1/3 don't
+  // collapse to 0 at the threshold (`(1/3) * 3 = 0.999...` in FP).
+  const step = (per) => Math.floor(((per || 0) * offset) + 1e-9);
+  const dA = step(rule.attack);
+  const dH = step(rule.hp);
+  const dS = step(rule.shield);
+  const dAr = step(rule.armor);
+  const dEnd = step(rule.endTurnDamage);
+  const dAB = step(rule.armorBonus);
+  const dHA = step(rule.endTurnHealAllies);
+  const dSA = step(rule.endTurnShieldAllies);
+  const dHeroA = step(rule.endTurnHeroismAllies);
+  const dIceAll = step(rule.iceAttackAll);
+  const dODD = step(rule.onDeathDamage);
+  const dODF = step(rule.onDeathFireHits);
+  const dODDC = step(rule.onDeathDiscardOrDamage);
   if (dA) creature.attack = (creature.attack || 0) + dA;
   if (dH) {
     creature.maxHp = (creature.maxHp || 0) + dH;
@@ -932,6 +1117,67 @@ function scaleCreatureWithOffset(creature, offset) {
   }
   if (dS) creature.shield = (creature.shield || 0) + dS;
   if (dAr) creature.armor = (creature.armor || 0) + dAr;
+  if (dEnd) creature.endTurnDamage = (creature.endTurnDamage || 0) + dEnd;
+  if (dHA) creature.endTurnHealAllies = (creature.endTurnHealAllies || 0) + dHA;
+  if (dSA) creature.endTurnShieldAllies = (creature.endTurnShieldAllies || 0) + dSA;
+  if (dHeroA) creature.endTurnHeroismAllies = (creature.endTurnHeroismAllies || 0) + dHeroA;
+  if (dIceAll) creature.iceAttackAll = (creature.iceAttackAll || 0) + dIceAll;
+  if (dODD) creature.onDeathDamage = (creature.onDeathDamage || 0) + dODD;
+  if (dODF) creature.onDeathFireHits = (creature.onDeathFireHits || 0) + dODF;
+  if (dODDC) creature.onDeathDiscardOrDamage = (creature.onDeathDiscardOrDamage || 0) + dODDC;
+  // Obsidian-family vs Armor/Shield bonus — base is 2 in
+  // applyObsidianAllyBonus when armorBonusOverride isn't set.
+  // Layer the offset bump on top of that baseline.
+  if (dAB) creature.armorBonusOverride = (creature.armorBonusOverride || 2) + dAB;
+  // Description rebuild — the base text carries the unscaled
+  // numbers, so a flat description swap would drift out of sync
+  // with the bumped stat fields. Per-name rewrites keep the codex
+  // / in-combat tooltip honest.
+  if (creature.name === 'Obsidian Slime' && dAB) {
+    const bonus = creature.armorBonusOverride;
+    creature.description = `+${bonus} vs Armor/Shield.`;
+  } else if (creature.name === 'Obsidian Construct' && dAB) {
+    const bonus = creature.armorBonusOverride;
+    creature.description = `Sentinel. +${bonus} vs Armor/Shield.`;
+  } else if (creature.name === 'Dwarven Scout' && dEnd) {
+    const dmg = creature.endTurnDamage;
+    creature.description = `Turn End: ${dmg} Random Dmg`;
+  } else if (creature.name === 'Durin Stoneheart' && dHA) {
+    const heal = creature.endTurnHealAllies;
+    creature.description = `End of Turn: Heal ${heal} to all allies.`;
+  } else if (creature.name === 'Balgrim Ironvein' && dSA) {
+    const shld = creature.endTurnShieldAllies;
+    creature.description = `End of Turn: All allies gain ${shld} Shield.`;
+  } else if (creature.name === 'Thordak Ashmantle' && dHeroA) {
+    // Boss-shell Thordak gets +1 heroism rider per enemy offset.
+    // Only the enemy variant has endTurnHeroismAllies > 0, so this
+    // rebuild fires for the Founders Quest boss row and leaves the
+    // player-side ancestor (which has the lighter description
+    // 'Haste. Attacks ALL enemies.') alone.
+    const hero = creature.endTurnHeroismAllies;
+    creature.description = `Attacks ALL enemies.\nEnd of Turn: All allies gain ${hero} Heroism.`;
+  } else if (creature.name === 'Goblin Sapper' && dODD) {
+    const max = creature.onDeathDamage;
+    creature.description = `On Attack: Explode. On Death: Deal 1-${max} damage to a random enemy.`;
+  } else if (creature.name === 'Magma Mephit' && dODF) {
+    const max = creature.onDeathFireHits;
+    creature.description = `Fire Immune.\nOn Death: Apply Fire to a random target 1-${max} times.`;
+  } else if (creature.name === 'Harpy' && dODDC) {
+    const dmg = creature.onDeathDiscardOrDamage;
+    creature.description = `On Death: Enemies discard their hand, or take ${dmg} damage if empty.`;
+  } else if (creature.name === 'Baby Giant Frog' && dA) {
+    // Two variants: enemy-side ("Deal N Damage to all enemies")
+    // and player-side ("Hits all enemies for N"). Both pull from
+    // the attack stat, so rebuild based on the new attack value
+    // so the hover preview matches the AoE the frog will actually
+    // produce when it explodes.
+    const atk = creature.attack;
+    if (typeof creature.description === 'string' && creature.description.includes('Hits all')) {
+      creature.description = `On Attack: Explode. Hits all enemies for ${atk}.`;
+    } else {
+      creature.description = `On Attack: Explode. Deal ${atk} Damage to all enemies.`;
+    }
+  }
 }
 // True when the creature has an offset rule wired (codex hides the
 // red "+N?" badge in that case). Mirrors cardHasOffsetRules.
@@ -952,7 +1198,11 @@ function applyTierOffsetToCreaturePreview(creature, offset) {
   // Shallow clone — preserves prototype + all fields so the codex
   // creature card renderer reads the same shape.
   const clone = Object.assign(Object.create(Object.getPrototypeOf(creature)), creature);
-  scaleCreatureWithOffset(clone, offset);
+  // Read the side hint stamped during buildCodexSourceCache so
+  // boss-shell variants (`_enemy` override) scale correctly in the
+  // codex preview without the rest of the call site having to know.
+  const side = creature._codexSide === 'enemy' ? 'enemy' : 'player';
+  scaleCreatureWithOffset(clone, offset, side);
   return clone;
 }
 // True when the card already has tier-up rules wired for the given
@@ -966,8 +1216,13 @@ function cardHasOffsetRules(card, offset) {
   // with tier (Overwhelm, Vanish, etc.) set noTierOffset so the codex
   // doesn't paint the red "needs rules" badge over them.
   if (card.noTierOffset === true) return true;
-  if (!card.gamePlusOffset) return false;
-  return Object.keys(card.gamePlusOffset).length > 0;
+  // gamePlusOffset is the developer's opt-in marker — even an empty
+  // object `{}` signals "the card itself just gets the name/tier
+  // bump; the actual scaling lives on the summoned creature(s) /
+  // a custom branch in applyGamePlusOffsetInPlace." Treating empty
+  // as "no rules" makes Dwarven Scout / Summon Ancestor read as
+  // unscaled in the codex even though they bump correctly.
+  return card.gamePlusOffset !== undefined && card.gamePlusOffset !== null;
 }
 // Companion tier chains — used by the corner_cell / calm_grove /
 // personal_quarters loot intercept to swap base companion cards for
@@ -4705,11 +4960,12 @@ function startGamePlusFromSave(slot) {
     level: player ? player.level : 1,
     source_slot: slot,
   });
-  // One-shot consumption — stamp the source slot so it's hidden
-  // from the Game+ picker until the player kills the dragon again
-  // (the part1_complete_<class> writer overwrites the slot with a
-  // fresh blob, clearing the consumedForGamePlus flag).
-  markSlotConsumedForGamePlus(slot);
+  // Deferred consumption — park the slot id and only stamp the
+  // "consumed" flag once an autosave fires in the new run. If the
+  // player bails back to MENU during the rebalance / first-room
+  // beat (e.g. they realize the offsets aren't tuned the way they
+  // wanted), the source slot stays available in the Game+ picker.
+  _pendingGamePlusConsumeSlot = slot;
   // ccgQuest+ rebalance bonus — bumps the LEVEL-UP CAP by +2 (from
   // 3 to 5 per category). The player still earns the +1s by leveling
   // up; they just have more headroom to spend them. Game+ from save
@@ -10902,6 +11158,9 @@ function setupEnemyForCombat(enemyId) {
     const starting = new Creature({
       name: 'Bone Amalgam', attack: 3, maxHp: 3,
       description: 'A mass of fused bones.',
+      // Spawned by the Amalgam power, not by a deck card — no
+      // CREATURE_TIER_OFFSET rule, no codex red badge.
+      noTierOffset: true,
     });
     starting.exhausted = true;
     enemy.addCreature(starting);
@@ -11571,6 +11830,9 @@ function setupEnemyForCombat(enemyId) {
       const e = new Creature(s);
       e._iceAbsorb = true;
       e._codexVariableStats = true;
+      // Ice Elemental scales off consumed Ice (not tier offset) —
+      // skip the codex red badge and the auto-scale wrap.
+      e.noTierOffset = true;
       enemy.addCreature(e);
     }
   };
@@ -11629,6 +11891,9 @@ function setupEnemyForCombat(enemyId) {
       const e = new Creature(s);
       e._iceAbsorb = true;
       e._codexVariableStats = true;
+      // Ice Elemental scales off consumed Ice (not tier offset) —
+      // skip the codex red badge and the auto-scale wrap.
+      e.noTierOffset = true;
       enemy.addCreature(e);
     }
     // Blizzard passive — every start of enemy turn the whole board
@@ -13291,6 +13556,13 @@ function autosaveNow() {
     if (!player || !currentMap) return;
     saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
+    // First autosave in a Game+ run commits the source slot — stamp
+    // it consumed so the Game+ picker hides it (player has actually
+    // started the run; bailing-before-saving stays reversible).
+    if (_pendingGamePlusConsumeSlot) {
+      markSlotConsumedForGamePlus(_pendingGamePlusConsumeSlot);
+      _pendingGamePlusConsumeSlot = null;
+    }
   } catch (err) {
     console.warn('Autosave failed:', err);
   }
@@ -17622,10 +17894,14 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   if (hasInlineBadge) {
     // If the badge clause is preceded by a separate sentence, add an
     // extra row so the badge can sit on its own line with the rider
-    // still visible beneath it.
+    // still visible beneath it. Even without a leading clause we add
+    // +2 (was +1) — countWrappedLines undercounts the badge pill's
+    // padded width, which clipped Dwarven Scout's "Turn End: 1
+    // Random Dmg" by pushing "Dmg" past the box edge on the modal
+    // 240x336 preview.
     const hasLeadingClause = /\.\s+\S/.test(creature.description) ||
       /\b(Cannot|Can't|Will not|Won't)\b/i.test(creature.description);
-    descLines += hasLeadingClause ? 2 : 1;
+    descLines += hasLeadingClause ? 3 : 2;
   }
   const descContentH = descLines * lineH;
   const baseBoxH = Math.floor(h / 5);
@@ -19858,6 +20134,19 @@ function handleCombatClick(x, y) {
       const summonsAlly = (card.effects || []).some(e => e && e.target === TargetType.SUMMON);
       if (summonsAlly && !player.canSummonMore()) {
         showToast(`Field is full — can't summon more allies.`);
+        return;
+      }
+      // Unique companion guard — refuse to play a Thorb / Raena /
+      // Valdrisa card while the named companion is already alive on
+      // the field. The card SHOULD stay in the play pile after the
+      // first summon (see _routeToPlayPile in resolveEffect), but
+      // certain save-load / power-summon paths have let duplicates
+      // slip through. This is the user-facing safety net: if the
+      // companion is up, block the play with a toast.
+      const uniqueCompanionName = _uniqueCompanionNameFromCardEffects(card);
+      if (uniqueCompanionName
+          && (player.creatures || []).some(c => c && c.isAlive && c.name === uniqueCompanionName)) {
+        showToast(`${uniqueCompanionName} is already in the fight!`);
         return;
       }
       // Lucky Pebble (and any other on-discard relic) can't be played from
@@ -22309,8 +22598,15 @@ function resolveEffect(eff, caster, target) {
       }
       consumePoisonBuff(caster, target, landed);
       consumeIgniteOnAttack(caster, target, dmg);
-      // Draw rider — only on a swing that actually landed damage.
-      if (landed > 0 && caster === player) {
+      // Draw rider — fires whenever the swing made contact. "Hit"
+      // counts ANY connection that produced effect: damage that
+      // landed, damage absorbed by a defense play (Kraken Spawn's
+      // Tentacle Block soaking the swing via the boss's block pool),
+      // shield/armor that ate the hit, etc. Filtering on `landed > 0`
+      // alone misses the Tentacle Block case where the user
+      // legitimately swung and dealt damage — just to the wrong
+      // body. `dmg > 0` is the correct "the rock connected" gate.
+      if (dmg > 0 && caster === player) {
         const drawn = player.deck.draw(1, MAX_HAND_SIZE);
         for (const d of drawn) addLog(`  Hit! Draw: ${d.name}`, Colors.BLUE, d);
         if (drawn.length > 0) playDrawSounds(drawn.length);
@@ -23722,6 +24018,9 @@ function resolveEffect(eff, caster, target) {
         endTurnDamage: 1, isCompanion: true,
         description: 'Turn End: 1 Dmg to random enemy',
       });
+      // ccgQuest+ — CREATURE_TIER_OFFSET['Dwarven Scout'] adds
+      // +1 atk / +1 hp / +1 end-of-turn damage per playerTierOffset.
+      scaleCreatureWithOffset(scout, playerTierOffset || 0);
       scout.sourceCard = _activePlayCard || null;
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(scout);
@@ -23787,11 +24086,28 @@ function resolveEffect(eff, caster, target) {
       // Summon: card discards normally, slime is its own throwaway.
       // Previously the slime tied its card to playPile via _routeToPlayPile
       // but lacked isCompanion, leaving the card stranded on death.
-      const slime = createObsidianSlimeSummonCreature();
-      slime._sourceRarity = 'rare';
-      slime._sourceSubtype = 'allies';
-      player.addCreature(slime);
-      addLog(`  Obsidian Slime joins the fight!`, Colors.GREEN);
+      // ccgQuest+ scaling: spawn 1..(eff.value) slimes (Obsidian Slime
+      // card's gamePlusOffset bumps eff.value by +1 per offset). Each
+      // slime is scaled via CREATURE_TIER_OFFSET['Obsidian Slime']
+      // (+1 atk/hp/armor and +1 vs Armor/Shield bonus per offset).
+      const maxRoll = Math.max(1, eff.value || 1);
+      const count = caster === player
+        ? (1 + Math.floor(Math.random() * maxRoll))
+        : 1;
+      let lastSlime = null;
+      for (let i = 0; i < count; i++) {
+        const slime = createObsidianSlimeSummonCreature();
+        if (caster === player) scaleCreatureWithOffset(slime, playerTierOffset || 0);
+        slime._sourceRarity = 'rare';
+        slime._sourceSubtype = 'allies';
+        if (!player.addCreature(slime)) break;
+        lastSlime = slime;
+      }
+      addLog(count === 1 ? `  Obsidian Slime joins the fight!` : `  ${count} Obsidian Slimes join the fight!`, Colors.GREEN);
+      if (lastSlime) {
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = lastSlime;
+      }
       if (!_suppressSummonSfx) playObsidianSlimeBurst();
       break;
     }
@@ -23825,16 +24141,17 @@ function resolveEffect(eff, caster, target) {
     case 'summon_tamed_rat': {
       // Rat Taming: 50% chance summon Dire Rat(s) (2/2, armor 1,
       // Bloodfrenzy), otherwise summon Tamed Rats. Per playerTierOffset:
-      //   Dire branch: random 1..(1+offset) Dire Rats (base 1, then
-      //     1-2 at +1, 1-3 at +2…), each scaled via
-      //     CREATURE_TIER_OFFSET['Dire Rat'] (+2/+2 per offset).
+      //   Dire branch: random 1..(1 + floor(0.5 * offset)) Dire Rats —
+      //     base 1, first extra lands at offset 2, second at offset 4.
+      //     Each scaled via CREATURE_TIER_OFFSET['Dire Rat'] (+2/+2).
       //   Tamed branch: 1 + offset bumps the max roll (1-3 → 1-4 → 1-5…),
       //     each Tamed Rat scaled via CREATURE_TIER_OFFSET['Tamed Rat']
       //     (+1/+1 per offset).
       const off = playerTierOffset || 0;
       const summonDire = Math.random() < 0.5;
       if (summonDire) {
-        const direCount = 1 + Math.floor(Math.random() * (1 + off));
+        const direMax = 1 + Math.floor(0.5 * off);
+        const direCount = 1 + Math.floor(Math.random() * direMax);
         let summoned = 0;
         let lastDire;
         for (let i = 0; i < direCount; i++) {
@@ -23946,6 +24263,7 @@ function resolveEffect(eff, caster, target) {
         const e = new Creature({
           name: 'Ice Elemental', attack: totalIce, maxHp: totalIce, iceAttack: 1,
           description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+          noTierOffset: true,
         });
         e._iceAbsorb = true;
         if (caster.addCreature(e)) {
@@ -24047,6 +24365,10 @@ function resolveEffect(eff, caster, target) {
       // side. Each baby is attack=2, multiAttack=99, selfDestruct=true
       // (mirrors Thordak Ashmantle's auto-resolve attacks-all path so
       // clicking the baby instantly hits every enemy, then it dies).
+      // gamePlusOffset on Frog Nursery bumps eff.value (max roll) by
+      // +1 per offset; CREATURE_TIER_OFFSET['Baby Giant Frog'] adds
+      // +1/+1 to each baby (and since the explosion echoes attack,
+      // the AoE scales naturally).
       const maxRoll = Math.max(1, eff.value || 1);
       const count = 1 + Math.floor(Math.random() * maxRoll);
       let lastFrog = null;
@@ -24056,6 +24378,7 @@ function resolveEffect(eff, caster, target) {
           multiAttack: 99, selfDestruct: true,
           description: 'On Attack: Explode. Hits all enemies for 2.',
         });
+        scaleCreatureWithOffset(frog, playerTierOffset || 0);
         caster.addCreature(frog);
         addLog(`  Baby Giant Frog joins the fight!`, Colors.GREEN, null, null, frog);
         lastFrog = frog;
@@ -24117,6 +24440,12 @@ function resolveEffect(eff, caster, target) {
       }
       const pick = eligible[Math.floor(Math.random() * eligible.length)];
       const cre = new Creature(pick);
+      // ccgQuest+ scaling lives on the ancestor creatures, not the
+      // card — bump per CREATURE_TIER_OFFSET so each summon comes in
+      // already statted for the current player tier offset. The
+      // 'player' side picks the base rule (lighter than the `_enemy`
+      // override used by the Founders Quest boss-shell variants).
+      scaleCreatureWithOffset(cre, playerTierOffset || 0, 'player');
       caster.addCreature(cre);
       addLog(`  ${pick.name} answers the call!`, Colors.GOLD, null, null, cre);
       const lastEntry = combatLog[combatLog.length - 1];
@@ -24614,6 +24943,32 @@ function liftCardFromHand(handIndex) {
   return card;
 }
 
+// Maps each unique-companion summon-effect id back to the live
+// creature name that ends up on the field. Used by the hand-click
+// gate to refuse a second play while the companion is already up.
+// Misha / Huffer / Treant are NOT here — Animal Companion is a
+// modal pick (Misha OR Huffer per cast) and the player can stack
+// multiples of those allies; the unique guard is specifically the
+// named companion chain (Thorb / Raena / Valdrisa).
+const _UNIQUE_COMPANION_BY_EFFECT = {
+  summon_thorb: 'Thorb',
+  summon_thorb_upgraded: 'Thorb',
+  summon_thorb_tier3: 'Thorb',
+  summon_raena: 'Raena',
+  summon_raena_upgraded: 'Raena',
+  summon_raena_tier3: 'Raena',
+  summon_valdrisa: 'Valdrisa',
+  summon_valdrisa_tier3: 'Valdrisa',
+};
+function _uniqueCompanionNameFromCardEffects(card) {
+  if (!card || !Array.isArray(card.effects)) return null;
+  for (const e of card.effects) {
+    if (!e || !e.effectType) continue;
+    const name = _UNIQUE_COMPANION_BY_EFFECT[e.effectType];
+    if (name) return name;
+  }
+  return null;
+}
 function playCardSelf(handIndex) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
@@ -25856,7 +26211,15 @@ function resolveMultiTargeting() {
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       const delay = i * SFX_STAGGER_MS;
-      const dmg = (i === 0) ? primaryDmg : secondaryDmg;
+      const baseChainDmg = (i === 0) ? primaryDmg : secondaryDmg;
+      // Mark bonus is per-target (each marked enemy adds its own
+      // stacks). Missing this layer is why Hunter's Mark didn't fire
+      // on Dwarven Throwing Axe / Wooden Axe / Steel Greataxe — the
+      // resolveEffect multi_damage case applies it via mdPerTarget,
+      // but this picker-driven flow ran its own damage loop with no
+      // mark hook. Heroism + Ice are already folded into primaryDmg
+      // / secondaryDmg above; mark stacks on top per target.
+      const dmg = applyMarkBonus(t, baseChainDmg);
       if (t === enemy) {
         if (!hitEnemy) { enemyAutoPlayDefenses(dmg); hitEnemy = true; }
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
@@ -28207,47 +28570,56 @@ function startEnemyTurn() {
           const fresh = new Creature({
             name: 'Bone Amalgam', attack: atk, maxHp: hp,
             description: 'A mass of fused bones.',
+            // Power-spawned — atk/hp already baked in via the
+            // baseAmalgamBump math above; skip the auto-scale wrap.
+            noTierOffset: true,
           });
           enemy.addCreature(fresh);
           addLog(`  Bone Amalgam rises! (${atk}/${hp})`, Colors.ORANGE);
           playSound('bones_clatter', 0.85);
         }
       } else if (power.id === 'dark_vision') {
-        // Obsidian Oracle passive. Peek the top 3 of the player's
-        // draw pile, pick the highest-value card (tier > rarity >
-        // random tiebreaker), and move it to the player's discard
-        // pile. Mirrors PY game.py:14193-14208.
+        // Obsidian Oracle passive. Peek the top N of the player's
+        // draw pile, pick the K highest-value cards (tier > rarity >
+        // random tiebreaker), and move them to the player's discard
+        // pile. Mirrors PY game.py:14193-14208. ccgQuest+: scry
+        // depth grows by +2 per monsterTierOffset and the number of
+        // cards discarded grows by +1 per offset (base 3/1 → 5/2 →
+        // 7/3 …) so the oracle digs deeper and skims more.
         if (player && player.deck && player.deck.drawPile.length > 0) {
           // Center-screen pop so the player sees the power firing —
           // same beat a played card gets, just sourced from a passive.
           showcasePower(power);
           // draw() pops from the END of drawPile (end = top, drawn
           // first). flushRechargePile at end of player turn unshifts
-          // to the START (= bottom, drawn last). So "scry the top 3"
-          // means the LAST 3 entries of the array, not the first.
-          // The old slice(0,N) was peeking the BOTTOM, which is why
-          // a freshly-recharged Raena was getting nabbed instead of
-          // the cards actually next-up.
-          const scryCount = Math.min(3, player.deck.drawPile.length);
+          // to the START (= bottom, drawn last). So "scry the top N"
+          // means the LAST N entries of the array, not the first.
+          const dvOffset = monsterTierOffset || 0;
+          const scryTarget = 3 + 2 * dvOffset;
+          const discardTarget = 1 + dvOffset;
+          const scryCount = Math.min(scryTarget, player.deck.drawPile.length);
           const peek = player.deck.drawPile.slice(-scryCount);
           const RARITY_ORDER = { epic: 4, rare: 3, uncommon: 2, common: 1, '': 0 };
-          let best = peek[0];
-          let bestScore = -1;
-          for (const c of peek) {
+          // Score every peeked card once, then take the top K so the
+          // oracle deterministically rakes the best K each cast
+          // instead of looping the single-best picker.
+          const scored = peek.map(c => {
             const tier = c.tier || 0;
             const rarity = RARITY_ORDER[(c.rarity || '').toLowerCase()] || 0;
-            const score = tier * 10 + rarity + Math.random() * 0.5;
-            if (score > bestScore) { bestScore = score; best = c; }
-          }
-          const idx = player.deck.drawPile.indexOf(best);
-          if (idx !== -1) {
+            return { card: c, score: tier * 10 + rarity + Math.random() * 0.5 };
+          });
+          scored.sort((a, b) => b.score - a.score);
+          const toDiscard = scored.slice(0, Math.min(discardTarget, scored.length));
+          for (const entry of toDiscard) {
+            const idx = player.deck.drawPile.indexOf(entry.card);
+            if (idx === -1) continue;
             player.deck.drawPile.splice(idx, 1);
-            player.deck.discardPile.push(best);
-            addLog(`  Dark Vision! The Oracle discards ${best.name}!`, Colors.RED, best);
-            // No damage spawn on Dark Vision — the card just moves to
-            // discard, it's not damage. (The earlier purple "1" was
-            // visually misleading.) Warp cue makes the deck-edit
-            // distinct from the curse's dark-spell incantation.
+            player.deck.discardPile.push(entry.card);
+            addLog(`  Dark Vision! The Oracle discards ${entry.card.name}!`, Colors.RED, entry.card);
+          }
+          if (toDiscard.length > 0) {
+            // Warp cue plays once per cast, not once per card —
+            // multi-discard rakes still feel like a single spell.
             playSound('dark_warp_01', 0.75);
           }
         }
@@ -28394,7 +28766,10 @@ function startEnemyTurn() {
         // Sappers (self-destruct, on-death-damage 1-2). Was 1-3 / 1-3
         // and the gauntlet felt overtuned — sappers compound geometrically
         // and the on-death explosion bypasses player block via allies.
-        const num = 1 + Math.floor(Math.random() * 2); // 1..2
+        // ccgQuest+ adds +1 to the upper bound per monster offset so a
+        // +1 run summons 1-3, +2 summons 1-4, etc.
+        const sapperMax = 2 + (monsterTierOffset || 0);
+        const num = 1 + Math.floor(Math.random() * sapperMax);
         for (let i = 0; i < num; i++) {
           enemy.addCreature(new Creature({
             name: 'Goblin Sapper', attack: 1, maxHp: 2,
@@ -28432,29 +28807,36 @@ function startEnemyTurn() {
         }
       } else if (power.id === 'from_the_deep') {
         // Mirrors PY: each turn, summon 1 random creature — Shark
-        // (Bloodfrenzy), Sahuagin Sentinel, or High Priest.
-        const roll = Math.floor(Math.random() * 3);
-        let summoned;
-        if (roll === 0) {
-          summoned = new Creature({
-            name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-            description: 'Bloodfrenzy: +1 Rage after attacking.',
-          });
-          addLog(`  From the Deep! A Shark surfaces!`, Colors.ORANGE);
-        } else if (roll === 1) {
-          summoned = new Creature({
-            name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true,
-            description: 'Sentinel: Must be targeted first.',
-          });
-          addLog(`  From the Deep! A Sahuagin Sentinel emerges!`, Colors.ORANGE);
-        } else {
-          summoned = new Creature({
-            name: 'High Priest', attack: 0, maxHp: 4,
-            description: 'Plays Whirlpool at start of turn.',
-          });
-          addLog(`  From the Deep! A High Priest rises from the water!`, Colors.ORANGE);
+        // (Bloodfrenzy), Sahuagin Sentinel, or High Priest. ccgQuest+
+        // bumps the upper bound on the random roll so a +1 offset
+        // makes the power summon 1-2 creatures per turn, +2 makes it
+        // 1-3, etc. Each summon picks its own type independently.
+        const maxRoll = 1 + (monsterTierOffset || 0);
+        const count = 1 + Math.floor(Math.random() * maxRoll);
+        for (let n = 0; n < count; n++) {
+          const roll = Math.floor(Math.random() * 3);
+          let summoned;
+          if (roll === 0) {
+            summoned = new Creature({
+              name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
+              description: 'Bloodfrenzy: +1 Rage after attacking.',
+            });
+            addLog(`  From the Deep! A Shark surfaces!`, Colors.ORANGE);
+          } else if (roll === 1) {
+            summoned = new Creature({
+              name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true,
+              description: 'Sentinel: Must be targeted first.',
+            });
+            addLog(`  From the Deep! A Sahuagin Sentinel emerges!`, Colors.ORANGE);
+          } else {
+            summoned = new Creature({
+              name: 'High Priest', attack: 0, maxHp: 4,
+              description: 'Plays Whirlpool at start of turn.',
+            });
+            addLog(`  From the Deep! A High Priest rises from the water!`, Colors.ORANGE);
+          }
+          enemy.addCreature(summoned);
         }
-        enemy.addCreature(summoned);
       }
     }
   }
@@ -29174,13 +29556,14 @@ function updateEnemyTurn(dt) {
     }
     for (const eff of card.currentEffects) {
       if (eff.effectType === 'enemy_sneak_attack' || eff.effectType === 'sneak_attack') {
-        // Slyblade Sneak Attack — damage = enemy cards committed this
-        // turn (including this card). Tracked via _enemyCardsThisTurn
-        // bumped in the enemy card-play loop. Minimum 1 so the card
-        // always lands. Heroism/Rage stack on top. Handles both the
-        // legacy 'enemy_sneak_attack' tag and the player-side
+        // Slyblade Sneak Attack / Pummel — damage = enemy cards
+        // committed this turn (including this card) + eff.value
+        // (Pummel's gamePlusOffset adds +2 per offset on top).
+        // Heroism/Rage stack on top. Handles both the legacy
+        // 'enemy_sneak_attack' tag and the player-side
         // 'sneak_attack' tag (slyblade reuses the player card).
-        let dmg = Math.max(1, (_enemyCardsThisTurn || 0));
+        const flatBonus = eff.value || 0;
+        let dmg = Math.max(1, (_enemyCardsThisTurn || 0)) + flatBonus;
         dmg = Math.max(0, dmg + enemy.heroism + enemy.rage + getDamageModifier(enemy));
         dmg = consumeIceForAttack(enemy, dmg);
         dmg += getIncomingDamageModifier(player);
@@ -29264,14 +29647,20 @@ function updateEnemyTurn(dt) {
         spawnDamageOnTarget(player, eff.value, Colors.ORANGE);
         addLog(`  ${eff.value} true damage to you!`, Colors.ORANGE);
       } else if (eff.effectType === 'necrotic_drain') {
-        // Drain Essence — roll 1..N random unpreventable damage to
-        // the player, then heal the Specter by the amount actually
-        // drained (cards moved from its discardPile back to drawPile).
-        // PY parity (game.py:13278-13325). Dedicated dark warp cue
-        // instead of the generic flesh hit — the drain is magical,
-        // not a swing.
+        // Drain Essence — roll min..max random unpreventable damage
+        // to the player, then heal the Specter by the amount
+        // actually drained (cards moved from its discardPile back to
+        // drawPile). PY parity (game.py:13278-13325). Dedicated dark
+        // warp cue instead of the generic flesh hit — the drain is
+        // magical, not a swing. ccgQuest+ shifts BOTH ends of the
+        // range by `monsterTierOffset` (eff.value already includes
+        // the upper-bound bump via gamePlusOffset; the min slides up
+        // to match so 1-4 reads 2-5 / 3-6 / … instead of stretching).
         playSound('drain_essence', 0.8);
-        const necroticDmg = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+        const dOffset = monsterTierOffset || 0;
+        const minRoll = 1 + dOffset;
+        const maxRoll = Math.max(minRoll, eff.value);
+        const necroticDmg = minRoll + Math.floor(Math.random() * (maxRoll - minRoll + 1));
         // takeDamageFromDeck returns the number of NON-token cards
         // actually moved out of the player's draw pile (= "drained").
         // Using `player.totalCards` delta here would always read 0
@@ -29387,6 +29776,7 @@ function updateEnemyTurn(dt) {
           const e = new Creature({
             name: 'Ice Elemental', attack: totalIce, maxHp: totalIce, iceAttack: 1,
             description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+            noTierOffset: true,
           });
           e._iceAbsorb = true;
           if (enemy.addCreature(e)) {
@@ -30762,11 +31152,16 @@ function startWhirlpoolPhase(stacks, opts = {}) {
   // Empty hand: drown for the full count without entering interactive
   // swim — take 1 deck damage per stack, flash, and bounce out.
   if (!player.deck.hand.length) {
+    // ccgQuest+ scales the per-stack failure damage by +3 per
+    // monsterTierOffset so the empty-hand drown stings harder at
+    // higher tier (base 1 → 4 → 7 → …). Stacks themselves already
+    // scale via the apply_whirlpool effect value bump on the card.
+    const stackDmg = 1 + 3 * (monsterTierOffset || 0);
     for (let i = 0; i < stacks; i++) {
-      const taken = player.takeDamageFromDeck(1);
+      const taken = player.takeDamageFromDeck(stackDmg);
       if (taken > 0) {
         spawnDamageOnTarget(player, taken);
-        addLog(`  Whirlpool: No cards — 1 damage!`, Colors.RED);
+        addLog(`  Whirlpool: No cards — ${taken} damage!`, Colors.RED);
       }
     }
     swimFlashTimer = 750;
@@ -31146,16 +31541,19 @@ function checkCombatEnd() {
 // Also strips the matching combatBuff from the caster.
 function consumeUnpreventableBuff(caster) {
   if (!caster || !(caster.unpreventableBuff > 0)) return false;
-  caster.unpreventableBuff = 0;
+  caster.unpreventableBuff = caster.unpreventableBuff - 1;
   // The Slime Jar combat buff is the original carrier; Ambush perk
   // sets unpreventableBuff directly without a backing combatBuff, so
-  // strip the slime_jar_buff only if present and pick the log line
-  // accordingly.
+  // decrement the slime_jar_buff stacks only if present (strip when
+  // the last charge is consumed) and pick the log line accordingly.
   let source = 'Unpreventable';
   if (Array.isArray(caster.combatBuffs)) {
-    const hadSlimeJar = caster.combatBuffs.some(b => b.id === 'slime_jar_buff');
-    if (hadSlimeJar) {
-      caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'slime_jar_buff');
+    const slimeJar = caster.combatBuffs.find(b => b.id === 'slime_jar_buff');
+    if (slimeJar) {
+      slimeJar.stacks = (slimeJar.stacks || 1) - 1;
+      if (slimeJar.stacks <= 0) {
+        caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'slime_jar_buff');
+      }
       source = 'Slime Jar';
     } else if (caster._ambushUnpreventable) {
       source = 'Ambush';
@@ -36826,6 +37224,13 @@ function handleIngameMenuClick(x, y) {
       player = null;
       currentMap = null;
       currentEncounter = null;
+      // Quit-without-saving from a Game+ run = the source slot was
+      // never committed. Clear the deferred consumption so the next
+      // Game+ launch (or this same one re-loaded) finds the slot
+      // still available. Necessary even if autosave fired earlier
+      // because that already stamped the flag — the clear here just
+      // avoids leaking the variable into a different class's launch.
+      _pendingGamePlusConsumeSlot = null;
       // Reset the menu music so the heroic title theme actually
       // starts playing again on quit. pauseMusic muted the gameplay
       // track when the in-game menu opened; without these flag
@@ -41008,6 +41413,13 @@ function buildCodexSourceCache() {
       if (!card) continue;
       const tierSuffix = (card.tier && card.tier > 1) ? ` (Tier ${card.tier})` : '';
       const stamp = (creature) => {
+        // Don't overwrite an enemy stamp — some cards live in
+        // CARD_REGISTRY (so the codex can surface them) but the
+        // creature they preview belongs to the enemy (Tentacle from
+        // Kraken Spawn's Tentacle Grab / Tentacle / Tentacle Block).
+        // The enemy-pass below will add the proper "Enemy: Kraken
+        // Spawn" source line so the player Summons column stays clean.
+        if (creature._codexSide === 'enemy') return;
         creature._codexSide = 'player';
         creature._sourceRarity = card.rarity || 'common';
         creature._sourceSubtype = card.subtype || '';
