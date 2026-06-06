@@ -689,6 +689,60 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.effectDescription = `Start of Turn: Scry ${scry} of your draw pile. The ${bestStr} to your discard pile.`;
       c.shortDesc = `Scry ${scry}\nDiscard ${disc} Best`;
     }
+    // Massive Ogre Ram — +5 damage per offset. Rebuild both
+    // descriptions so the hover preview matches the runtime hit.
+    if (c.id === 'massive_ogre_ram') {
+      const dmg = 5 + 5 * offset;
+      c.effectDescription = `Deal ${dmg} Damage to ALL enemies.`;
+      c.shortDesc = `R4->${dmg} Dmg All`;
+    }
+    // Obsidian Body (Slime boss) — +1 turn-start armor regen / offset.
+    if (c.id === 'obsidian_body') {
+      const regen = 1 + offset;
+      c.effectDescription = `When Hit: -1 Armor, spawn an Obsidian Slime. Turn Start: +${regen} Armor (max 5).`;
+      c.shortDesc = `When Hit:\n-1 Armor +Slime`;
+    }
+    // Obsidian Construct (Golem boss) — armor regen cap +2 / offset.
+    if (c.id === 'obsidian_construct') {
+      const cap = 5 + 2 * offset;
+      c.effectDescription = `When Hit: -1 Armor, +1 Rage. Turn Start: +1 Armor (max ${cap}), -1 Rage.`;
+    }
+    // From the Deep — random summon count grows by 1 per offset.
+    if (c.id === 'from_the_deep') {
+      const maxN = 1 + offset;
+      const range = maxN > 1 ? `1-${maxN}` : '1';
+      c.effectDescription = `Start of Turn: Summon ${range} Creature(s) from the Deep.`;
+    }
+    // Goblin Sapper Squad — random sapper count grows by 1 per
+    // offset (base 1-2 → 1-3 → 1-4 …).
+    if (c.id === 'goblin_sapper_squad') {
+      const maxN = 2 + offset;
+      c.effectDescription = `Turn Start: Summon 1-${maxN} Goblin Sappers.`;
+      c.shortDesc = `Turn Start:\n1-${maxN} Sappers`;
+    }
+    // Piranhas Swarm — BOTH ends of the swarm/top-up ranges shift
+    // up by offset, so the description spells out the bumped pair.
+    if (c.id === 'piranhas_swarm') {
+      const lo1 = 3 + offset, hi1 = 4 + offset;
+      const lo2 = 1 + offset, hi2 = 2 + offset;
+      c.effectDescription = `Start of Turn: Summon ${lo1}-${hi1} Piranhas (${lo2}-${hi2} if 5+ alive).`;
+    }
+    // Kobold Army (escalating swarm) — base count = ceil((turn+1)/2);
+    // each turn rolls an extra 0..offset bonus on top. Describe the
+    // random kicker so the player understands the offset effect.
+    if (c.id === 'kobold_army_swarm') {
+      c.effectDescription = `Start of Turn: Kobolds are swarming you! (Escalating spawns + 0-${offset} bonus per turn)`;
+    }
+    // Kobold Army (Zhost top-up power) — Guard target widens +1 per
+    // offset, Slinger random max grows +1 per offset, Dragonshield
+    // chance climbs 20% per offset (capped visually at 100%).
+    if (c.id === 'kobold_army') {
+      const gFloor = 4 + offset;
+      const gCeil = 6 + offset;
+      const sMax = 1 + offset;
+      const dPct = Math.min(100, 30 + 20 * offset);
+      c.effectDescription = `Start of Turn: Top up to ${gFloor}-${gCeil} Kobold Guards, 1-${sMax} Slingers, ${dPct}% Dragonshield.`;
+    }
     // Wand of Fire — base description has no number ("Deal Fire"),
     // so inject the scaled Fire stack count into both lines.
     if (c.id === 'wand_of_fire') {
@@ -1054,6 +1108,10 @@ const CREATURE_TIER_OFFSET = {
   'Piranha':            { attack: 1, hp: 1 },
   'Kobold Slinger':     { attack: 1, hp: 1 },
   'Kobold Dragonshield': { attack: 1, hp: 2 },
+  // Deathjump Spider — +1 atk / +1 hp per offset on top of the
+  // forest dungeon scaling (4 → 5 → 6 … loop levels per offset).
+  // Double-dip is intentional per the user's spec: deeper loops
+  // AND meaner spiders.
   'Deathjump Spider':   { attack: 1, hp: 1 },
   'Frost Drake':        { attack: 2, hp: 4, armor: 0.5, iceAttackAll: 0.5 },
   'High Priest':        { attack: 0, hp: 4 },
@@ -10503,7 +10561,14 @@ function advanceEncounterPhase() {
       // when the player has been looping the right way long enough
       // (loop_level >= 4) AND just took the correct path.
       const side = completedEncounterId === 'forest_ambush_left' ? 'left' : 'right';
-      if (forestLoopLevel >= 4 && side === forestCorrectPath) {
+      // ccgQuest+: every monster offset adds another required loop
+      // through the maze before the Forest Clearing opens. Base is
+      // 4 levels; at +1 the player has to survive a 5-deep clear,
+      // +2 takes it to 6, etc. The forest_spiders setup already
+      // scales the spider count from `forestLoopLevel`, so deeper
+      // loops naturally face more (1..N) spiders per ambush.
+      const forestTarget = 4 + (monsterTierOffset || 0);
+      if (forestLoopLevel >= forestTarget && side === forestCorrectPath) {
         const returnId = side === 'left' ? 'forest_return_left' : 'forest_return_right';
         const returnNode = currentMap.getNode(returnId);
         if (returnNode) {
@@ -11077,12 +11142,14 @@ function setupEnemyForCombat(enemyId) {
       enemy.addPower(createArmorPower(1));
       enemy.addPower(createDireFury());
       // Starts with 2 Rat creatures (1/1) already ready to attack.
-      const rat1 = new Creature({ name: 'Rat', attack: 1, maxHp: 1 });
-      const rat2 = new Creature({ name: 'Rat', attack: 1, maxHp: 1 });
-      rat1.exhausted = false; rat1.justSummoned = false;
-      rat2.exhausted = false; rat2.justSummoned = false;
-      enemy.addCreature(rat1);
-      enemy.addCreature(rat2);
+      // ccgQuest+ adds +1 starting rat per monster tier offset (2 →
+      // 3 → 4…) so the opening field scales alongside the deck.
+      const dRatCount = 2 + (monsterTierOffset || 0);
+      for (let i = 0; i < dRatCount; i++) {
+        const rat = new Creature({ name: 'Rat', attack: 1, maxHp: 1 });
+        rat.exhausted = false; rat.justSummoned = false;
+        enemy.addCreature(rat);
+      }
       // Thorb fights at the player's side in the corner-cell rescue. Matches
       // PY: `if encounter.id == "corner_cell": player.add_creature(thorb)`.
       // He arrives ready to act on the player's first turn (no summoning
@@ -11279,8 +11346,15 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createWhirlpool());
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createScaleArmor());
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createSahuaginStaffEnemy());
-    enemy.addCreature(new Creature({ name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true, description: 'Sentinel: Must be targeted first.' }));
-    enemy.addCreature(new Creature({ name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true, description: 'Sentinel: Must be targeted first.' }));
+    // 2 starting Sahuagin Sentinels + 0.5 per monster offset
+    // (floor) — +1 at offset 2, +2 at offset 4, etc. Keeps the
+    // priest's sentinel wall scaling slowly so a +1 run doesn't
+    // immediately triple the opening pressure.
+    const spsExtra = Math.floor((monsterTierOffset || 0) * 0.5);
+    const spsCount = 2 + spsExtra;
+    for (let i = 0; i < spsCount; i++) {
+      enemy.addCreature(new Creature({ name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true, description: 'Sentinel: Must be targeted first.' }));
+    }
   };
   ENEMY_HAND_SIZE.sahuagin_priest = 3;
 
@@ -11316,6 +11390,17 @@ function setupEnemyForCombat(enemyId) {
     }
     starter.exhausted = false;
     enemy.addCreature(starter);
+    // ccgQuest+: +1 starting Sahuagin Sentinel per monster offset
+    // on top of the random pick above so the Baron has a guarding
+    // wall scaling with tier (offset 0: 1 random; offset 1: 1
+    // random + 1 Sentinel; offset 2: 1 random + 2 Sentinels …).
+    const sbExtra = monsterTierOffset || 0;
+    for (let i = 0; i < sbExtra; i++) {
+      enemy.addCreature(new Creature({
+        name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true,
+        description: 'Sentinel: Must be targeted first.',
+      }));
+    }
   };
   ENEMY_HAND_SIZE.sahuagin_baron = 3;
 
@@ -11351,7 +11436,8 @@ function setupEnemyForCombat(enemyId) {
     enemy = new Character('Obsidian Golem');
     enemy.deck = new Deck();
     for (let i = 0; i < 20; i++) enemy.deck.addCard(createCrush());
-    enemy.baseArmor = 5;
+    // +2 starting armor per monster offset (5 → 7 → 9 …).
+    enemy.baseArmor = 5 + 2 * (monsterTierOffset || 0);
     // Mirrors PY: obsidian_construct (lose armor + gain rage on
     // attack) + overwhelm (overflow ally damage onto the player).
     enemy.addPower(createObsidianConstructPower());
@@ -11363,7 +11449,8 @@ function setupEnemyForCombat(enemyId) {
     enemy = new Character('Obsidian Slime');
     enemy.deck = new Deck();
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createRockyAppendage());
-    enemy.baseArmor = 5;
+    // +2 starting armor per monster offset (5 → 7 → 9 …).
+    enemy.baseArmor = 5 + 2 * (monsterTierOffset || 0);
     // Mirrors PY: obsidian_body — every attack peels 1 armor AND
     // splits off a small Obsidian Slime (1/1, 5 Armor) ally.
     enemy.addPower(createObsidianBodyPower());
@@ -11486,7 +11573,9 @@ function setupEnemyForCombat(enemyId) {
     enemy._invulnerable = true;
     enemy._swimTarget = 12;
     enemy.addPower(createPiranhasSwarm());
-    for (let i = 0; i < 5; i++) {
+    // 5 starting piranhas + 1 per monster offset (5 → 6 → 7 …).
+    const pSwarmStart = 5 + (monsterTierOffset || 0);
+    for (let i = 0; i < pSwarmStart; i++) {
       const piranha = new Creature({
         name: 'Piranha', attack: 0, maxHp: 1, swarm: true,
         description: 'Swarm: +1 Atk for 5 allies',
@@ -11505,18 +11594,28 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createDefensiveFormation());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createWardensWhip());
     enemy._invulnerable = true;
-    enemy._killTarget = 20;
+    // +2 kill target per monster offset (20 → 22 → 24 …) so a
+    // higher-tier siege lasts proportionally longer.
+    const gzOff = monsterTierOffset || 0;
+    enemy._killTarget = 20 + 2 * gzOff;
     enemy.addPower(createKoboldArmy());
-    for (let i = 0; i < 4; i++) {
+    // Opening roster scales with monster offset: +1 Guard, +1
+    // Slinger, +0.5 Dragonshield (floor) per offset.
+    const gzGuards = 4 + gzOff;
+    const gzSlingers = 2 + gzOff;
+    const gzDshields = 1 + Math.floor(gzOff * 0.5);
+    for (let i = 0; i < gzGuards; i++) {
       enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
     }
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < gzSlingers; i++) {
       enemy.addCreature(new Creature({ name: 'Kobold Slinger', attack: 2, maxHp: 1, fireAttack: 1 }));
     }
-    enemy.addCreature(new Creature({
-      name: 'Kobold Dragonshield', attack: 2, maxHp: 2, shield: 2, sentinel: true,
-      description: 'Sentinel: Must be targeted first.',
-    }));
+    for (let i = 0; i < gzDshields; i++) {
+      enemy.addCreature(new Creature({
+        name: 'Kobold Dragonshield', attack: 2, maxHp: 2, shield: 2, sentinel: true,
+        description: 'Sentinel: Must be targeted first.',
+      }));
+    }
     // Player allies — 4 Elf Warriors + Raena (companion) join the fight.
     // Was 5 elves originally; dropped to 4 because Elf Reinforcements now
     // fires on turn 1 (start_of_turn buffs are processed at the end of
@@ -11578,7 +11677,9 @@ function setupEnemyForCombat(enemyId) {
     // Mirrors PY: passive Wolf Pack power tops up the wolf roster every
     // turn (3-4 fresh wolves while alive count <5, otherwise 1-2).
     enemy.addPower(createWolfPack());
-    for (let i = 0; i < 3; i++) {
+    // 3 starting wolves + 1 per monster offset (3 → 4 → 5 …).
+    const wolfStart = 3 + (monsterTierOffset || 0);
+    for (let i = 0; i < wolfStart; i++) {
       const wolf = new Creature({ name: 'Wolf', attack: 2, maxHp: 2 });
       wolf.ready();
       enemy.addCreature(wolf);
@@ -15139,6 +15240,19 @@ function startCombat() {
   // any future on_draw_* relic fires every time it lands in hand
   // (start of combat, mid-turn draw, end-of-turn refill).
   player.deck.onCardDrawn = (c) => triggerOnDraw(c);
+  // Encounter-spawned companions (corner_cell Thorb, general_zhost
+  // Raena, etc.) arrive on the field WITHOUT a sourceCard link, so
+  // the matching companion card stays in drawPile / hand instead of
+  // sitting in playPile next to her on-field instance. Two visible
+  // bugs followed: (1) the deck count read "13 + 1a" with two
+  // companions alive because only the card-summoned one made it to
+  // playPile, and (2) the unique-companion play gate could refuse a
+  // second cast but the card itself could still get drawn and the
+  // duplicate-creature bug stayed reachable via odd paths. Route
+  // every companion card matching an on-field companion straight
+  // into playPile here, AFTER deck.startCombat has rebuilt drawPile
+  // from masterDeck (so the card is actually findable).
+  linkEncounterCompanionsToPlayPile();
   const enemyStartHand = enemy._handSize || 2;
   enemy.deck.startCombat(enemyStartHand, 10);
 
@@ -24969,6 +25083,43 @@ function _uniqueCompanionNameFromCardEffects(card) {
   }
   return null;
 }
+// Walks the player's deck (drawPile / hand / rechargePile / discardPile)
+// and routes the card that summons `creatureName` into the play pile,
+// stamping the creature's sourceCard so the standard
+// playPileToDiscard rule fires when the companion dies. Called at
+// combat start for encounter-spawned companions (corner_cell Thorb,
+// general_zhost Raena) so the deck count reads correctly ("13 + 2a"
+// instead of "13 + 1a" with both companions alive) AND so the same
+// companion card can't be drawn a second time mid-fight.
+function linkEncounterCompanionToPlayPile(creature) {
+  if (!player || !player.deck || !creature) return false;
+  if (creature.sourceCard) return false; // already linked (card-summoned)
+  const name = creature.name;
+  if (!name) return false;
+  const piles = ['drawPile', 'hand', 'rechargePile', 'discardPile'];
+  for (const pileName of piles) {
+    const pile = player.deck[pileName];
+    if (!Array.isArray(pile)) continue;
+    const idx = pile.findIndex(card => {
+      if (!card) return false;
+      const sName = _uniqueCompanionNameFromCardEffects(card);
+      return sName === name;
+    });
+    if (idx === -1) continue;
+    const card = pile[idx];
+    pile.splice(idx, 1);
+    player.deck.playPile.push(card);
+    creature.sourceCard = card;
+    return true;
+  }
+  return false;
+}
+function linkEncounterCompanionsToPlayPile() {
+  if (!player || !player.deck || !Array.isArray(player.creatures)) return;
+  for (const c of player.creatures) {
+    if (c && c.isCompanion) linkEncounterCompanionToPlayPile(c);
+  }
+}
 function playCardSelf(handIndex) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
@@ -25050,7 +25201,18 @@ function playCardOnAlly(handIndex, target) {
       resolveEffect(eff, player, enemy);
     }
   }
-  player.deck.placeByCost(card);
+  // Companion-summon cards route to playPile so the deck reads
+  // correctly ("R + Na") and the same card can't cycle back into
+  // the draw pile while the ally is alive. Valdrisa T3 routes
+  // through this ally-target path because of her optional
+  // Called-heal effect (TargetType.SINGLE_ALLY); without the flag
+  // check, her card was hitting the recharge pile instead.
+  if (card._routeToPlayPile) {
+    player.deck.playPile.push(card);
+    delete card._routeToPlayPile;
+  } else {
+    player.deck.placeByCost(card);
+  }
   _activePlayCard = null;
   selectedCardIndex = -1;
   if (state === GameState.COMBAT || state === GameState.TARGETING) {
@@ -25112,7 +25274,22 @@ function playCardOnEnemy(handIndex) {
     }
   }
 
-  if (!stays) player.deck.placeByCost(card);
+  // Companion-summon cards route to playPile so the deck count
+  // stays in sync with on-field companions and the same card
+  // can't cycle back through the draw pile mid-fight. Raena
+  // (every tier) routes through this enemy-target path because
+  // her "Called" arrow is a SINGLE_ENEMY damage effect — without
+  // this branch her card landed in the recharge pile, the deck
+  // readout showed "+1a" instead of "+2a" when Thorb+Raena were
+  // both alive, and the card could be drawn again next turn.
+  if (!stays) {
+    if (card._routeToPlayPile) {
+      player.deck.playPile.push(card);
+      delete card._routeToPlayPile;
+    } else {
+      player.deck.placeByCost(card);
+    }
+  }
 
   // Bleed tick fires AFTER the attack card resolves so a fatal bleed
   // never robs the player of the swing. Only ATTACK-type cards count
@@ -25178,7 +25355,19 @@ function playCardOnCreature(handIndex, creature) {
     }
   }
 
-  if (!stays) player.deck.placeByCost(card);
+  // Same _routeToPlayPile branch as playCardSelf / playCardOnEnemy
+  // — Raena's "Called" arrow can land on a creature instead of the
+  // enemy character, which routes through this path. Without the
+  // check her card was missing from playPile when she was summoned
+  // by targeting a creature.
+  if (!stays) {
+    if (card._routeToPlayPile) {
+      player.deck.playPile.push(card);
+      delete card._routeToPlayPile;
+    } else {
+      player.deck.placeByCost(card);
+    }
+  }
 
   if (card.cardType === CardType.ATTACK) tickBleedOnAttack(player, 'You');
 
@@ -28677,8 +28866,15 @@ function startEnemyTurn() {
         // rest are a 50/50 Guard/Slinger roll. enemyTurnNumber is
         // already reset to 0 in startCombat and incremented at the
         // start of every enemy turn — perfect proxy for PY's swarm_turn.
+        // ccgQuest+: per monster offset, add a random 0..offset bonus
+        // on top of the base count so a +1 run turns "1 / 1 / 2 / 2 / 3"
+        // into a 1-2 / 1-2 / 2-3 / 2-3 / 3-4 random roll, +2 into
+        // 1-3 / 2-4 / etc. — the swarm grows every turn AND varies.
         const turn = enemyTurnNumber;
-        const totalSpawns = Math.floor((turn + 1) / 2);
+        const baseSpawns = Math.floor((turn + 1) / 2);
+        const swarmOffset = monsterTierOffset || 0;
+        const swarmBonus = swarmOffset > 0 ? Math.floor(Math.random() * (swarmOffset + 1)) : 0;
+        const totalSpawns = baseSpawns + swarmBonus;
         const numDragonshields = turn >= 9 ? 1 : 0;
         const numOthers = Math.max(0, totalSpawns - numDragonshields);
         let guards = 0;
@@ -28709,21 +28905,36 @@ function startEnemyTurn() {
       } else if (power.id === 'kobold_army') {
         // Mirrors PY: top up to a target of 4-6 allies with Guards, always
         // add 1 Slinger, and 30 % chance for an extra Dragonshield.
+        // ccgQuest+: per monster offset, bump (a) the Guard target
+        // ceiling by +1, (b) the Slinger random count upper bound by
+        // +1 (1 base → 1-2 at +1, 1-3 at +2 …), and (c) the
+        // Dragonshield chance by +20 % (30 → 50 → 70 …).
+        const kaOff = monsterTierOffset || 0;
         const currentAllies = enemy.creatures.filter(c => c.isAlive).length;
-        const targetAllies = 4 + Math.floor(Math.random() * 3); // 4..6
+        const targetCeiling = 6 + kaOff;
+        const targetFloor = 4 + kaOff;
+        const targetAllies = targetFloor + Math.floor(Math.random() * (targetCeiling - targetFloor + 1));
         const numGuards = Math.max(0, targetAllies - currentAllies);
-        const spawnDragonshield = Math.random() < 0.3;
+        const slingerMax = 1 + kaOff;
+        const numSlingers = 1 + Math.floor(Math.random() * slingerMax);
+        const dshieldChance = 0.3 + 0.2 * kaOff;
+        const spawnDragonshield = Math.random() < dshieldChance;
         for (let i = 0; i < numGuards; i++) {
           enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
         }
-        enemy.addCreature(new Creature({ name: 'Kobold Slinger', attack: 2, maxHp: 1, fireAttack: 1 }));
+        for (let i = 0; i < numSlingers; i++) {
+          enemy.addCreature(new Creature({ name: 'Kobold Slinger', attack: 2, maxHp: 1, fireAttack: 1 }));
+        }
         if (spawnDragonshield) {
           enemy.addCreature(new Creature({
             name: 'Kobold Dragonshield', attack: 2, maxHp: 2, shield: 2, sentinel: true,
             description: 'Sentinel: Must be targeted first.',
           }));
         }
-        const parts = [`${numGuards} Guard${numGuards === 1 ? '' : 's'}`, '1 Slinger'];
+        const parts = [
+          `${numGuards} Guard${numGuards === 1 ? '' : 's'}`,
+          `${numSlingers} Slinger${numSlingers === 1 ? '' : 's'}`,
+        ];
         if (spawnDragonshield) parts.push('1 Dragonshield');
         addLog(`  Kobold Army! ${parts.join(', ')} join the fight!`, Colors.ORANGE);
         playSound('kobold_attack', 0.7);
@@ -28751,9 +28962,12 @@ function startEnemyTurn() {
         const alivePiranhas = enemy.creatures.filter(
           c => c.isAlive && c.name === 'Piranha'
         ).length;
-        const num = alivePiranhas <= 5
-          ? 3 + Math.floor(Math.random() * 2)  // 3..4 — refill toward swarm bonus
-          : 1 + Math.floor(Math.random() * 2); // 1..2 — top-up only
+        // ccgQuest+ shifts BOTH ends of the random window up by
+        // monsterTierOffset so a +1 run reads 4-5 / 2-3 (was 3-4 /
+        // 1-2). Range width stays at 2; the pool just escalates.
+        const pSwarmOffset = monsterTierOffset || 0;
+        const pMin = (alivePiranhas <= 5 ? 3 : 1) + pSwarmOffset;
+        const num = pMin + Math.floor(Math.random() * 2);
         for (let i = 0; i < num; i++) {
           enemy.addCreature(new Creature({
             name: 'Piranha', attack: 0, maxHp: 1, swarm: true,
@@ -28784,19 +28998,25 @@ function startEnemyTurn() {
         playStaggeredSfx('goblin_explosion', num, 140, 0.6);
         addLog(`  Goblin Sapper Squad! ${num} sapper${num === 1 ? '' : 's'} join the fight!`, Colors.ORANGE);
       } else if (power.id === 'obsidian_body') {
-        // Slime boss — regrows 1 base armor at the start of every turn,
-        // capped at 5. Counters players peeling armor with single-target
-        // hits while the slimes spread.
+        // Slime boss — regrows N base armor at the start of every
+        // turn, capped at 5. ccgQuest+ bumps the regen by +1 per
+        // monsterTierOffset so a +1 run rebuilds 2 armor each turn
+        // instead of 1. Counters players peeling armor with
+        // single-target hits while the slimes spread.
         if ((enemy.baseArmor || 0) < 5) {
-          enemy.baseArmor = (enemy.baseArmor || 0) + 1;
-          addLog(`  Obsidian Body regrows! +1 Armor (${enemy.baseArmor}).`, Colors.ORANGE);
-          spawnTokenOnTarget(enemy, 1, 'Armor', '#cccccc');
+          const regen = 1 + (monsterTierOffset || 0);
+          enemy.baseArmor = Math.min(5, (enemy.baseArmor || 0) + regen);
+          addLog(`  Obsidian Body regrows! +${regen} Armor (${enemy.baseArmor}).`, Colors.ORANGE);
+          spawnTokenOnTarget(enemy, regen, 'Armor', '#cccccc');
         }
       } else if (power.id === 'obsidian_construct') {
-        // Golem boss — regrows 1 base armor (cap 5) and bleeds 1 Rage
-        // every turn so it doesn't snowball indefinitely from the on-hit
-        // rage gain.
-        if ((enemy.baseArmor || 0) < 5) {
+        // Golem boss — regrows 1 base armor and bleeds 1 Rage every
+        // turn so it doesn't snowball indefinitely from the on-hit
+        // rage gain. ccgQuest+ raises the armor cap by +2 per
+        // monsterTierOffset (5 → 7 → 9 …) so the construct can soak
+        // more before peeling out entirely. Regen amount stays at 1.
+        const armorCap = 5 + 2 * (monsterTierOffset || 0);
+        if ((enemy.baseArmor || 0) < armorCap) {
           enemy.baseArmor = (enemy.baseArmor || 0) + 1;
           addLog(`  Obsidian Construct hardens! +1 Armor (${enemy.baseArmor}).`, Colors.ORANGE);
           spawnTokenOnTarget(enemy, 1, 'Armor', '#cccccc');
@@ -29434,9 +29654,10 @@ function updateEnemyTurn(dt) {
       // and persists across swings (Rage is a permanent +damage buff
       // unless a card explicitly clears it). Routes player damage
       // through the accumulator so the defense phase can absorb it;
-      // ally damage is immediate.
+      // ally damage is immediate. ccgQuest+ bumps the base hit by
+      // +5 per monsterTierOffset (5 → 10 → 15 …).
       const rageBonus = enemy.rage || 0;
-      let dmg = 5 + rageBonus;
+      let dmg = 5 + 5 * (monsterTierOffset || 0) + rageBonus;
       if (rageBonus > 0) {
         addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
       }
@@ -39677,9 +39898,12 @@ function drawCodexFilters(L) {
     });
   }
 
-  // Format toggle (everything except characters and perks): Small / Full —
+  // Format toggle (everything except characters, perks, sounds): Small / Full —
   // sits right of the search box. Perks are a single consistent layout, no
-  // size variants.
+  // size variants. The TOffset stepper sits right of the format toggle on
+  // tabs that have one, OR directly right of the search box on the
+  // characters tab where Small/Full don't apply.
+  let trOffAnchorX;
   if (codexTab !== 'characters' && codexTab !== 'perks' && codexTab !== 'sounds') {
     const tw = 70;
     const trX = sr.x + sr.w + 8;
@@ -39698,14 +39922,21 @@ function drawCodexFilters(L) {
       ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
       codexClickAreas.push({ ...r, kind: 'format', value: val });
     }
-    // TOffset stepper — sits right of Full. Click to advance the
-    // preview tier offset (0..9, wraps). While offset > 0, every
-    // card in the grid gets a red "needs offset rules" overlay
-    // (no card currently has tier-up rules wired, so all of them
-    // light up — that's the point: a visual checklist for what
-    // needs ccgQuest+ scaling rules).
+    trOffAnchorX = trFull.x + tw + 12;
+  } else if (codexTab === 'characters') {
+    // Heroes & Monsters tab — no Small/Full toggle, anchor the
+    // TOffset stepper directly to the right of the search box so
+    // the player can dial in the offset and watch the monster
+    // panel's Setup / Powers update in place.
+    trOffAnchorX = sr.x + sr.w + 8;
+  }
+  if (typeof trOffAnchorX === 'number') {
+    // TOffset stepper — click to advance the preview tier offset
+    // (0..9, wraps). While offset > 0, cards in the grid get a red
+    // "needs offset rules" overlay and the monster panel renders
+    // scaled Setup / Powers descriptions for the current offset.
     const offW = 110;
-    const trOff = { x: trFull.x + tw + 12, y: L.filterY + 4, w: offW, h: CODEX_FILTER_H - 8 };
+    const trOff = { x: trOffAnchorX, y: L.filterY + 4, w: offW, h: CODEX_FILTER_H - 8 };
     const offActive = codexTierOffset > 0;
     ctx.fillStyle = offActive ? 'rgba(140, 40, 40, 0.85)' : 'rgba(20, 20, 35, 0.7)';
     ctx.fillRect(trOff.x, trOff.y, trOff.w, trOff.h);
@@ -41263,6 +41494,13 @@ function buildCodexSourceCache() {
     enemyPowersByEnemyId: {},    // enemyId -> [Power] (snapshot per enemy for codex monster panel)
     enemyDeckByEnemyId: {},      // enemyId -> deckId (so monster cards link to their deck)
     enemyDeckSummaryById: {},    // deckId -> "5x A · 5x B · …" text summary
+    // Setup snapshot for the codex monster panel — fields not
+    // surfaced by powers (starting armor / shield / kill target /
+    // invulnerable flag, hand size, base deck size, opening
+    // creature roster). The codex renders these under a "Setup"
+    // section so the player can see things like "Obsidian Golem:
+    // Armor 5" without scrolling through the power list.
+    enemySetupByEnemyId: {},     // enemyId -> { fields: [{label, value, scales?}] }
   };
   // Snapshot the player-side card id set up front so we can classify enemy
   // deck cards as "enemy-only" if they're not in this set.
@@ -41622,6 +41860,15 @@ function buildCodexSourceCache() {
   // effects (magma_mephit's spawn whoosh, etc.) so the codex cache
   // build is silent. Cleared in the finally-equivalent below.
   _codexSandboxRunning = true;
+  // Lock monsterTierOffset to 0 for the duration of the sandbox so
+  // the captured setup numbers are the BASE values. The codex
+  // monster panel applies the codexTierOffset selection at render
+  // time using the scaling rules tagged on each field. Without this
+  // freeze, a player in a Game+ run (monsterTierOffset > 0) would
+  // see already-scaled "base" values in the cache and the render
+  // would double-bump them.
+  const savedMonsterOffset = monsterTierOffset;
+  monsterTierOffset = 0;
   for (const eid of enemyIds) {
     try {
       setupEnemyForCombat(eid);
@@ -41677,11 +41924,103 @@ function buildCodexSourceCache() {
           addCreature(c, `Enemy: ${name}`);
         }
       }
+      // Setup snapshot — capture the non-power fields the encounter
+      // wires onto the boss shell during setupEnemyForCombat. Each
+      // field can carry a `scale` rule describing how it grows with
+      // monsterTierOffset; the codex monster panel reads
+      // codexTierOffset at render time and applies the rule so the
+      // displayed values track the offset selector live.
+      //
+      // Scale rule shapes (per field):
+      //   { per: N }       — additive: value + N * offset (floor)
+      //   { mult: N }      — multiplicative: value * (1 + N * offset)
+      //   { creature: N }  — adds N to a "Opens with K× …" creature count
+      {
+        const fields = [];
+        const baseArmor = enemy.baseArmor || 0;
+        const ARMOR_SCALE = { obsidian_golem: 2, obsidian_slime: 2 };
+        const SHIELD_SCALE = { prison_guards: 4 };
+        const KILL_TARGET_SCALE = { general_zhost: 2 };
+        // Opening creature counts that scale per monster offset.
+        // Floor halves are intentional — Sahuagin Priest's Sentinel
+        // grows every 2 offsets, General Zhost's Dragonshield same.
+        const OPENING_CREATURE_SCALE = {
+          'prison_guards|Kobold Guard': 1,
+          'kobold_patrol|Kobold Guard': 1,
+          'dire_rat|Rat': 1,
+          'sahuagin_priest|Sahuagin Sentinel': 0.5,
+          'sahuagin_baron|Sahuagin Sentinel': 1,
+          'general_zhost|Kobold Guard': 1,
+          'general_zhost|Kobold Slinger': 1,
+          'general_zhost|Kobold Dragonshield': 0.5,
+          'wolf_pack|Wolf': 1,
+          'piranhas_swarm|Piranha': 1,
+        };
+        if (baseArmor > 0) {
+          const per = ARMOR_SCALE[eid];
+          fields.push({ label: 'Armor', value: baseArmor, scale: per ? { per } : null });
+        }
+        if ((enemy.shield || 0) > 0) {
+          const per = SHIELD_SCALE[eid];
+          fields.push({ label: 'Shield', value: enemy.shield, scale: per ? { per } : null });
+        }
+        if (enemy.fireImmune) fields.push({ label: 'Fire Immune', value: 'yes' });
+        if (enemy._invulnerable) fields.push({ label: 'Invulnerable', value: 'yes' });
+        if (enemy._killTarget) {
+          const per = KILL_TARGET_SCALE[eid];
+          fields.push({ label: 'Kill Target', value: enemy._killTarget, scale: per ? { per } : null });
+        }
+        if (enemy._swimTarget) fields.push({ label: 'Swim Target', value: enemy._swimTarget });
+        const hs = ENEMY_HAND_SIZE[eid];
+        if (typeof hs === 'number') fields.push({ label: 'Hand Size', value: hs });
+        // Base deck size BEFORE the monsterTierOffset duplication —
+        // monsterTierOffset is locked to 0 for the sandbox, so this
+        // is the +0 baseline. Scales × (1 + offset) via
+        // applyMonsterTierOffsetToEnemy at fight time.
+        const baseDeck = enemy.deck && Array.isArray(enemy.deck.masterDeck)
+          ? enemy.deck.masterDeck.length : 0;
+        if (baseDeck > 0) fields.push({ label: 'Deck Size', value: baseDeck, scale: { mult: 1 } });
+        // Opening creature roster — group by name + apply the
+        // per-eid scaling rule so the field shows base count now and
+        // base + (per × offset) at higher codex tiers.
+        if (Array.isArray(enemy.creatures) && enemy.creatures.length) {
+          const creatureCounts = {};
+          for (const c of enemy.creatures) {
+            const n = c?.name;
+            if (!n) continue;
+            creatureCounts[n] = (creatureCounts[n] || 0) + 1;
+          }
+          for (const [cname, count] of Object.entries(creatureCounts)) {
+            const per = OPENING_CREATURE_SCALE[`${eid}|${cname}`];
+            fields.push({
+              label: `Opens with`,
+              creatureName: cname,
+              value: count,
+              scale: per ? { per } : null,
+            });
+          }
+        }
+        if (fields.length > 0) {
+          cache.enemySetupByEnemyId[eid] = { fields };
+        }
+      }
+      // Codex monster-id aliases — the codex catalogs `kobold_warden`
+      // but the enemy is set up under `prison_guards`. Mirror every
+      // per-eid cache entry to the codex-facing alias so the monster
+      // panel finds powers / deck / setup without a separate lookup.
+      const CODEX_EID_ALIAS = { prison_guards: 'kobold_warden' };
+      const aliasEid = CODEX_EID_ALIAS[eid];
+      if (aliasEid) {
+        if (cache.enemySetupByEnemyId[eid]) cache.enemySetupByEnemyId[aliasEid] = cache.enemySetupByEnemyId[eid];
+        if (cache.enemyPowersByEnemyId[eid]) cache.enemyPowersByEnemyId[aliasEid] = cache.enemyPowersByEnemyId[eid];
+        if (cache.enemyDeckByEnemyId[eid]) cache.enemyDeckByEnemyId[aliasEid] = cache.enemyDeckByEnemyId[eid];
+      }
     } catch (e) { /* enemy setup failed — skip */ }
   }
   enemy = savedEnemy;
   if (player && savedPlayerCreatures) player.creatures = savedPlayerCreatures;
   if (player && savedPlayerBuffs) player.combatBuffs = savedPlayerBuffs;
+  monsterTierOffset = savedMonsterOffset;
   _codexSandboxRunning = false;
 
   // Class powers
@@ -42074,9 +42413,21 @@ function drawCodexStatsPanel(L) {
       ctx.textBaseline = 'top';
       const lineH = 18;
       const maxW = CODEX_RIGHT_W - CODEX_PADDING - 24;
+      const codexOff = codexTierOffset || 0;
       for (const p of powers) {
         if (py + lineH > L.rightY + L.rightH - 8) break;
-        let text = `• ${p.name}`;
+        // Apply the codex TOffset to the power so the row's name +
+        // hover-preview pop shows the scaled values (Dark Vision
+        // becomes "Scry 5 / Discard 2 Best" at +1, etc.). The clone
+        // is fresh per frame; the cached raw power stays untouched
+        // for the next render pass.
+        const previewP = codexOff > 0
+          ? applyTierOffsetToCardPreview(p, codexOff)
+          : p;
+        // Power name picks up the gamePlusNameSuffix ("+", "++", …)
+        // from applyGamePlusOffsetInPlace, so the list row directly
+        // surfaces the offset without an extra annotation.
+        let text = `• ${previewP.name}`;
         if (ctx.measureText(text).width > maxW) {
           while (text.length > 4 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1);
           text += '…';
@@ -42086,10 +42437,70 @@ function drawCodexStatsPanel(L) {
         // to the cursor (same path the codex Powers tab uses).
         const rowRect = { x: L.rightX + 12, y: py, w: maxW, h: lineH };
         const hov = hitTest(mouseX, mouseY, rowRect);
-        if (hov && !isShiftFrozen()) hoveredPowerPreview = p;
+        if (hov && !isShiftFrozen()) hoveredPowerPreview = previewP;
         ctx.fillStyle = hov ? Colors.GOLD : '#dce6f0';
         ctx.fillText(text, L.rightX + 12, py);
         py += lineH;
+      }
+      ctx.textBaseline = 'alphabetic';
+      py += 4;
+    }
+    // Setup section — non-power fields wired during enemy
+    // construction (armor, shield, invulnerable, kill target, hand
+    // size, base deck size, opening creature roster). Each field
+    // can carry a `scale` rule; the renderer applies the current
+    // codexTierOffset and prints "base → scaled" when the offset is
+    // non-zero so the player can directly see what the toggle does.
+    const setupSnapshot = cache.enemySetupByEnemyId[eid];
+    if (setupSnapshot && setupSnapshot.fields.length > 0) {
+      ctx.fillStyle = Colors.GOLD;
+      ctx.font = 'bold 13px Georgia, serif';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText('Setup', L.rightX + 12, py);
+      py += 16;
+      ctx.font = '12px sans-serif';
+      ctx.textBaseline = 'top';
+      const setupLineH = 16;
+      const setupMaxW = CODEX_RIGHT_W - CODEX_PADDING - 24;
+      const off = codexTierOffset || 0;
+      // Per-rule scaler — returns the scaled value at the current
+      // codex tier offset. Floor handles the 0.5/offset cases.
+      const applyScale = (base, scale) => {
+        if (!scale || off <= 0) return base;
+        if (scale.per) return base + Math.floor(scale.per * off + 1e-9);
+        if (scale.mult) return base * (1 + scale.mult * off);
+        return base;
+      };
+      for (const f of setupSnapshot.fields) {
+        if (py + setupLineH > L.rightY + L.rightH - 8) break;
+        let text;
+        if (f.creatureName) {
+          // Opening creature line — "• Opens with N× CreatureName".
+          // When the count scales, show base → scaled at the right.
+          const scaledCount = applyScale(f.value, f.scale);
+          text = `• ${f.label} ${scaledCount}× ${f.creatureName}`;
+          if (f.scale && off > 0 && scaledCount !== f.value) {
+            text = `• ${f.label} ${scaledCount}× ${f.creatureName} (base ${f.value})`;
+          }
+        } else if (f.value === '' || f.value === 'yes') {
+          text = `• ${f.label}${f.value === 'yes' ? '' : ''}`;
+        } else if (typeof f.value === 'number') {
+          const scaled = applyScale(f.value, f.scale);
+          if (f.scale && off > 0 && scaled !== f.value) {
+            text = `• ${f.label}: ${scaled} (base ${f.value})`;
+          } else {
+            text = `• ${f.label}: ${f.value}`;
+          }
+        } else {
+          text = `• ${f.label}: ${f.value}`;
+        }
+        if (ctx.measureText(text).width > setupMaxW) {
+          while (text.length > 4 && ctx.measureText(text + '…').width > setupMaxW) text = text.slice(0, -1);
+          text += '…';
+        }
+        ctx.fillStyle = '#cdd';
+        ctx.fillText(text, L.rightX + 12, py);
+        py += setupLineH;
       }
       ctx.textBaseline = 'alphabetic';
       py += 4;

@@ -219,6 +219,10 @@ export function createMassiveOgreRam() {
     effectDescription: 'Deal 5 Damage to ALL enemies.',
     rechargeCost: 4,
     shortDesc: 'R4->5 Dmg All',
+    // +5 base damage per offset — handler reads monsterTierOffset.
+    // Empty rule object opts the codex out of the red badge; the
+    // applyGamePlusOffsetInPlace custom branch rebuilds the dmg text.
+    gamePlusOffset: {},
   });
 }
 
@@ -236,6 +240,9 @@ export function createGoblinSapperSquad() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Turn Start:\nSummon Sappers',
+    // +1 to the upper bound of the random sapper roll per offset
+    // (1-2 → 1-3 → 1-4 …) — runtime handler reads monsterTierOffset.
+    gamePlusOffset: {},
   });
 }
 
@@ -338,6 +345,9 @@ export function createPiranhasSwarm() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Summon\nPiranhas',
+    // +1 to BOTH ends of the random spawn range per offset (3-4 / 1-2
+    // shift to 4-5 / 2-3 at +1, 5-6 / 3-4 at +2, …).
+    gamePlusOffset: {},
   });
 }
 
@@ -353,6 +363,9 @@ export function createFromTheDeep() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Summon\nFrom Deep',
+    // +1 to the upper bound of the random summon roll per offset —
+    // 1-2 creatures at +1, 1-3 at +2 …
+    gamePlusOffset: {},
   });
 }
 
@@ -380,10 +393,13 @@ export function createKoboldArmy() {
     id: 'kobold_army',
     name: 'Kobold Army',
     costDescription: 'Passive',
-    effectDescription: 'Start of Turn: Summon a Kobold Army.',
+    effectDescription: 'Start of Turn: Top up to 4-6 Kobold Guards, 1 Slinger, 30% Dragonshield.',
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Summon Army',
+    // Per offset: +1 Guard ceiling, +1 Slinger max random,
+    // +20% Dragonshield chance — handler reads monsterTierOffset.
+    gamePlusOffset: {},
   });
 }
 
@@ -461,6 +477,9 @@ export function createKoboldArmySwarm() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Kobold Swarm',
+    // Per offset, each turn rolls an extra 0..offset bonus on top of
+    // the escalating base count — handler reads monsterTierOffset.
+    gamePlusOffset: {},
   });
 }
 
@@ -476,6 +495,10 @@ export function createObsidianConstructPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'When Hit:\n-1 Armor, +1 Rage',
+    // +2 to the regen armor cap per offset (5 → 7 → 9 …) so the
+    // construct can rebuild deeper into the fight before peeling
+    // out. Regen amount stays at 1.
+    gamePlusOffset: {},
   });
 }
 
@@ -492,6 +515,8 @@ export function createObsidianOracleBodyPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'When Hit:\n-1 Armor',
+    // Bare armor-peel rule — no numeric value to scale with tier.
+    noTierOffset: true,
   });
 }
 
@@ -531,6 +556,8 @@ export function createObsidianBodyPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'When Hit:\n-1 Armor +Slime',
+    // +1 to the turn-start armor regen per offset (1 → 2 → 3 …).
+    gamePlusOffset: {},
   });
 }
 
