@@ -162,6 +162,9 @@ export function saveGame(state, saveName = '') {
         }))
       : [],
     soldCardsHistory: Array.isArray(state.soldCardsHistory) ? state.soldCardsHistory.slice() : [],
+    // Per-run Mimic Tongue purchase flag — gates Grimbold's fresh-
+    // stock Tongue slot. Wiped on Game+ launch by resetStoryFlags.
+    mimicTongueAcquiredThisRun: !!state.mimicTongueAcquiredThisRun,
     // Filibaf Forest maze state — drives the post-clear teleport pair
     // and the in-loop counters when saving mid-maze.
     forestCleared: !!state.forestCleared,

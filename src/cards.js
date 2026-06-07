@@ -365,6 +365,7 @@ export function createDragonBoneBow() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { multi_damage: 2 },
   });
 }
 
@@ -388,6 +389,7 @@ export function createDragonEyeMace() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { transform_shield_to_ice_target: 1, damage: 2, iced_bonus_damage: 2 },
   });
 }
 
@@ -491,6 +493,7 @@ export function createDragonToothDagger() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { damage: 1, iced_bonus_damage: 1 },
   });
 }
 
@@ -2305,6 +2308,7 @@ export function createBoneStaff() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 1, apply_poison: 0.5, gain_shield: 1 },
   });
 }
 
@@ -2517,6 +2521,11 @@ export function createBabyFrogSwarm() {
       new CardEffect('summon_baby_giant_frogs', 2, TargetType.SUMMON),
     ],
     previewCreature: createBabyGiantFrogCreature(),
+    // +1 block, +1 to the upper bound of the random Baby Giant
+    // Frog summon roll per offset. The summon_baby_giant_frogs
+    // EFFECT_DESC_PATTERN matches the "1-N" tail (player-side
+    // pattern) and the runtime handler reads eff.value as the max.
+    gamePlusOffset: { block: 1, summon_baby_giant_frogs: 1 },
   });
 }
 
@@ -3598,6 +3607,7 @@ export function createBow() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -3833,6 +3843,8 @@ export function createGreatclub() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    // +2 base / +2 vs Armor-Shield per offset (4/+4 → 6/+6 → 8/+8…).
+    gamePlusOffset: { armor_bonus_damage: { base: 2, bonus: 2 } },
   });
 }
 
@@ -3943,6 +3955,8 @@ export function createScaleArmor() {
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],
     rarity: 'rare',
+    // +2 block, +1 ice per offset.
+    gamePlusOffset: { block: 2, apply_ice_random: 1 },
   });
 }
 
@@ -4231,7 +4245,7 @@ export function createGravechillShard() {
   return new Card({
     id: 'gravechill_shard',
     name: 'Gravechill Shard',
-    description: 'Deal Ice Twice.\nStays in hand.',
+    description: 'Deal Ice 2 times.\nStays in hand.',
     shortDesc: 'Ice x2, Stays',
     subtype: 'wand',
     cardType: CardType.ATTACK,
@@ -4248,6 +4262,8 @@ export function createGravechillShard() {
     ],
     rarity: 'common',
     tier: 2,
+    // +1 Ice attack per offset (3 attacks at +1, 4 at +2…).
+    gamePlusOffset: { apply_ice_multi: 1 },
   });
 }
 
@@ -4807,6 +4823,7 @@ export function createDwarvenWarhammer() {
     ],
     rarity: 'common',
     tier: 2,
+    gamePlusOffset: { destroy_shield: 2, damage: 1 },
   });
 }
 
@@ -4852,6 +4869,7 @@ export function createDwarvenThrowingAxe() {
     ],
     rarity: 'common',
     tier: 2,
+    gamePlusOffset: { multi_damage: 1 },
   });
 }
 
@@ -5551,6 +5569,7 @@ export function createDwarvenCrossbow() {
       new CardEffect('unpreventable_damage', 5, TargetType.SINGLE_ENEMY),
     ],
     tier: 2,
+    gamePlusOffset: { unpreventable_damage: 2 },
   });
 }
 
@@ -5801,6 +5820,9 @@ export function createGnikansStaff() {
     ],
     rarity: 'epic',
     tier: 2,
+    // +2 self-Ice (= bigger pre-burst stack → fatter Ice Elemental),
+    // +1 hit damage, and +1/3 Ice on the swing per offset.
+    gamePlusOffset: { apply_ice_self: 2, damage: 1, apply_ice: 1/3 },
     previewCreature: (() => {
       // Ice Elemental side preview. `_iceAbsorb` matches the boss's
       // version so the codex Summons entry advertises the same

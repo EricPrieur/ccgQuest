@@ -437,6 +437,7 @@ const EFFECT_DESC_PATTERNS = {
   // Frogs" — without the context-aware pattern the fallback \b2\b
   // would rewrite the already-bumped block value).
   summon_player_baby_frogs: [/1-(\d+)\s+Baby/i, /1-(\d+)/, /Summon\s+(\d+)/i],
+  summon_baby_giant_frogs:  [/1\s*to\s*(\d+)\s+Baby/i, /1-(\d+)\s+Baby/i, /1-(\d+)/, /Summon\s+(\d+)/i],
   summon_obsidian_slime: [/1-(\d+)\s+Obsidian/i, /Summon\s+(\d+)/i],
   summon_random: [/1-(\d+)/, /Summon\s+(\d+)/i],
   summon_small_spider: [/1-(\d+)\s+Pet\s+Spiders/i, /1-(\d+)/],
@@ -457,6 +458,14 @@ const EFFECT_DESC_PATTERNS = {
   grant_obsidian_buff: [/\+(\d+)\s+vs\s+Armor/i, /(\d+)\s+vs\s+Armor/i],
   on_discard: [/Draw\s+(\d+)/i],
   on_discard_draw: [/Draw\s+(\d+)/i],
+  // Dragon / Gnikan / dwarven weapon coverage. Patterns lean on the
+  // surrounding noun so the swap targets the right number even when
+  // multiple digits live in the description.
+  transform_shield_to_ice_target: [/Transform\s+up\s+to\s+(\d+)/i, /Transform\s+(\d+)/i],
+  iced_bonus_damage: [/Iced:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Iced/i, /\+(\d+)\s+Iced/i, /Iced.*?(\d+)/i],
+  destroy_shield: [/Strip\s+(\d+)\s+Shield/i, /Destroy\s+(\d+)\s+Shield/i],
+  apply_ice_self: [/Gain\s+(\d+)\s+Ice/i],
+  apply_ice_multi: [/Ice\s+(\d+)\s+times/i, /(\d+)\s+times/i],
   // Varimatras / Kraken / boss-card additions.
   apply_ice_all: [/(\d+)\s+Ice\b/i],
   apply_ice_creatures_all: [/(\d+)\s+Ice\b/i],
@@ -1401,6 +1410,14 @@ let calmGroveBreadTaken = false;
 // Antiquity Shop. Subsequent visits skip straight to the cleared-shop
 // variant and open the buyback storefront.
 let antiquityShopCleared = false;
+// Tracks whether the Mimic Tongue has been picked up in THIS run
+// (purchase from Grimbold's or any other path). The antiquity shop
+// uses this — rather than a plain "is the card in masterDeck" check
+// — so a Game+ run that carried the Tongue over from the prior
+// run still gets a fresh copy on the shelf. Reset to false in
+// resetStoryFlags so every new run / Game+ launch starts with the
+// slot available again.
+let mimicTongueAcquiredThisRun = false;
 // Obsidian Forge one-time flags. forgeUsed = a weapon has been forged
 // (skips the intro text + grays out the forge_weapon choice on revisit).
 // forgeRested = the heal action has been used (grays out forge_rest).
@@ -5060,6 +5077,10 @@ function resetStoryFlags() {
   calmGroveBreadTaken = false;
   antiquityShopCleared = false;
   soldCardsHistory = [];
+  // Game+ / new-run reset of the antiquity shop's per-run flag so
+  // the fresh-stock Mimic Tongue slot is offered again. The
+  // buy-back history clear above already takes care of the rest.
+  mimicTongueAcquiredThisRun = false;
   forestLoopLevel = 1;
   forestCorrectPath = 'left';
   forestCleared = false;
@@ -5140,6 +5161,10 @@ function startNewGame() {
   calmGroveBreadTaken = false;
   antiquityShopCleared = false;
   soldCardsHistory = [];
+  // Game+ / new-run reset of the antiquity shop's per-run flag so
+  // the fresh-stock Mimic Tongue slot is offered again. The
+  // buy-back history clear above already takes care of the rest.
+  mimicTongueAcquiredThisRun = false;
   forestLoopLevel = 1;
   forestCorrectPath = 'left';
   forestCleared = false;
@@ -11318,20 +11343,25 @@ function setupEnemyForCombat(enemyId) {
     // tentacle swings on Raena/Thorb still hurt you.
     enemy.addPower(createDireFury());
     enemy.addPower(createOverwhelm());
-    // Start with 2 Tentacles already coiled on the field. Each one
-    // is the standard 3/5 snag-tentacle and arrives ready to swing
-    // on turn 1 (justSummoned=false), so the opening turn already
-    // has both lashes coming at the player before the Kraken even
-    // plays a card. Skipped during codex sandbox scans (same guard
-    // as the Kobold Patrol opening guard).
+    // Start with 2 Tentacles already coiled on the field (+0.5 per
+    // monster offset, floor: 2 base → 2 at +1 → 3 at +2 → 3 at +3 →
+    // 4 at +4 …). Each is the standard 3/5 snag-tentacle and arrives
+    // ready to swing on turn 1, so the opening turn already has the
+    // lashes coming at the player before the Kraken plays a card.
+    // The addCreature loop is OUTSIDE the sandbox guard so the codex
+    // monster panel's Setup section picks the tentacles up; only the
+    // log setTimeout is gated to prevent leaking into a stale log.
+    const kStartTentacles = 2 + Math.floor((monsterTierOffset || 0) * 0.5 + 1e-9);
+    for (let i = 0; i < kStartTentacles; i++) {
+      const tentacle = createKrakenTentacleCreature();
+      tentacle.exhausted = false;
+      tentacle.justSummoned = false;
+      enemy.addCreature(tentacle);
+    }
     if (!_codexSandboxRunning) {
-      for (let i = 0; i < 2; i++) {
-        const tentacle = createKrakenTentacleCreature();
-        tentacle.exhausted = false;
-        tentacle.justSummoned = false;
-        enemy.addCreature(tentacle);
-      }
-      setTimeout(() => addLog(`  Two Tentacles already coil up out of the water!`, Colors.RED), 50);
+      const cnt = kStartTentacles;
+      const word = cnt === 2 ? 'Two' : cnt === 3 ? 'Three' : cnt === 4 ? 'Four' : `${cnt}`;
+      setTimeout(() => addLog(`  ${word} Tentacles already coil up out of the water!`, Colors.RED), 50);
     }
   };
   ENEMY_HAND_SIZE.kraken_spawn = 3;
@@ -11391,14 +11421,22 @@ function setupEnemyForCombat(enemyId) {
     starter.exhausted = false;
     enemy.addCreature(starter);
     // ccgQuest+: +1 starting Sahuagin Sentinel per monster offset
+    // PLUS +0.5 starting Shark per offset (floor). Sentinel scaling
     // on top of the random pick above so the Baron has a guarding
-    // wall scaling with tier (offset 0: 1 random; offset 1: 1
-    // random + 1 Sentinel; offset 2: 1 random + 2 Sentinels …).
-    const sbExtra = monsterTierOffset || 0;
-    for (let i = 0; i < sbExtra; i++) {
+    // wall; the Sharks give the front line some bite at higher tiers.
+    const sbOff = monsterTierOffset || 0;
+    const sbExtraSentinels = sbOff;
+    const sbExtraSharks = Math.floor(sbOff * 0.5 + 1e-9);
+    for (let i = 0; i < sbExtraSentinels; i++) {
       enemy.addCreature(new Creature({
         name: 'Sahuagin Sentinel', attack: 2, maxHp: 5, sentinel: true,
         description: 'Sentinel: Must be targeted first.',
+      }));
+    }
+    for (let i = 0; i < sbExtraSharks; i++) {
+      enemy.addCreature(new Creature({
+        name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
+        description: 'Bloodfrenzy: +1 Rage after attacking.',
       }));
     }
   };
@@ -11512,7 +11550,8 @@ function setupEnemyForCombat(enemyId) {
     // erosion of the player's best cards.
     enemy = new Character('Obsidian Oracle');
     enemy.deck = new Deck();
-    enemy.baseArmor = 15;
+    // +2 starting armor per monster offset (15 → 17 → 19 …).
+    enemy.baseArmor = 15 + 2 * (monsterTierOffset || 0);
     for (let i = 0; i < 15; i++) enemy.deck.addCard(createObsidianCurse());
     enemy.addPower(createDarkVisionPower());
     enemy.addPower(createObsidianOracleBodyPower());
@@ -11535,9 +11574,15 @@ function setupEnemyForCombat(enemyId) {
     // invulnerability guard in checkCombatEnd. Matches the Piranhas
     // Swarm pattern.
     enemy.addPower(createLavaFloor());
-    // Spawn count: 3..5 (nerfed from 4..6 — 6 mephits + lava floor was
-    // a slog; 5 cap keeps the fight tense without dragging).
-    const numMephits = 3 + Math.floor(Math.random() * 3); // 3..5
+    // Spawn count: 3..5 base (nerfed from 4..6 — 6 mephits + lava
+    // floor was a slog; 5 cap keeps the fight tense without dragging).
+    // ccgQuest+ pushes the upper bound up by 0.5 per monster offset
+    // (floor) so the kill target ceiling rises with tier: 3..5 at
+    // base, 3..6 at +2, 3..7 at +4, etc. Spawn count == kill target.
+    const mmCeilBump = Math.floor((monsterTierOffset || 0) * 0.5 + 1e-9);
+    const mmMax = 5 + mmCeilBump;
+    const mmRange = mmMax - 3 + 1;
+    const numMephits = 3 + Math.floor(Math.random() * mmRange);
     for (let i = 0; i < numMephits; i++) {
       const mephit = new Creature({
         name: 'Magma Mephit', attack: 2, maxHp: 5,
@@ -11600,21 +11645,31 @@ function setupEnemyForCombat(enemyId) {
     enemy._killTarget = 20 + 2 * gzOff;
     enemy.addPower(createKoboldArmy());
     // Opening roster scales with monster offset: +1 Guard, +1
-    // Slinger, +0.5 Dragonshield (floor) per offset.
+    // Slinger, +1/3 Dragonshield (floor) per offset. Spawn order
+    // matters because Character.MAX_CREATURES caps the field at 12 —
+    // queue Dragonshields first (so the sentinel front line is
+    // always present), then Slingers, then Guards. At high offset
+    // (e.g. +3: 1+1=2 Dshield, 2+3=5 Slingers, 4+3=7 Guards = 14
+    // total → capped to 12; the last 2 Guards drop). addCreature
+    // returns false at the cap and the loop just stops adding.
     const gzGuards = 4 + gzOff;
     const gzSlingers = 2 + gzOff;
-    const gzDshields = 1 + Math.floor(gzOff * 0.5);
-    for (let i = 0; i < gzGuards; i++) {
-      enemy.addCreature(new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }));
-    }
-    for (let i = 0; i < gzSlingers; i++) {
-      enemy.addCreature(new Creature({ name: 'Kobold Slinger', attack: 2, maxHp: 1, fireAttack: 1 }));
-    }
+    const gzDshields = 1 + Math.floor(gzOff / 3 + 1e-9);
+    const addGz = (creator) => {
+      const c = creator();
+      return enemy.addCreature(c);
+    };
     for (let i = 0; i < gzDshields; i++) {
-      enemy.addCreature(new Creature({
+      if (!addGz(() => new Creature({
         name: 'Kobold Dragonshield', attack: 2, maxHp: 2, shield: 2, sentinel: true,
         description: 'Sentinel: Must be targeted first.',
-      }));
+      }))) break;
+    }
+    for (let i = 0; i < gzSlingers; i++) {
+      if (!addGz(() => new Creature({ name: 'Kobold Slinger', attack: 2, maxHp: 1, fireAttack: 1 }))) break;
+    }
+    for (let i = 0; i < gzGuards; i++) {
+      if (!addGz(() => new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 }))) break;
     }
     // Player allies — 4 Elf Warriors + Raena (companion) join the fight.
     // Was 5 elves originally; dropped to 4 because Elf Reinforcements now
@@ -11714,9 +11769,14 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createLargeBoulder());
     enemy._invulnerable = true;
     enemy._survivalRounds = 5;
-    const boulder = new Creature({ name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true });
-    boulder.ready();
-    enemy.addCreature(boulder);
+    // 1 starting Large Boulder + 0.5 per monster offset (floor): +1
+    // boulder at +2, +2 at +4, etc. Each spawn ready to swing turn 1.
+    const sgBoulders = 1 + Math.floor((monsterTierOffset || 0) * 0.5 + 1e-9);
+    for (let i = 0; i < sgBoulders; i++) {
+      const boulder = new Creature({ name: 'Large Boulder', attack: 6, maxHp: 4, armor: 1, selfDestruct: true });
+      boulder.ready();
+      enemy.addCreature(boulder);
+    }
   };
   ENEMY_HAND_SIZE.stone_giant = 1;
 
@@ -11730,6 +11790,13 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     for (let i = 0; i < 50; i++) enemy.deck.addCard(createPummel());
     enemy.addPower(createBrute());
+    // +0.5 hand size per monster offset (floor). 2 → 3 at +2 → 4 at
+    // +4, etc. Stamped on the enemy instance so the in-fight draw
+    // uses the bumped size; ENEMY_HAND_SIZE only seeds the base.
+    const rugaOff = monsterTierOffset || 0;
+    if (rugaOff > 0) {
+      enemy._handSize = 2 + Math.floor(rugaOff * 0.5 + 1e-9);
+    }
   };
   ENEMY_HAND_SIZE.ruga_slave_master = 2;
 
@@ -11922,13 +11989,17 @@ function setupEnemyForCombat(enemyId) {
       enemy.deck.addCard(c);
     }
     for (let i = 0; i < 6; i++) enemy.deck.addCard(createArcaneShield());
-    const stats = [
-      { name: 'Ice Elemental', attack: 1, maxHp: 1, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
-      { name: 'Ice Elemental', attack: 2, maxHp: 2, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
-      { name: 'Ice Elemental', attack: 3, maxHp: 3, iceAttack: 1, description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.' },
-    ];
-    for (const s of stats) {
-      const e = new Creature(s);
+    // Base trio: 1/1, 2/2, 3/3. ccgQuest+ adds +1 elemental per
+    // monster offset, continuing the +1/+1 stair pattern (4/4 at +1,
+    // 4/4 + 5/5 at +2, etc.). Each new elemental inherits the same
+    // Ice-Absorb / variable-stats / noTierOffset flags.
+    const gnikanCount = 3 + (monsterTierOffset || 0);
+    for (let i = 0; i < gnikanCount; i++) {
+      const n = i + 1; // 1/1, 2/2, 3/3, 4/4, …
+      const e = new Creature({
+        name: 'Ice Elemental', attack: n, maxHp: n, iceAttack: 1,
+        description: 'Ice Absorb: gain +1/+1 from any Ice that would land. Attacks apply 1 Ice.',
+      });
       e._iceAbsorb = true;
       e._codexVariableStats = true;
       // Ice Elemental scales off consumed Ice (not tier offset) —
@@ -12938,7 +13009,7 @@ function handleEncounterChoiceClick(x, y) {
               selectedClass, gold, player, currentMap, visitedNodes, backpack,
               kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
-              soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath,
+              soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
               dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
@@ -13655,7 +13726,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -33644,10 +33715,15 @@ const SHOP_LABELS = {
 // price it sold for. PY parity (game.py 17263+).
 function buildAntiquityShopInventory() {
   const entries = [];
-  const ownedDeck = (player && player.deck) ? player.deck.masterDeck.some(c => c.id === 'mimic_tongue') : false;
-  const ownedBp = backpack.some(c => c.id === 'mimic_tongue');
+  // Gate the fresh-stock Mimic Tongue on a per-RUN flag rather than
+  // "is the card anywhere in the player's deck". Game+ runs carry
+  // the prior-run deck over wholesale, so the old masterDeck check
+  // hid Mimic Tongue forever for any Game+ player who bought it
+  // before — they'd kill the Mimic and Grimbold's stock would read
+  // as empty. mimicTongueAcquiredThisRun resets in resetStoryFlags
+  // and flips when the card is purchased in the buy handler below.
   const soldMimic = soldCardsHistory.some(e => e.id === 'mimic_tongue');
-  if (!ownedDeck && !ownedBp && !soldMimic) {
+  if (!mimicTongueAcquiredThisRun && !soldMimic) {
     // Full rare price (200g via the rarity formula) — no override.
     entries.push(createMimicTongue);
   }
@@ -33742,6 +33818,11 @@ function applyShopConfirm() {
       if (shopMode && shopMode.id === 'antiquity_shop' && newCard.id) {
         const idx = soldCardsHistory.findIndex(e => e.id === newCard.id && e.price === c.price);
         if (idx !== -1) soldCardsHistory.splice(idx, 1);
+        // Flip the per-run flag the moment Mimic Tongue lands in
+        // the player's bag — covers the fresh-stock slot AND the
+        // buyback slot equally (buying back a sold Tongue still
+        // counts as "acquired" for the shop-display gate).
+        if (newCard.id === 'mimic_tongue') mimicTongueAcquiredThisRun = true;
         const inventory = buildAntiquityShopInventory();
         shopCards = inventory.map(entry => {
           const { creator, priceOverride } = resolveShopEntry(entry);
@@ -35918,7 +35999,7 @@ function commitSaveEditing() {
     selectedClass, gold, player, currentMap, visitedNodes, backpack,
     kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
     calmGroveRaenaJoined, calmGroveBreadTaken,
-    antiquityShopCleared, soldCardsHistory,
+    antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
     throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
@@ -36555,6 +36636,10 @@ function restoreFromSave(data) {
   calmGroveBreadTaken = !!data.calmGroveBreadTaken;
   antiquityShopCleared = !!data.antiquityShopCleared;
   soldCardsHistory = Array.isArray(data.soldCardsHistory) ? data.soldCardsHistory.slice() : [];
+  // Per-run Mimic Tongue gate — older saves predate the flag so
+  // default to "not acquired" (worst-case the player sees the
+  // fresh-stock slot once on next visit, which is benign).
+  mimicTongueAcquiredThisRun = !!data.mimicTongueAcquiredThisRun;
   forestCleared = !!data.forestCleared;
   forestLoopLevel = typeof data.forestLoopLevel === 'number' ? data.forestLoopLevel : 1;
   forestCorrectPath = data.forestCorrectPath === 'right' ? 'right' : 'left';
@@ -39555,6 +39640,11 @@ const HERO_NAMES = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
 const FORCE_ENEMY_CARD_IDS = new Set([
   'tentacle_grab', 'swallowing_bite', 'kraken_tentacle_block',
   'kraken_whip', 'ink_cloud',
+  // Giant Frog deck — Acid Spit, Baby Frog Swarm, Frog Bite, and
+  // Giant Frog Swallow ship from CARD_REGISTRY for codex sourcing
+  // but only ever live in the boss's deck; force them under the
+  // Enemy column so they stop showing up in the Player tab.
+  'acid_spit', 'baby_frog_swarm', 'frog_bite', 'giant_frog_swallow',
 ]);
 function getCodexCardEntries() {
   // Build a rich list from CARD_REGISTRY (cards) + token cards + powers.
@@ -40115,6 +40205,31 @@ function drawCodexCharacterGrid(L) {
     const e = entries[i];
     drawCodexCharacterPanel(e, x, y, cardW, cardH);
     codexClickAreas.push({ x, y, w: cardW, h: cardH, kind: 'select-character', entry: e });
+    // Monster red-border gate — mirrors the cards / powers /
+    // creatures grid. Heroes never get the badge (they don't carry
+    // a monster-side scaling concept). Monsters need either setup
+    // scale fields, a scaled / opted-out power, or an explicit
+    // MONSTERS_NO_OFFSET stamp; otherwise paint the "+N?" overlay.
+    if (codexTierOffset > 0 && e.kind === 'monster' && !monsterHasOffsetCoverage(e.id)) {
+      ctx.save();
+      ctx.strokeStyle = '#ff4040';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x + 1.5, y + 1.5, cardW - 3, cardH - 3);
+      const bw = 44, bh = 22;
+      const bx = x + cardW - bw - 4;
+      const by = y + 4;
+      ctx.fillStyle = 'rgba(120, 20, 20, 0.92)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = '#ff8080';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.fillStyle = '#ffd8d8';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`+${codexTierOffset}?`, bx + bw / 2, by + bh / 2);
+      ctx.restore();
+    }
   }
   ctx.restore();
 
@@ -41398,6 +41513,67 @@ function getCodexMonsterIds() {
 
 // Stand-in for drawCharacterPanel that renders a portrait + name + frame at a
 // fixed rect, without needing a real Character object.
+// Monsters that have been audited and intentionally carry no ccgQuest+
+// scaling — keeps them out of the red "needs coverage" badge in the
+// codex character grid. Add an eid here AFTER deciding the monster
+// doesn't need offset scaling (binary mechanic, fixed-shape fight,
+// etc.). Add it to the alias-aware lookup so kobold_warden (which
+// runs the prison_guards setup) inherits the resolution.
+const MONSTERS_NO_OFFSET = new Set([
+  // Currently empty — every monster either has offset coverage wired
+  // (setup scale rules, power gamePlusOffset, or opening creatures
+  // with CREATURE_TIER_OFFSET) or is awaiting tuning. Populate as the
+  // audit lands.
+]);
+// True when the monster has any kind of ccgQuest+ scaling presence
+// — at least one setup field with a scale rule, at least one power
+// with gamePlusOffset or noTierOffset, OR is explicitly stamped in
+// MONSTERS_NO_OFFSET. Used by the character grid red-border gate.
+function monsterHasOffsetCoverage(eid) {
+  if (!eid) return true;
+  if (MONSTERS_NO_OFFSET.has(eid)) return true;
+  const cache = buildCodexSourceCache();
+  // Setup scale rules attached during the sandbox build.
+  const setup = cache.enemySetupByEnemyId[eid];
+  if (setup && Array.isArray(setup.fields)) {
+    for (const f of setup.fields) {
+      if (f && f.scale) return true;
+    }
+  }
+  // Power coverage — gamePlusOffset OR noTierOffset both count as
+  // "audited", since noTierOffset declares the binary opt-out.
+  const powers = cache.enemyPowersByEnemyId[eid] || [];
+  for (const p of powers) {
+    if (!p) continue;
+    if (p.gamePlusOffset) return true;
+    if (p.noTierOffset === true) return true;
+  }
+  // Deck coverage — monsters whose only ccgQuest+ surface area is
+  // their deck (Sahuagin Sentinel only adds Trident Throws + Scale
+  // Armor) still count as audited if at least one deck card has
+  // offset rules. The monsterTierOffset deck-duplication rule is
+  // applied universally too, but coverage here gates on the
+  // per-card gamePlusOffset / noTierOffset audit.
+  const deckId = cache.enemyDeckByEnemyId[eid];
+  const deck = deckId ? cache.decks.find(d => d.id === deckId) : null;
+  if (deck && Array.isArray(deck.entries)) {
+    for (const entry of deck.entries) {
+      const card = entry && entry.card;
+      if (!card) continue;
+      if (card.gamePlusOffset) return true;
+      if (card.noTierOffset === true) return true;
+    }
+  }
+  // Opening-roster creatures whose names have a CREATURE_TIER_OFFSET
+  // rule count as coverage too (Forest Spiders, Stone Giant, etc.).
+  if (Array.isArray(setup?.fields)) {
+    for (const f of setup.fields) {
+      if (!f || !f.creatureName) continue;
+      if (CREATURE_TIER_OFFSET[f.creatureName]) return true;
+    }
+  }
+  return false;
+}
 function drawCodexCharacterPanel(entry, x, y, w, h) {
   // Some monster ids share an art key with a card (wolf_pack → the
   // power card art) instead of a portrait. Remap those to the right
@@ -41938,23 +42114,32 @@ function buildCodexSourceCache() {
       {
         const fields = [];
         const baseArmor = enemy.baseArmor || 0;
-        const ARMOR_SCALE = { obsidian_golem: 2, obsidian_slime: 2 };
+        const ARMOR_SCALE = {
+          obsidian_golem: 2,
+          obsidian_slime: 2,
+          obsidian_oracle: 2,
+        };
         const SHIELD_SCALE = { prison_guards: 4 };
         const KILL_TARGET_SCALE = { general_zhost: 2 };
+        const HAND_SIZE_SCALE = { ruga_slave_master: 0.5 };
         // Opening creature counts that scale per monster offset.
-        // Floor halves are intentional — Sahuagin Priest's Sentinel
-        // grows every 2 offsets, General Zhost's Dragonshield same.
+        // Fractional rates floor at the threshold (0.5 = +1 every 2
+        // offsets, 1/3 = +1 every 3 offsets, etc.).
         const OPENING_CREATURE_SCALE = {
           'prison_guards|Kobold Guard': 1,
           'kobold_patrol|Kobold Guard': 1,
           'dire_rat|Rat': 1,
           'sahuagin_priest|Sahuagin Sentinel': 0.5,
           'sahuagin_baron|Sahuagin Sentinel': 1,
+          'sahuagin_baron|Shark': 0.5,
           'general_zhost|Kobold Guard': 1,
           'general_zhost|Kobold Slinger': 1,
-          'general_zhost|Kobold Dragonshield': 0.5,
+          'general_zhost|Kobold Dragonshield': 1/3,
           'wolf_pack|Wolf': 1,
           'piranhas_swarm|Piranha': 1,
+          'stone_giant|Large Boulder': 0.5,
+          'kraken_spawn|Tentacle': 0.5,
+          'overseer_gnikan|Ice Elemental': 1,
         };
         if (baseArmor > 0) {
           const per = ARMOR_SCALE[eid];
@@ -41972,7 +42157,10 @@ function buildCodexSourceCache() {
         }
         if (enemy._swimTarget) fields.push({ label: 'Swim Target', value: enemy._swimTarget });
         const hs = ENEMY_HAND_SIZE[eid];
-        if (typeof hs === 'number') fields.push({ label: 'Hand Size', value: hs });
+        if (typeof hs === 'number') {
+          const per = HAND_SIZE_SCALE[eid];
+          fields.push({ label: 'Hand Size', value: hs, scale: per ? { per } : null });
+        }
         // Base deck size BEFORE the monsterTierOffset duplication —
         // monsterTierOffset is locked to 0 for the sandbox, so this
         // is the +0 baseline. Scales × (1 + offset) via
