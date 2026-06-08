@@ -429,6 +429,11 @@ const EFFECT_DESC_PATTERNS = {
   apply_ice: [/(\d+)\s+Ice\b/i],
   gain_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
   buff_allies_heroism: [/Allies\s+gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Ally\s+Heroism/i, /(\d+)\s+Heroism/i],
+  // Shield Wall — "Allies gain N Shield" line (the self-gain "N Shield"
+  // is owned by the gain_shield pattern above).
+  buff_allies_shield: [/Allies\s+gain\s+(\d+)\s+Shield/i, /Ally\s+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  // Thunderclap — "Apply N Shock to ALL enemies".
+  apply_shock_all: [/Apply\s+(\d+)\s+Shock/i, /(\d+)\s+Shock/i],
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
   damage_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
   damaged_bonus_damage: [/\+(\d+)\s+if/i, /(\d+)\s+if\s+damaged/i],
@@ -2867,6 +2872,13 @@ let barrageShotsTotal = 0;        // total shots this barrage (barrage value + 1
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
 let barrageShotDamage = 1;        // per-shot base damage from the MM card
+// Consumable on-attack buff snapshots — taken on the FIRST shot of a
+// barrage so every subsequent shot in the same card play benefits.
+// Mirrors the multi_damage / picker-flow pattern.
+let barragePoisonStacks = 0;
+let barrageEyeBonus = 0;
+let barrageObsBonus = 0;
+let barrageIgnite = 0;
 
 // Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
 // element shots, each picks its own target — same enemy or different).
@@ -3806,11 +3818,6 @@ canvas.addEventListener('mousemove', (e) => {
         } else if (needsTarget(card)) {
           const rechargeNeeded = getCardRechargeExtra(card);
           if (rechargeNeeded > 0) { clearDragState(); return; }
-          if (card.id === 'backstab' && !backstabHasValidTarget()) {
-            showStyledToast('Backstab requires an undamaged enemy', 'recharge', 1800);
-            clearDragState();
-            return;
-          }
           if (card.id === 'execute' && !executeHasValidTarget()) {
             showStyledToast('Execute requires an enemy below half HP', 'recharge', 1800);
             clearDragState();
@@ -20826,9 +20833,6 @@ function handleCombatClick(x, y) {
         // multi-targets.
         if (cardIsFeralSwipe(card)) {
           enterFeralSwipeTargeting(i);
-        } else if (card.id === 'backstab' && !backstabHasValidTarget()) {
-          showStyledToast('Backstab requires an undamaged enemy', 'recharge', 1800);
-          return;
         } else if (card.id === 'execute' && !executeHasValidTarget()) {
           showStyledToast('Execute requires an enemy below half HP', 'recharge', 1800);
           return;
@@ -21809,6 +21813,16 @@ function triggerSentinelFlash() {
 
 // Resolve one barrage shot on a target
 function resolveBarrageShot(target) {
+  // Snapshot consumable on-attack buffs on the FIRST shot only — every
+  // subsequent shot reuses the snapshot so a single Vial of Poison /
+  // Sahuagin Eye / Obsidian Core / Ignite stack applies to the whole
+  // barrage instead of evaporating after shot 1.
+  if (barrageShotsFired === 0) {
+    barragePoisonStacks = snapshotPoisonBuff(player);
+    barrageEyeBonus = snapshotEyeBuff(player);
+    barrageObsBonus = snapshotObsidianBuff(player);
+    barrageIgnite = consumePlayerIgnite();
+  }
   barrageShotsLeft--;
   barrageShotsFired++;
   attacksThisTurn++;
@@ -21826,6 +21840,8 @@ function resolveBarrageShot(target) {
   dmg = Math.max(0, dmg);
   dmg = consumeIceForAttack(player, dmg);
   dmg += getIncomingDamageModifier(target);
+  dmg += applyEyeBonus(target, barrageEyeBonus);
+  dmg += applyObsidianBonus(target, barrageObsBonus);
   dmg = Math.max(0, dmg);
   dmg = applyMarkBonus(target, dmg);
   addLog(`  Shot ${barrageShotsFired}:`, Colors.GRAY);
@@ -21836,12 +21852,16 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, taken);
     const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
+    applyPoisonRider(enemy, barragePoisonStacks, taken);
+    if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
     onPlayerHitEnemy(taken);
   } else if (target.isAlive) {
     const actual = target.takeDamage(dmg);
     if (actual > 0) spawnDamageOnTarget(target, actual);
     playAttackHitSfx(dmg, actual);
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
+    applyPoisonRider(target, barragePoisonStacks, actual);
+    if (actual > 0) applyIgniteRider(target, barrageIgnite);
     if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); }
   }
   countAndRemoveDeadCreatures();
@@ -21871,6 +21891,10 @@ function finishBarrage() {
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
   barrageShotDamage = 1;
+  barragePoisonStacks = 0;
+  barrageEyeBonus = 0;
+  barrageObsBonus = 0;
+  barrageIgnite = 0;
   barrageCardIndex = -1;
   selectedCardIndex = -1;
   state = GameState.COMBAT;
@@ -21902,6 +21926,10 @@ function cancelBarrage() {
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
   barrageShotDamage = 1;
+  barragePoisonStacks = 0;
+  barrageEyeBonus = 0;
+  barrageObsBonus = 0;
+  barrageIgnite = 0;
   barrageCardIndex = -1;
 }
 
@@ -22820,20 +22848,24 @@ function resolveEffect(eff, caster, target) {
       // Per target: +shock incoming, +mark.
       let dmg = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
-      // Sahuagin Eye buff: consumed on any attack, including multi-hits.
-      // Only the first target of the chain decides the +1 bonus.
-      const mdTargetDamaged = target instanceof Creature
-        ? (target.currentHp || 0) < (target.maxHp || 0)
-        : !!(target && target.deck && (target.deck.discardPile || []).length > 0);
-      const mdEye = consumeEyeBuff(caster, mdTargetDamaged);
-      if (mdEye > 0) dmg += mdEye;
-      const mdObs = consumeObsidianBuff(caster, target);
-      if (mdObs > 0) dmg += mdObs;
       dmg = Math.max(0, dmg);
       const mdBaseDmg = consumeIceForAttack(caster, dmg);
-      // Per-target damage helper: applies Shock-on-target + Mark on
-      // top of the shared base damage. Used for every chain hit.
-      const mdPerTarget = (t) => applyMarkBonus(t, Math.max(0, mdBaseDmg + getIncomingDamageModifier(t)));
+      // Consumable on-attack buffs (Sahuagin Eye, Obsidian Core, Vial
+      // of Poison): snapshot ONCE so every chain hit benefits.
+      // applyEyeBonus / applyObsidianBonus re-check each target's
+      // damaged / armored state; applyPoisonRider lands the stacks on
+      // every target the chain damages.
+      const mdEyeBonus = snapshotEyeBuff(caster);
+      const mdObsBonus = snapshotObsidianBuff(caster);
+      const mdPoisonStacks = snapshotPoisonBuff(caster);
+      // Per-target damage helper: applies Shock-on-target + Mark + the
+      // per-target Eye/Obsidian bonus on top of the shared base damage.
+      const mdPerTarget = (t) => {
+        let d = mdBaseDmg + getIncomingDamageModifier(t);
+        d += applyEyeBonus(t, mdEyeBonus);
+        d += applyObsidianBonus(t, mdObsBonus);
+        return applyMarkBonus(t, Math.max(0, d));
+      };
       let hits = 0;
       const maxT = eff.maxTargets || 2;
       const unpreventable = consumeUnpreventableBuff(caster);
@@ -22847,14 +22879,14 @@ function resolveEffect(eff, caster, target) {
           target.takeUnpreventableDamage(tDmg);
           if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
           addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, tDmg);
+          applyPoisonRider(target, mdPoisonStacks, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(tDmg);
           const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, target.shield || 0);
           addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
-          consumePoisonBuff(caster, target, actual);
+          applyPoisonRider(target, mdPoisonStacks, actual);
           playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!target.isAlive) addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target);
@@ -22865,12 +22897,12 @@ function resolveEffect(eff, caster, target) {
           target.takeDamageFromDeck(tDmg);
           triggerSplitPower(target, tDmg > 0); if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
           addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, tDmg);
+          applyPoisonRider(target, mdPoisonStacks, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
-          consumePoisonBuff(caster, target, taken);
+          applyPoisonRider(target, mdPoisonStacks, taken);
           playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
@@ -22884,12 +22916,14 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           c.takeUnpreventableDamage(tDmg);
           addLog(`  ${tDmg} true dmg to ${c.name}`, Colors.ORANGE);
+          applyPoisonRider(c, mdPoisonStacks, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = c.shield || 0;
           const actual = c.takeDamage(tDmg);
           const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+          applyPoisonRider(c, mdPoisonStacks, actual);
           playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -22900,10 +22934,12 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(tDmg);
           addLog(`  ${tDmg} true dmg to ${enemy.name}`, Colors.ORANGE);
+          applyPoisonRider(enemy, mdPoisonStacks, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const [blocked, taken] = enemy.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+          applyPoisonRider(enemy, mdPoisonStacks, taken);
           playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
         }
       }
@@ -22957,7 +22993,16 @@ function resolveEffect(eff, caster, target) {
       const iceDelta = primary - primaryAfterIce;
       primary = primaryAfterIce;
       secondary = Math.max(0, secondary - iceDelta);
-      const spPerTarget = (t, baseDmg) => applyMarkBonus(t, Math.max(0, baseDmg + getIncomingDamageModifier(t)));
+      // Consumable buff snapshots — every chain hit benefits.
+      const spEyeBonus = snapshotEyeBuff(caster);
+      const spObsBonus = snapshotObsidianBuff(caster);
+      const spPoisonStacks = snapshotPoisonBuff(caster);
+      const spPerTarget = (t, baseDmg) => {
+        let d = baseDmg + getIncomingDamageModifier(t);
+        d += applyEyeBonus(t, spEyeBonus);
+        d += applyObsidianBonus(t, spObsBonus);
+        return applyMarkBonus(t, Math.max(0, d));
+      };
       const maxT = eff.maxTargets || 3;
       const SFX_STAGGER_MS = 120;
       let hitIdx = 0;
@@ -22971,6 +23016,7 @@ function resolveEffect(eff, caster, target) {
           playAttackHitSfx(dmg, actual, delay);
           const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
           addLog(`  ${actual} dmg to ${t.name}${absSuffix}`, Colors.RED);
+          applyPoisonRider(t, spPoisonStacks, actual);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         } else {
           if (t === enemy) enemyAutoPlayDefenses(dmg);
@@ -22978,13 +23024,13 @@ function resolveEffect(eff, caster, target) {
           triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
           playAttackHitSfx(dmg, taken, delay);
           addLog(`  ${t.name}: ${taken} dmg`, Colors.RED);
+          applyPoisonRider(t, spPoisonStacks, taken);
           if (caster === player && t === enemy) onPlayerHitEnemy(taken);
         }
         hitIdx++;
       };
       // Primary
       hitOne(target, primary);
-      consumePoisonBuff(caster, target, primary);
       // Secondaries — first try other living creatures, then the enemy character if not already targeted.
       let extraHits = 0;
       const others = enemy.creatures.filter(c => c.isAlive && c !== target);
@@ -24369,6 +24415,22 @@ function resolveEffect(eff, caster, target) {
       // discard effects, etc.). Playing the card does nothing.
       break;
     }
+    case 'draw_if_target_undamaged': {
+      // Backstab — draws eff.value cards iff the target was at full HP
+      // at the moment this effect resolves. Card effects are ordered so
+      // this fires BEFORE the damage effect, giving it the pre-hit
+      // snapshot. Works for both creatures (currentHp vs maxHp) and
+      // characters (discardPile size).
+      const undamaged = target instanceof Creature
+        ? (target.currentHp || 0) >= (target.maxHp || 0)
+        : !!(target && target.deck && (target.deck.discardPile || []).length === 0);
+      if (undamaged) {
+        const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Undamaged! Draw: ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+      }
+      break;
+    }
     case 'gain_heroism':
       caster.heroism += eff.value;
       addLog(`  +${eff.value} Heroism`, Colors.GOLD);
@@ -25311,10 +25373,20 @@ function resolveEffect(eff, caster, target) {
       // the chill the dragon's Blizzard / Cold Breath had piled on.
       dmg = consumeIceForAttack(caster, dmg);
       const aoeBaseDmg = dmg;
-      // Per-target damage helper: applies Shock-on-target + Mark on
-      // top of the shared base damage so a primed enemy still eats
-      // the bonus on an AoE swing.
-      const aoePerTarget = (t) => applyMarkBonus(t, Math.max(0, aoeBaseDmg + getIncomingDamageModifier(t)));
+      // Consumable buff snapshots — every target eats the bonus and
+      // the rider.
+      const aoeEyeBonus = snapshotEyeBuff(caster);
+      const aoeObsBonus = snapshotObsidianBuff(caster);
+      const aoePoisonStacks = snapshotPoisonBuff(caster);
+      // Per-target damage helper: applies Shock-on-target + Mark + the
+      // per-target Eye / Obsidian bonus on top of the shared base
+      // damage so a primed enemy still eats the bonus on an AoE swing.
+      const aoePerTarget = (t) => {
+        let d = aoeBaseDmg + getIncomingDamageModifier(t);
+        d += applyEyeBonus(t, aoeEyeBonus);
+        d += applyObsidianBonus(t, aoeObsBonus);
+        return applyMarkBonus(t, Math.max(0, d));
+      };
       // Shoot one red arrow per legal target from the played card's
       // hand rect — mirrors the single-target attack flow where the
       // arrow comes out of the lifted card. Invulnerable boss shells
@@ -25335,6 +25407,7 @@ function resolveEffect(eff, caster, target) {
         taken = tk;
         if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
         addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+        applyPoisonRider(enemy, aoePoisonStacks, taken);
         // Split / on-attacked triggers fire per target — same as
         // single-target swings — so AoEs like Ice Nova spawn slimes
         // on Obsidian Body and peel armor on Obsidian Construct.
@@ -25351,6 +25424,7 @@ function resolveEffect(eff, caster, target) {
         if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
         const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
         addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+        applyPoisonRider(c, aoePoisonStacks, actual);
         triggerSplitPower(c, actual > 0);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
@@ -26781,28 +26855,41 @@ function resolveMultiTargeting() {
     // Ice on the player reduces the swing once + burns 1 stack
     // (same one-attack semantics as Cleave / single-target damage).
     hitDmg = consumeIceForAttack(player, hitDmg);
+    // Consumable buff snapshots — every hit benefits.
+    const fsPoisonStacks = snapshotPoisonBuff(player);
+    const fsEyeBonus = snapshotEyeBuff(player);
+    const fsObsBonus = snapshotObsidianBuff(player);
+    const fsIgnite = consumePlayerIgnite();
     const SFX_STAGGER_MS = 120;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       const delay = i * SFX_STAGGER_MS;
       let dmgLanded = 0;
+      let perTargetDmg = hitDmg;
+      perTargetDmg += applyEyeBonus(t, fsEyeBonus);
+      perTargetDmg += applyObsidianBonus(t, fsObsBonus);
+      perTargetDmg = Math.max(0, perTargetDmg);
       if (t === enemy) {
-        const [blocked, taken] = enemy.takeDamageWithDefense(hitDmg);
+        const [blocked, taken] = enemy.takeDamageWithDefense(perTargetDmg);
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
+        applyPoisonRider(enemy, fsPoisonStacks, taken);
+        if (taken > 0) applyIgniteRider(enemy, fsIgnite);
         onPlayerHitEnemy(taken);
         dmgLanded = taken;
       } else {
         const shieldBefore = t.shield || 0;
-        const actual = t.takeDamage(hitDmg);
+        const actual = t.takeDamage(perTargetDmg);
         if (actual > 0) spawnDamageOnTarget(t, actual);
-        const absSuffix = creatureAbsorbSuffix(hitDmg, actual, shieldBefore, t.shield || 0);
+        const absSuffix = creatureAbsorbSuffix(perTargetDmg, actual, shieldBefore, t.shield || 0);
         addLog(`  -> Feral Swipe: ${t.name} takes ${actual} dmg${absSuffix}`, Colors.WHITE);
+        applyPoisonRider(t, fsPoisonStacks, actual);
+        if (actual > 0) applyIgniteRider(t, fsIgnite);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = actual;
       }
-      playAttackHitSfx(hitDmg, dmgLanded, delay);
+      playAttackHitSfx(perTargetDmg, dmgLanded, delay);
     }
     showToast(`Feral Swipe hits ${targets.length} target(s)!`);
     attacksThisTurn++;
@@ -26852,9 +26939,12 @@ function resolveMultiTargeting() {
     primaryDmg = consumeIceForAttack(player, primaryDmg);
     const iceCut = dmgBeforeIce - primaryDmg;
     if (iceCut > 0) secondaryDmg = Math.max(0, secondaryDmg - iceCut);
-    // Snapshot ignite ONCE so every target in the chain gets the full
-    // Fire rider (same rule as Cleave / heroism).
+    // Snapshot consumable on-attack buffs ONCE so every target in the
+    // chain gets the full rider (same rule as Cleave / heroism).
     const multiIgnite = consumePlayerIgnite();
+    const multiEyeBonus = snapshotEyeBuff(player);
+    const multiObsBonus = snapshotObsidianBuff(player);
+    const multiPoisonStacks = snapshotPoisonBuff(player);
     let hitEnemy = false;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
@@ -26867,7 +26957,10 @@ function resolveMultiTargeting() {
       // but this picker-driven flow ran its own damage loop with no
       // mark hook. Heroism + Ice are already folded into primaryDmg
       // / secondaryDmg above; mark stacks on top per target.
-      const dmg = applyMarkBonus(t, baseChainDmg);
+      let withRiders = baseChainDmg;
+      withRiders += applyEyeBonus(t, multiEyeBonus);
+      withRiders += applyObsidianBonus(t, multiObsBonus);
+      const dmg = applyMarkBonus(t, Math.max(0, withRiders));
       if (t === enemy) {
         if (!hitEnemy) { enemyAutoPlayDefenses(dmg); hitEnemy = true; }
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
@@ -26875,6 +26968,7 @@ function resolveMultiTargeting() {
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
         playAttackHitSfx(dmg, taken, delay);
+        applyPoisonRider(enemy, multiPoisonStacks, taken);
         onPlayerHitEnemy(taken);
       } else {
         const shieldBefore = t.shield || 0;
@@ -26883,6 +26977,7 @@ function resolveMultiTargeting() {
         const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
         addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         playAttackHitSfx(dmg, actual, delay);
+        applyPoisonRider(t, multiPoisonStacks, actual);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
       }
       if (dmg > 0) applyIgniteRider(t, multiIgnite);
@@ -27602,17 +27697,29 @@ function executePower(power) {
     case 'quick_strike': {
       // Quick Strike — barrage: 1 base attack, +1 per player offset.
       // Each swing is its own damage application + log line so the
-      // sfx + screen flash read naturally.
+      // sfx + screen flash read naturally. Consumable on-attack buffs
+      // (Vial of Poison, Sahuagin Eye, Obsidian Core, Ignite) snapshot
+      // once and apply to every shot — same rule as Magic Missiles /
+      // multi_damage cards.
       const attacks = 1 + (playerTierOffset || 0);
       const heroismBonus = player.heroism;
       if (heroismBonus > 0) { addLog(`  (Heroism +${heroismBonus})`, Colors.GOLD); player.heroism = 0; }
-      const dmg = 1 + heroismBonus;
+      const qsPoisonStacks = snapshotPoisonBuff(player);
+      const qsEyeBonus = snapshotEyeBuff(player);
+      const qsObsBonus = snapshotObsidianBuff(player);
+      const qsIgnite = consumePlayerIgnite();
       for (let i = 0; i < attacks; i++) {
+        let dmg = 1 + heroismBonus;
+        dmg += applyEyeBonus(enemy, qsEyeBonus);
+        dmg += applyObsidianBonus(enemy, qsObsBonus);
+        dmg = Math.max(0, dmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         if (blocked > 0) addLog(`  Shot ${i + 1}: (${blocked} blocked)`, Colors.BLUE);
         addLog(`  Shot ${i + 1}: ${taken} dmg to ${enemy.name}`, Colors.RED);
         playAttackHitSfx(dmg, taken, i * 120);
+        applyPoisonRider(enemy, qsPoisonStacks, taken);
+        if (taken > 0) applyIgniteRider(enemy, qsIgnite);
       }
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);

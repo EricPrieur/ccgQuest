@@ -1771,29 +1771,33 @@ export function createArcaneBeam() {
 export function createFanOfBlades() {
   return new Card({
     id: 'fan_of_blades', name: 'Fan of Blades',
-    description: 'Recharge -> Deal 1 Damage to ALL enemies.\nDraw 1.',
-    shortDesc: 'R->1 Dmg ALL\nDraw 1', subtype: 'ability',
+    description: 'Recharge -> Deal 1 Damage to ALL enemies.\nDraw.',
+    shortDesc: 'R->1 Dmg ALL\nDraw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage_all: 1 },
   });
 }
 
 export function createBackstab() {
   return new Card({
     id: 'backstab', name: 'Backstab',
-    description: 'Recharge -> Deal 6 Damage. Draw 1.\nMust target an undamaged enemy.',
-    shortDesc: 'R->6 Dmg, Draw 1\n(Full HP)', subtype: 'ability',
+    description: 'Recharge -> Deal 6 Damage.\nWas Undamaged: Draw.',
+    shortDesc: 'R->6 Dmg\nUndamaged->Draw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    // draw_if_target_undamaged runs BEFORE damage so it can read the
+    // target's pre-hit state and grant the draw only when the target
+    // started the swing at full HP.
     effects: [
+      new CardEffect('draw_if_target_undamaged', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('damage', 6, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
-      new CardEffect('backstab_restriction', 0, TargetType.SELF),
     ],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -1823,6 +1827,7 @@ export function createSprint() {
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('draw', 2, TargetType.SELF)],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -1835,6 +1840,7 @@ export function createThunderclap() {
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('apply_shock_all', 1, TargetType.ALL_ENEMIES)],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { apply_shock_all: 0.5 },
   });
 }
 
@@ -1849,14 +1855,15 @@ export function createShieldWall() {
       new CardEffect('buff_allies_shield', 1, TargetType.SELF),
     ],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { gain_shield: 1, buff_allies_shield: 1 },
   });
 }
 
 export function createBattleShout() {
   return new Card({
     id: 'battle_shout', name: 'Battle Shout',
-    description: 'Recharge -> Gain 1 Heroism.\nAllies gain 1 Heroism.\nDraw 1.',
-    shortDesc: 'R->Hero+Ally Hero\nDraw 1', subtype: 'ability',
+    description: 'Recharge -> You and allies gain 1 Heroism, Draw.',
+    shortDesc: 'R->Hero+Ally Hero\nDraw', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_heroism', 1, TargetType.SELF),
@@ -1864,14 +1871,15 @@ export function createBattleShout() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { gain_heroism: 1, buff_allies_heroism: 1 },
   });
 }
 
 export function createExecute() {
   return new Card({
     id: 'execute', name: 'Execute',
-    description: 'Recharge -> Deal 5 Damage. Draw 1.\nMust target enemy below half HP.',
-    shortDesc: 'R->5 Dmg, Draw 1\n(<50% HP)', subtype: 'ability',
+    description: 'Recharge -> Deal 5 Damage, Draw.\nMust target enemy below half HP.',
+    shortDesc: 'R->5 Dmg, Draw\n(<50% HP)', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
@@ -1879,6 +1887,7 @@ export function createExecute() {
       new CardEffect('execute_restriction', 0, TargetType.SELF),
     ],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -4476,17 +4485,18 @@ export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'Heal 4. Discard.\nIf you healed, Draw.',
-    shortDesc: 'Heal 4, Discard\nDraw if Healed',
+    description: 'Heal 2. Discard. Draw.',
+    shortDesc: 'Heal 2, Discard\nDraw',
     subtype: 'relic',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
     effects: [
-      new CardEffect('heal_draw_if_healed', 4, TargetType.SELF),
+      new CardEffect('heal', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal_draw_if_healed: 2 },
+    gamePlusOffset: { heal: 1 },
   });
 }
 
