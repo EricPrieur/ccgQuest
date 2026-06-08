@@ -438,8 +438,8 @@ export function createBlizzard() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: '1 Ice\nto ALL',
-    // +1 Ice per monster tier offset.
-    gamePlusOffset: { apply_ice: 1 },
+    // +0.5 Ice per monster tier offset (floor — +1 at +2, +2 at +4).
+    gamePlusOffset: { apply_ice: 0.5 },
   });
 }
 

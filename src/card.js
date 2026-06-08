@@ -163,7 +163,23 @@ export class Card {
       previewCreatures: [...this.previewCreatures],
       isToken: this.isToken,
       isUnique: this.isUnique,
-      provision: this.provision,
+      // Deep-clone provision so card.copy() (used by codex preview,
+      // hand draws, etc.) doesn't share the same object with the
+      // base card. The codex preview re-stamps the offset on every
+      // render frame, and the custom-branch bumps that mutate
+      // provision.turnsPerCombat / provision.value (Bad Rations,
+      // Chicken Leg, Fresh Fish, Harpy Egg Omelette, Travel Rations)
+      // would otherwise climb +per-offset every single frame until
+      // the codex displayed numbers like "200 turns".
+      provision: this.provision ? {
+        ...this.provision,
+        effects: Array.isArray(this.provision.effects)
+          ? this.provision.effects.map(e => ({
+              ...e,
+              options: Array.isArray(e.options) ? e.options.map(o => ({ ...o })) : e.options,
+            }))
+          : this.provision.effects,
+      } : this.provision,
       unplayable: this.unplayable,
       gamePlusOffset: this.gamePlusOffset,
       noTierOffset: this.noTierOffset,

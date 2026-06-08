@@ -421,15 +421,17 @@ export function createWhiteDragonEgg() {
       const c = new Creature({
         name: 'White Dragon Egg', attack: 0, maxHp: 3, armor: 3,
         description: 'Cannot attack. When Attacked: Attacker gains 1 Ice.',
-        noTierOffset: true,
       });
       c._cantAttack = true;
+      // Baseline attacker-ice value; CREATURE_TIER_OFFSET bumps
+      // this by +0.5 per offset via scaleCreatureWithOffset.
+      c.attackerGainsIce = 1;
       return c;
     })(),
-    // The egg's payoff is the hatch transformation (Wyrmling), not
-    // a tier-scaling stat sheet — explicitly opt out so the codex
-    // doesn't paint the red "needs rules" badge.
-    noTierOffset: true,
+    // The egg + Wyrmling scale via CREATURE_TIER_OFFSET; the card
+    // itself has no per-effect bump, just the opt-in marker so the
+    // codex stamps the name/tier suffix and drops the red badge.
+    gamePlusOffset: {},
   });
 }
 
@@ -467,6 +469,11 @@ export function createWhiteDragonWyrmling() {
       name: 'White Dragon Wyrmling', attack: 3, maxHp: 6, iceAttack: 1, armor: 1,
       description: 'Called: Deal Ice to all enemies. Ice becomes Shields. Attacks apply 1 Ice.',
     }),
+    // The on-card "Called: Deal Ice to all enemies" scales +1/3
+    // per offset on the apply_ice_all effect (1 → 2 at +3). The
+    // Wyrmling creature itself scales via CREATURE_TIER_OFFSET
+    // (attack +1, hp +2, armor +1/3, iceAttack +1/3 per offset).
+    gamePlusOffset: { apply_ice_all: 1/3 },
   });
 }
 
@@ -537,6 +544,7 @@ export function createFireBurst() {
     gamePlusOffset: { damage: 2, apply_fire: 1 },
     characterClass: ['wizard'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -557,6 +565,7 @@ export function createIceBolt() {
     gamePlusOffset: { damage: 1 },
     characterClass: ['wizard'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -582,6 +591,7 @@ export function createMagicMissiles() {
     gamePlusOffset: { damage: 1, barrage: 1 },
     characterClass: ['wizard'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -604,6 +614,7 @@ export function createArcaneShield() {
     gamePlusOffset: { block: 3 },
     characterClass: ['wizard'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -615,8 +626,8 @@ export function createVialOfPoison() {
   return new Card({
     id: 'vial_of_poison',
     name: 'Vial of Poison',
-    description: 'Consume -> Next attack applies Poison.',
-    shortDesc: 'C->+Poison',
+    description: 'Consume -> Next attack applies 1 Poison.',
+    shortDesc: 'C->Next: +1 Poison',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -649,6 +660,7 @@ export function createSneakAttack() {
     effects: [new CardEffect('sneak_attack', 0, TargetType.SINGLE_ENEMY)],
     characterClass: ['rogue', 'druid'],
     tier: 1,
+    rarity: 'uncommon',
     // +2 base damage per offset. Effect value carries the flat bonus
     // (0 by default → 2 → 4…); runtime adds it on top of the X count.
     gamePlusOffset: { sneak_attack: 2 },
@@ -681,6 +693,7 @@ export function createPetSpider() {
     ],
     characterClass: ['rogue'],
     tier: 1,
+    rarity: 'uncommon',
     previewCreature: createSmallSpiderCreature(),
     previewCard: createVialOfPoison(),
     // +1 max spiders summoned per offset (1-2 → 1-3 → 1-4…). Each
@@ -707,6 +720,7 @@ export function createHeroicStrike() {
     effects: [new CardEffect('gain_heroism', 4, TargetType.SELF)],
     characterClass: ['paladin', 'warrior'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { gain_heroism: 3 },
   });
 }
@@ -723,6 +737,7 @@ export function createCharge() {
     effects: [new CardEffect('charge_attack', 3, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { charge_attack: 2 },
   });
 }
@@ -739,6 +754,7 @@ export function createGreaterCleave() {
     effects: [new CardEffect('greater_cleave_buff', 1, TargetType.SELF)],
     characterClass: ['warrior'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -756,6 +772,7 @@ export function createRecklessStrike() {
     effects: [new CardEffect('damage', 6, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { damage: 4 },
   });
 }
@@ -772,6 +789,7 @@ export function createShieldBash() {
     effects: [new CardEffect('shield_bash', 1, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior', 'paladin'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { shield_bash: 1 },
   });
 }
@@ -795,6 +813,7 @@ export function createHolyLight() {
     ],
     characterClass: ['paladin'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -813,6 +832,7 @@ export function createShieldOfFaith() {
     ],
     characterClass: ['paladin'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { gain_shield: 2 },
   });
 }
@@ -835,6 +855,7 @@ export function createCarefulStrike() {
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -858,6 +879,7 @@ export function createHeroicTumble() {
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
+    rarity: 'uncommon',
     // +4 block per offset (6 → 10 → 14…). Block amount lives in the
     // runtime handler (tumble_block.value carries the percent
     // chance), so the custom heroic_tumble branch in
@@ -879,6 +901,7 @@ export function createMultiShot() {
     effects: [new CardEffect('multi_damage', 1, TargetType.SINGLE_ENEMY, 3)],
     characterClass: ['ranger'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -905,6 +928,7 @@ export function createAimedShotCard() {
     ],
     characterClass: ['ranger', 'rogue'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { damage: 3 },
   });
 }
@@ -1153,6 +1177,7 @@ export function createGoodberries() {
     effects: [new CardEffect('create_goodberries', 3, TargetType.SELF)],
     characterClass: ['ranger'],
     tier: 1,
+    rarity: 'uncommon',
     previewCard: createGoodberry(),
     // +1 max Goodberry per offset (3 → 4 → 5…). Each spawned berry
     // is also scaled in the create_goodberries runtime via
@@ -1188,6 +1213,7 @@ export function createWrath() {
     gamePlusOffset: { modes: [{ damage: 3 }, { damage: 1 }] },
     characterClass: ['druid'],
     tier: 1,
+    rarity: 'uncommon',
   });
 }
 
@@ -1206,6 +1232,7 @@ export function createRegrowth() {
     ],
     characterClass: ['druid'],
     tier: 1,
+    rarity: 'uncommon',
     // +2 on-play heal per offset. Per-turn regen bumps in the runtime
     // (regen_buff handler reads playerTierOffset → healPerTurn).
     // Custom regrowth handler rebuilds the dual-heal description.
@@ -1228,6 +1255,7 @@ export function createFeralSwipe() {
     ],
     characterClass: ['druid'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { gain_shield: 1, feral_swipe_damage: 1 },
   });
 }
@@ -1356,6 +1384,7 @@ export function createFlashHeal() {
     effects: [new CardEffect('heal', 4, TargetType.SINGLE_ALLY)],
     characterClass: ['paladin'],
     tier: 1,
+    rarity: 'uncommon',
     gamePlusOffset: { heal: 3 },
   });
 }
@@ -1395,6 +1424,7 @@ export function createTamedRat() {
     effects: [new CardEffect('summon_tamed_rat', 1, TargetType.SUMMON)],
     characterClass: ['ranger'],
     tier: 1,
+    rarity: 'uncommon',
     // Both possible summons render in the hover side-preview
     // (50/50: 1-3 Tamed Rats vs 1 Dire Rat).
     previewCreatures: [createTamedRatCreature(), createDireRatCreature()],
@@ -1420,7 +1450,7 @@ export function createConsecration() {
     shortDesc: 'R->2 Dmg ALL', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [new CardEffect('damage_all', 2, TargetType.ALL_ENEMIES)],
-    characterClass: ['paladin'], tier: 2,
+    characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1434,7 +1464,7 @@ export function createHammerOfWrath() {
       new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    characterClass: ['paladin'], tier: 2,
+    characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1449,7 +1479,7 @@ export function createHolySword() {
       new CardEffect('heal', 3, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
-    characterClass: ['paladin'], tier: 2,
+    characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1460,7 +1490,7 @@ export function createRevivify() {
     shortDesc: 'R->Revive 1 of\nup to 3 Allies', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('revivify', 3, TargetType.SELF)],
-    characterClass: ['paladin'], tier: 2,
+    characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1482,7 +1512,7 @@ export function createHuntersMark() {
       new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    characterClass: ['ranger'], tier: 2,
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1504,7 +1534,7 @@ export function createAnimalCompanion() {
       new CardMode('Summon Huffer (4/2 Haste)',
         [new CardEffect('summon_huffer', 1, TargetType.SUMMON)]),
     ],
-    characterClass: ['ranger'], tier: 2,
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     previewCreatures: [createMishaCreature(), createHufferCreature()],
   });
 }
@@ -1519,7 +1549,7 @@ export function createPiercingShot() {
       new CardEffect('unpreventable_damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('player_overwhelm', 0, TargetType.SELF),
     ],
-    characterClass: ['ranger'], tier: 2,
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1533,7 +1563,7 @@ export function createExplosiveShot() {
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('splash_fire', 1, TargetType.ALL_ENEMIES),
     ],
-    characterClass: ['ranger'], tier: 2,
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1547,7 +1577,7 @@ export function createBurningHands() {
     effects: [
       new CardEffect('apply_fire_all', 2, TargetType.ALL_ENEMIES),
     ],
-    characterClass: ['wizard'], tier: 2,
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1561,7 +1591,7 @@ export function createIceNova() {
       new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
     ],
-    characterClass: ['wizard'], tier: 2,
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1719,7 +1749,7 @@ export function createIceBlock() {
       new CardEffect('apply_ice_self', 4, TargetType.SELF),
       new CardEffect('gain_shield', 8, TargetType.SELF),
     ],
-    characterClass: ['wizard'], tier: 2,
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1733,7 +1763,7 @@ export function createArcaneBeam() {
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('optional_recharge_damage', 2, TargetType.SELF),
     ],
-    characterClass: ['wizard'], tier: 2,
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1748,7 +1778,7 @@ export function createFanOfBlades() {
       new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    characterClass: ['rogue'], tier: 2,
+    characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1763,7 +1793,7 @@ export function createBackstab() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('backstab_restriction', 0, TargetType.SELF),
     ],
-    characterClass: ['rogue'], tier: 2,
+    characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1792,7 +1822,7 @@ export function createSprint() {
     shortDesc: 'R->Draw 2', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('draw', 2, TargetType.SELF)],
-    characterClass: ['rogue'], tier: 2,
+    characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1804,7 +1834,7 @@ export function createThunderclap() {
     shortDesc: 'R->Shock ALL', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('apply_shock_all', 1, TargetType.ALL_ENEMIES)],
-    characterClass: ['warrior'], tier: 2,
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1818,7 +1848,7 @@ export function createShieldWall() {
       new CardEffect('gain_shield', 4, TargetType.SELF),
       new CardEffect('buff_allies_shield', 1, TargetType.SELF),
     ],
-    characterClass: ['warrior'], tier: 2,
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1833,7 +1863,7 @@ export function createBattleShout() {
       new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    characterClass: ['warrior'], tier: 2,
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1848,7 +1878,7 @@ export function createExecute() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('execute_restriction', 0, TargetType.SELF),
     ],
-    characterClass: ['warrior'], tier: 2,
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1864,7 +1894,7 @@ export function createSummonTreants() {
     shortDesc: 'R->Summon 2-4\nTreants', subtype: 'ability',
     cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_treants', 1, TargetType.SUMMON)],
-    characterClass: ['druid'], tier: 2,
+    characterClass: ['druid'], tier: 2, rarity: 'uncommon',
     previewCreature: createTreantCreature(),
   });
 }
@@ -1879,7 +1909,7 @@ export function createFeralBite() {
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('gain_shield', 3, TargetType.SELF),
     ],
-    characterClass: ['druid'], tier: 2,
+    characterClass: ['druid'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1894,7 +1924,7 @@ export function createStarfire() {
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
-    characterClass: ['druid'], tier: 2,
+    characterClass: ['druid'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -1908,7 +1938,7 @@ export function createHealingTouch() {
       new CardEffect('heal', 8, TargetType.SINGLE_ALLY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
-    characterClass: ['druid'], tier: 2,
+    characterClass: ['druid'], tier: 2, rarity: 'uncommon',
   });
 }
 
@@ -2674,8 +2704,8 @@ export function createToxicFrogExtract() {
   return new Card({
     id: 'toxic_frog_extract',
     name: 'Toxic Frog Extract',
-    description: 'Consume -> Poison to all enemies.',
-    shortDesc: 'C->Poison ALL',
+    description: 'Consume -> Apply 1 Poison to all enemies.',
+    shortDesc: 'C->1 Poison ALL',
     subtype: 'item',
     cardType: CardType.ATTACK,
     costType: CostType.BANISH,
@@ -3923,8 +3953,8 @@ export function createAle() {
   return new Card({
     id: 'ale',
     name: 'Ale',
-    description: 'Consume -> Heal 1, Heroism.\nBeverage: +1 Heroism for 2 turns.',
-    shortDesc: 'C->Heal 1, Heroism\nBeverage: +Hero/2T',
+    description: 'Consume -> Heal 1, Gain 1 Heroism.\nBeverage: +Heroism for 2 turns.',
+    shortDesc: 'C->Heal 1, +1H\nBeverage: +Hero/2T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -3937,6 +3967,7 @@ export function createAle() {
       new CardEffect('grant_provision', 0, TargetType.SELF),
     ],
     // Provision metadata — picked up by the grant_provision handler.
+    // Beverage stays at +1 Heroism/turn flat regardless of offset.
     provision: {
       slot: 'beverage',
       name: 'Ale',
@@ -3945,7 +3976,13 @@ export function createAle() {
       turnsPerCombat: 2,
       description: '+1 Heroism/turn for 2 turns each combat (until rest)',
     },
-    // +1 Consume heal + +1 Consume heroism per offset.
+    // +1 Consume heal + +1 Consume heroism per offset. The Beverage
+    // description intentionally drops the "+1" number prefix so the
+    // generic gain_heroism description swap doesn't rewrite the
+    // tick value too (provision.value is untouched mechanically,
+    // but a visible "+2 Heroism for 2 turns" would lie about the
+    // tick math). The swap will only match "Gain 1 Heroism" on the
+    // Consume line.
     gamePlusOffset: { heal: 1, gain_heroism: 1 },
   });
 }
@@ -4439,18 +4476,17 @@ export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'Discard -> Heal 4. Draw.',
-    shortDesc: 'Discard->Heal 4\nDraw',
+    description: 'Heal 4. Discard.\nIf you healed, Draw.',
+    shortDesc: 'Heal 4, Discard\nDraw if Healed',
     subtype: 'relic',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
     effects: [
-      new CardEffect('heal', 4, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('heal_draw_if_healed', 4, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal: 2 },
+    gamePlusOffset: { heal_draw_if_healed: 2 },
   });
 }
 
@@ -4848,9 +4884,11 @@ export function createObsidianShardToken() {
       new CardEffect('enemy_gain_armor', 1, TargetType.SELF),
     ],
     isToken: true,
-    // +1 Shield to the player per offset — a small consolation for
-    // having to recharge through enemy-injected junk at higher tiers.
-    gamePlusOffset: { gain_shield: 1 },
+    // +1 Shield to the player per offset — small consolation for
+    // recharging through enemy-injected junk. AND +1 Armor to the
+    // enemy per offset, making the shard meaner the further into
+    // ccgQuest+ the player goes.
+    gamePlusOffset: { gain_shield: 1, enemy_gain_armor: 1 },
   });
 }
 
@@ -5777,8 +5815,8 @@ export function createDwarvenBrew() {
   return new Card({
     id: 'dwarven_brew',
     name: 'Dwarven Brew',
-    description: 'Consume -> Heal 2, Shield.\nBeverage: +Shield for 4 turns.',
-    shortDesc: 'C->Heal 2, Shield\nBeverage: +Shld/4T',
+    description: 'Consume -> Heal 2, Gain 1 Shield.\nBeverage: +Shield for 4 turns.',
+    shortDesc: 'C->Heal 2, +1 Sh\nBeverage: +Shld/4T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -5812,8 +5850,8 @@ export function createWhitescaleBrew() {
   return new Card({
     id: 'whitescale_brew',
     name: 'Whitescale Brew',
-    description: 'Consume -> Heal 2, Heroism, Ice.\nBeverage: +Heroism, Ice Randomly for 4 turns.',
-    shortDesc: 'C->Heal 2\n+Heroism, +Ice\nBev: H+Ice/4T',
+    description: 'Consume -> Heal 2, Gain 1 Heroism, Gain 1 Ice.\nBeverage: +Heroism, Ice Randomly for 4 turns.',
+    shortDesc: 'C->Heal 2, +1H\n+1 Ice self\nBev: H+Ice/4T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,

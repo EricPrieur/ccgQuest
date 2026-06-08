@@ -420,6 +420,8 @@ const EFFECT_DESC_PATTERNS = {
   block: [/Block\s+(\d+)/i, /(\d+)\s+Block/i],
   heal: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
   heal_all: [/for\s+(\d+)/i, /Heal\s+(\d+)/i, /(\d+)\s+Heal/i, /All\s+(\d+)/i],
+  // Specter Ectoplasm — "Heal N. Discard. If you healed, Draw."
+  heal_draw_if_healed: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
   gain_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
   team_shield: [/gain\s+(\d+)\s+Shield/i, /Shield\s+(\d+)/i, /(\d+)\s+Shield/i],
   apply_fire: [/(\d+)\s+Fire\b/i],
@@ -496,6 +498,10 @@ const EFFECT_DESC_PATTERNS = {
   luring_song:         [/take\s+(\d+)\s+damage/i, /(\d+)\s+damage\b/i],
   // Kraken's Eye Spyglass — "Scry N from your discard pile".
   scry_pick_discard:   [/Scry\s+(\d+)/i],
+  // Vial of Poison — "Next attack applies N Poison". Pattern pinned
+  // to the "applies N Poison" / "Next: +N Poison" form so the swap
+  // doesn't pick up "1 Heroism" or anything else.
+  grant_poison_buff:   [/applies\s+(\d+)\s+Poison/i, /\+(\d+)\s+Poison/i, /(\d+)\s+Poison/i],
   // Cave Shroom / Sack / Travelers Clothing all share the
   // existing scry_pick pattern above (already defined). No new
   // pattern needed for those.
@@ -811,16 +817,20 @@ function applyGamePlusOffsetInPlace(c, offset) {
       c.shortDesc = `C->${min}-${max} Dmg+Fire\nrandom x${rounds}`;
     }
     // Obsidian Shard token — gain_shield starts at 0 on the base
-    // card, so the generic swap can't substitute a 0 → N change.
-    // Rebuild the description from the bumped effect value so the
-    // player sees the consolation Shield grant at higher tiers.
+    // card so the generic swap can't substitute a 0 → N change.
+    // enemy_gain_armor starts at 1 but the description swap pattern
+    // can't disambiguate "Enemy +1 Armor" from "+1 Shield" cleanly
+    // when both bump per offset. Rebuild the whole description from
+    // the live effect values so both lines stay in sync.
     if (c.id === 'obsidian_shard_token') {
       const shieldEff = c.effects.find(e => e.effectType === 'gain_shield');
+      const armorEff = c.effects.find(e => e.effectType === 'enemy_gain_armor');
       const shieldAmt = shieldEff ? shieldEff.value : 0;
-      if (shieldAmt > 0) {
-        c.description = `Recharge a card -> Consume.\nGain ${shieldAmt} Shield.\nEnemy gains 1 Armor.`;
-        c.shortDesc = `R1->Consume\n+${shieldAmt} Shield\nEnemy +1 Armor`;
-      }
+      const armorAmt = armorEff ? armorEff.value : 1;
+      const shieldLine = shieldAmt > 0 ? `Gain ${shieldAmt} Shield.\n` : '';
+      const shieldShort = shieldAmt > 0 ? `+${shieldAmt} Shield\n` : '';
+      c.description = `Recharge a card -> Consume.\n${shieldLine}Enemy gains ${armorAmt} Armor.`;
+      c.shortDesc = `R1->Consume\n${shieldShort}Enemy +${armorAmt} Armor`;
     }
     // Shadow Cloak — bump the on-success Block grant by +4 per
     // offset. The chance (eff.value) stays at 50%; the payoff lives
@@ -1339,6 +1349,16 @@ const CREATURE_TIER_OFFSET = {
   // the deck-multiplied Tentacle Grab / Tentacle / Tentacle Block
   // cards so a +1 Kraken Spawn fight stays brutal.
   'Tentacle':           { attack: 1, hp: 2 },
+  // White Dragon Egg — +0.5 armor / +1 hp per offset, AND the
+  // attacker-gains-ice rider scales +0.5 per offset (1 → 2 at +2).
+  // attackerGainsIce is a creature-level field stamped by the egg
+  // factory + the summon handler; handleWhiteDragonEggHit reads it.
+  'White Dragon Egg':       { armor: 0.5, hp: 1, attackerGainsIce: 0.5 },
+  // White Dragon Wyrmling — +1 atk / +2 hp / +1/3 armor per offset
+  // PLUS +1/3 Ice on attack (iceAttack rider). The "Called" ice
+  // spread (apply_ice_all on the card) scales separately via the
+  // card's gamePlusOffset.
+  'White Dragon Wyrmling':  { attack: 1, hp: 2, armor: 1/3, iceAttack: 1/3 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
@@ -1368,6 +1388,8 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   const dSA = step(rule.endTurnShieldAllies);
   const dHeroA = step(rule.endTurnHeroismAllies);
   const dIceAll = step(rule.iceAttackAll);
+  const dIceAtk = step(rule.iceAttack);
+  const dAttIce = step(rule.attackerGainsIce);
   const dODD = step(rule.onDeathDamage);
   const dODF = step(rule.onDeathFireHits);
   const dODDC = step(rule.onDeathDiscardOrDamage);
@@ -1383,6 +1405,11 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   if (dSA) creature.endTurnShieldAllies = (creature.endTurnShieldAllies || 0) + dSA;
   if (dHeroA) creature.endTurnHeroismAllies = (creature.endTurnHeroismAllies || 0) + dHeroA;
   if (dIceAll) creature.iceAttackAll = (creature.iceAttackAll || 0) + dIceAll;
+  if (dIceAtk) creature.iceAttack = (creature.iceAttack || 0) + dIceAtk;
+  // White Dragon Egg attacker_gains_ice rider — initialise the
+  // base value to 1 if not already set so handleWhiteDragonEggHit
+  // always reads a numeric value.
+  if (dAttIce) creature.attackerGainsIce = (creature.attackerGainsIce || 1) + dAttIce;
   if (dODD) creature.onDeathDamage = (creature.onDeathDamage || 0) + dODD;
   if (dODF) creature.onDeathFireHits = (creature.onDeathFireHits || 0) + dODF;
   if (dODDC) creature.onDeathDiscardOrDamage = (creature.onDeathDiscardOrDamage || 0) + dODDC;
@@ -1426,6 +1453,22 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   } else if (creature.name === 'Harpy' && dODDC) {
     const dmg = creature.onDeathDiscardOrDamage;
     creature.description = `On Death: Enemies discard their hand, or take ${dmg} damage if empty.`;
+  } else if (creature.name === 'White Dragon Egg' && dAttIce) {
+    // Rebuild the "When Attacked: Attacker gains N Ice." rider so
+    // the codex preview + in-combat hover shows the scaled value.
+    const ice = creature.attackerGainsIce;
+    creature.description = `Cannot attack. When Attacked: Attacker gains ${ice} Ice.`;
+  } else if (creature.name === 'White Dragon Wyrmling' && dIceAtk) {
+    // Wyrmling's on-attack Ice rider scales — rebuild whichever
+    // description shape the creature carries (the card preview
+    // includes the Called clause; the on-hatch / handler creature
+    // only carries the short Attacks-apply tail).
+    const ice = creature.iceAttack;
+    if (typeof creature.description === 'string' && creature.description.includes('Called:')) {
+      creature.description = `Called: Deal Ice to all enemies. Ice becomes Shields. Attacks apply ${ice} Ice.`;
+    } else {
+      creature.description = `Attacks apply ${ice} Ice.`;
+    }
   } else if (creature.name === 'Baby Giant Frog' && dA) {
     // Two variants: enemy-side ("Deal N Damage to all enemies")
     // and player-side ("Hits all enemies for N"). Both pull from
@@ -12035,16 +12078,19 @@ function setupEnemyForCombat(enemyId) {
       enemy.addCreature(wolf);
     }
     // PY applies a Blizzard combat buff to the player at fight start —
-    // every turn the player + every alive ally takes 1 Ice. Re-entry
-    // guard so a retry doesn't stack a second copy.
+    // every turn the player + every alive ally takes 1 Ice. ccgQuest+
+    // bumps the tick by +0.5 per monster offset (floor — +1 Ice at
+    // +2, +2 at +4). Re-entry guard so a retry doesn't stack a
+    // second copy.
     if (player && !player.combatBuffs.some(b => b.id === 'blizzard')) {
+      const wpIce = 1 + Math.floor((monsterTierOffset || 0) * 0.5 + 1e-9);
       player.addCombatBuff(new CombatBuff({
         id: 'blizzard',
         name: 'Blizzard',
         description: 'Start of Turn: You and allies get Ice.',
         imageId: 'buff_blizzard',
         effectType: 'apply_ice',
-        effectValue: 1,
+        effectValue: wpIce,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
       }));
@@ -24075,6 +24121,20 @@ function resolveEffect(eff, caster, target) {
         }
       }
       break;
+    case 'heal_draw_if_healed': {
+      // Specter Ectoplasm: heal N (player-only), then draw 1 ONLY if the
+      // heal actually restored damage (i.e. discardPile shrunk). Poison /
+      // Bleed clears do NOT count — only HP restored from the discard.
+      const before = (caster === player) ? player.deck.discardPile.length : 0;
+      if (caster === player) healPlayer(eff.value);
+      const after = (caster === player) ? player.deck.discardPile.length : 0;
+      if (before - after > 0) {
+        const drawn = caster.deck.draw(1, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+      }
+      break;
+    }
     case 'apply_whirlpool': {
       // Sahuagin Priest spell + High Priest creature chant. Each
       // application stacks 1 forced swim onto the player, resolved
@@ -24786,6 +24846,10 @@ function resolveEffect(eff, caster, target) {
         iceAttack: 1, armor: 1, isCompanion: true,
         description: 'Called: Deal Ice to all enemies. Ice becomes Shields. Attacks apply 1 Ice.',
       });
+      // ccgQuest+ scaling — pull the Wyrmling's stat bumps from
+      // CREATURE_TIER_OFFSET so the on-field ally matches the
+      // codex preview at the same offset.
+      scaleCreatureWithOffset(wyrm, playerTierOffset || 0, 'player');
       wyrm.sourceCard = _activePlayCard || null;
       wyrm._sourceRarity = 'legendary';
       // 'allies' subtype to match the card (brown ally tint, codex
@@ -24822,6 +24886,11 @@ function resolveEffect(eff, caster, target) {
         description: 'Cannot attack. When Attacked: Attacker gains 1 Ice.',
       });
       egg._cantAttack = true;
+      // Baseline attacker-ice rider; scaleCreatureWithOffset bumps
+      // this by +0.5 per offset (1 → 2 at +2). Without the initial
+      // 1 the egg would silently no-op the rider at +0.
+      egg.attackerGainsIce = 1;
+      scaleCreatureWithOffset(egg, playerTierOffset || 0, 'player');
       egg.sourceCard = _activePlayCard || null;
       egg._sourceRarity = 'legendary';
       egg._sourceSubtype = 'relic';
@@ -25298,6 +25367,17 @@ function resolveEffect(eff, caster, target) {
         if (key) playStaggeredSfx(key, stagger, 140);
       } else {
         playAttackHitSfx(dmg, anyLanded ? Math.max(taken, 1) : 0);
+      }
+      // Ignite rider — consume the player's stacks once and apply
+      // them as Fire to every enemy the AoE swung at. Without this,
+      // Fan of Blades / Consecration / Burning Hands wouldn't burn
+      // through stored Ignite even though single-target attacks do.
+      const aoeIgnite = (caster === player) ? consumePlayerIgnite() : 0;
+      if (aoeIgnite > 0) {
+        if (enemy && enemy.isAlive && !enemy._invulnerable) applyIgniteRider(enemy, aoeIgnite);
+        for (const c of (enemy.creatures || [])) {
+          if (c.isAlive && !c._invulnerable) applyIgniteRider(c, aoeIgnite);
+        }
       }
       countAndRemoveDeadCreatures();
       attacksThisTurn++;
@@ -25973,6 +26053,7 @@ function healPlayer(amount) {
     // Nothing to heal
     addLog(`  Nothing to heal.`, Colors.GRAY);
   }
+  return healed;
 }
 
 // --- End turn ---
@@ -28733,7 +28814,11 @@ function handleWhiteDragonEggHit(egg, rawDmg, attacker) {
   // hears the chick chirp and sees the WHEN ATTACKED ice rider.
   addLog(`  The egg shudders inside its shell.`, Colors.ICE_BLUE);
   if (attacker) {
-    applyIceToTarget(attacker, 1);
+    // ccgQuest+ scaling — the egg's attackerGainsIce field carries
+    // the bumped value (1 + 0.5*offset, floor). Falls back to 1
+    // for legacy / unstamped eggs.
+    const iceAmt = (egg && egg.attackerGainsIce) || 1;
+    applyIceToTarget(attacker, iceAmt);
   }
   if (dragonEggDamage >= WHITE_DRAGON_EGG_HATCH_THRESHOLD) {
     hatchWhiteDragonEgg(egg);
@@ -28776,6 +28861,11 @@ function hatchWhiteDragonEgg(egg) {
       iceAttack: 1, armor: 1,
       description: 'Attacks apply 1 Ice.',
     });
+    // ccgQuest+ scaling — match the card-play Wyrmling stats so a
+    // hatch in a Game+ run gives the same beefier ally as casting
+    // the Wyrmling card directly. CREATURE_TIER_OFFSET drives the
+    // attack / hp / armor / iceAttack bumps.
+    scaleCreatureWithOffset(wyrmling, playerTierOffset || 0, 'player');
     wyrmling.ready();
     // Inherit the egg's slot + owner so the row layout stays stable.
     // Without this the fresh wyrmling has slot=-1 (Creature default),
@@ -28793,11 +28883,15 @@ function hatchWhiteDragonEgg(egg) {
     // these as regular effects in resolveEffect; here we trigger
     // them manually since the wyrmling appeared via the egg's
     // own damage threshold, not via casting the Wyrmling card.
+    // Called Ice spread — scale with playerTierOffset so the
+    // hatch path matches the card-play apply_ice_all bump (1/3
+    // per offset → +1 every 3 offsets).
+    const calledIce = 1 + Math.floor((playerTierOffset || 0) / 3 + 1e-9);
     if (enemy && enemy.isAlive && !enemy._invulnerable) {
-      applyIceToTarget(enemy, 1);
+      applyIceToTarget(enemy, calledIce);
     }
     for (const c of (enemy && enemy.creatures || [])) {
-      if (c && c.isAlive && !c._invulnerable) applyIceToTarget(c, 1);
+      if (c && c.isAlive && !c._invulnerable) applyIceToTarget(c, calledIce);
     }
     const pIce = (player.getStatus && player.getStatus('ICE')) || 0;
     if (pIce > 0) {
@@ -32205,52 +32299,30 @@ function consumeIgniteOnAttack(caster, target, attempted) {
   applyIgniteRider(target, consumePlayerIgnite());
 }
 
-function consumeEyeBuff(caster, targetDamaged) {
-  if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
-  // Snapshot then walk in reverse so splicing as we go doesn't skip
-  // entries. Collecting first then filtering would also work; reverse-
-  // walk keeps the original ordering of survivors intact.
-  let totalBonus = 0;
-  for (let i = caster.combatBuffs.length - 1; i >= 0; i--) {
-    const buff = caster.combatBuffs[i];
-    if (buff.effectType !== 'damaged_bonus_on_attack') continue;
-    if (!buff._persistent) caster.combatBuffs.splice(i, 1);
-    if (targetDamaged) {
-      const label = buff.name || 'Sahuagin Eye';
-      addLog(`  ${label}! +${buff.effectValue} damage`, Colors.GOLD);
-      totalBonus += buff.effectValue || 0;
-    }
-  }
-  return totalBonus;
-}
-
-// Obsidian Core buff: consumed on the next attack. Adds +N damage
-// when the target has Armor or Shield. Mirrors PY's
-// obsidian_armor_bonus consumption (game.py:12217-12230).
-function consumeObsidianBuff(caster, target) {
-  if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
-  const idx = caster.combatBuffs.findIndex(b => b.effectType === 'obsidian_armor_bonus');
-  if (idx === -1) return 0;
-  const buff = caster.combatBuffs[idx];
-  caster.combatBuffs.splice(idx, 1);
-  const armor = (target && (target.armor || target.shield)) || 0;
-  if (armor > 0) {
-    addLog(`  Obsidian Core! +${buff.effectValue} vs Armor/Shield`, Colors.GOLD);
-    return buff.effectValue || 0;
-  }
-  return 0;
-}
-
-function consumePoisonBuff(caster, target, damageDealt = null) {
-  if (!caster || !(caster.poisonBuff > 0)) return;
+// === Consumable "next attack" buff snapshots ===
+// Multi-target attacks (Wooden Axe, Fan of Blades, Magic Missiles
+// barrage, Quick Strike+ etc.) need every swing in the chain to
+// benefit from a single Vial of Poison / Sahuagin Eye / Obsidian
+// Core buff. The legacy `consumeXBuff(caster, target, ...)` shape
+// zeroes the buff on the FIRST per-target call, so subsequent
+// targets in the same card play silently lose the rider.
+//
+// The fix: split each consume into a snapshot pass (called once
+// at the start of the attack) + a per-target apply pass. The
+// legacy consumeXBuff functions stay as backwards-compat wrappers
+// (snapshot + apply once) for the many single-target sites that
+// don't care about the split.
+function snapshotPoisonBuff(caster) {
+  if (!caster || !(caster.poisonBuff > 0)) return 0;
   const stacks = caster.poisonBuff;
   caster.poisonBuff = 0;
-  // Remove the visual buff badge (Vial of Poison) from the character
   if (Array.isArray(caster.combatBuffs)) {
     caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'vial_poison');
   }
-  if (!target) return;
-  // Poison doesn't land if the attack was fully absorbed by defenses.
+  return stacks;
+}
+function applyPoisonRider(target, stacks, damageDealt = null) {
+  if (!stacks || stacks <= 0 || !target) return;
   if (damageDealt !== null && damageDealt <= 0) {
     addLog(`  (Vial of Poison absorbed — no Poison applied)`, Colors.GRAY);
     return;
@@ -32263,6 +32335,62 @@ function consumePoisonBuff(caster, target, damageDealt = null) {
     return;
   }
   addLog(`  (Vial of Poison) +${stacks} Poison on ${target.name}`, Colors.GREEN);
+}
+function snapshotEyeBuff(caster) {
+  if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
+  // Sum every damaged_bonus_on_attack buff's value (persistent +
+  // non-persistent). Splice non-persistent in place so the next
+  // card play doesn't double-dip.
+  let total = 0;
+  for (let i = caster.combatBuffs.length - 1; i >= 0; i--) {
+    const buff = caster.combatBuffs[i];
+    if (buff.effectType !== 'damaged_bonus_on_attack') continue;
+    if (!buff._persistent) caster.combatBuffs.splice(i, 1);
+    total += buff.effectValue || 0;
+  }
+  return total;
+}
+function applyEyeBonus(target, bonus) {
+  if (!bonus || bonus <= 0 || !target) return 0;
+  const damaged = (target instanceof Creature)
+    ? (target.currentHp || 0) < (target.maxHp || 0)
+    : !!(target && target.deck && (target.deck.discardPile || []).length > 0);
+  if (!damaged) return 0;
+  addLog(`  Sahuagin Eye! +${bonus} damage on ${target.name}`, Colors.GOLD);
+  return bonus;
+}
+function snapshotObsidianBuff(caster) {
+  if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
+  const idx = caster.combatBuffs.findIndex(b => b.effectType === 'obsidian_armor_bonus');
+  if (idx === -1) return 0;
+  const buff = caster.combatBuffs[idx];
+  caster.combatBuffs.splice(idx, 1);
+  return buff.effectValue || 0;
+}
+function applyObsidianBonus(target, bonus) {
+  if (!bonus || bonus <= 0 || !target) return 0;
+  const armor = (target && (target.armor || target.shield)) || 0;
+  if (armor <= 0) return 0;
+  addLog(`  Obsidian Core! +${bonus} vs Armor/Shield on ${target.name}`, Colors.GOLD);
+  return bonus;
+}
+
+// Legacy wrappers — snapshot + apply once. Single-target damage
+// handlers still call these; the per-target buff distribution
+// happens entirely inside the snapshot/apply pair below the hood.
+function consumeEyeBuff(caster, targetDamaged) {
+  const total = snapshotEyeBuff(caster);
+  if (total <= 0 || !targetDamaged) return 0;
+  addLog(`  Sahuagin Eye! +${total} damage`, Colors.GOLD);
+  return total;
+}
+function consumeObsidianBuff(caster, target) {
+  const total = snapshotObsidianBuff(caster);
+  return applyObsidianBonus(target, total);
+}
+function consumePoisonBuff(caster, target, damageDealt = null) {
+  const stacks = snapshotPoisonBuff(caster);
+  applyPoisonRider(target, stacks, damageDealt);
 }
 
 // Trigger split power: when a character with "split" power takes
@@ -37219,6 +37347,14 @@ function restoreFromSave(data) {
     }
     applyNodeStates(cached, ms.nodeStates);
     if (typeof ms.currentNodeId === 'string') cached.currentNodeId = ms.currentNodeId;
+    // Hydrate the cached map AFTER node states are applied so the
+    // state-driven unlocks (dragonSlain → Mithril Remedies,
+    // mithrilRemediesVisited → Tharnag Main Door pair, etc.) fire
+    // on load. Without this, a player who saved post-dragon
+    // wouldn't see the Mithril Remedies node when they walked back
+    // into the Artisan District — the cached map was restored at
+    // its pre-dragon state with no re-hydrate pass.
+    hydrateMapFromGlobalState(cached);
     _mapCache[mid] = cached;
   }
   // Stuck-state recovery: pre-transition saves (and any save that lands
