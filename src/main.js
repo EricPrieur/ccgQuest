@@ -104,6 +104,7 @@ import {
   // Tier 2 ability cards (Tharnag arrival level-up + Cathedral Shrine)
   createConsecration, createHammerOfWrath, createHolySword, createRevivify,
   createHuntersMark, createAnimalCompanion, createPiercingShot, createExplosiveShot,
+  createElementalWeapon,
   createBurningHands, createIceNova, createIceBlock, createIceShatter, createColdBreath, createArcaneBeam,
   createVarimatrasBite, createVarimatrasClaw, createVarimatrasTail, createVarimatrasWing, createVarimatrasScale,
   createFanOfBlades, createBackstab, createPoisonedDagger, createSprint,
@@ -420,6 +421,12 @@ const EFFECT_DESC_PATTERNS = {
   block: [/Block\s+(\d+)/i, /(\d+)\s+Block/i],
   heal: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
   heal_all: [/for\s+(\d+)/i, /Heal\s+(\d+)/i, /(\d+)\s+Heal/i, /All\s+(\d+)/i],
+  // Arcane Beam — "+N damage each" rider on the optional recharge.
+  optional_recharge_damage: [/\+(\d+)\s+damage\s+each/i, /\+(\d+)\s+Dmg\s+each/i, /\+(\d+)\s+damage/i],
+  // Revivify — "up to N dead allies" pool size. The picks count
+  // ("Choose N") is handled by the custom branch in
+  // applyGamePlusOffsetInPlace which rewrites both numbers together.
+  revivify: [/up\s+to\s+(\d+)/i, /(\d+)\s+dead/i],
   // Specter Ectoplasm — "Heal N. Discard. If you healed, Draw."
   heal_draw_if_healed: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
   gain_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
@@ -732,6 +739,41 @@ function applyGamePlusOffsetInPlace(c, offset) {
     // Pet Slime — 1-N slime summons per offset (mirrors Loose Bone's
     // pattern). The previewCreature is rescaled via CREATURE_TIER_OFFSET
     // automatically in applyTierOffsetToCardPreview.
+    // Revivify — both the picks count ("Choose 1") and the pool size
+    // ("up to 3 dead allies") bump +0.5 per offset (floor). The pool
+    // value is in eff.value (bumped by the generic `revivify` swap);
+    // the picks count is implicit (always 1 in the handler) and lives
+    // only in the description, so this branch rewrites it explicitly.
+    if (c.id === 'revivify') {
+      const picks = 1 + Math.floor(0.5 * offset);
+      const ref = (c.effects || []).find(e => e.effectType === 'revivify');
+      const pool = ref ? ref.value : 3;
+      c.description = `Recharge -> Choose ${picks} of up to ${pool}\ndead allies in your discard pile\nand summon ${picks === 1 ? 'it' : 'them'}.`;
+      c.shortDesc = `R->Revive ${picks} of\nup to ${pool} Allies`;
+    }
+    // Arcane Beam — shortDesc shows the damage range "R->4-10 Dmg"
+    // which doesn't match the generic damage pattern (range, not flat
+    // number). Rebuild from the scaled base + per-card bonus so the
+    // shortDesc stays accurate at every offset.
+    if (c.id === 'arcane_beam') {
+      const baseEff = (c.effects || []).find(e => e.effectType === 'damage');
+      const perEff = (c.effects || []).find(e => e.effectType === 'optional_recharge_damage');
+      const base = baseEff ? baseEff.value : 4;
+      const per = perEff ? perEff.value : 2;
+      const maxDmg = base + 3 * per;
+      c.shortDesc = `R->${base}-${maxDmg} Dmg`;
+    }
+    // Summon Treants — "Summon 2-4 Treants.\n(2/1 with Haste)". Max
+    // count bumps +0.5 per offset (4 → 5 at +2 → 6 at +4). Treant
+    // stats bump +1/+1 per offset via CREATURE_TIER_OFFSET['Treant'],
+    // so the stat line in parentheses follows the offset directly.
+    if (c.id === 'summon_treants') {
+      const maxCount = 4 + Math.floor(0.5 * offset);
+      const tAtk = 2 + offset;
+      const tHp = 1 + offset;
+      c.description = `Recharge -> Summon 2-${maxCount} Treants.\n(${tAtk}/${tHp} with Haste)`;
+      c.shortDesc = `R->Summon 2-${maxCount}\nTreants`;
+    }
     if (c.id === 'pet_slime' && c.gamePlusOffset?.pet_slime_summon) {
       const maxRoll = 1 + (c.gamePlusOffset.pet_slime_summon * offset);
       c.description = `Recharge -> Summon 1-${maxRoll} Pet Slimes!`;
@@ -1333,7 +1375,7 @@ const CREATURE_TIER_OFFSET = {
   // player-side Summons; no enemy variant needed.
   'Misha':              { attack: 2, hp: 2 },
   'Huffer':             { attack: 2, hp: 1 },
-  'Treant':             { attack: 1, hp: 0 },
+  'Treant':             { attack: 1, hp: 1 },
   // Shark — player summon from Sahuagin Priest Staff +
   // enemy summon from Sahuagin Baron's From the Deep power. Boss
   // variant gets the chunkier +1/+2 stat bump.
@@ -2944,6 +2986,7 @@ const CARD_REGISTRY = {
   holy_sword: createHolySword, revivify: createRevivify,
   hunters_mark: createHuntersMark, animal_companion: createAnimalCompanion,
   piercing_shot: createPiercingShot, explosive_shot: createExplosiveShot,
+  elemental_weapon: createElementalWeapon,
   burning_hands: createBurningHands, ice_nova: createIceNova,
   ice_block: createIceBlock, arcane_beam: createArcaneBeam,
   // Ice Shatter intentionally NOT in CARD_REGISTRY — it's the
@@ -16308,7 +16351,7 @@ const KEYWORD_ICONS = {
   shock: { iconKey: 'icon_shock', label: 'Shock', desc: '-1 dmg dealt and +1 dmg taken per stack' },
   bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing). Decays by 1 at end of turn. Cleared 1-to-1 by healing.' },
   ink_cloud: { iconKey: 'icon_ink_cloud', label: 'Ink Cloud', desc: 'Each attack the afflicted character makes has a 50% chance to miss entirely (no damage, no riders). Every attack consumes 1 stack of Ink Cloud whether or not the swing connected.' },
-  mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Marked targets take +1 damage per stack from every attack. Persistent — does not decay.' },
+  mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Each stack is a charge: the next attack on the target consumes 1 stack and deals double damage (before armor / shield). Stacks persist until used up or the target dies.' },
   rage: { iconKey: 'icon_rage', label: 'Rage', desc: 'Permanent bonus damage to all attacks' },
   scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards of your draw pile. Pick 1 to draw, recharge the rest. Variant: Scry N from your discard pile — pick 1 to draw, the unpicked cards stay in the discard pile.' },
   heal: { isTextKeyword: true, color: '#7cff9c', label: 'Heal N', desc: 'Restore up to N cards from your discard pile. If you have Poison, each stack is cleared first (1 heal = 1 Poison removed); any leftover heals cards.' },
@@ -16420,7 +16463,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -16526,6 +16569,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // keyword so it pairs visually with other recharge mechanics.
         badge = { type: 'badge', label: 'WHEN RECHARGED',
           bg: 'rgba(40,70,110,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Was Undamaged') {
+        // Backstab's conditional draw — fires only when the target
+        // was at full HP at the moment of resolution (pre-swing).
+        // Cool steel-grey palette so it reads as a precondition,
+        // distinct from HIT (post-damage trigger).
+        badge = { type: 'badge', label: 'WAS UNDAMAGED',
+          bg: 'rgba(60,80,90,0.92)', border: '#a8c4d4', fg: '#dde8f0' };
       } else if (phrase === 'Hit') {
         // Conditional rider fired only when the swing actually landed
         // damage on the target (Sharp Rock: "Hit: Draw"). Hot orange
@@ -18229,12 +18279,17 @@ function drawHoverPreview() {
   const margin = 12;
 
   // Side preview (smaller — used when a card has a previewCard or previewCreature(s)
-  // that shows the summon/produced card next to the main hover preview)
-  const sidePreview = hasAnySidePreview(hoveredCardPreview);
+  // that shows the summon/produced card next to the main hover preview).
+  // Creatures with a side card (e.g. foraging Tamed/Dire Rat) use the
+  // same slot so the foraged drop reads in line with card-side previews.
+  const creatureSideCard = hoveredCreaturePreview ? getCreatureSidePreviewCard(hoveredCreaturePreview) : null;
+  const sidePreview = hasAnySidePreview(hoveredCardPreview) || !!creatureSideCard;
   const sideW = COMBAT_POWER_W;   // small mini-card size matches in-combat layout
   const sideH = COMBAT_POWER_H;
   const sideGap = 10;
-  const sidePanelW = sidePreview ? getCombinedSidePreviewWidth(hoveredCardPreview, sideW) : 0;
+  const sidePanelW = sidePreview
+    ? (creatureSideCard ? sideW : getCombinedSidePreviewWidth(hoveredCardPreview, sideW))
+    : 0;
   const totalW = previewW + (sidePreview ? sideGap + sidePanelW : 0);
 
   // Anchor mouse (frozen if shift-lock, live otherwise).
@@ -18260,6 +18315,12 @@ function drawHoverPreview() {
 
   if (hoveredCreaturePreview) {
     drawCreaturePreviewCard(hoveredCreaturePreview, x, y, previewW, previewH);
+    // Mini side card (foraging rats drop their forage card here).
+    if (creatureSideCard) {
+      const sx = x + previewW + sideGap;
+      const sy = y + Math.floor((previewH - sideH) / 2);
+      drawCard(creatureSideCard, sx, sy, sideW, sideH, false, false);
+    }
   } else if (hoveredCardPreview) {
     // Draw a full-size version of the card
     drawCard(hoveredCardPreview, x, y, previewW, previewH, false, false, 'full');
@@ -19838,6 +19899,29 @@ function getSideCreaturePreviews(card) {
     return card.previewCreatures;
   }
   return card.previewCreature ? [card.previewCreature] : [];
+}
+
+// Creature-side preview lookup — returns a Card to render as a small
+// mini next to the creature's hover preview, or null. Currently used by
+// foraging allies (Tamed Rat → Goodberry, Dire Rat → Cave Shroom) so
+// the player can see at a glance what the rat might drop. Lazily caches
+// the built+scaled card on the creature so the hover render doesn't
+// rebuild it every frame.
+function getCreatureSidePreviewCard(creature) {
+  if (!creature) return null;
+  if (creature._sidePreviewCard) return creature._sidePreviewCard;
+  let creator = (typeof creature._forageCreator === 'function') ? creature._forageCreator : null;
+  if (!creator) {
+    const profile = FORAGE_PROFILES[creature.name];
+    if (profile) creator = profile.creator;
+  }
+  if (creator) {
+    const card = creator();
+    applyGamePlusOffsetInPlace(card, playerTierOffset || 0);
+    creature._sidePreviewCard = card;
+    return card;
+  }
+  return null;
 }
 
 // Layout helper for the side-creature mini-card grid. 1-2 creatures
@@ -21854,6 +21938,7 @@ function resolveBarrageShot(target) {
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
     applyPoisonRider(enemy, barragePoisonStacks, taken);
     if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
+    if (taken > 0) applyElementalWeaponRider(enemy, taken);
     onPlayerHitEnemy(taken);
   } else if (target.isAlive) {
     const actual = target.takeDamage(dmg);
@@ -21862,6 +21947,7 @@ function resolveBarrageShot(target) {
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
     applyPoisonRider(target, barragePoisonStacks, actual);
     if (actual > 0) applyIgniteRider(target, barrageIgnite);
+    if (actual > 0) applyElementalWeaponRider(target, actual);
     if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); }
   }
   countAndRemoveDeadCreatures();
@@ -22956,6 +23042,18 @@ function resolveEffect(eff, caster, target) {
         }
         if (target !== enemy && enemy.isAlive) applyIgniteRider(enemy, mdIgnite);
       }
+      // Elemental Weapon rider — same target set as ignite but
+      // independently gated (passive buff, fires whenever the player
+      // is the caster). Uses the shared mdBaseDmg as the per-target
+      // damageLanded probe; the helper internally skips on 0.
+      if (caster === player) {
+        applyElementalWeaponRider(target, mdBaseDmg);
+        for (const c of (enemy.creatures || [])) {
+          if (c === target) continue;
+          if (c.isAlive) applyElementalWeaponRider(c, mdBaseDmg);
+        }
+        if (target !== enemy && enemy.isAlive) applyElementalWeaponRider(enemy, mdBaseDmg);
+      }
       // 2 Targets: Draw rider (Dwarven Throwing Axe). Reads the
       // active card's currentEffects for a `draw_on_two_targets`
       // entry; when the chain landed on >= 2 distinct targets, the
@@ -23052,6 +23150,17 @@ function resolveEffect(eff, caster, target) {
           if (c.isAlive && secondary > 0) applyIgniteRider(c, splitIgnite);
         }
         if (target !== enemy && enemy.isAlive && secondary > 0) applyIgniteRider(enemy, splitIgnite);
+      }
+      // Elemental Weapon rider — same chain semantics as ignite, but
+      // independently gated (passive buff). Primary slot uses the
+      // primary damage value, secondaries use the secondary value.
+      if (caster === player) {
+        applyElementalWeaponRider(target, primary);
+        for (const c of (enemy.creatures || [])) {
+          if (c === target) continue;
+          if (c.isAlive) applyElementalWeaponRider(c, secondary);
+        }
+        if (target !== enemy && enemy.isAlive) applyElementalWeaponRider(enemy, secondary);
       }
       attacksThisTurn++;
       break;
@@ -23172,15 +23281,10 @@ function resolveEffect(eff, caster, target) {
       }
       consumePoisonBuff(caster, target, landed);
       consumeIgniteOnAttack(caster, target, dmg);
-      // Draw rider — fires whenever the swing made contact. "Hit"
-      // counts ANY connection that produced effect: damage that
-      // landed, damage absorbed by a defense play (Kraken Spawn's
-      // Tentacle Block soaking the swing via the boss's block pool),
-      // shield/armor that ate the hit, etc. Filtering on `landed > 0`
-      // alone misses the Tentacle Block case where the user
-      // legitimately swung and dealt damage — just to the wrong
-      // body. `dmg > 0` is the correct "the rock connected" gate.
-      if (dmg > 0 && caster === player) {
+      // Draw rider — only fires when damage actually landed past
+      // defenses. A fully blocked / absorbed swing is not a "Hit" for
+      // this card's rider.
+      if (landed > 0 && caster === player) {
         const drawn = player.deck.draw(1, MAX_HAND_SIZE);
         for (const d of drawn) addLog(`  Hit! Draw: ${d.name}`, Colors.BLUE, d);
         if (drawn.length > 0) playDrawSounds(drawn.length);
@@ -23189,9 +23293,10 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'apply_mark': {
-      // Hunter's Mark — +N stacks on the target. Persistent debuff:
-      // every subsequent attack on this target deals +mark_stacks damage.
-      // Mark cannot be blocked; applies to creatures and characters.
+      // Hunter's Mark — +N stacks on the target. Each stack is a
+      // single-use charge: the next attack on the target consumes one
+      // stack and is doubled (pre-defense). Stacks persist until used
+      // up or the target dies; cannot be blocked.
       if (target instanceof Creature) {
         target.markStacks = (target.markStacks || 0) + eff.value;
         addLog(`  +${eff.value} Mark on ${target.name} (Mark:${target.markStacks})`, Colors.RED);
@@ -23258,6 +23363,63 @@ function resolveEffect(eff, caster, target) {
         buff.stacks = eff.value;
       }
       addLog(`  ${caster.name}: next attack +${eff.value} if target is damaged`, Colors.GOLD);
+      break;
+    }
+    case 'grant_elemental_weapon_fire':
+    case 'grant_elemental_weapon_ice': {
+      // Elemental Weapon (Ranger Tier 2). Imbue future attacks with the
+      // chosen element; the buff stacks per cast. Fire and Ice cancel
+      // each other 1-to-1 on the buff side, mirroring how the Fire / Ice
+      // status engine already cancels on the target side.
+      const isFire = eff.effectType === 'grant_elemental_weapon_fire';
+      const ownType = isFire ? 'elemental_weapon_fire' : 'elemental_weapon_ice';
+      const oppType = isFire ? 'elemental_weapon_ice' : 'elemental_weapon_fire';
+      const ownName = isFire ? 'Elemental Weapon (Fire)' : 'Elemental Weapon (Ice)';
+      const ownImg  = isFire ? 'buff_elemental_weapon_fire' : 'buff_elemental_weapon_ice';
+      const oppLabel = isFire ? 'Ice' : 'Fire';
+      let amount = eff.value || 1;
+      // Cancel opposing element first.
+      const opposing = (caster.combatBuffs || []).find(b => b.effectType === oppType);
+      if (opposing && amount > 0) {
+        const cancel = Math.min(opposing.effectValue || 0, amount);
+        if (cancel > 0) {
+          opposing.effectValue -= cancel;
+          opposing.stacks = (opposing.stacks || 1) - cancel;
+          amount -= cancel;
+          addLog(`  Elemental Weapon cancels ${cancel} ${oppLabel}`, isFire ? Colors.ORANGE : Colors.ICE_BLUE);
+          if ((opposing.effectValue || 0) <= 0) {
+            caster.combatBuffs = caster.combatBuffs.filter(b => b !== opposing);
+          }
+        }
+      }
+      if (amount > 0) {
+        const existing = (caster.combatBuffs || []).find(b => b.effectType === ownType);
+        if (existing) {
+          existing.effectValue = (existing.effectValue || 0) + amount;
+          existing.stacks = (existing.stacks || 1) + amount;
+        } else {
+          caster.addCombatBuff(new CombatBuff({
+            id: ownType,
+            name: ownName,
+            description: isFire ? 'Your attacks add Fire.' : 'Your attacks add Ice.',
+            imageId: ownImg,
+            effectType: ownType,
+            effectValue: amount,
+            trigger: 'on_attack',
+            combatsRemaining: 1,
+            turnsRemaining: 0,
+          }));
+          const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
+          buff.stacks = amount;
+        }
+        addLog(`  ${caster.name}: attacks add ${amount} ${isFire ? 'Fire' : 'Ice'}`, isFire ? Colors.ORANGE : Colors.ICE_BLUE);
+      }
+      // On-cast whoosh — same cue applyElementalWeaponRider plays on
+      // every imbued swing, so the cast itself sounds like the element
+      // "landing" on the weapon. Always plays even when the cast just
+      // cancelled the opposing element (the element is still imbuing
+      // the chosen pool, audibly).
+      playSound(isFire ? 'fireball_whoosh_01' : 'cold_whoosh_01', 0.7);
       break;
     }
     case 'grant_unpreventable_buff': {
@@ -23623,8 +23785,9 @@ function resolveEffect(eff, caster, target) {
       // the hit and consumed (matches the standard damage handler), and
       // rage adds its flat bonus too — so stockpiled buffs still pay
       // off on the counter swing. Shock-on-target (+1/stack incoming)
-      // and Hunter's Mark (+1/stack to target) also apply, so a primed
-      // enemy still eats the bonus on the random counter.
+      // and Hunter's Mark (consume 1 stack → double damage) also
+      // apply, so a primed enemy still eats the bonus on the random
+      // counter.
       const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
       const t = candidates.length > 0
         ? candidates[Math.floor(Math.random() * candidates.length)]
@@ -24649,6 +24812,7 @@ function resolveEffect(eff, caster, target) {
         name: 'Misha', attack: 4, maxHp: 4, sentinel: true,
         description: 'Sentinel.',
       });
+      scaleCreatureWithOffset(misha, playerTierOffset || 0, 'player');
       misha._sourceRarity = 'rare';
       misha._sourceSubtype = 'allies';
       player.addCreature(misha);
@@ -24662,6 +24826,7 @@ function resolveEffect(eff, caster, target) {
         name: 'Huffer', attack: 4, maxHp: 2, haste: true,
         description: 'Haste',
       });
+      scaleCreatureWithOffset(huffer, playerTierOffset || 0, 'player');
       huffer._sourceRarity = 'rare';
       huffer._sourceSubtype = 'allies';
       player.addCreature(huffer);
@@ -24670,16 +24835,23 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_treants': {
-      // Druid Tier 2 — Summon 2-4 Treants (2/1 Haste). Summons, not
-      // companions: card discards normally and each treant is its own
-      // throwaway creature.
-      const count = 2 + Math.floor(Math.random() * 3);
+      // Druid Tier 2 — Summon 2-(4+floor(0.5*offset)) Treants (2/1
+      // Haste). +0.5 max per offset (offset 2 → 2-5, offset 4 → 2-6).
+      // Each treant scaled via CREATURE_TIER_OFFSET['Treant'] (+1/+1
+      // per offset). Summons, not companions: card discards normally
+      // and each treant is its own throwaway creature.
+      const off = playerTierOffset || 0;
+      const minCount = 2;
+      const maxCount = 4 + Math.floor(0.5 * off);
+      const range = maxCount - minCount + 1;
+      const count = minCount + Math.floor(Math.random() * range);
       let summoned = 0;
       for (let i = 0; i < count; i++) {
         const treant = new Creature({
           name: 'Treant', attack: 2, maxHp: 1, haste: true,
           description: 'Haste',
         });
+        scaleCreatureWithOffset(treant, off, 'player');
         if (!player.addCreature(treant)) break;
         summoned++;
       }
@@ -24772,8 +24944,11 @@ function resolveEffect(eff, caster, target) {
           const dire = new Creature({
             name: 'Dire Rat', attack: 2, maxHp: 2, armor: 1,
             bloodfrenzy: 1,
-            description: 'Bloodfrenzy: +1 Rage after attacking.',
+            description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 33% to dig up\na Cave Shroom on attack.',
           });
+          dire._forageCreator = createCaveShroom;
+          dire._forageLabel = 'Cave Shroom';
+          dire._forageVerb = 'digs up';
           scaleCreatureWithOffset(dire, off);
           if (!player.addCreature(dire)) break;
           if (summoned === 0) playCreaturePlaySfx(dire);
@@ -24795,7 +24970,13 @@ function resolveEffect(eff, caster, target) {
         let summoned = 0;
         let lastRat;
         for (let i = 0; i < want; i++) {
-          const rat = new Creature({ name: 'Tamed Rat', attack: 1, maxHp: 1 });
+          const rat = new Creature({
+            name: 'Tamed Rat', attack: 1, maxHp: 1,
+            description: 'Forage: 33% to scrounge\na Goodberry on attack.',
+          });
+          rat._forageCreator = createGoodberry;
+          rat._forageLabel = 'Goodberry';
+          rat._forageVerb = 'scrounges';
           scaleCreatureWithOffset(rat, off);
           if (!player.addCreature(rat)) break; // hit the 12-ally cap
           lastRat = rat;
@@ -25076,11 +25257,14 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'revivify': {
-      // Surface up to `eff.value` ally cards from the discard pile and let
-      // the player pick ONE to replay (summons that card's creature, like
-      // playing it from hand). 0 candidates → log; 1 → auto-revive; 2+ →
-      // open the REVIVE_SELECT modal.
+      // Surface up to `eff.value` ally cards from the discard pile and
+      // let the player pick `picks` to replay (each summons that
+      // card's creature, like playing it from hand). `picks` scales
+      // +0.5 per offset: 1 at offset 0/1, 2 at offset 2/3, etc.
+      // 0 candidates → log; candidates <= picks → auto-revive all;
+      // otherwise → open the REVIVE_SELECT modal in multi-pick mode.
       const limit = Math.max(1, eff.value || 1);
+      const picks = 1 + Math.floor(0.5 * (playerTierOffset || 0));
       const candidates = [];
       for (let i = caster.deck.discardPile.length - 1; i >= 0 && candidates.length < limit; i--) {
         const c = caster.deck.discardPile[i];
@@ -25090,13 +25274,16 @@ function resolveEffect(eff, caster, target) {
         addLog(`  No dead allies to revive.`, Colors.GRAY);
         break;
       }
-      if (candidates.length === 1) {
-        reviveAllyFromCard(candidates[0]);
+      if (candidates.length <= picks) {
+        // Pool small enough that there's nothing to pick — just revive
+        // everyone offered.
+        for (const cand of candidates) reviveAllyFromCard(cand);
         break;
       }
       reviveChoiceCards = candidates;
       reviveChoiceRects = [];
       reviveCancelRect = null;
+      revivePicksRemaining = picks;
       state = GameState.REVIVE_SELECT;
       break;
     }
@@ -25451,6 +25638,13 @@ function resolveEffect(eff, caster, target) {
         if (enemy && enemy.isAlive && !enemy._invulnerable) applyIgniteRider(enemy, aoeIgnite);
         for (const c of (enemy.creatures || [])) {
           if (c.isAlive && !c._invulnerable) applyIgniteRider(c, aoeIgnite);
+        }
+      }
+      // Elemental Weapon rider on the AoE — every legal target gets it.
+      if (caster === player) {
+        if (enemy && enemy.isAlive && !enemy._invulnerable) applyElementalWeaponRider(enemy, aoeBaseDmg);
+        for (const c of (enemy.creatures || [])) {
+          if (c.isAlive && !c._invulnerable) applyElementalWeaponRider(c, aoeBaseDmg);
         }
       }
       countAndRemoveDeadCreatures();
@@ -26876,6 +27070,7 @@ function resolveMultiTargeting() {
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
         applyPoisonRider(enemy, fsPoisonStacks, taken);
         if (taken > 0) applyIgniteRider(enemy, fsIgnite);
+        if (taken > 0) applyElementalWeaponRider(enemy, taken);
         onPlayerHitEnemy(taken);
         dmgLanded = taken;
       } else {
@@ -26886,6 +27081,7 @@ function resolveMultiTargeting() {
         addLog(`  -> Feral Swipe: ${t.name} takes ${actual} dmg${absSuffix}`, Colors.WHITE);
         applyPoisonRider(t, fsPoisonStacks, actual);
         if (actual > 0) applyIgniteRider(t, fsIgnite);
+        if (actual > 0) applyElementalWeaponRider(t, actual);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = actual;
       }
@@ -26981,6 +27177,7 @@ function resolveMultiTargeting() {
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
       }
       if (dmg > 0) applyIgniteRider(t, multiIgnite);
+      if (dmg > 0) applyElementalWeaponRider(t, dmg);
     }
     // 2 Targets: Draw rider (Dwarven Throwing Axe). The resolveEffect
     // multi_damage case has the same check, but this picker flow runs
@@ -27221,6 +27418,14 @@ function resolveAllyAttack(ally, target) {
   // Bleed tick fires AFTER all strikes land so the attack is never
   // robbed by a fatal bleed. Multi-attack is one swing = one tick.
   tickBleedOnAttack(ally, ally.name);
+
+  // Forage rider — Tamed Rat / Dire Rat have a 50% chance to drop
+  // a fresh token card into the player's hand on each swing. Helper
+  // gates internally on _forageCreator (stamped at summon time, with
+  // a name-based fallback for older rats). Was previously wired into
+  // processPlayerAllyAttacks, but that helper is dead code — the live
+  // ally-attack path is this click-and-direct flow.
+  maybeForage(ally);
 
   ally.exhaust();
   // Bloodfrenzy: ally gains +N persistent Rage after every swing
@@ -27495,6 +27700,7 @@ function resolvePowerTargeting() {
       // Each swing that landed any damage triggers the full Ignite
       // rider on its target (snapshot consumed once above the loop).
       if (dmg > 0) applyIgniteRider(t, cleaveIgnite);
+      if (dmg > 0) applyElementalWeaponRider(t, dmg);
     }
     countAndRemoveDeadCreatures();
     // Conditional draw rider: only fires when both swings landed on
@@ -27720,6 +27926,7 @@ function executePower(power) {
         playAttackHitSfx(dmg, taken, i * 120);
         applyPoisonRider(enemy, qsPoisonStacks, taken);
         if (taken > 0) applyIgniteRider(enemy, qsIgnite);
+        if (taken > 0) applyElementalWeaponRider(enemy, taken);
       }
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
@@ -28462,9 +28669,12 @@ function getIncomingDamageModifier(character) {
   return character.shockStacks || 0;
 }
 
-// Hunter's Mark bonus: target takes +1 damage per stack on every attack.
-// Mark stacks DO NOT clear — they persist until target is removed (PY behavior).
-// Returns the bonus to add to damage; logs the mark hit when nonzero.
+// Hunter's Mark — each stack is a charge that, when consumed by an
+// attack, doubles that single attack's damage BEFORE armor / shield
+// reduction. Multiple stacks queue up multiple doubled swings (one
+// stack per swing). Stacks that aren't consumed persist until the
+// target dies. Specter's Ethereal still clamps post-doubling damage
+// down to 1, so Ethereal targets are effectively immune.
 function getMarkBonus(target) {
   if (!target) return 0;
   if (target instanceof Creature) return target.markStacks || 0;
@@ -28499,11 +28709,21 @@ function maybeFireDrawOnKill(caster, target) {
 }
 
 function applyMarkBonus(target, dmg) {
-  if (dmg <= 0) return dmg;
-  const bonus = getMarkBonus(target);
-  if (bonus <= 0) return dmg;
-  addLog(`  Marked! +${bonus} damage to ${target.name}`, Colors.RED);
-  return dmg + bonus;
+  if (dmg <= 0 || !target) return dmg;
+  const stacks = getMarkBonus(target);
+  if (stacks <= 0) return dmg;
+  // Consume one Mark charge and double the swing. Doubling runs
+  // here (before defenses) so a 5-dmg swing on a marked enemy with
+  // 4 Shield reads 10 → 4 absorbed → 6 through, instead of 5 → 4
+  // absorbed → 1 doubled to 2.
+  if (target instanceof Creature) {
+    target.markStacks = stacks - 1;
+  } else if (target.removeStatus) {
+    target.removeStatus('MARK', 1);
+  }
+  const doubled = dmg * 2;
+  addLog(`  Marked! ${dmg} → ${doubled} damage (Mark consumed)`, Colors.RED);
+  return doubled;
 }
 
 // Obsidian-family ally bonus: Valdrisa, Obsidian Slime, and Obsidian
@@ -28521,6 +28741,55 @@ function applyObsidianAllyBonus(ally, target, dmg) {
   const bonus = ally.armorBonusOverride || 2;
   addLog(`  ${ally.name}: +${bonus} vs Armor/Shield`, Colors.GOLD);
   return dmg + bonus;
+}
+
+// Forage rider — Tamed Rat / Dire Rat ally attacks have a 50% chance
+// to drop a fresh token card into the player's hand (Goodberry / Cave
+// Shroom). Stamped via _forageCardId on the summoned creature so any
+// future "foraging" ally just sets the flag without touching this
+// resolver. Showcases the card center-screen so the rider feels like
+// an event, not a silent log line. Skipped if the hand is full
+// (capped at MAX_HAND_SIZE) — the foraged card is lost in that case.
+// Name-based forage profiles — fallback for rats that were summoned
+// before _forageCreator was stamped (older save loaded post-fix, or a
+// long-running combat from before the rider existed). Keeps the rider
+// working without forcing a re-summon. New foraging allies should
+// stamp _forageCreator/_forageLabel/_forageVerb explicitly at summon
+// time; this map is only the safety net.
+const FORAGE_PROFILES = {
+  'Tamed Rat': { creator: createGoodberry,  label: 'Goodberry',   verb: 'scrounges' },
+  'Dire Rat':  { creator: createCaveShroom, label: 'Cave Shroom', verb: 'digs up'   },
+};
+function maybeForage(ally) {
+  if (!ally) return;
+  // Resolve creator/label/verb from the stamp first, then fall back to
+  // the name-based profile. Foraging IDs that don't have one are
+  // silently skipped.
+  let creator = (typeof ally._forageCreator === 'function') ? ally._forageCreator : null;
+  let label = ally._forageLabel;
+  let verb = ally._forageVerb;
+  if (!creator) {
+    const profile = FORAGE_PROFILES[ally.name];
+    if (!profile) return;
+    creator = profile.creator;
+    label = label || profile.label;
+    verb = verb || profile.verb;
+    // Backfill the stamp so subsequent attacks skip the fallback.
+    ally._forageCreator = creator;
+    ally._forageLabel = label;
+    ally._forageVerb = verb;
+  }
+  if (Math.random() >= 0.33) return;
+  if (player.deck.hand.length >= MAX_HAND_SIZE) {
+    addLog(`  ${ally.name} ${verb} a ${label}... hand full!`, Colors.GRAY);
+    return;
+  }
+  const card = creator();
+  applyGamePlusOffsetInPlace(card, playerTierOffset || 0);
+  player.deck.hand.push(card);
+  addLog(`  Forage! ${ally.name} ${verb} a ${label}.`, Colors.GREEN, card);
+  playSound('card_draw');
+  showcasePlayerCard(card, SHOWCASE_DURATION);
 }
 
 // --- Player Ally Attacks ---
@@ -28587,6 +28856,12 @@ function processPlayerAllyAttacks() {
       }
     }
     _activeAttacker = null;
+    // Forage rider — fires on attack, gated on a coin flip inside the
+    // helper. Tamed Rat / Dire Rat each carry the rider via
+    // _forageCardId stamped at summon time. Runs every swing regardless
+    // of whether the hit landed (the rat foraged whether or not it
+    // chomped) and before bloodfrenzy so the log reads in attack order.
+    maybeForage(ally);
     // Bloodfrenzy: ally gains +N persistent Rage after every swing
     // (Sharks: +1). Mirrors PY's per-attack rage bump.
     if (ally.bloodfrenzy > 0) {
@@ -32404,6 +32679,11 @@ function consumeIgniteOnAttack(caster, target, attempted) {
   if (caster !== player) return;
   if (!(attempted > 0)) return;
   applyIgniteRider(target, consumePlayerIgnite());
+  // Elemental Weapon — passive on-attack rider, NOT consumed. Stamped
+  // on the same single-target sites that fire ignite so any player
+  // swing carries the imbued element. Multi-target / barrage / picker
+  // flows call applyElementalWeaponRider directly per target.
+  applyElementalWeaponRider(target, attempted);
 }
 
 // === Consumable "next attack" buff snapshots ===
@@ -32480,6 +32760,35 @@ function applyObsidianBonus(target, bonus) {
   if (armor <= 0) return 0;
   addLog(`  Obsidian Core! +${bonus} vs Armor/Shield on ${target.name}`, Colors.GOLD);
   return bonus;
+}
+
+// Elemental Weapon rider — passive on-attack buff (NOT consumed). The
+// player's combatBuffs list holds at most one of the two elemental
+// stacks (they cancel on apply), so this just reads whichever side is
+// active and stamps that many Fire / Ice on the target. Lands only
+// when the attack actually dealt damage (matches Ignite rider's rule
+// so a fully-blocked swing doesn't smear Fire on shields all day).
+function applyElementalWeaponRider(target, damageLanded) {
+  if (!player || !target || damageLanded <= 0) return;
+  const buffs = player.combatBuffs || [];
+  let fireFired = false;
+  let iceFired = false;
+  for (const b of buffs) {
+    if (!b || !b.effectValue) continue;
+    if (b.effectType === 'elemental_weapon_fire') {
+      applyFireToTarget(target, b.effectValue);
+      fireFired = true;
+    } else if (b.effectType === 'elemental_weapon_ice') {
+      applyIceToTarget(target, b.effectValue);
+      iceFired = true;
+    }
+  }
+  // Delayed whoosh layered on top of the base hit sfx so the elemental
+  // imbue reads audibly even when the hit's own swing sound is loud.
+  // 180 ms is enough to clear the impact thud without feeling
+  // disconnected from the swing.
+  if (fireFired) setTimeout(() => playSound('fireball_whoosh_01', 0.7), 180);
+  if (iceFired) setTimeout(() => playSound('cold_whoosh_01', 0.7), 180);
 }
 
 // Legacy wrappers — snapshot + apply once. Single-target damage
@@ -33186,7 +33495,13 @@ function drawPerkSelect() {
 // Uses the parent card's id (so the art lookup matches) and the mode's name+effects.
 function buildModeCard(parent, mode) {
   const c = parent.copy();
-  c.id = parent.id;          // keep the same art
+  // Per-mode art override — when a CardMode carries `artId` the
+  // modal choice card swaps to that art (Elemental Weapon's
+  // Fire / Ice picks point at the matching buff art). Without
+  // an override the synthetic card keeps the parent's id and
+  // renders the parent's art (Animal Companion's two summon picks
+  // share the parent art, for example).
+  c.id = mode.artId || parent.id;
   c.name = mode.description; // mode label as the card name
   c.description = mode.description;
   c.shortDesc = mode.description;
@@ -33323,6 +33638,10 @@ function cancelModalSelect() {
 let reviveChoiceCards = [];
 let reviveChoiceRects = [];
 let reviveCancelRect = null;
+// Number of additional picks remaining in the current Revivify call.
+// Scales with playerTierOffset (1 base + floor(0.5*offset)). Each
+// click decrements; when it hits 0 the modal closes.
+let revivePicksRemaining = 1;
 
 function cardCanRevive(card) {
   const isSummon = e => typeof e?.effectType === 'string' && e.effectType.startsWith('summon_');
@@ -33405,10 +33724,20 @@ function handleReviveSelectClick(x, y) {
   for (const r of reviveChoiceRects) {
     if (hitTest(x, y, r)) {
       const chosen = r.card;
-      reviveChoiceCards = [];
+      // Pull the chosen card out of the remaining offered set so
+      // multi-pick can't double-pick the same instance, then revive.
+      reviveChoiceCards = reviveChoiceCards.filter(c => c !== chosen);
       reviveChoiceRects = [];
-      reviveCancelRect = null;
       reviveAllyFromCard(chosen);
+      revivePicksRemaining = Math.max(0, revivePicksRemaining - 1);
+      // Keep the modal up if we still have picks to spend AND there
+      // are candidates left to pick from. Otherwise close it.
+      if (revivePicksRemaining > 0 && reviveChoiceCards.length > 0) {
+        return;
+      }
+      reviveChoiceCards = [];
+      reviveCancelRect = null;
+      revivePicksRemaining = 0;
       state = GameState.COMBAT;
       checkCombatEnd();
       return;
@@ -33423,6 +33752,7 @@ function cancelReviveSelect() {
   reviveChoiceCards = [];
   reviveChoiceRects = [];
   reviveCancelRect = null;
+  revivePicksRemaining = 0;
   state = GameState.COMBAT;
 }
 
@@ -33435,7 +33765,10 @@ function drawReviveSelectOverlay() {
   ctx.fillStyle = Colors.GOLD;
   ctx.font = 'bold 32px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Revivify: Choose an ally to return', SCREEN_WIDTH / 2, 110);
+  const title = revivePicksRemaining > 1
+    ? `Revivify: Choose ${revivePicksRemaining} allies to return`
+    : 'Revivify: Choose an ally to return';
+  ctx.fillText(title, SCREEN_WIDTH / 2, 110);
 
   reviveChoiceRects = layoutReviveChoiceRects();
   for (const r of reviveChoiceRects) {

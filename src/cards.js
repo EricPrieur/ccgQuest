@@ -1394,6 +1394,7 @@ function createTamedRatCreature() {
     name: 'Tamed Rat',
     attack: 1,
     maxHp: 1,
+    description: 'Forage: 33% to scrounge\na Goodberry on attack.',
   });
 }
 
@@ -1408,7 +1409,7 @@ function createDireRatCreature() {
     maxHp: 2,
     armor: 1,
     bloodfrenzy: 1,
-    description: 'Bloodfrenzy: +1 Rage after attacking.',
+    description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 33% to dig up\na Cave Shroom on attack.',
   });
 }
 
@@ -1416,8 +1417,8 @@ export function createTamedRat() {
   return new Card({
     id: 'tamed_rat',
     name: 'Rat Taming',
-    description: 'Recharge -> Summon Rats.',
-    shortDesc: 'R->Summon Rats',
+    description: 'Recharge -> Summon Rats that can Forage.',
+    shortDesc: 'R->Summon\nForaging Rats',
     subtype: 'ability',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
@@ -1451,6 +1452,7 @@ export function createConsecration() {
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [new CardEffect('damage_all', 2, TargetType.ALL_ENEMIES)],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage_all: 1 },
   });
 }
 
@@ -1465,6 +1467,7 @@ export function createHammerOfWrath() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 1 },
   });
 }
 
@@ -1480,6 +1483,7 @@ export function createHolySword() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 3, heal: 1 },
   });
 }
 
@@ -1491,6 +1495,11 @@ export function createRevivify() {
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('revivify', 3, TargetType.SELF)],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    // +0.5 per offset to both picks AND pool: offset 0 = 1/3, offset
+    // 2 = 2/4, offset 4 = 3/5, etc. eff.value bumps the pool size; the
+    // picks count is computed from playerTierOffset in the handler so
+    // a single saved card replays correctly at any offset.
+    gamePlusOffset: { revivify: 0.5 },
   });
 }
 
@@ -1505,21 +1514,25 @@ function createHufferCreature() {
 export function createHuntersMark() {
   return new Card({
     id: 'hunters_mark', name: "Hunter's Mark",
-    description: 'Recharge -> Mark an enemy.\nDraw. +1 dmg per Mark.',
-    shortDesc: 'R->Mark, Draw', subtype: 'ability',
+    description: 'Recharge -> Mark an enemy.\nNext attack on Marked: 2x damage\n(consumes 1 Mark).',
+    shortDesc: 'R->Mark\n2x next attack', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
 export function createAnimalCompanion() {
   return new Card({
     id: 'animal_companion', name: 'Animal Companion',
-    description: 'Recharge +1 Card -> Summon:\nMisha (4/4 Sentinel)\nOR Huffer (4/2 Haste)',
+    // Stats omitted from the description so the card text stays
+    // accurate at any offset — the actual numbers live on the
+    // previewCreatures (which rescale via CREATURE_TIER_OFFSET) and
+    // on the summoned creature itself.
+    description: 'Recharge +1 Card -> Summon:\nMisha (Sentinel)\nOR Huffer (Haste)',
     shortDesc: 'R+1->Summon\nMisha or Huffer', subtype: 'ability',
     cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     // +1 recharge cost on top of the base play. Mode picks resolve
@@ -1529,13 +1542,47 @@ export function createAnimalCompanion() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     modes: [
-      new CardMode('Summon Misha (4/4 Sentinel)',
+      new CardMode('Summon Misha (Sentinel)',
         [new CardEffect('summon_misha', 1, TargetType.SUMMON)]),
-      new CardMode('Summon Huffer (4/2 Haste)',
+      new CardMode('Summon Huffer (Haste)',
         [new CardEffect('summon_huffer', 1, TargetType.SUMMON)]),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     previewCreatures: [createMishaCreature(), createHufferCreature()],
+    // Empty opt-in: scaling lives entirely on the summoned creatures
+    // (CREATURE_TIER_OFFSET['Misha'] = +2/+2, ['Huffer'] = +2/+1).
+    // The card itself has no per-effect bump.
+    gamePlusOffset: {},
+  });
+}
+
+// Elemental Weapon — replaces Piercing Shot in the Ranger tier-2 pool.
+// Discard cost, modal: imbue your future attacks with Fire OR Ice. The
+// buff stacks (each cast adds 1 to its chosen element); casting the
+// opposite element cancels stacks 1-to-1 the way Fire / Ice already do
+// in the status engine.
+export function createElementalWeapon() {
+  // Per-mode artId — the modal picker uses this to swap the choice
+  // card's art (Fire mode shows ElementalWeaponFire, Ice shows
+  // ElementalWeaponIce) so the player sees which element they're
+  // picking at a glance. Same image is reused on the in-combat buff
+  // (imageId 'buff_elemental_weapon_<element>' in the resolver).
+  const fireMode = new CardMode('Attacks add 1 Fire',
+    [new CardEffect('grant_elemental_weapon_fire', 1, TargetType.SELF)]);
+  fireMode.artId = 'buff_elemental_weapon_fire';
+  const iceMode = new CardMode('Attacks add 1 Ice',
+    [new CardEffect('grant_elemental_weapon_ice', 1, TargetType.SELF)]);
+  iceMode.artId = 'buff_elemental_weapon_ice';
+  return new Card({
+    id: 'elemental_weapon', name: 'Elemental Weapon',
+    description: 'Discard -> Choose:\nYour attacks add Fire,\nOR your attacks add Ice.',
+    shortDesc: 'D->Attacks +Fire\nOR Attacks +Ice',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.DISCARD,
+    effects: [],
+    modes: [fireMode, iceMode],
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -1556,14 +1603,17 @@ export function createPiercingShot() {
 export function createExplosiveShot() {
   return new Card({
     id: 'explosive_shot', name: 'Explosive Shot',
-    description: 'Recharge -> Deal 4 Damage.\n1 Fire to all other enemies.',
-    shortDesc: 'R->4 Dmg\n+Fire ALL', subtype: 'ability',
+    description: 'Recharge +1 Card -> Deal 7 Damage,\n1 Fire to ALL enemies, Draw.',
+    shortDesc: 'R+1->7 Dmg\n1 Fire ALL, Draw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
-      new CardEffect('splash_fire', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('damage', 7, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 3, apply_fire_all: 0.5 },
   });
 }
 
@@ -1578,6 +1628,7 @@ export function createBurningHands() {
       new CardEffect('apply_fire_all', 2, TargetType.ALL_ENEMIES),
     ],
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { apply_fire_all: 1 },
   });
 }
 
@@ -1592,6 +1643,7 @@ export function createIceNova() {
       new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
     ],
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage_all: 1, apply_ice_all: 0.5 },
   });
 }
 
@@ -1750,6 +1802,7 @@ export function createIceBlock() {
       new CardEffect('gain_shield', 8, TargetType.SELF),
     ],
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { apply_ice_self: 2, gain_shield: 4 },
   });
 }
 
@@ -1764,6 +1817,7 @@ export function createArcaneBeam() {
       new CardEffect('optional_recharge_damage', 2, TargetType.SELF),
     ],
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 2, optional_recharge_damage: 1 },
   });
 }
 
@@ -1905,6 +1959,12 @@ export function createSummonTreants() {
     effects: [new CardEffect('summon_treants', 1, TargetType.SUMMON)],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
     previewCreature: createTreantCreature(),
+    // Empty opt-in marker: scaling lives on the runtime handler
+    // (max count) + CREATURE_TIER_OFFSET['Treant'] (+1/+1 stats). The
+    // description / shortDesc carry the 2-4 range hardcoded — a custom
+    // branch in applyGamePlusOffsetInPlace rewrites the max number
+    // (4 → 5 at offset 2, → 6 at offset 4).
+    gamePlusOffset: { summon_treants: 0.5 },
   });
 }
 
@@ -1919,6 +1979,7 @@ export function createFeralBite() {
       new CardEffect('gain_shield', 3, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 1.5, gain_shield: 1.5 },
   });
 }
 
@@ -1934,6 +1995,7 @@ export function createStarfire() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 4 },
   });
 }
 
@@ -1948,6 +2010,7 @@ export function createHealingTouch() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { heal: 4 },
   });
 }
 
@@ -1965,8 +2028,11 @@ export function getPaladinAbilityChoices() {
 }
 
 export function getRangerAbilityChoices() {
+  // Piercing Shot retired from the level-up / shrine pool; its creator
+  // stays in CARD_REGISTRY so older saves with it still deserialize.
+  // Elemental Weapon takes its slot.
   return [createTamedRat(), createGoodberries(), createAimedShotCard(), createHeroicTumble(),
-          createHuntersMark(), createAnimalCompanion(), createPiercingShot(), createExplosiveShot()];
+          createHuntersMark(), createAnimalCompanion(), createElementalWeapon(), createExplosiveShot()];
 }
 
 export function getWizardAbilityChoices() {

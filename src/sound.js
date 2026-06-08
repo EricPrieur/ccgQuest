@@ -395,6 +395,7 @@ export const SOUND_MAP = {
   // cast cue without aliasing meaning (Gnikan's Staff layers it
   // on top of the baton_hit_01 swing).
   cold_whoosh:   'Magic/cold_whoosh_01',
+  cold_whoosh_01: 'Magic/cold_whoosh_01',
   // Varimatras Wing Buffet — howling-wind spell cue. Already in the
   // Magic pack as windy_spell_01; alias surfaces it as a friendlier
   // key for CARD_SFX_OVERRIDES.

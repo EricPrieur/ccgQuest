@@ -44,7 +44,9 @@ export class CardMode {
   }
 
   copy() {
-    return new CardMode(this.description, this.effects.map(e => e.copy()));
+    const m = new CardMode(this.description, this.effects.map(e => e.copy()));
+    if (this.artId) m.artId = this.artId;
+    return m;
   }
 }
 

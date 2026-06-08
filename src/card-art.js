@@ -53,6 +53,9 @@ export const CARD_ART_MAP = {
   animal_companion: 'AnimalCompanion.jpg',
   piercing_shot: 'PiercingShot.jpg',
   explosive_shot: 'ExplosiveShot.jpg',
+  elemental_weapon: 'ElementalWeaponBothElements.jpg',
+  buff_elemental_weapon_fire: 'ElementalWeaponFire.jpg',
+  buff_elemental_weapon_ice: 'ElementalWeaponIce.jpg',
 
   // === Wizard ===
   fire_burst: 'FireBurst.jpg',
