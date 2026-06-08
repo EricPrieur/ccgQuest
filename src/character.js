@@ -403,7 +403,7 @@ export class Character {
   //   { effectType, effectValue }                     — standard tick
   //   { effectType: 'random_pick', options: [ ... ] } — pick one option
   //                                                     uniformly each tick
-  _applyBuffTickEffect(buff, eff, logs) {
+  _applyBuffTickEffect(buff, eff, logs, enemy = null) {
     if (!eff) return;
     const effectType = eff.effectType;
     const effectValue = eff.effectValue;
@@ -415,7 +415,7 @@ export class Character {
       this._applyBuffTickEffect(buff, {
         effectType: choice.effectType || choice.type,
         effectValue: choice.value != null ? choice.value : choice.effectValue,
-      }, logs);
+      }, logs, enemy);
       return;
     }
     switch (effectType) {
@@ -694,6 +694,39 @@ export class Character {
         });
         break;
       }
+      case 'apply_ice_random_enemy': {
+        // Whitescale Brew beverage tick — pour a stack of Ice onto a
+        // random alive enemy. The pool is the enemy's living
+        // creatures plus the enemy character itself; if everything
+        // is dead the tick noops silently. Cross-character target
+        // pickup needs the enemy passed in by processCombatBuffs.
+        if (!enemy) break;
+        const pool = [];
+        if (Array.isArray(enemy.creatures)) {
+          for (const c of enemy.creatures) {
+            if (c && c.isAlive) pool.push(c);
+          }
+        }
+        if (enemy.isAlive && !enemy._invulnerable) pool.push(enemy);
+        if (pool.length === 0) break;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        if (pick instanceof Creature) {
+          pick.iceStacks = (pick.iceStacks || 0) + effectValue;
+        } else if (typeof pick.applyStatus === 'function') {
+          pick.applyStatus('ICE', effectValue);
+        }
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Ice on ${pick.name}`,
+          color: '#7ec8e3',
+          token: 'Ice', tokenAmount: effectValue, tokenColor: '#7ec8e3',
+          buff,
+          // Stash the pick so main.js can spawn the visual token on
+          // the right target (logs that name a creature route the
+          // token spawn through that creature instead of the player).
+          creature: pick instanceof Creature ? pick : null,
+        });
+        break;
+      }
       case 'summon_elf_warrior': {
         const aliveAllies = (this.creatures || []).filter(c => c.isAlive).length;
         if (aliveAllies < 6) {
@@ -743,19 +776,24 @@ export class Character {
     }
   }
 
-  processCombatBuffs() {
+  processCombatBuffs(enemy = null) {
     const logs = [];
     for (const buff of this.combatBuffs) {
       if (buff.trigger === 'start_of_turn') {
-        // Multi-effect provisions (Bad Rations Meal) carry an effects
-        // array and resolve each entry per tick. Single-effect buffs
-        // fall through to the legacy { effectType, effectValue } path.
+        // Multi-effect provisions (Bad Rations Meal, Whitescale Brew)
+        // carry an effects array and resolve each entry per tick.
+        // Single-effect buffs fall through to the legacy
+        // { effectType, effectValue } path. The optional `enemy`
+        // parameter is passed through so cross-character effects
+        // (apply_ice_random_enemy on Whitescale Brew) can land on
+        // the live opponent without the character class needing a
+        // module-level enemy reference.
         if (Array.isArray(buff.effects) && buff.effects.length > 0) {
           for (const e of buff.effects) {
-            this._applyBuffTickEffect(buff, e, logs);
+            this._applyBuffTickEffect(buff, e, logs, enemy);
           }
         } else {
-          this._applyBuffTickEffect(buff, { effectType: buff.effectType, effectValue: buff.effectValue }, logs);
+          this._applyBuffTickEffect(buff, { effectType: buff.effectType, effectValue: buff.effectValue }, logs, enemy);
         }
         if (buff.turnsRemaining > 0) {
           buff.turnsRemaining--;

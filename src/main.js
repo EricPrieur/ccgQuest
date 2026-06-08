@@ -90,7 +90,7 @@ import {
   createGoblinRocketBoots, createGoblinSapperCharges, createOgreMaul,
   createThorbCard, createThorbUpgradedCard, createThorbTier3Card,
   createRaenaCardTier3, createValdrisaCardTier3,
-  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createDwarvenScoutCard, createWhiteWolfCloak, createWolfFang,
+  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createWhitescaleBrew, createDwarvenScoutCard, createWhiteWolfCloak, createWolfFang,
   createCaveShroom,
   createSahuaginTridentLoot, createFishScaleBoots, createSahuaginEye,
   createSahuaginPriestStaffLoot, createWhirlpool, createSwimmingShowcase,
@@ -430,6 +430,7 @@ const EFFECT_DESC_PATTERNS = {
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
   damage_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
   damaged_bonus_damage: [/\+(\d+)\s+if/i, /(\d+)\s+if\s+damaged/i],
+  poison_bonus_damage:  [/\+(\d+)\s+if\s+target\s+is\s+Poisoned/i, /\+(\d+)\s+if\s+Poison/i, /\+(\d+)\s+Poison/i],
   heal_random: [/Heal\s+1-(\d+)/i, /Heal\s+(\d+)/i, /1-(\d+)/],
   // Summon-range patterns target the upper bound of a "1-N" range so
   // the swap doesn't accidentally hit unrelated numbers earlier in
@@ -466,6 +467,38 @@ const EFFECT_DESC_PATTERNS = {
   destroy_shield: [/Strip\s+(\d+)\s+Shield/i, /Destroy\s+(\d+)\s+Shield/i],
   apply_ice_self: [/Gain\s+(\d+)\s+Ice/i],
   apply_ice_multi: [/Ice\s+(\d+)\s+times/i, /(\d+)\s+times/i],
+  create_barnacle: [/create\s+1-(\d+)\s+Barnacle/i, /create\s+(\d+)\s+Barnacle/i, /\+(\d+)\s+Barnacle/i, /(\d+)\s+Barnacle/i],
+  gain_heroism_per_damaged_enemy: [/Gain\s+(\d+)\s+Heroism\s+for\s+each/i, /\+(\d+)H\/Damaged/i, /(\d+)\s+Heroism/i],
+  destroy_shield_random: [/Strip\s+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  // Mephit Skin family. apply_fire_random matches "N Fire randomly"
+  // / "N Fire rand" and falls back to "N Fire" so the swap targets
+  // the right number even when Block N and N Fire share the line.
+  apply_fire_random: [/(\d+)\s+Fire\s+randomly/i, /(\d+)\s+Fire\s+rand/i, /(\d+)\s+Fire\b/i],
+  // if_burning_heal_fire = Douse N Fire stacks. value=99 means the
+  // boots/gloves wipe ALL stacks; pattern matches the explicit
+  // number form ("Douse N Fire") for cards using a finite douse.
+  if_burning_heal_fire: [/Douse\s+(\d+)\s+Fire/i, /Heal\s+(\d+)\s+Fire/i],
+  if_burning_gain_ignite: [/Gain\s+(\d+)\s+Ignite/i, /\+(\d+)\s+Ignite/i, /(\d+)\s+Ignite/i],
+  // Soul Ward random rolls — Block 1-N / Gain 1-N Shield / Heal 1-N.
+  // Patterns lean on the "1-N <noun>" form so the swap doesn't
+  // accidentally rewrite an unrelated number on the same line.
+  block_random:        [/Block\s+1-(\d+)/i, /1-(\d+)\s+Block/i],
+  gain_shield_random:  [/Gain\s+1-(\d+)\s+Shield/i, /1-(\d+)\s+Shield/i],
+  heal_random:         [/Heal\s+1-(\d+)/i, /1-(\d+)\s+Heal/i],
+  // White Wolf Cloak — "Clear N Ice".
+  clear_ice:           [/Clear\s+(\d+)\s+Ice/i, /(\d+)\s+Ice\b/i],
+  // White Dragonscale Shield — "Gain N Shields" then bash for Shield
+  // count. The shield_bash effect value is the on-cast Shield gain;
+  // the description swap targets that gain.
+  shield_bash:         [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  // Harpy Screaming Charm — "discard 1 card or take N damage". The
+  // discard count stays at 1; the damage tail is what scales.
+  luring_song:         [/take\s+(\d+)\s+damage/i, /(\d+)\s+damage\b/i],
+  // Kraken's Eye Spyglass — "Scry N from your discard pile".
+  scry_pick_discard:   [/Scry\s+(\d+)/i],
+  // Cave Shroom / Sack / Travelers Clothing all share the
+  // existing scry_pick pattern above (already defined). No new
+  // pattern needed for those.
   // Varimatras / Kraken / boss-card additions.
   apply_ice_all: [/(\d+)\s+Ice\b/i],
   apply_ice_creatures_all: [/(\d+)\s+Ice\b/i],
@@ -584,6 +617,15 @@ function applyGamePlusOffsetInPlace(c, offset) {
           // { value: N, maxTargets: M }.
           if (typeof per.value === 'number') e.value = (e.value || 0) + scaledInc(per.value);
           if (typeof per.maxTargets === 'number') e.maxTargets = (e.maxTargets || 1) + scaledInc(per.maxTargets);
+        } else if (per && typeof per === 'object' && e.effectType === 'split_damage') {
+          // Steel Greataxe + future Cleave-style splits: encoded as
+          // primary*10 + secondary. per is { primary: N, secondary: M }
+          // and both ends scale independently per offset point.
+          const primaryNow = Math.floor((e.value || 0) / 10);
+          const secondaryNow = (e.value || 0) % 10;
+          const primaryNew = primaryNow + Math.floor((per.primary || 0) * offset + 1e-9);
+          const secondaryNew = secondaryNow + Math.floor((per.secondary || 0) * offset + 1e-9);
+          e.value = primaryNew * 10 + secondaryNew;
         }
       }
     };
@@ -615,6 +657,28 @@ function applyGamePlusOffsetInPlace(c, offset) {
         };
         c.description = swapBonus(swapBase(c.description));
         c.shortDesc = swapBonus(swapBase(c.shortDesc));
+      } else if (per && typeof per === 'object' && etype === 'split_damage') {
+        // Steel Greataxe — "Deal 4 Damage and 3 Damage to 2 other
+        // targets." has two numbers that both scale. Replace the
+        // primary (first "Deal N") and the secondary (second number
+        // before "Damage to"). Bare digit search would clobber both
+        // values with the first match; pin to the surrounding noun.
+        const primaryNew = Math.floor(ref.value / 10);
+        const secondaryNew = ref.value % 10;
+        const primaryOld = primaryNew - Math.floor((per.primary || 0) * offset + 1e-9);
+        const secondaryOld = secondaryNew - Math.floor((per.secondary || 0) * offset + 1e-9);
+        const swapSplit = (s) => {
+          if (typeof s !== 'string') return s;
+          // Primary: first "Deal N Damage" or "+N Dmg" at the head.
+          let out = s.replace(/Deal\s+(\d+)\s+Damage/i, (m, n) => parseInt(n, 10) === primaryOld ? `Deal ${primaryNew} Damage` : m);
+          out = out.replace(/^(\s*)(\d+)\s+Dmg/i, (m, ws, n) => parseInt(n, 10) === primaryOld ? `${ws}${primaryNew} Dmg` : m);
+          // Secondary: "and N Damage to" or "+N Dmg" tail.
+          out = out.replace(/and\s+(\d+)\s+Damage/i, (m, n) => parseInt(n, 10) === secondaryOld ? `and ${secondaryNew} Damage` : m);
+          out = out.replace(/\+(\d+)\s+Dmg\s+x(\d+)/i, (m, n, x) => parseInt(n, 10) === secondaryOld ? `+${secondaryNew} Dmg x${x}` : m);
+          return out;
+        };
+        c.description = swapSplit(c.description);
+        c.shortDesc = swapSplit(c.shortDesc);
       }
     }
     // Magic Missiles — two damage numbers (initial + per-shot) and
@@ -676,6 +740,131 @@ function applyGamePlusOffsetInPlace(c, offset) {
       } else {
         c.description = `Recharge -> Summon 1 Obsidian Slime.\n+${armorBonus} vs Armor/Shield.`;
       }
+    }
+    // Fresh Fish — Meal heal value bumps by +0.5 per offset (floor).
+    // The Consume heal scales via the generic { heal: 2 } swap; the
+    // provision.value carries the per-turn heal which needs its own
+    // bump (provisions live outside the effects array).
+    if (c.id === 'fresh_fish' && c.gamePlusOffset?.fresh_fish_meal) {
+      const dHeal = Math.floor(c.gamePlusOffset.fresh_fish_meal * offset + 1e-9);
+      if (c.provision && dHeal > 0) {
+        c.provision.value = (c.provision.value || 0) + dHeal;
+        const v = c.provision.value;
+        c.provision.description = `Heal ${v} each turn for 4 turns. While active, recharging a card during Swim also draws 1.`;
+        c.description = (c.description || '').replace(/Meal:\s+Heal\s+\d+/i, `Meal: Heal ${v}`);
+        c.shortDesc = (c.shortDesc || '').replace(/Meal:\s+Heal\s+\d+/i, `Meal: Heal ${v}`);
+      }
+    }
+    // Travel Rations — bump the heal arm of the random_pick meal
+    // tick by the same per-offset rate as the Consume heal (the
+    // gamePlusOffset.heal value drives both ends). Draw arm stays
+    // flat. The Consume heal swap fires via the generic loop above.
+    if (c.id === 'travel_rations' && c.gamePlusOffset?.heal) {
+      const dHeal = Math.floor(c.gamePlusOffset.heal * offset + 1e-9);
+      const provEff = c.provision?.effects?.[0];
+      if (provEff && Array.isArray(provEff.options) && dHeal > 0) {
+        for (const opt of provEff.options) {
+          if (opt.effectType === 'heal') opt.value = (opt.value || 0) + dHeal;
+        }
+        const healVal = provEff.options.find(o => o.effectType === 'heal')?.value || 1;
+        c.provision.description = `Heal ${healVal} or Draw each turn for 3 turns (each combat, until rest)`;
+        c.description = (c.description || '').replace(/Heal\s+\d+\s+or\s+Draw/i, `Heal ${healVal} or Draw`);
+        c.shortDesc = (c.shortDesc || '').replace(/Heal\/Draw\s+\d+T/i, `Heal/Draw 3T`);
+      }
+    }
+    // Harpy Egg Omelette — Consume heal scales via the generic
+    // { heal: 2 } swap. Bump turnsPerCombat by +1 per offset (3 →
+    // 4 → 5 …) so the discard-draw meal lasts longer.
+    if (c.id === 'harpy_egg_omelette') {
+      if (c.provision) {
+        c.provision.turnsPerCombat = (c.provision.turnsPerCombat || 3) + offset;
+        const t = c.provision.turnsPerCombat;
+        c.provision.description = `Discarding from hand draws a card. Lasts ${t} turns each combat.`;
+        c.description = (c.description || '').replace(/(\d+)\s+Turns?/i, (m, n) => `${t} Turns`);
+        c.shortDesc = (c.shortDesc || '').replace(/Draw\s+(\d+)T/i, `Draw ${t}T`);
+      }
+    }
+    // Magma Tablet — +0.5 turns per offset (floor) AND +1 Ignite per
+    // offset on the per-turn tick. The grant_magma_tablet_buff
+    // handler reads the bumped effect value directly for the turn
+    // count; the Ignite-per-turn lives on a separate field
+    // (_magmaTabletIgnite) read at buff-projection time.
+    if (c.id === 'magma_tablet') {
+      const igniteBump = offset;
+      c._magmaTabletIgnite = 1 + igniteBump;
+      const turns = c.effects.find(e => e.effectType === 'grant_magma_tablet_buff')?.value || 4;
+      const igniteNow = c._magmaTabletIgnite;
+      c.description = `Recharge -> Gain ${igniteNow} Ignite now and for the next ${turns} turns.\nBurning: Gain ${igniteNow} Ignite and Draw.`;
+      c.shortDesc = `R->+${igniteNow} Ignite\n${turns} turns (+Burning)`;
+    }
+    // Goblin Sapper Charges — both ends of the 1-3 random roll
+    // shift by +1 per offset. Stamp the bump on the card so the
+    // sapper_charges handler can read it; rebuild the description
+    // / shortDesc with the new range. Each round still rolls
+    // independently — the bump is a per-charge floor lift.
+    if (c.id === 'goblin_sapper_charges') {
+      c._sapperChargesDmgBump = offset;
+      const min = 1 + offset;
+      const max = 3 + offset;
+      const rounds = c.effects.find(e => e.effectType === 'sapper_charges')?.value || 3;
+      c.description = `Consume -> Deal ${min} to ${max} Damage + Fire to a random enemy ${rounds} times.`;
+      c.shortDesc = `C->${min}-${max} Dmg+Fire\nrandom x${rounds}`;
+    }
+    // Obsidian Shard token — gain_shield starts at 0 on the base
+    // card, so the generic swap can't substitute a 0 → N change.
+    // Rebuild the description from the bumped effect value so the
+    // player sees the consolation Shield grant at higher tiers.
+    if (c.id === 'obsidian_shard_token') {
+      const shieldEff = c.effects.find(e => e.effectType === 'gain_shield');
+      const shieldAmt = shieldEff ? shieldEff.value : 0;
+      if (shieldAmt > 0) {
+        c.description = `Recharge a card -> Consume.\nGain ${shieldAmt} Shield.\nEnemy gains 1 Armor.`;
+        c.shortDesc = `R1->Consume\n+${shieldAmt} Shield\nEnemy +1 Armor`;
+      }
+    }
+    // Shadow Cloak — bump the on-success Block grant by +4 per
+    // offset. The chance (eff.value) stays at 50%; the payoff lives
+    // on the card itself via _chanceBlockAmount, which the
+    // block_chance_10 handler reads at play time.
+    if (c.id === 'shadow_cloak') {
+      const blockAmt = 10 + 4 * offset;
+      c._chanceBlockAmount = blockAmt;
+      c.description = `Recharge -> 50% to gain\n${blockAmt} Block. Draw.`;
+      c.shortDesc = `R->50% Block ${blockAmt}\nDraw`;
+    }
+    // Barnacle-Covered Buckler — bump the random-Barnacle roll to a
+    // 1-N range (was a clean N swap). Per +0.5 offset (floor) the
+    // create_barnacle value climbs 1 → 2 → 3 …; the description
+    // should read "1-N" so the random-roll nature is visible. Also
+    // refreshes the Shield count if `gain_shield` scaled.
+    if (c.id === 'barnacle_covered_buckler' && c.gamePlusOffset?.create_barnacle) {
+      const shieldEff = c.effects.find(e => e.effectType === 'gain_shield');
+      const barEff = c.effects.find(e => e.effectType === 'create_barnacle');
+      const shieldAmt = shieldEff ? shieldEff.value : 3;
+      const barMax = barEff ? barEff.value : 1;
+      const barText = barMax > 1 ? `Create 1-${barMax} Barnacles` : 'Create 1 Barnacle';
+      const barShort = barMax > 1 ? `+1-${barMax} Barnacle` : '+1 Barnacle';
+      c.description = `Recharge ->\nGain ${shieldAmt} Shield. ${barText}.\nFirst Shield, On Swim: Draw.`;
+      c.shortDesc = `R->${shieldAmt} Shield\n${barShort}\n1st/Swim: Draw`;
+    }
+    // Obsidian Staff — the staff hit scales via armor_bonus_damage
+    // above (encoded base/bonus), but the summon-line description
+    // still reads "2/4 ... +2 vs Armor/Shield" no matter the offset.
+    // Rebuild the staff description so the Obsidian Construct
+    // numbers reflect the live CREATURE_TIER_OFFSET bump (+1 atk,
+    // +1 hp, +1/3 armor, +1 vs Armor/Shield per offset). The hit
+    // damage portion is left to the generic armor_bonus_damage swap
+    // — only the summon clause needs the rewrite.
+    if (c.id === 'obsidian_staff') {
+      const abd = c.effects.find(e => e.effectType === 'armor_bonus_damage')?.value || 13;
+      const hitBase = abd >= 100 ? Math.floor(abd / 100) : Math.floor(abd / 10);
+      const hitVs = abd >= 100 ? (abd % 100) : (abd % 10);
+      const hitBonus = Math.max(0, hitVs - hitBase);
+      const cAtk = 2 + offset;
+      const cHp = 4 + offset;
+      const cArmor = 1 + Math.floor(offset / 3 + 1e-9);
+      const cBonus = 2 + offset;
+      c.description = `Recharge +1 -> Deal ${hitBase} Damage (+${hitBonus} vs Armor/Shield). Summon a ${cAtk}/${cHp} Obsidian Construct (Sentinel, ${cArmor} Armor, +${cBonus} vs Armor/Shield).`;
     }
     // Drain Essence — both ends of the 1-N random roll slide up
     // together. Card-level bump already pushed the max via
@@ -1145,6 +1334,11 @@ const CREATURE_TIER_OFFSET = {
   'Goblin Sapper':      { attack: 1, hp: 1, onDeathDamage: 2 },
   'Harpy':              { attack: 2, hp: 4, onDeathDiscardOrDamage: 5 },
   'Magma Mephit':       { attack: 1, hp: 3, onDeathFireHits: 2 },
+  // Kraken Spawn's Tentacle — +1 atk / +2 hp per offset. Pairs
+  // with the +0.5 starting-tentacle bump on the boss setup and
+  // the deck-multiplied Tentacle Grab / Tentacle / Tentacle Block
+  // cards so a +1 Kraken Spawn fight stays brutal.
+  'Tentacle':           { attack: 1, hp: 2 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
@@ -1536,6 +1730,18 @@ let dragonSlain = false;
 // volcano warming the great forge). One-shot; persists across save
 // so revisits don't replay it.
 let staircaseTopDragonDialogSeen = false;
+// Post-dragon Mithril Remedies side-quest gate. Latches once the
+// player has completed the Olbrim Goldbalm dialog in the Artisan
+// District. While false, the Tharnag Main Door + Grand Hall Main
+// Entrance teleport pair stays locked (they're the route up to the
+// Stairs of the Infinite — the next side quest beat). Persisted via
+// save.js below; reset in resetStoryFlags / startNewGame.
+let mithrilRemediesVisited = false;
+// Tracks whether the barkeep has already handed the post-dragon
+// freebie Whitescale Brew to the player. One-shot: the LOOT phase
+// only fires on the first post-dragon visit; subsequent visits
+// open straight into the shop with a short hero-welcome line.
+let dwarvenTavernFreebieGiven = false;
 // Latches once the player has completed the volcano_choice encounter
 // (Point of No Return) at least once. Subsequent visits use the
 // volcano_choice_revisit encounter — simpler dialog, no level-up, and
@@ -2756,7 +2962,7 @@ const CARD_REGISTRY = {
   runeforged_buckler: createRuneforgedBuckler,
   chain_shirt: createChainShirt, ironforge_chainmail: createIronforgeChainmail,
   dwarven_throwing_axe: createDwarvenThrowingAxe,
-  dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew,
+  dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew, whitescale_brew: createWhitescaleBrew,
   dwarven_warhammer: createDwarvenWarhammer, miners_pickaxe: createMinersPickaxe,
   dwarven_scout: createDwarvenScoutCard,
   // Zhost Revenge boss drop — same creator as the enemy-deck card; the
@@ -5090,6 +5296,8 @@ function resetStoryFlags() {
   quartersRested = false;
   dragonSlain = false;
   staircaseTopDragonDialogSeen = false;
+  mithrilRemediesVisited = false;
+  dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
@@ -5174,6 +5382,8 @@ function startNewGame() {
   quartersRested = false;
   dragonSlain = false;
   staircaseTopDragonDialogSeen = false;
+  mithrilRemediesVisited = false;
+  dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
@@ -9375,6 +9585,42 @@ function hydrateMapFromGlobalState(map) {
       }
     }
   }
+  // Post-dragon side quest: Mithril Remedies opens once the dragon
+  // is dead (the player is now hero-level, the apothecary's
+  // missing-note dialog becomes available). After the dialog fires
+  // the player flips mithrilRemediesVisited which unlocks the
+  // Tharnag Main Door teleport pair below.
+  if (map.id === 'artisan_district' && dragonSlain) {
+    const n = map.getNode('artisan_mithril_remedies');
+    if (n) {
+      n.isLocked = false;
+      n.hiddenName = '';
+      n.hiddenDescription = '';
+    }
+  }
+  // Tharnag interior — Grand Hall Main Entrance unlocks once the
+  // Mithril Remedies dialog has fired (the party now knows to head
+  // out the front gate and up the Stairs of the Infinite to find
+  // Olbrim). Pairs with the exterior Tharnag Main Door below.
+  if (map.id === 'tharnag_interior' && mithrilRemediesVisited) {
+    const n = map.getNode('grand_hall_main_entrance');
+    if (n) {
+      n.isLocked = false;
+      n.hiddenName = '';
+      n.hiddenDescription = '';
+    }
+  }
+  // Tharnag exterior — the Main Door teleport target unlocks on
+  // the same trigger. The pair lights up together so the player can
+  // walk through immediately.
+  if (map.id === 'tharnag' && mithrilRemediesVisited) {
+    const n = map.getNode('tharnag_main_door');
+    if (n) {
+      n.isLocked = false;
+      n.hiddenName = '';
+      n.hiddenDescription = '';
+    }
+  }
   // Obsidian Wastes: if the rest stop is complete, ensure the
   // Edge↔North shortcut is wired (handled separately in
   // transitionToObsidianWastes too, but defensive).
@@ -9784,6 +10030,16 @@ function transitionToObsidianWastes(fromNodeId) {
 // the main menu instead of doing a normal rebalance.
 function transitionToTharnagPart1Ending(fromNodeId) {
   dragonSlain = true;
+  // Re-hydrate every cached map so post-dragon unlocks light up on
+  // maps the player already visited pre-kill. Without this, the
+  // Mithril Remedies node (gated on dragonSlain in
+  // hydrateMapFromGlobalState) stayed locked on a cached
+  // artisan_district map because getOrCreateMap returned the cached
+  // copy and skipped the hydrate pass. Cheap loop — there are only
+  // a handful of cached maps at any point.
+  for (const cached of Object.values(_mapCache)) {
+    hydrateMapFromGlobalState(cached);
+  }
   // Volcano arc is over — wipe the Volcano's Blessing persistent
   // buff projection + zero the timer globals so the buff icon
   // doesn't keep haunting the character sheet through the Tharnag
@@ -10139,6 +10395,20 @@ function startNodeEncounter(nodeId) {
     } else {
       currentEncounter = factory();
     }
+  } else if (node.encounterId === 'dwarven_smithy') {
+    // Post-dragon, the smith acknowledges the player as a hero and
+    // pulls out his reserved stock — the encounter factory branches
+    // on the dragonSlain flag to swap in the longer intro line.
+    currentEncounter = factory(dragonSlain);
+  } else if (node.encounterId === 'dwarven_tavern') {
+    // Post-dragon, the barkeep hands the player a free Whitescale
+    // Brew on the first visit (LOOT phase) and uses a short
+    // hero-welcome line on revisits. Pre-dragon stays on the
+    // recruitment dialog.
+    currentEncounter = factory({
+      dragonSlain,
+      freebieGiven: dwarvenTavernFreebieGiven,
+    });
   } else if (node.encounterId === 'obsidian_forge') {
     // The Obsidian Forge — first visit gets the full intro text; once
     // the forge has been used (player picked a weapon to forge), swap
@@ -10361,6 +10631,14 @@ function advanceEncounterPhase() {
     // default art.
     _encounterBgOverride = null;
 
+    // Dwarven Tavern — post-dragon freebie one-shot. MUST run
+    // before the QUALIBAF_SHOP_IDS auto-open below because that
+    // branch returns early; without latching here the flag never
+    // flips and the player gets the heroic dialog + free brew on
+    // every visit forever.
+    if (completedEncounterId === 'dwarven_tavern' && dragonSlain && !dwarvenTavernFreebieGiven) {
+      dwarvenTavernFreebieGiven = true;
+    }
     // Qualibaf shop encounters: dialog → straight into the 3-column shop UI.
     // The shop's Leave Shop button drops the player back to the map.
     const QUALIBAF_SHOP_IDS = new Set([
@@ -10379,6 +10657,23 @@ function advanceEncounterPhase() {
     // openShop reads `antiquityShopCleared`'s sister buyback inventory
     // through SHOP_INVENTORIES.antiquity_shop, which is built dynamically
     // in resolveShopEntry-style code below.
+    // Mithril Remedies — Olbrim Goldbalm dialog. Latches the visit
+    // flag so the Tharnag Main Door teleport pair (Grand Hall Main
+    // Entrance + exterior Tharnag Main Door) unlocks on the next
+    // map render. Also re-runs the unlock pass on the current map
+    // so the freshly-unlocked node renders immediately without
+    // forcing a map transition.
+    if (completedEncounterId === 'mithril_remedies') {
+      mithrilRemediesVisited = true;
+      // Re-hydrate every cached map so the Tharnag Main Door
+      // teleport pair (Grand Hall Main Entrance + exterior Main
+      // Door) lights up immediately, even on maps the player
+      // already cached pre-Mithril. Without this the player would
+      // have to leave + come back for the unlock to register.
+      for (const cached of Object.values(_mapCache)) {
+        hydrateMapFromGlobalState(cached);
+      }
+    }
     if (completedEncounterId === 'antiquity_shop' || completedEncounterId === 'antiquity_shop_cleared') {
       antiquityShopCleared = true;
       // Mimic-fight boss music (music_tension_01) was crossfaded in for
@@ -13011,7 +13306,7 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
@@ -13726,7 +14021,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -15341,7 +15636,7 @@ function startCombat() {
   // start buff that should have hit every turn. Mid-combat buffs (Ale,
   // Dwarven Brew, Scroll of Potency, Regrowth) are added by card play, so
   // they're never present at startCombat and won't trip this call.
-  const startBuffLogs = player.processCombatBuffs();
+  const startBuffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(startBuffLogs);
   for (const log of startBuffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
@@ -15577,7 +15872,7 @@ function continueCombatPhase2() {
   // Tick start_of_turn buffs once so the freshly-projected ones (e.g.
   // Volcano's Blessing draw / heroism / shield) fire on the first turn
   // of phase 2 — matches the turn-1 behavior in startCombat below.
-  const phase2BuffLogs = player.processCombatBuffs();
+  const phase2BuffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(phase2BuffLogs);
   for (const log of phase2BuffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
@@ -20889,18 +21184,20 @@ function handleDefendingClick(x, y) {
           playHeroPainSound(1);
         }
       } else if (eff.effectType === 'block_chance_10') {
-        // Shadow Cloak — roll eff.value% to grant 10 Block on the
-        // player. Block soaks the incoming swing through the normal
-        // defense math; if the swing is bigger than 10, the
-        // remainder still lands. On a failed roll the card just
-        // draws (nothing else fires). Pure gamble — no fallback
-        // block on a miss.
+        // Shadow Cloak — roll eff.value% to grant the bumped Block
+        // amount on the player (default 10; ccgQuest+ offset stamps
+        // `_chanceBlockAmount` on the card via the custom branch in
+        // applyGamePlusOffsetInPlace, +4 per offset). Block soaks
+        // the incoming swing through the normal defense math; if
+        // the swing is bigger, the remainder still lands. On a
+        // failed roll the card just draws — pure gamble.
         const chance = Math.max(0, Math.min(100, eff.value));
         const roll = Math.random() * 100;
+        const blockAmt = (_activePlayCard && _activePlayCard._chanceBlockAmount) || 10;
         if (roll < chance) {
-          player.addBlock(10);
-          addLog(`  ${card.name}: +10 Block! (${Math.round(chance)}%)`, Colors.GOLD);
-          spawnTokenOnTarget(player, 10, 'Block', BLOCK_BLUE);
+          player.addBlock(blockAmt);
+          addLog(`  ${card.name}: +${blockAmt} Block! (${Math.round(chance)}%)`, Colors.GOLD);
+          spawnTokenOnTarget(player, blockAmt, 'Block', BLOCK_BLUE);
         } else {
           addLog(`  ${card.name}: Failed (${Math.round(chance)}%)`, Colors.GRAY);
         }
@@ -23192,15 +23489,20 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'grant_magma_tablet_buff': {
-      // Magma Tablet — gain 1 Ignite now (+1 more + draw if Burning),
-      // then add a CombatBuff that grants +1 Ignite each start-of-turn
-      // for N turns. Mirrors PY game.py:11609-11633.
-      caster.ignite = (caster.ignite || 0) + 1;
-      addLog(`  +1 Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
-      spawnTokenOnTarget(caster, 1, 'Ignite', Colors.ORANGE);
+      // Magma Tablet — gain N Ignite now (+N more + draw if Burning),
+      // then add a CombatBuff that grants +N Ignite each start-of-turn
+      // for `eff.value` turns. Mirrors PY game.py:11609-11633.
+      // ccgQuest+ bumps both the per-Ignite count via
+      // `_magmaTabletIgnite` (stamped by applyGamePlusOffsetInPlace)
+      // AND the turn count (eff.value carries the +0.5/offset bump
+      // from the generic scaledInc).
+      const igniteAmt = (_activePlayCard && _activePlayCard._magmaTabletIgnite) || 1;
+      caster.ignite = (caster.ignite || 0) + igniteAmt;
+      addLog(`  +${igniteAmt} Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
+      spawnTokenOnTarget(caster, igniteAmt, 'Ignite', Colors.ORANGE);
       if (_wasBurningAtCardStart) {
-        caster.ignite += 1;
-        addLog(`  Burning! +1 Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
+        caster.ignite += igniteAmt;
+        addLog(`  Burning! +${igniteAmt} Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
         const drawn = caster.deck.draw(1, MAX_HAND_SIZE);
         for (const d of drawn) addLog(`  Burning! Draw ${d.name}`, Colors.BLUE, d);
       }
@@ -23210,15 +23512,15 @@ function resolveEffect(eff, caster, target) {
       caster.addCombatBuff(new CombatBuff({
         id: 'magma_tablet',
         name: 'Magma Tablet',
-        description: `+1 Ignite at start of turn (${eff.value} turns)`,
+        description: `+${igniteAmt} Ignite at start of turn (${eff.value} turns)`,
         imageId: 'magma_tablet',
         effectType: 'magma_tablet_tick',
-        effectValue: 1,
+        effectValue: igniteAmt,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
         turnsRemaining: eff.value,
       }));
-      addLog(`  Magma Tablet: +1 Ignite/turn for ${eff.value} turns`, Colors.ORANGE);
+      addLog(`  Magma Tablet: +${igniteAmt} Ignite/turn for ${eff.value} turns`, Colors.ORANGE);
       break;
     }
     case 'damage_random': {
@@ -23407,6 +23709,11 @@ function resolveEffect(eff, caster, target) {
       // subsequent charges inherit the same modifier. Mark + Shock are
       // applied per target per charge (each charge is a separate hit).
       const rounds = Math.max(1, eff.value || 3);
+      // ccgQuest+ shift: both ends of the per-charge 1-3 random
+      // roll move up by the stamped _sapperChargesDmgBump (+1 per
+      // offset). Bump comes from the custom branch in
+      // applyGamePlusOffsetInPlace so the value follows the card.
+      const sapperBump = (_activePlayCard && _activePlayCard._sapperChargesDmgBump) || 0;
       let iceConsumed = false;
       for (let r = 0; r < rounds; r++) {
         const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
@@ -23414,7 +23721,7 @@ function resolveEffect(eff, caster, target) {
           ? candidates[Math.floor(Math.random() * candidates.length)]
           : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
         if (!t) break;
-        let dmg = 1 + Math.floor(Math.random() * 3); // 1..3
+        let dmg = (1 + sapperBump) + Math.floor(Math.random() * 3); // (1+bump)..(3+bump)
         // First charge eats the Ice stack; remaining charges run unmodified
         // (mirrors how a multi-hit swing only consumes Ice once).
         if (!iceConsumed) {
@@ -31330,7 +31637,7 @@ function completePlayerTurnTransition() {
   // status DoTs so meal heals can clear Poison stacks before they
   // tick damage. Without this swap, Fresh Fish + Poison would tick
   // poison first (damaging the player), then heal only the leftover.
-  const buffLogs = player.processCombatBuffs();
+  const buffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(buffLogs);
   for (const log of buffLogs) {
     addLog(log.text, log.color, log.card || null, log.buff || null);
@@ -33713,6 +34020,46 @@ const SHOP_LABELS = {
 // dynamically: a single copy of Mimic Tongue (until acquired or sold),
 // plus every card the player has previously sold to any shop, at the
 // price it sold for. PY parity (game.py 17263+).
+// Dwarven Tavern inventory — base stock (Dwarven Brew + Dwarven
+// Scout) plus the post-dragon Whitescale Brew the barkeep keeps
+// on tap once Varimatras is dead. The freebie LOOT phase only
+// fires once via dwarvenTavernFreebieGiven; the shop slot stays
+// permanent so the player can keep buying mead.
+function buildDwarvenTavernInventory() {
+  const base = [
+    createDwarvenBrew,
+    createDwarvenScoutCard,
+  ];
+  if (!dragonSlain) return base;
+  return [
+    ...base,
+    createWhitescaleBrew,
+  ];
+}
+// Dwarven Smithy inventory — base stock (Crossbow, Tower Shield,
+// Greaves, White Wolf Cloak) plus the hero-tier reserves the smith
+// pulls out post-dragon (Throwing Axe, Warhammer, Ironforge
+// Chainmail, Miner's Pickaxe, Runeforged Buckler). The dialog
+// branch in createDwarvenSmithyEncounter mirrors this — the smith
+// acknowledges the player as a dragon-slayer before the shelves
+// fill out.
+function buildDwarvenSmithyInventory() {
+  const base = [
+    createDwarvenCrossbow,
+    createDwarvenTowerShield,
+    createDwarvenGreaves,
+    createWhiteWolfCloak,
+  ];
+  if (!dragonSlain) return base;
+  return [
+    ...base,
+    createDwarvenThrowingAxe,
+    createDwarvenWarhammer,
+    createIronforgeChainmail,
+    createMinersPickaxe,
+    createRuneforgedBuckler,
+  ];
+}
 function buildAntiquityShopInventory() {
   const entries = [];
   // Gate the fresh-stock Mimic Tongue on a per-RUN flag rather than
@@ -33769,8 +34116,15 @@ function openShop(shopId, name) {
   shopName = name;
   // Antiquity is the buyback shop — its inventory is recomputed every
   // visit from soldCardsHistory + the still-available Mimic Tongue.
+  // Dwarven Smithy adds post-dragon hero-tier stock dynamically so
+  // the shelf changes after Varimatras dies. Everything else reads
+  // straight from SHOP_INVENTORIES.
   const inventory = shopId === 'antiquity_shop'
     ? buildAntiquityShopInventory()
+    : shopId === 'dwarven_smithy'
+    ? buildDwarvenSmithyInventory()
+    : shopId === 'dwarven_tavern'
+    ? buildDwarvenTavernInventory()
     : (SHOP_INVENTORIES[shopId] || []);
   shopCards = inventory.map(entry => {
     const { creator, priceOverride } = resolveShopEntry(entry);
@@ -36002,7 +36356,7 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
@@ -36649,6 +37003,8 @@ function restoreFromSave(data) {
   quartersRested = !!data.quartersRested;
   dragonSlain = !!data.dragonSlain;
   staircaseTopDragonDialogSeen = !!data.staircaseTopDragonDialogSeen;
+  mithrilRemediesVisited = !!data.mithrilRemediesVisited;
+  dwarvenTavernFreebieGiven = !!data.dwarvenTavernFreebieGiven;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
   // Back-compat: pre-fix saves don't have volcanoChoiceCompleted.

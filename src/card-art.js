@@ -351,6 +351,8 @@ export const CARD_ART_MAP = {
   dwarven_tower_shield: 'DwarvenTowerShield.jpg',
   dwarven_greaves: 'DwarvenGreaves.jpg',
   dwarven_brew: 'DwarvenBrew.jpg',
+  whitescale_brew: 'WhitescaleBrew.jpg',
+  buff_whitescale_brew: 'WhitescaleBrew.jpg',
   dwarven_warhammer: 'DwarvenWarhammer.jpg',
   ironforge_chainmail: 'IronforgeChainmail.jpg',
   dwarven_throwing_axe: 'DwarvenThrowingAxe.jpg',

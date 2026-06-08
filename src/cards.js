@@ -184,6 +184,7 @@ export function createBuckler() {
       new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { gain_shield: 2 },
   });
 }
 
@@ -316,6 +317,7 @@ export function createWhiteDragonscaleShield() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { shield_bash: 2 },
   });
 }
 
@@ -343,6 +345,7 @@ export function createWhiteDragonscaleArmor() {
     ],
     tier: 2,
     rarity: 'epic',
+    gamePlusOffset: { block: 5 },
   });
 }
 
@@ -620,6 +623,8 @@ export function createVialOfPoison() {
     effects: [new CardEffect('grant_poison_buff', 1, TargetType.SELF)],
     characterClass: ['rogue'],
     tier: 1,
+    // +0.5 Poison per offset (floor — +1 at +2, +2 at +4 …).
+    gamePlusOffset: { grant_poison_buff: 0.5 },
     // Spawned by Pet Spider's play — it's a token, so the Antiquity
     // shop sells it for 0 gp and other shops reject it (token gate).
     // Counted in the deck (added to masterDeck by the handler) so the
@@ -1108,6 +1113,10 @@ export function createFreshFish() {
     },
     rarity: 'uncommon',
     tier: 1,
+    // +2 Consume heal per offset, +0.5 Meal heal per offset (the
+    // custom branch in applyGamePlusOffsetInPlace bumps
+    // provision.value with a separate fresh_fish_meal rate).
+    gamePlusOffset: { heal: 2, fresh_fish_meal: 0.5 },
   });
 }
 
@@ -1770,6 +1779,9 @@ export function createPoisonedDagger() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     characterClass: ['rogue'], tier: 2,
+    rarity: 'uncommon',
+    // +1 dmg, +0.5 poison (floor) per offset.
+    gamePlusOffset: { damage: 1, apply_poison: 0.5 },
   });
 }
 
@@ -2542,6 +2554,7 @@ export function createFrogBite() {
     effects: [
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
     ],
+    gamePlusOffset: { damage: 2 },
   });
 }
 
@@ -2564,6 +2577,7 @@ export function createGiantFrogSwallow() {
       new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
+    gamePlusOffset: { damage: 3, apply_poison: 1 },
   });
 }
 
@@ -2582,6 +2596,8 @@ export function createAcidSpit() {
     effects: [
       new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
     ],
+    // +0.5 poison stacks per offset (floor).
+    gamePlusOffset: { apply_poison_all: 0.5 },
   });
 }
 
@@ -2647,6 +2663,7 @@ export function createFrogSkinBoots() {
     ],
     rarity: 'uncommon',
     tier: 1,
+    gamePlusOffset: { block: 1, heal: 1 },
   });
 }
 
@@ -2667,6 +2684,7 @@ export function createToxicFrogExtract() {
     ],
     rarity: 'common',
     tier: 1,
+    gamePlusOffset: { apply_poison_all: 1 },
   });
 }
 
@@ -2694,6 +2712,7 @@ export function createFeatherCloak() {
     ],
     rarity: 'rare',
     tier: 1,
+    gamePlusOffset: { block: 2 },
   });
 }
 
@@ -2751,6 +2770,9 @@ export function createHarpyEggOmelette() {
     },
     rarity: 'uncommon',
     tier: 1,
+    // +2 Consume heal per offset + +1 Meal turn per offset (custom
+    // branch in applyGamePlusOffsetInPlace bumps turnsPerCombat).
+    gamePlusOffset: { heal: 2 },
   });
 }
 
@@ -2775,6 +2797,7 @@ export function createHarpyTalonBlade() {
     ],
     rarity: 'rare',
     tier: 1,
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -2797,6 +2820,10 @@ export function createHarpyScreamingCharm() {
     ],
     rarity: 'rare',
     tier: 1,
+    // +2 damage on the discard-or-damage rider per offset (the
+    // damage tier of luring_song; the number of cards discarded
+    // stays at 1 per enemy regardless of offset).
+    gamePlusOffset: { luring_song: 2 },
   });
 }
 
@@ -2820,7 +2847,9 @@ export function createKrakenTentacleCreature() {
   // Tentacle Block, Tentacle). Those cards live in CARD_REGISTRY for
   // codex visibility, but the previewCreature stamper would otherwise
   // tag this creature as a player summon. Pre-stamp the side so the
-  // codex Summons tab routes it to the enemy column.
+  // codex Summons tab routes it to the enemy column. The creature
+  // itself now scales via CREATURE_TIER_OFFSET['Tentacle'] (+1 atk /
+  // +2 hp per offset) so noTierOffset stays off here.
   c._codexSide = 'enemy';
   return c;
 }
@@ -2997,6 +3026,8 @@ export function createBloodyEyePatch() {
     ],
     rarity: 'epic',
     tier: 1,
+    // +1 block, +2 Heroism per damaged enemy, per offset.
+    gamePlusOffset: { block: 1, gain_heroism_per_damaged_enemy: 2 },
   });
 }
 
@@ -3017,6 +3048,7 @@ export function createHarpoonOfTheDeep() {
     ],
     rarity: 'epic',
     tier: 1,
+    gamePlusOffset: { damage: 3, apply_bleed: 1 },
   });
 }
 
@@ -3077,6 +3109,7 @@ export function createKrakensEyeSpyglass() {
     effects: [new CardEffect('scry_pick_discard', 3, TargetType.SELF)],
     rarity: 'epic',
     tier: 1,
+    gamePlusOffset: { scry_pick_discard: 1 },
   });
 }
 
@@ -3100,6 +3133,8 @@ export function createBarnacleCoveredBuckler() {
     ],
     rarity: 'epic',
     tier: 1,
+    // +3 shield, +0.5 barnacle (floor) per offset.
+    gamePlusOffset: { gain_shield: 3, create_barnacle: 0.5 },
   });
 }
 
@@ -3479,6 +3514,11 @@ export function createTravelRations() {
       description: 'Heal 1 or Draw each turn for 3 turns (each combat, until rest)',
     },
     rarity: 'uncommon',
+    // +1 Consume heal per offset + +1 Meal heal (only the heal arm
+    // of the random_pick scales; the draw arm stays at 1).
+    // applyGamePlusOffsetInPlace bumps the random_pick option via a
+    // custom branch below.
+    gamePlusOffset: { heal: 1 },
   });
 }
 
@@ -3493,6 +3533,7 @@ export function createBandages() {
     costType: CostType.DISCARD,
     effects: [new CardEffect('heal', 4, TargetType.SELF)],
     rarity: 'uncommon',
+    gamePlusOffset: { heal: 3 },
   });
 }
 
@@ -3511,6 +3552,7 @@ export function createTravelersClothing() {
     ],
     rarity: 'uncommon',
     tier: 1,
+    gamePlusOffset: { block: 1, scry_pick: 1 },
   });
 }
 
@@ -3525,6 +3567,7 @@ export function createSack() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('scry_pick', 3, TargetType.SELF)],
     rarity: 'uncommon',
+    gamePlusOffset: { scry_pick: 1 },
   });
 }
 
@@ -3543,6 +3586,7 @@ export function createSteelAxe() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('multi_damage', 3, TargetType.SINGLE_ENEMY, 2)],
     rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 2 },
   });
 }
 
@@ -3557,6 +3601,8 @@ export function createSteelMace() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('armor_bonus_damage', 35, TargetType.SINGLE_ENEMY)],
     rarity: 'uncommon',
+    // +3 base / +2 vs Armor-Shield per offset (3/+2 → 6/+4 → 9/+6…).
+    gamePlusOffset: { armor_bonus_damage: { base: 3, bonus: 2 } },
   });
 }
 
@@ -3571,6 +3617,7 @@ export function createSteelSword() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('damage', 4, TargetType.SINGLE_ENEMY)],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 4 },
   });
 }
 
@@ -3589,6 +3636,8 @@ export function createSteelGreataxe() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    // +2 primary / +1 secondary per offset (4/3 → 6/4 → 8/5…).
+    gamePlusOffset: { split_damage: { primary: 2, secondary: 1 } },
   });
 }
 
@@ -3625,6 +3674,7 @@ export function createSteelDagger() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 1 },
   });
 }
 
@@ -3647,6 +3697,7 @@ export function createStuddedLeatherArmor() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { block: 2, gain_shield: 0.5 },
   });
 }
 
@@ -3665,6 +3716,7 @@ export function createRingMail() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { block: 2, gain_shield: 1 },
   });
 }
 
@@ -3863,6 +3915,7 @@ export function createQuarterstaff() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 2, gain_shield: 1 },
   });
 }
 
@@ -3870,7 +3923,7 @@ export function createAle() {
   return new Card({
     id: 'ale',
     name: 'Ale',
-    description: 'Consume -> Heal 1, Gain 1 Heroism.\nBeverage: +1 Heroism/turn for 2 turns.',
+    description: 'Consume -> Heal 1, Heroism.\nBeverage: +1 Heroism for 2 turns.',
     shortDesc: 'C->Heal 1, Heroism\nBeverage: +Hero/2T',
     subtype: 'item',
     cardType: CardType.ITEM,
@@ -3892,6 +3945,8 @@ export function createAle() {
       turnsPerCombat: 2,
       description: '+1 Heroism/turn for 2 turns each combat (until rest)',
     },
+    // +1 Consume heal + +1 Consume heroism per offset.
+    gamePlusOffset: { heal: 1, gain_heroism: 1 },
   });
 }
 
@@ -4033,6 +4088,8 @@ export function createBarnacleEncrustedPlate() {
     // Side-preview the Barnacle token on the full hover card so the
     // player sees what create_barnacle drops into hand.
     previewCard: createBarnacle(),
+    // +5 block, +1 to the upper bound of the barnacle roll per offset.
+    gamePlusOffset: { block: 5, create_barnacle: 1 },
   });
 }
 
@@ -4048,6 +4105,7 @@ export function createBarnacle() {
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
     effects: [new CardEffect('heal', 1, TargetType.SELF)],
+    gamePlusOffset: { heal: 0.5 },
   });
 }
 
@@ -4105,9 +4163,9 @@ export function createWebSpider() {
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [new CardEffect('add_web_token', 1, TargetType.SELF)],
-    // +1 web thrown per offset (the runtime handler reads eff.value
-    // and loops; mirrors how Sticky Web's summon count scales).
-    gamePlusOffset: { add_web_token: 1 },
+    // No tier scaling — one web per cast is the design, the spider
+    // pressure comes from the dungeon's loop-level count.
+    noTierOffset: true,
   });
 }
 
@@ -4130,6 +4188,11 @@ export function createWebToken() {
       new CardEffect('on_discard_discard', 1, TargetType.SELF),
     ],
     isToken: true,
+    // No tier scaling — the web token is a junk-card debuff, the
+    // spider's Web ability already opts out and the token mirrors
+    // that decision. Without the flag the codex paints a red
+    // "needs offset rules" border at +1+.
+    noTierOffset: true,
   });
 }
 
@@ -4163,6 +4226,7 @@ export function createSlyBlade() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { damage: 1, poison_bonus_damage: 1 },
   });
 }
 
@@ -4180,13 +4244,18 @@ export function createShadowCloak() {
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      // value = chance %, handler grants 10 Block on success and
-      // does nothing on failure.
+      // value = chance %, handler grants 10 Block (default) or the
+      // bumped _chanceBlockAmount stamped by ccgQuest+ offset.
       new CardEffect('block_chance_10', 50, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
     tier: 2,
+    // +4 Block per offset on the on-success grant — the chance stays
+    // 50%, just the payoff swells. Custom branch in
+    // applyGamePlusOffsetInPlace stamps `_chanceBlockAmount` and
+    // rebuilds the description.
+    gamePlusOffset: {},
   });
 }
 
@@ -4207,6 +4276,8 @@ export function createKoboldSmokeBomb() {
     // play loop; the Consume cost permanently removes the bomb.
     cardType: CardType.DEFENSE,
     costType: CostType.BANISH,
+    // 100% dodge is binary — nothing to scale per offset.
+    noTierOffset: true,
     effects: [
       new CardEffect('dodge_chance_all', 100, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -4285,6 +4356,9 @@ export function createSoulWard() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    // +1 to the upper bound of each random roll per offset
+    // (1-2 → 1-3 → 1-4 …).
+    gamePlusOffset: { block_random: 1, gain_shield_random: 1, heal_random: 1 },
   });
 }
 
@@ -4307,6 +4381,7 @@ export function createSpectralHand() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { unpreventable_damage: 1, heal: 1 },
   });
 }
 
@@ -4401,6 +4476,8 @@ export function createGoblinRocketBoots() {
     ],
     rarity: 'common',
     tier: 2,
+    // +1 block, +1/3 Fire to all enemies per offset (floor — +1 at +3).
+    gamePlusOffset: { block: 1, apply_fire_all: 1/3 },
   });
 }
 
@@ -4418,6 +4495,12 @@ export function createGoblinSapperCharges() {
     ],
     rarity: 'common',
     tier: 2,
+    // +1 damage per offset to BOTH ends of the 1-3 random roll
+    // (becomes 2-4 at +1, 3-5 at +2, …). Runtime handler reads the
+    // stamped _sapperChargesDmgBump from the card; the custom
+    // branch in applyGamePlusOffsetInPlace stamps it and rebuilds
+    // the description.
+    gamePlusOffset: {},
   });
 }
 
@@ -4436,6 +4519,8 @@ export function createOgreMaul() {
     ],
     rarity: 'common',
     tier: 2,
+    // +4 base / +2 vs Armor-Shield per offset (8/+6 → 12/+8 → 16/+10…).
+    gamePlusOffset: { armor_bonus_damage: { base: 4, bonus: 2 } },
   });
 }
 
@@ -4592,6 +4677,8 @@ export function createRugasSpikedGauntlets() {
     ],
     rarity: 'rare',
     tier: 2,
+    // +2 base dmg per offset on the sneak_attack scaling.
+    gamePlusOffset: { sneak_attack: 2 },
   });
 }
 
@@ -4678,18 +4765,20 @@ export function createMoltenScaleArmorLoot() {
   return new Card({
     id: 'molten_scale_armor_loot',
     name: 'Molten Scale Armor',
-    description: 'Recharge -> Block 3.\nDeal Fire to all enemies. Draw.',
-    shortDesc: 'R->Block 3\nFire ALL, Draw',
+    description: 'Recharge -> Block 5.\nDeal Fire to all enemies. Draw.',
+    shortDesc: 'R->Block 5\nFire ALL, Draw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('block', 5, TargetType.SELF),
       new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    rarity: 'uncommon',
+    rarity: 'rare',
     tier: 2,
+    // +2 block, +1 Fire to all enemies per offset.
+    gamePlusOffset: { block: 2, apply_fire_all: 1 },
   });
 }
 
@@ -4730,6 +4819,7 @@ export function createObsidianCandle() {
     ],
     rarity: 'rare',
     tier: 2,
+    gamePlusOffset: { scry_pick: 1 },
   });
 }
 
@@ -4749,9 +4839,18 @@ export function createObsidianShardToken() {
     costType: CostType.BANISH,
     effects: [
       new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // gain_shield starts at 0 so base-tier players never get an
+      // unexpected freebie on banish. ccgQuest+ bumps the value by
+      // +1 per offset, and the custom branch in
+      // applyGamePlusOffsetInPlace rewrites the description to
+      // include the new "+N Shield" line.
+      new CardEffect('gain_shield', 0, TargetType.SELF),
       new CardEffect('enemy_gain_armor', 1, TargetType.SELF),
     ],
     isToken: true,
+    // +1 Shield to the player per offset — a small consolation for
+    // having to recharge through enemy-injected junk at higher tiers.
+    gamePlusOffset: { gain_shield: 1 },
   });
 }
 
@@ -4778,6 +4877,8 @@ export function createWhiteClawReforged() {
     ],
     rarity: 'rare',
     tier: 2,
+    // +3 dmg / +0.5 Ice (floor) per offset.
+    gamePlusOffset: { damage: 3, apply_ice_all: 0.5 },
   });
 }
 
@@ -4802,6 +4903,7 @@ export function createIronforgeChainmail() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { block: 2, gain_shield: 1 },
   });
 }
 
@@ -4847,6 +4949,8 @@ export function createMinersPickaxe() {
     ],
     rarity: 'common',
     tier: 2,
+    // +1 strip, +1 base dmg, +1 vs Armor/Shield per offset.
+    gamePlusOffset: { destroy_shield: 1, armor_bonus_damage: { base: 1, bonus: 1 } },
   });
 }
 
@@ -4891,6 +4995,7 @@ export function createRuneforgedBuckler() {
     ],
     rarity: 'common',
     tier: 2,
+    gamePlusOffset: { gain_shield: 1, gain_heroism: 1 },
   });
 }
 
@@ -4911,6 +5016,7 @@ export function createDwarvenTowerShield() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     tier: 2,
+    gamePlusOffset: { gain_shield: 2 },
   });
 }
 
@@ -4964,23 +5070,25 @@ export function createMoltenBite() {
 }
 
 export function createMoltenScaleArmor() {
+  // Boss-deck Molten Scale (player can also loot via separate
+  // _loot creator). Both share the same rare stat line + offset
+  // shape: Block 5 + Fire to all enemies + Draw.
   return new Card({
     id: 'molten_scale_armor',
     name: 'Molten Scale',
-    // Draw rider added on all tiers — the base card was missing
-    // the cantrip that the rest of the dragon-rider defenses
-    // pull through their plays.
-    description: 'Recharge -> Block 2 + 1 Shield. Draw.',
-    shortDesc: 'R->Block 2, Shield, Draw',
+    description: 'Recharge -> Block 5.\nDeal Fire to all enemies. Draw.',
+    shortDesc: 'R->Block 5\nFire ALL, Draw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 2, TargetType.SELF),
-      new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    gamePlusOffset: { block: 2, gain_shield: 1 },
+    rarity: 'rare',
+    // Same offset as the player loot variant: +2 block, +1 Fire ALL.
+    gamePlusOffset: { block: 2, apply_fire_all: 1 },
   });
 }
 
@@ -5019,6 +5127,7 @@ export function createMagmaRock() {
     ],
     rarity: 'common',
     tier: 2,
+    gamePlusOffset: { damage: 1 },
   });
 }
 
@@ -5044,6 +5153,10 @@ export function createMephitSkinSandals() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    // +1 block, +2 random Fire, +1 douse (the "Douse ALL" rider
+    // is already maxed at 99; the +1 here is symbolic and shows in
+    // the description swap via the if_burning_heal_fire pattern).
+    gamePlusOffset: { block: 1, apply_fire_random: 2, if_burning_heal_fire: 1 },
   });
 }
 
@@ -5068,6 +5181,14 @@ export function createMephitSkinGloves() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    // +1 block, +1 Ignite, +1 Douse (if_burning_heal_fire),
+    // +1 Ignite while burning per offset.
+    gamePlusOffset: {
+      block: 1,
+      gain_ignite: 1,
+      if_burning_heal_fire: 1,
+      if_burning_gain_ignite: 1,
+    },
   });
 }
 
@@ -5086,6 +5207,11 @@ export function createMagmaTablet() {
     effects: [new CardEffect('grant_magma_tablet_buff', 4, TargetType.SELF)],
     rarity: 'uncommon',
     tier: 2,
+    // +0.5 turns per offset (4 → 5 at +2, 6 at +4 …) — the value
+    // here IS the turn count. Custom branch in
+    // applyGamePlusOffsetInPlace bumps the per-turn Ignite by +1
+    // per offset via a stamped `_magmaTabletIgnite` field.
+    gamePlusOffset: { grant_magma_tablet_buff: 0.5 },
   });
 }
 
@@ -5271,6 +5397,8 @@ export function createObsidianRock() {
       new CardEffect('armor_bonus_damage', 24, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'common', tier: 2,
+    // +1 base, +1 vs Armor/Shield per offset (2/+2 -> 3/+3 …).
+    gamePlusOffset: { armor_bonus_damage: { base: 1, bonus: 1 } },
   });
 }
 
@@ -5285,13 +5413,15 @@ export function createObsidianEdge() {
       new CardEffect('apply_fire', 1, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'uncommon', tier: 2,
+    // +2 base, +1 vs Armor/Shield, +1 Fire per offset.
+    gamePlusOffset: { armor_bonus_damage: { base: 2, bonus: 1 }, apply_fire: 1 },
   });
 }
 
 export function createObsidianStaff() {
   return new Card({
     id: 'obsidian_staff', name: 'Obsidian Staff',
-    description: 'Recharge +1 -> Deal 1 Damage (+2 vs Armor/Shield). Summon a 2/4 Obsidian Construct (Sentinel, 1 Armor).',
+    description: 'Recharge +1 -> Deal 1 Damage (+2 vs Armor/Shield). Summon a 2/4 Obsidian Construct (Sentinel, 1 Armor, +2 vs Armor/Shield).',
     shortDesc: 'R+1->1 Dmg (+2)\nSummon Construct',
     subtype: 'staff', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
@@ -5301,6 +5431,13 @@ export function createObsidianStaff() {
     ],
     rarity: 'uncommon', tier: 2,
     previewCreature: createObsidianConstructCreature(),
+    // +1 base / +1 vs Armor-Shield per offset for the hit. The
+    // Obsidian Construct summon scales via CREATURE_TIER_OFFSET
+    // ('Obsidian Construct': { attack: 1, hp: 1, armor: 1/3,
+    // armorBonus: 1 }); custom branch in applyGamePlusOffsetInPlace
+    // rebuilds the description so the summon line shows the bumped
+    // 3/5 (+3 vs Armor/Shield) numbers at offset 1, 4/6 at +2, etc.
+    gamePlusOffset: { armor_bonus_damage: { base: 1, bonus: 1 } },
   });
 }
 
@@ -5321,6 +5458,7 @@ export function createObsidianSpear() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon', tier: 2,
+    gamePlusOffset: { damage: 4 },
   });
 }
 
@@ -5335,6 +5473,8 @@ export function createObsidianShard() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon', tier: 2,
+    // +1 base, +1 vs Armor/Shield per offset.
+    gamePlusOffset: { armor_bonus_damage: { base: 1, bonus: 1 } },
   });
 }
 
@@ -5592,6 +5732,8 @@ export function createDwarvenGreaves() {
       new CardEffect('on_recharge_shield', 1, TargetType.SELF),
     ],
     tier: 2,
+    // +2 block, +1 to max strip-shield targets per offset.
+    gamePlusOffset: { block: 2, destroy_shield_random: 1 },
   });
 }
 
@@ -5654,6 +5796,55 @@ export function createDwarvenBrew() {
       description: '+1 Shield each turn for 4 turns (each combat, until rest)',
     },
     tier: 2,
+    // +1 Consume heal + +1 Consume shield per offset.
+    gamePlusOffset: { heal: 1, gain_shield: 1 },
+  });
+}
+
+// Whitescale Brew — post-dragon premium beverage. Frost-herb mead
+// brewed from Varimatras's downfall: served very cold, honors the
+// kill. Consume → Heal 2 + Heroism + Ice a random enemy. Beverage
+// slot ticks +1 Heroism + 1 Ice on a random enemy each turn for
+// 4 turns each combat (until rest). The Ice-to-random-enemy tick
+// is handled by the new `apply_ice_random_enemy` case in
+// _applyBuffTickEffect which receives the enemy reference.
+export function createWhitescaleBrew() {
+  return new Card({
+    id: 'whitescale_brew',
+    name: 'Whitescale Brew',
+    description: 'Consume -> Heal 2, Heroism, Ice.\nBeverage: +Heroism, Ice Randomly for 4 turns.',
+    shortDesc: 'C->Heal 2\n+Heroism, +Ice\nBev: H+Ice/4T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 2, TargetType.SELF),
+      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      // Consume puts the Ice on the PLAYER (you drink it cold — it
+      // shows up on YOU). The beverage tick is the part that
+      // throws Ice at a random enemy.
+      new CardEffect('apply_ice_self', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    // Multi-effect beverage — every tick fires Heroism + Ice on a
+    // random alive enemy. "Randomly" in the description implies
+    // enemy-only per the player request.
+    provision: {
+      slot: 'beverage',
+      name: 'Whitescale Brew',
+      turnsPerCombat: 4,
+      effects: [
+        { effectType: 'gain_heroism', value: 1 },
+        { effectType: 'apply_ice_random_enemy', value: 1 },
+      ],
+      description: '+1 Heroism + 1 Ice Randomly each turn for 4 turns (each combat, until rest)',
+    },
+    rarity: 'uncommon',
+    tier: 2,
+    // +1 Consume heal, +1 Consume heroism, +1 Consume Ice per
+    // offset. The beverage tick stays flat (its job is the
+    // sustained pressure, not the burst).
+    gamePlusOffset: { heal: 1, gain_heroism: 1, apply_ice_self: 1 },
   });
 }
 
@@ -5672,6 +5863,7 @@ export function createWhiteWolfCloak() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
+    gamePlusOffset: { block: 2, clear_ice: 2 },
   });
 }
 
@@ -5691,6 +5883,7 @@ export function createSahuaginTridentLoot() {
       new CardEffect('damaged_bonus_damage', 3, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'uncommon',
+    gamePlusOffset: { damage: 2, damaged_bonus_damage: 2 },
   });
 }
 
@@ -5712,6 +5905,7 @@ export function createFishScaleBoots() {
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],
     rarity: 'rare',
+    gamePlusOffset: { block: 1, apply_ice_all: 1 },
   });
 }
 
@@ -5867,6 +6061,9 @@ export function createSahuaginPriestStaffLoot() {
       name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
       description: 'Bloodfrenzy: +1 Rage after attacking.',
     }),
+    // +1 dmg / +1 Ice per offset. The Shark summon scales via
+    // CREATURE_TIER_OFFSET['Shark'] (+1/+1 on the player side).
+    gamePlusOffset: { damage: 1, apply_ice: 1 },
   });
 }
 
@@ -5910,6 +6107,7 @@ export function createCaveShroom() {
       new CardEffect('heal', 1, TargetType.SELF),
       new CardEffect('scry_pick', 2, TargetType.SELF),
     ],
+    gamePlusOffset: { heal: 1, scry_pick: 1 },
     rarity: 'uncommon',
   });
 }

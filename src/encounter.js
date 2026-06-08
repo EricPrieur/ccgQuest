@@ -4160,8 +4160,44 @@ export function createGrandStaircaseArrivalEncounter() {
 }
 
 // Dwarven Tavern — short dialog, then auto-open shop. Mirrors PY
-// encounter.py:create_dwarven_tavern_encounter.
-export function createDwarvenTavernEncounter() {
+// encounter.py:create_dwarven_tavern_encounter. Three branches:
+//   - pre-dragon (default): original recruitment dialog.
+//   - post-dragon, first visit: hero dialog + LOOT phase that
+//     hands the player a free Whitescale Brew.
+//   - post-dragon, revisit: short hero-welcome dialog only; the
+//     shop auto-opens after the text closes.
+export function createDwarvenTavernEncounter(opts = {}) {
+  const { dragonSlain = false, freebieGiven = false } = opts;
+  if (dragonSlain && !freebieGiven) {
+    return new Encounter('dwarven_tavern', 'Dwarven Tavern', 'A warm tavern in the Artisan Hall — the hearth roars again.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The tavern has changed. The hearth roars again — sparks chasing each other up the new flue. Three or four extra tables have been dragged in, and every one of them is full of dwarves shouting toasts."),
+          new EncounterText("The barkeep spots you the moment you cross the threshold. He puts down the mug he was polishing, drops it actually, and waves you over with both hands.", 'Barkeep'),
+          new EncounterText("\"Look who walks in. Sit, sit — we've been pouring for ye all week and ye finally show up. The whole mountain's talkin' about Varimatras's head!\"", 'Barkeep'),
+          new EncounterText("He turns, shouts something in dwarvish toward the cellar hatch. A younger dwarf scurries off and returns hauling a frost-rimed cask between two arms, condensation beading on the staves.", '!'),
+          new EncounterText("\"We tapped a barrel we'd been holdin' for the day the dragon fell. Whitescale Brew — frost-herb mead, served cold as her scales. First one's on the house. The first one ALWAYS is, for heroes like ye.\"", 'Barkeep'),
+          new EncounterText("A dwarven scout at the bar raises his mug. \"To the dragon-slayers!\" The whole room follows. The cheer rattles dust from the ceiling.", '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootCards: ['whitescale_brew'],
+      }),
+    ]);
+  }
+  if (dragonSlain) {
+    return new Encounter('dwarven_tavern', 'Dwarven Tavern', 'A warm tavern in the Artisan Hall.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The barkeep grins as you push the door open. \"Welcome back, hero! Another Whitescale Brew?\"", 'Barkeep'),
+          new EncounterText("He sets a fresh mug on the bar, frost beading on the side. \"This one's on yer coin — house freebie was a one-time deal. Worth every copper though.\"", 'Barkeep'),
+        ],
+      }),
+    ]);
+  }
   return new Encounter('dwarven_tavern', 'Dwarven Tavern', 'A warm tavern in the Artisan Hall.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -4178,15 +4214,25 @@ export function createDwarvenTavernEncounter() {
 
 // Dwarven Smithy — short dialog, then auto-open shop. Mirrors PY
 // encounter.py:create_dwarven_smithy_encounter.
-export function createDwarvenSmithyEncounter() {
-  return new Encounter('dwarven_smithy', 'Dwarven Smithy', 'The finest dwarven arms and armor.', [
-    new EncounterPhaseData({
-      phaseType: EncounterPhase.TEXT,
-      texts: [
+//
+// Post-dragon (dragonSlain=true) the smith opens up the reserved
+// hero-tier stock — Throwing Axe, Warhammer, Ironforge Chainmail,
+// Miner's Pickaxe, Runeforged Buckler. The shop-inventory branch in
+// main.js (buildDwarvenSmithyInventory) mirrors the dialog so the
+// player sees the new gear on the shelves immediately.
+export function createDwarvenSmithyEncounter(dragonSlain = false) {
+  const texts = dragonSlain
+    ? [
+        new EncounterText("The smithy is roaring now — bellows pumping, sparks flying, the air thick with the smell of hot iron. The Great Forge is back online and you can hear the rhythm of hammers from a dozen anvils at once."),
+        new EncounterText("A scarred dwarven smith looks up from a glowing blade, takes one look at you, and lets out a low whistle. \"Now I know who slew the dragon. The whole mountain's been talkin' about ye.\"", 'Smith'),
+        new EncounterText("\"For ye, I'll bring out the good stock — the work I keep in the back for heroes. None of this picked-over street tray. Take yer pick.\"", 'Smith'),
+      ]
+    : [
         new EncounterText("The smithy is enormous — rows of anvils and quenching troughs stretch back into the darkness. Without the Great Forge's heat, only a few small fires still burn."),
         new EncounterText("A scarred dwarven smith looks up from polishing a crossbow. \"Can't make new work without the Forge, but we've got stock. Finest dwarven craft — built to last a thousand years.\"", 'Smith'),
-      ],
-    }),
+      ];
+  return new Encounter('dwarven_smithy', 'Dwarven Smithy', 'The finest dwarven arms and armor.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }),
   ]);
 }
 

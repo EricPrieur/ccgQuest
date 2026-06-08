@@ -539,7 +539,7 @@ export function createTharnagMap() {
     // to the Stairs of the Infinite side-quest line (post-dragon,
     // WIP / debug-only for now). Reached by cross-map from the
     // Grand Hall Main Entrance node.
-    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['tharnag_side_door'], position: [560, 340], mapArea: 'tharnag', canRevisit: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.', wip: true },
+    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['tharnag_side_door'], position: [560, 340], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.' },
     // North Pass — unlocked after the throne audience. Clicking it
     // hops to the Obsidian Wastes map (wastes_entry). Mirrors PY
     // map.py:1088-1099 + game.py:2322-2341.
@@ -1303,7 +1303,7 @@ export function createTharnagInteriorMap() {
     // Tharnag exterior at the new Main Door node west of the
     // Side Door (eventual gateway to the Stairs of the Infinite
     // side-quest line).
-    { id: 'grand_hall_main_entrance', name: 'Main Entrance', description: 'The grand front doors of Tharnag — the path out to the mountain road.', encounterId: '', connections: ['grand_hall_lower_stairs'], position: [580, 880], mapArea: 'grand_hall', canRevisit: true, hiddenName: '???', hiddenDescription: 'A massive set of doors leads out of the city.', wip: true },
+    { id: 'grand_hall_main_entrance', name: 'Main Entrance', description: 'The grand front doors of Tharnag — the path out to the mountain road.', encounterId: '', connections: ['grand_hall_lower_stairs'], position: [580, 880], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors leads out of the city.' },
     { id: 'grand_hall_mid_stairs', name: 'Middle Stairs', description: 'The stairs continue upward past towering pillars.', encounterId: '', connections: ['grand_hall_lower_stairs', 'grand_hall_upper_stairs'], position: [690, 520], mapArea: 'grand_hall', canRevisit: true },
     { id: 'grand_hall_upper_stairs', name: 'Upper Stairs', description: 'The top of the grand stairway. A massive archway leads deeper into Tharnag.', encounterId: '', connections: ['grand_hall_mid_stairs', 'staircase_entry'], position: [740, 420], mapArea: 'grand_hall', canRevisit: true, passthroughTo: 'staircase_entry' },
     // Grand Staircase area — Thorb's homecoming dialog at the entry,
@@ -1634,7 +1634,7 @@ export function createArtisanDistrictMap() {
     // non-debug renders (the existing wip + debugMode gate in
     // drawMap handles it). When the side quest is ready, drop the
     // wip flag and gate on the dragon-slain check instead.
-    { id: 'artisan_mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary — a small workshop tucked between two larger forges.", encounterId: 'mithril_remedies', connections: ['artisan_upper_shops'], position: [120, 320], mapArea: 'artisan_district', canRevisit: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the forges.', wip: true },
+    { id: 'artisan_mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary — a small workshop tucked between two larger forges.", encounterId: 'mithril_remedies', connections: ['artisan_upper_shops'], position: [120, 320], mapArea: 'artisan_district', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the forges.' },
     { id: 'artisan_walkway', name: 'Iron Walkway', description: 'A narrow iron walkway spans the gap between workshop platforms. Lava glows far below.', encounterId: '', connections: ['artisan_upper_shops', 'artisan_overlook'], position: [620, 380], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_overlook'], hiddenName: '???', hiddenDescription: 'A narrow iron walkway.' },
     { id: 'artisan_overlook', name: 'Forge Overlook', description: 'A raised platform overlooking the entire district. The central forge sits cold and dark below.', encounterId: '', connections: ['artisan_walkway', 'artisan_exit', 'artisan_workshop'], position: [890, 260], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_exit', 'artisan_workshop'], hiddenName: '???', hiddenDescription: 'A raised platform above the district.' },
     { id: 'artisan_workshop', name: 'Intact Workshop', description: 'A sealed workshop door, untouched by kobold hands. Dwarven runes glow faintly around the frame.', encounterId: 'artisan_workshop', connections: ['artisan_overlook'], position: [580, 200], mapArea: 'artisan_district', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A sealed dwarven workshop.' },
