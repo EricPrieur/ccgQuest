@@ -856,6 +856,7 @@ export function createCarefulStrike() {
     characterClass: ['ranger', 'rogue'],
     tier: 1,
     rarity: 'uncommon',
+    gamePlusOffset: { careful_strike: 2 },
   });
 }
 
@@ -2925,10 +2926,10 @@ export function createHarpyScreamingCharm() {
     ],
     rarity: 'rare',
     tier: 1,
-    // +2 damage on the discard-or-damage rider per offset (the
+    // +4 damage on the discard-or-damage rider per offset (the
     // damage tier of luring_song; the number of cards discarded
     // stays at 1 per enemy regardless of offset).
-    gamePlusOffset: { luring_song: 2 },
+    gamePlusOffset: { luring_song: 4 },
   });
 }
 
@@ -3331,6 +3332,9 @@ export function createBuffVialOfPoison() {
     shortDesc: 'Next attack:\n+Poison',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    // Scales via the source Vial of Poison item (+0.5 Poison/offset).
+    // Empty opt-in suppresses the codex red badge.
+    gamePlusOffset: {},
   });
 }
 export function createBuffSlimeJar() {
@@ -3341,6 +3345,8 @@ export function createBuffSlimeJar() {
     shortDesc: 'Next attack:\nUnpreventable',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    // Slime Jar item scales charges, not the unpreventable bonus.
+    noTierOffset: true,
   });
 }
 export function createBuffScrollOfPotency() {
@@ -3351,6 +3357,8 @@ export function createBuffScrollOfPotency() {
     shortDesc: '+1 Heroism/turn',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    // Buff tick scales +1 Heroism per offset via the runtime handler.
+    gamePlusOffset: {},
   });
 }
 export function createBuffAle() {
@@ -3361,6 +3369,7 @@ export function createBuffAle() {
     shortDesc: '+1 Heroism/turn',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 export function createBuffDwarvenBrew() {
@@ -3371,6 +3380,7 @@ export function createBuffDwarvenBrew() {
     shortDesc: '+Shield/turn',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 export function createBuffRegrowth() {
@@ -3381,6 +3391,8 @@ export function createBuffRegrowth() {
     shortDesc: 'Heal 1/turn',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
+    // Buff tick scales +1 Heal per offset via the regen_buff handler.
+    gamePlusOffset: {},
   });
 }
 
@@ -3398,6 +3410,7 @@ export function createBuffElfReinforcements() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 export function createBuffBlizzard() {
@@ -3412,6 +3425,9 @@ export function createBuffBlizzard() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    // Per-tick Ice scales +0.5 per monster offset in the Wolf Pack
+    // fight setup (handler reads monsterTierOffset).
+    gamePlusOffset: {},
   });
 }
 
@@ -3427,6 +3443,8 @@ export function createBuffSahuaginEye() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    // Bonus scales +0.5 per offset via the source relic.
+    gamePlusOffset: {},
   });
 }
 export function createBuffVolcanoBlessing() {
@@ -3444,6 +3462,9 @@ export function createBuffVolcanoBlessing() {
     costType: CostType.FREE,
     effects: [],
     rarity: 'rare',
+    // Special encounter-bound buff — duration / effect depend on the
+    // sacrifice, not on tier offset.
+    noTierOffset: true,
   });
 }
 
@@ -3461,6 +3482,7 @@ export function createBuffMapKnowledge() {
     costType: CostType.FREE,
     effects: [],
     rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -3479,6 +3501,7 @@ export function createBuffMagmaTablet() {
     costType: CostType.FREE,
     effects: [],
     rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -3494,6 +3517,8 @@ export function createBuffObsidianCore() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    // Bonus scales +2 per offset via the source relic.
+    gamePlusOffset: {},
   });
 }
 export function createBuffOldGodBlessing() {
@@ -3512,6 +3537,7 @@ export function createBuffOldGodBlessing() {
     costType: CostType.FREE,
     effects: [],
     rarity: 'rare',
+    noTierOffset: true,
   });
 }
 export function createBuffRunning() {
@@ -3524,6 +3550,7 @@ export function createBuffRunning() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 export function createBuffHiding() {
@@ -3536,6 +3563,7 @@ export function createBuffHiding() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 export function createBuffCalculating() {
@@ -3548,6 +3576,7 @@ export function createBuffCalculating() {
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
     effects: [],
+    noTierOffset: true,
   });
 }
 
@@ -4809,10 +4838,10 @@ export function createPummel() {
     costType: CostType.RECHARGE,
     effects: [new CardEffect('enemy_sneak_attack', 0, TargetType.SINGLE_ENEMY)],
     priority: 1,
-    // +2 flat bonus damage per offset (X + 2 → X + 4…). The
+    // +1 flat bonus damage per offset (X + 1 → X + 2…). The
     // enemy_sneak_attack runtime adds eff.value as a flat bonus on
     // top of the per-turn X count.
-    gamePlusOffset: { enemy_sneak_attack: 2 },
+    gamePlusOffset: { enemy_sneak_attack: 1 },
   });
 }
 

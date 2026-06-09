@@ -5315,6 +5315,15 @@ function startGamePlusFromSave(slot) {
       player.addPower(newPower);
     }
   }
+  // ccgQuest+ restart wipes player.persistentBuffs alongside the
+  // story flags so the run truly restarts at the chapter 1 baseline.
+  // Map Knowledge, Old God's Blessing, Volcano's Blessing, etc. are
+  // all earned by chapter-specific encounters that the player will
+  // run through again — keeping the buff from the previous run while
+  // resetting the story flag would let them re-earn the same buff and
+  // stack it (or just enjoy the bonus without the world remembering
+  // they ever earned it).
+  if (player) player.persistentBuffs = [];
   // Wipe the story / map state so the run RE-runs chapter 1.
   resetStoryFlags();
   // Drop the player back at the chapter 1 entry node with the
@@ -12181,13 +12190,8 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     for (let i = 0; i < 50; i++) enemy.deck.addCard(createPummel());
     enemy.addPower(createBrute());
-    // +0.5 hand size per monster offset (floor). 2 → 3 at +2 → 4 at
-    // +4, etc. Stamped on the enemy instance so the in-fight draw
-    // uses the bumped size; ENEMY_HAND_SIZE only seeds the base.
-    const rugaOff = monsterTierOffset || 0;
-    if (rugaOff > 0) {
-      enemy._handSize = 2 + Math.floor(rugaOff * 0.5 + 1e-9);
-    }
+    // Ruga's hand size stays at 2 regardless of offset — Brute + Pummel
+    // damage already scale, the fight doesn't need a wider hand on top.
   };
   ENEMY_HAND_SIZE.ruga_slave_master = 2;
 
@@ -24420,22 +24424,23 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'grant_potency_buff': {
-      // Scroll of Potency: +1 Heroism at start of turn for N turns.
-      // Description is rendered by the perk-style tokenizer, so the
-      // "Start of Turn:" prefix becomes a pill. Turn count is already
-      // shown on the buff icon — no need to repeat it inline.
+      // Scroll of Potency: +1 Heroism/turn per offset. Scales the
+      // per-turn tick from playerTierOffset (1 base → 2 → 3…); the
+      // turn count is the eff.value (already bumped via the card's
+      // gain_heroism offset if any).
+      const heroPerTurn = 1 + (playerTierOffset || 0);
       caster.addCombatBuff(new CombatBuff({
         id: 'scroll_of_potency_buff',
         name: 'Scroll of Potency',
-        description: 'Start of Turn: +1 Heroism',
+        description: `Start of Turn: +${heroPerTurn} Heroism`,
         imageId: 'scroll_of_potency',
         effectType: 'gain_heroism',
-        effectValue: 1,
+        effectValue: heroPerTurn,
         trigger: 'start_of_turn',
         combatsRemaining: 1,
         turnsRemaining: eff.value,
       }));
-      addLog(`  Scroll of Potency: +1 Heroism/turn for ${eff.value} turns`, Colors.GOLD);
+      addLog(`  Scroll of Potency: +${heroPerTurn} Heroism/turn for ${eff.value} turns`, Colors.GOLD);
       break;
     }
     case 'ale_buff': {
@@ -28018,6 +28023,7 @@ function startIncomingDamage(dmg, label = 'damage to you') {
   if (dmg <= 0) return;
   // Reset the per-event pain-cue flag so the next phase entry plays.
   _painPlayedForCurrentDamageEvent = false;
+  _playerDamageLandedThisEvent = false;
   addLog(`  ${dmg} ${label}`, Colors.RED);
   showStyledToast(`Incoming ${dmg} damage!`, 'damage');
   const remaining = autoMitigateDamage(dmg);
@@ -28067,6 +28073,12 @@ function startIncomingDamage(dmg, label = 'damage to you') {
 // the player picks each card to discard), so we gate the cue to fire
 // exactly once when the phase is first entered.
 let _painPlayedForCurrentDamageEvent = false;
+// Set true the moment the player actually pays damage (mills a deck
+// card or discards a hand card to absorb the hit). Read by
+// finishIncomingDamage to fire maybeIceShatter(player) only when
+// damage truly broke through block/shield/armor. Reset in
+// startIncomingDamage so each event is independent.
+let _playerDamageLandedThisEvent = false;
 
 function enterTakeDamagePhase() {
   if (pendingIncomingDamage <= 0) {
@@ -28110,6 +28122,13 @@ function finishIncomingDamage() {
   pendingIncomingDamage = 0;
   _pendingHitSfx = null;
   _painPlayedForCurrentDamageEvent = false;
+  // Ice Shatter on the player — fires if any deck/hand pay actually
+  // happened this event. Skipped on fully blocked / fully shielded
+  // hits since the flag never flipped.
+  if (_playerDamageLandedThisEvent) {
+    _playerDamageLandedThisEvent = false;
+    maybeIceShatter(player);
+  }
   hideToast();
   state = GameState.COMBAT;
   if (checkCombatEnd()) return;
@@ -28142,6 +28161,7 @@ function handleDamageSourceClick(x, y) {
       if (!card) break;
       milled.push(card);
       pendingIncomingDamage--;
+      _playerDamageLandedThisEvent = true;
     }
     if (milled.length > 0) {
       spawnDamageOnTarget(player, milled.length);
@@ -28175,6 +28195,7 @@ function handleDamageSourceClick(x, y) {
     spawnDamageOnTarget(player, 1);
     addLog(`  Discarded: ${card.name}`, Colors.WHITE, card);
     pendingIncomingDamage--;
+    _playerDamageLandedThisEvent = true;
     if (pendingIncomingDamage <= 0) finishIncomingDamage();
     else enterTakeDamagePhase();
     return;
@@ -29178,6 +29199,12 @@ function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
     spawnDeathAnimation(ally);
     addLog(`  ${ally.name} destroyed!`, Colors.GOLD, null, null, ally);
     player.removeDeadCreatures();
+  } else if (actual > 0) {
+    // Ice Shatter — fires on damage that broke through the ally's
+    // shield / armor. applyDamageToAlly is the enemy-hit-ally path
+    // (it doesn't route through triggerSplitPower) so the shatter
+    // call needs to be wired here directly.
+    maybeIceShatter(ally);
   }
   return actual;
 }
@@ -32821,6 +32848,12 @@ function triggerSplitPower(character, damageLanded = true) {
   } else {
     triggerOnAttackedPowers(character, null);
   }
+  // Ice Shatter — runs at every damage site (chained here so the 47-
+  // ish triggerSplitPower call sites don't all need an extra wire).
+  // Fires only when damage actually broke through, mirroring the
+  // user spec: "if we are attacked and take any damage (it goes over
+  // our block/shield/armor)".
+  if (damageLanded) maybeIceShatter(character);
   if (!damageLanded) return;
   if (!character || !character.powers) return;
   for (const power of character.powers) {
@@ -32837,6 +32870,84 @@ function triggerSplitPower(character, damageLanded = true) {
       break;
     }
   }
+}
+
+// Ice Shatter — chance to "shatter" on the iced target when an attack
+// breaks through block/shield/armor. Chance is cumulative across
+// stacks (10% × stacks, capped at 100%). On shatter:
+//   1. The iced target takes UNPREVENTABLE damage = current stacks.
+//   2. AoE — for each stack, a random ally (same side, excluding the
+//      iced target itself) takes 1-2 unpreventable damage.
+//   3. Stacks reduce by max(1, floor(stacks/2)), so 3 → 2, 2 → 1,
+//      1 → 0. Works for players, allies, enemy characters, and any
+//      creature on either side.
+// Guarded against self-recursion via _iceShatterFiring so a chain of
+// shatters can't cycle through the same target on the same swing.
+function maybeIceShatter(target) {
+  if (!target || target._iceShatterFiring) return;
+  let stacks = 0;
+  if (target instanceof Creature) stacks = target.iceStacks || 0;
+  else if (typeof target.getStatus === 'function') stacks = target.getStatus('ICE') || 0;
+  if (stacks <= 0) return;
+  const chance = Math.min(1.0, stacks * 0.10);
+  if (Math.random() >= chance) return;
+  target._iceShatterFiring = true;
+  addLog(`  ❄ Ice shatters on ${target.name}! (${stacks} stacks → roll hit)`, Colors.ICE_BLUE);
+  playSound('ice_apply', 0.7);
+  // 1) Self damage = stacks (unpreventable so block/shield/armor can't
+  // soak the shatter — it's the ice cracking through whatever was
+  // holding it).
+  if (target instanceof Creature) {
+    target.takeUnpreventableDamage(stacks);
+    spawnDamageOnTarget(target, stacks, Colors.ICE_BLUE);
+  } else {
+    target.takeDamageFromDeck(stacks);
+    spawnDamageOnTarget(target, stacks, Colors.ICE_BLUE);
+  }
+  addLog(`    ${target.name} takes ${stacks} shatter damage`, Colors.ICE_BLUE);
+  // 2) AoE — random ally hit per stack for 1-2 damage. Allies are
+  // same-side combatants (player + their creatures, or enemy + theirs)
+  // excluding the iced target itself.
+  const allies = getShatterAllies(target);
+  for (let i = 0; i < stacks; i++) {
+    const livePool = allies.filter(a => a.isAlive);
+    if (livePool.length === 0) break;
+    const a = livePool[Math.floor(Math.random() * livePool.length)];
+    const dmg = 1 + Math.floor(Math.random() * 2);
+    if (a instanceof Creature) {
+      a.takeUnpreventableDamage(dmg);
+    } else if (a === player || a === enemy) {
+      a.takeDamageFromDeck(dmg);
+    }
+    spawnDamageOnTarget(a, dmg, Colors.ICE_BLUE);
+    addLog(`    Shard hits ${a.name}: ${dmg}`, Colors.ICE_BLUE);
+  }
+  // 3) Reduce stacks: lose max(1, floor(stacks/2)).
+  const lose = Math.max(1, Math.floor(stacks / 2));
+  if (target instanceof Creature) {
+    target.iceStacks = Math.max(0, stacks - lose);
+  } else if (typeof target.removeStatus === 'function') {
+    target.removeStatus('ICE', lose);
+  }
+  countAndRemoveDeadCreatures();
+  delete target._iceShatterFiring;
+}
+
+function getShatterAllies(target) {
+  if (!target) return [];
+  const playerCreatures = (player && player.creatures) || [];
+  const enemyCreatures = (enemy && enemy.creatures) || [];
+  const isPlayerSide = (target === player) || playerCreatures.includes(target);
+  if (isPlayerSide) {
+    const list = [];
+    if (player && player !== target && player.isAlive) list.push(player);
+    for (const c of playerCreatures) if (c !== target && c.isAlive) list.push(c);
+    return list;
+  }
+  const list = [];
+  if (enemy && enemy !== target && enemy.isAlive) list.push(enemy);
+  for (const c of enemyCreatures) if (c !== target && c.isAlive) list.push(c);
+  return list;
 }
 
 // On-attacked triggers — fire on EVERY attack the player (or a
@@ -43053,7 +43164,7 @@ function buildCodexSourceCache() {
         };
         const SHIELD_SCALE = { prison_guards: 4 };
         const KILL_TARGET_SCALE = { general_zhost: 2 };
-        const HAND_SIZE_SCALE = { ruga_slave_master: 0.5 };
+        const HAND_SIZE_SCALE = {};
         // Opening creature counts that scale per monster offset.
         // Fractional rates floor at the threshold (0.5 = +1 every 2
         // offsets, 1/3 = +1 every 3 offsets, etc.).
@@ -43142,6 +43253,18 @@ function buildCodexSourceCache() {
   if (player && savedPlayerBuffs) player.combatBuffs = savedPlayerBuffs;
   monsterTierOffset = savedMonsterOffset;
   _codexSandboxRunning = false;
+
+  // Enraged Strike — universal pity timer. Pushed straight into the
+  // active enemy's hand from turn 11 onward (see startEnemyTurn) so it
+  // never appears in any masterDeck. The sandbox scan above can't pick
+  // it up; surface it here so the codex Enemy Cards tab carries it.
+  {
+    const es = createEnragedStrike();
+    if (!cache.enemyOnlyCards[es.id]) {
+      cache.enemyOnlyCards[es.id] = es;
+    }
+    addCard(es.id, 'Enemy: All enemies (Turn 11+ pity timer)');
+  }
 
   // Class powers
   const classPowers = [
