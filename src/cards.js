@@ -14,6 +14,11 @@ export function createFireToken() {
     shortDesc: 'Fire', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('apply_fire', 1, TargetType.SINGLE_ENEMY)],
+    // Scales alongside Elemental Infusion's power offset (+1 Fire
+    // per offset). The power's runtime handler already reads
+    // playerTierOffset; this stamp ensures the choice card preview
+    // shows the bumped value when it's surfaced by enterPowerChoice.
+    gamePlusOffset: { apply_fire: 1 },
   });
 }
 
@@ -24,6 +29,7 @@ export function createIceToken() {
     shortDesc: 'Ice', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { apply_ice: 1 },
   });
 }
 
@@ -34,16 +40,22 @@ export function createCatFormToken() {
     shortDesc: 'Heroism, Draw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('cat_form', 1, TargetType.SELF)],
+    // +1 Heroism per offset. The cat_form effect handler is a marker
+    // (the runtime grant happens in onPowerChoicePicked); the choice
+    // card preview uses a custom branch in applyGamePlusOffsetInPlace
+    // to rewrite the description with the bumped number.
+    gamePlusOffset: { cat_form: 1 },
   });
 }
 
 export function createBearFormToken() {
   return new Card({
     id: 'bear_form_token', name: 'Bear Form',
-    description: 'Gain Shield. Draw.',
+    description: 'Gain 1 Shield. Draw.',
     shortDesc: 'Shield, Draw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('bear_form', 1, TargetType.SELF)],
+    gamePlusOffset: { bear_form: 1 },
   });
 }
 
@@ -755,6 +767,7 @@ export function createGreaterCleave() {
     characterClass: ['warrior'],
     tier: 1,
     rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -814,6 +827,7 @@ export function createHolyLight() {
     characterClass: ['paladin'],
     tier: 1,
     rarity: 'uncommon',
+    gamePlusOffset: { heal: 1 },
   });
 }
 
@@ -903,6 +917,7 @@ export function createMultiShot() {
     characterClass: ['ranger'],
     tier: 1,
     rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 1 },
   });
 }
 
@@ -1598,6 +1613,7 @@ export function createPiercingShot() {
       new CardEffect('player_overwhelm', 0, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { unpreventable_damage: 2 },
   });
 }
 
@@ -2926,10 +2942,10 @@ export function createHarpyScreamingCharm() {
     ],
     rarity: 'rare',
     tier: 1,
-    // +4 damage on the discard-or-damage rider per offset (the
+    // +3 damage on the discard-or-damage rider per offset (the
     // damage tier of luring_song; the number of cards discarded
     // stays at 1 per enemy regardless of offset).
-    gamePlusOffset: { luring_song: 4 },
+    gamePlusOffset: { luring_song: 3 },
   });
 }
 
@@ -6228,6 +6244,7 @@ export function createEnragedStrike() {
       new CardEffect('gain_rage', 1, TargetType.SELF),
     ],
     priority: 10,
+    gamePlusOffset: { damage: 4, gain_rage: 1 },
   });
 }
 

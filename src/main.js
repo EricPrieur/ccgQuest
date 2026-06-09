@@ -427,6 +427,9 @@ const EFFECT_DESC_PATTERNS = {
   // ("Choose N") is handled by the custom branch in
   // applyGamePlusOffsetInPlace which rewrites both numbers together.
   revivify: [/up\s+to\s+(\d+)/i, /(\d+)\s+dead/i],
+  // Druid Feral Form picker tokens — "Gain N Heroism" / "Gain N Shield".
+  cat_form:  [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  bear_form: [/Gain\s+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
   // Specter Ectoplasm — "Heal N. Discard. If you healed, Draw."
   heal_draw_if_healed: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
   gain_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
@@ -25502,15 +25505,16 @@ function resolveEffect(eff, caster, target) {
       break;
     case 'ice_shatter': {
       // Ice Shatter — strip every alive enemy's Ice stacks and
-      // convert each stack into 1 damage. Preventable: block /
-      // shield / armor absorb the burst like a normal attack, so
-      // the boss can mitigate it with stacked defenses (mirrors how
-      // the player can armor up against the dragon's Ice Shatter
-      // plays in phase 2). Targets the enemy character (Character
-      // status map) AND every alive, non-invulnerable enemy
-      // creature (per-Creature iceStacks). Arrows paint in
-      // ice-blue from the played card to every target carrying Ice
-      // so the shatter reads as a frost burst.
+      // convert each stack into 1 damage. Skips the one-shot Block
+      // window (a reactive defense card can't soak a frost burst
+      // that detonates mid-stack), but Shield and Armor absorb it
+      // like a normal hit. Mirrors the maybeIceShatter mechanic so
+      // the card plays by the same defense rules the global proc
+      // does. Targets the enemy character (Character status map)
+      // AND every alive, non-invulnerable enemy creature
+      // (per-Creature iceStacks). Arrows paint in ice-blue from the
+      // played card to every target carrying Ice so the shatter
+      // reads as a frost burst.
       const shatterTargets = [];
       const iceMap = new Map(); // target -> ice consumed
       if (enemy && enemy.isAlive && !enemy._invulnerable) {
@@ -25535,7 +25539,7 @@ function resolveEffect(eff, caster, target) {
         if (t === enemy) {
           if (t.removeStatus) t.removeStatus('ICE', consumed);
           addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
-          const [, taken] = enemy.takeDamageWithDefense(consumed);
+          const [, taken] = enemy.takeDamageNoBlock(consumed);
           if (taken > 0) { spawnDamageOnTarget(enemy, taken, Colors.ICE_BLUE); anyLanded = true; }
           triggerSplitPower(enemy, taken > 0);
           if (caster === player) onPlayerHitEnemy(taken);
@@ -26441,7 +26445,14 @@ let powerChoiceCancelRect = null;
 let chosenPowerEffect = null;   // which choice the player picked (drives subsequent targeting)
 
 function enterPowerChoice(power) {
-  powerChoices = power.choices.slice();
+  // Stamp the current playerTierOffset onto a copy of each choice so
+  // the picker shows the scaled numbers (e.g. Elemental Infusion's
+  // "Apply 1 Fire" reads as "Apply 2 Fire" at offset 1, Feline /
+  // Bear Form scale their heroism / shield gain in lock-step). The
+  // original power.choices array stays untouched.
+  powerChoices = (power.choices || []).map(c =>
+    (playerTierOffset > 0) ? applyTierOffsetToCardPreview(c, playerTierOffset) : c
+  );
   powerChoiceRects = [];
   state = GameState.POWER_CHOICE;
   // Title is rendered on top of the overlay; no toast needed.
@@ -26502,9 +26513,13 @@ function onPowerChoicePicked(choice) {
     playSound('cat_form_attack', 0.7);
     addLog(`Used power: ${power.name}`, Colors.GREEN, power);
     addLog(`  Mode: Feline Form`);
-    player.heroism += 1;
-    addLog(`  +1 Heroism (H:${player.heroism})`, Colors.GOLD);
-    spawnTokenOnTarget(player, 1, 'Heroism', Colors.GOLD);
+    // +1 Heroism per player tier offset (1 base → 2 → 3…). Mirrors
+    // the cat_form_token gamePlusOffset rule so the runtime grant
+    // matches the picker preview.
+    const cfGain = 1 + (playerTierOffset || 0);
+    player.heroism += cfGain;
+    addLog(`  +${cfGain} Heroism (H:${player.heroism})`, Colors.GOLD);
+    spawnTokenOnTarget(player, cfGain, 'Heroism', Colors.GOLD);
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     selectedPower = null;
@@ -26520,9 +26535,11 @@ function onPowerChoicePicked(choice) {
     playSound('bear_form_attack', 0.7);
     addLog(`Used power: ${power.name}`, Colors.GREEN, power);
     addLog(`  Mode: Bear Form`);
-    player.shield += 1;
-    addLog(`  +1 Shield (S:${player.shield})`, Colors.ALLY_BLUE);
-    spawnTokenOnTarget(player, 1, 'Shield', Colors.ALLY_BLUE);
+    // +1 Shield per player tier offset.
+    const bfGain = 1 + (playerTierOffset || 0);
+    player.shield += bfGain;
+    addLog(`  +${bfGain} Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+    spawnTokenOnTarget(player, bfGain, 'Shield', Colors.ALLY_BLUE);
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     selectedPower = null;
@@ -32894,33 +32911,41 @@ function maybeIceShatter(target) {
   target._iceShatterFiring = true;
   addLog(`  ❄ Ice shatters on ${target.name}! (${stacks} stacks → roll hit)`, Colors.ICE_BLUE);
   playSound('ice_apply', 0.7);
-  // 1) Self damage = stacks (unpreventable so block/shield/armor can't
-  // soak the shatter — it's the ice cracking through whatever was
-  // holding it).
+  // 1) Self damage = stacks. Skips the one-shot Block window but
+  // Shield / Armor still soak it — Creatures use takeDamage (no Block
+  // exists on creatures), Characters use takeDamageNoBlock.
+  let selfTaken;
   if (target instanceof Creature) {
-    target.takeUnpreventableDamage(stacks);
-    spawnDamageOnTarget(target, stacks, Colors.ICE_BLUE);
+    selfTaken = target.takeDamage(stacks);
   } else {
-    target.takeDamageFromDeck(stacks);
-    spawnDamageOnTarget(target, stacks, Colors.ICE_BLUE);
+    const [, taken] = target.takeDamageNoBlock(stacks);
+    selfTaken = taken;
   }
-  addLog(`    ${target.name} takes ${stacks} shatter damage`, Colors.ICE_BLUE);
+  if (selfTaken > 0) spawnDamageOnTarget(target, selfTaken, Colors.ICE_BLUE);
+  const selfAbs = stacks - selfTaken;
+  const absSuffix = selfAbs > 0 ? ` (${selfAbs} absorbed)` : '';
+  addLog(`    ${target.name} takes ${selfTaken} shatter damage${absSuffix}`, Colors.ICE_BLUE);
   // 2) AoE — random ally hit per stack for 1-2 damage. Allies are
   // same-side combatants (player + their creatures, or enemy + theirs)
-  // excluding the iced target itself.
+  // excluding the iced target itself. Same no-block / shield-armor
+  // treatment as the self hit.
   const allies = getShatterAllies(target);
   for (let i = 0; i < stacks; i++) {
     const livePool = allies.filter(a => a.isAlive);
     if (livePool.length === 0) break;
     const a = livePool[Math.floor(Math.random() * livePool.length)];
     const dmg = 1 + Math.floor(Math.random() * 2);
+    let aTaken = 0;
     if (a instanceof Creature) {
-      a.takeUnpreventableDamage(dmg);
+      aTaken = a.takeDamage(dmg);
     } else if (a === player || a === enemy) {
-      a.takeDamageFromDeck(dmg);
+      const [, taken] = a.takeDamageNoBlock(dmg);
+      aTaken = taken;
     }
-    spawnDamageOnTarget(a, dmg, Colors.ICE_BLUE);
-    addLog(`    Shard hits ${a.name}: ${dmg}`, Colors.ICE_BLUE);
+    if (aTaken > 0) spawnDamageOnTarget(a, aTaken, Colors.ICE_BLUE);
+    const aAbs = dmg - aTaken;
+    const aAbsSuffix = aAbs > 0 ? ` (${aAbs} absorbed)` : '';
+    addLog(`    Shard hits ${a.name}: ${aTaken}${aAbsSuffix}`, Colors.ICE_BLUE);
   }
   // 3) Reduce stacks: lose max(1, floor(stacks/2)).
   const lose = Math.max(1, Math.floor(stacks / 2));

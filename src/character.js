@@ -268,6 +268,33 @@ export class Character {
     return taken;
   }
 
+  // Damage path used by effects that bypass the one-shot Block window
+  // but still respect the persistent defense layers (Shield, Armor).
+  // Currently fired by Ice Shatter — the icy burst skips the
+  // reactive defense phase entirely yet stacked Shield / Armor still
+  // soaks it. Brute / Ethereal apply the same as takeDamageWithDefense.
+  takeDamageNoBlock(amount) {
+    if (this._invulnerable) return [0, 0];
+    if (amount > 0 && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'brute')) {
+      amount = amount + 1;
+    }
+    if (amount > 1 && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'ethereal')) {
+      amount = 1;
+    }
+    let remaining = amount;
+    if (this.shield > 0) {
+      const shieldAbsorb = Math.min(this.shield, remaining);
+      this.shield -= shieldAbsorb;
+      remaining -= shieldAbsorb;
+    }
+    const armorAbsorb = Math.min(this.armor, remaining);
+    remaining -= armorAbsorb;
+    const taken = this.takeDamageFromDeck(remaining);
+    return [amount - remaining, taken];
+  }
+
   takeDamageWithDefense(amount) {
     if (this._invulnerable) return [amount, 0];
     // Brute (Ruga's passive) — every incoming attack deals +1 more
