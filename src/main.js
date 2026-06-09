@@ -67,7 +67,7 @@ import {
   createStuddedLeatherArmor, createRingMail,
   createScrollOfPotency, createMinorHealingPotion, createWandOfFire,
   createTridentThrow, createTridentThrust, createScaleArmor,
-  createBloodInTheWater, createSahuaginStaffEnemy, createBarnacleEncrustedPlateEnemy,
+  createBloodInTheWater, createBarnacleEncrustedPlateEnemy,
   createBarnacleEncrustedPlate, createBarnacle,
   createPoisonedBite, createWebSpider, createWebToken,
   // Chapter-7 upper-path loot cards (Slyblade + Specter pools).
@@ -93,6 +93,7 @@ import {
   createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createWhitescaleBrew, createDwarvenScoutCard, createWhiteWolfCloak, createWolfFang,
   createCaveShroom,
   createSahuaginTridentLoot, createFishScaleBoots, createSahuaginEye,
+  createJarOfPiranhas,
   createSahuaginPriestStaffLoot, createWhirlpool, createSwimmingShowcase,
   createGnikansStaff,
   createEnragedStrike,
@@ -484,6 +485,8 @@ const EFFECT_DESC_PATTERNS = {
   // multiple digits live in the description.
   transform_shield_to_ice_target: [/Transform\s+up\s+to\s+(\d+)/i, /Transform\s+(\d+)/i],
   iced_bonus_damage: [/Iced:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Iced/i, /\+(\d+)\s+Iced/i, /Iced.*?(\d+)/i],
+  bleeding_bonus_damage: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Bleeding/i, /\+(\d+)\s+Bleeding/i, /Bleeding.*?(\d+)/i],
+  grant_bleeding_damage_buff: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+damage/i, /\+(\d+)\s+Dmg/i],
   destroy_shield: [/Strip\s+(\d+)\s+Shield/i, /Destroy\s+(\d+)\s+Shield/i],
   apply_ice_self: [/Gain\s+(\d+)\s+Ice/i],
   apply_ice_multi: [/Ice\s+(\d+)\s+times/i, /(\d+)\s+times/i],
@@ -1382,13 +1385,13 @@ const CREATURE_TIER_OFFSET = {
   'Misha':              { attack: 2, hp: 2 },
   'Huffer':             { attack: 2, hp: 1 },
   'Treant':             { attack: 1, hp: 1 },
-  // Shark — player summon from Sahuagin Priest Staff +
-  // enemy summon from Sahuagin Baron's From the Deep power. Boss
-  // variant gets the chunkier +1/+2 stat bump.
-  'Shark':              {
-    attack: 1, hp: 1,
-    _enemy: { attack: 1, hp: 2 },
-  },
+  // Shark — single spec for both player (Sahuagin Priest Staff) and
+  // enemy (Sahuagin Baron's From the Deep) summons.
+  'Shark':              { attack: 1, hp: 1 },
+  // Piranhas (Jar of Piranhas swarm) — short-lived bleed swarm. Per-
+  // creature scaling stays light; the card's summon_piranhas max roll
+  // already scales the swarm size via gamePlusOffset.
+  'Piranhas':           { bleedAttack: 0.5 },
   // Power-driven enemy spawns — Goblin Sapper / Magma Mephit /
   // Harpy each bump a per-summon "max" alongside the base stat
   // bumps. The scaler reads onDeathDamage / onDeathFireHits /
@@ -1443,6 +1446,8 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   const dIceAll = step(rule.iceAttackAll);
   const dIceAtk = step(rule.iceAttack);
   const dAttIce = step(rule.attackerGainsIce);
+  const dBleedAtk = step(rule.bleedAttack);
+  const dBleedBonus = step(rule.bleedingBonus);
   const dODD = step(rule.onDeathDamage);
   const dODF = step(rule.onDeathFireHits);
   const dODDC = step(rule.onDeathDiscardOrDamage);
@@ -1459,6 +1464,8 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   if (dHeroA) creature.endTurnHeroismAllies = (creature.endTurnHeroismAllies || 0) + dHeroA;
   if (dIceAll) creature.iceAttackAll = (creature.iceAttackAll || 0) + dIceAll;
   if (dIceAtk) creature.iceAttack = (creature.iceAttack || 0) + dIceAtk;
+  if (dBleedAtk) creature.bleedAttack = (creature.bleedAttack || 0) + dBleedAtk;
+  if (dBleedBonus) creature.bleedingBonus = (creature.bleedingBonus || 0) + dBleedBonus;
   // White Dragon Egg attacker_gains_ice rider — initialise the
   // base value to 1 if not already set so handleWhiteDragonEggHit
   // always reads a numeric value.
@@ -3111,6 +3118,7 @@ const CARD_REGISTRY = {
   sahuagin_trident: createSahuaginTridentLoot,
   fish_scale_boots: createFishScaleBoots, sahuagin_eye: createSahuaginEye,
   sahuagin_priest_staff: createSahuaginPriestStaffLoot,
+  jar_of_piranhas: createJarOfPiranhas,
   gnikans_staff: createGnikansStaff,
   barnacle_encrusted_plate: createBarnacleEncrustedPlate, barnacle: createBarnacle,
   // mimic_bite intentionally NOT in CARD_REGISTRY — the Mimic's Bite!
@@ -3211,11 +3219,15 @@ const LOOT_TABLES = {
     [{ creator: createCaveShroom, weight: 1.0 }],
     { pickCount: 2 },
   ),
-  // Sahuagin Sentinel loot — pick-one, mirrors PY get_sahuagin_sentinel_loot.
+  // Sahuagin Sentinel loot — pick-one. Trident / Scale Armor / Fresh
+  // Fish at common weight, Fish Scale Boots + Jar of Piranhas at rare
+  // weight, Sahuagin Eye at epic.
   sahuagin_sentinel_loot: [
     { creator: createSahuaginTridentLoot, weight: 1.0 },
     { creator: createScaleArmor,          weight: 1.0 },
+    { creator: createFreshFish,           weight: 1.0 },
     { creator: createFishScaleBoots,      weight: 0.5 },
+    { creator: createJarOfPiranhas,       weight: 0.5 },
     { creator: createSahuaginEye,         weight: 0.25 },
   ],
   // Giant Frog loot — guaranteed 1-card weighted pick across the
@@ -3445,7 +3457,7 @@ const LOOT_TABLE_NOTES = {
   bone_amalgam_loot:   'Dropped after defeating the Bone Amalgam. Pick-one bone weapon.',
   wolf_pack_loot:      'Dropped after surviving the Wolf Blizzard (kill 10 wolves).',
   cave_shroom_loot:    'Foraged at the Cave River Landing — always drops 2 Cave Shrooms.',
-  sahuagin_sentinel_loot: 'Dropped after defeating a Sahuagin Sentinel. Pick one — Trident or Scale Armor common, Fish Scale Boots uncommon, Sahuagin Eye rare.',
+  sahuagin_sentinel_loot: 'Dropped after defeating a Sahuagin Sentinel. Pick one — Trident, Scale Armor or Fresh Fish common; Fish Scale Boots / Jar of Piranhas rare; Sahuagin Eye epic.',
   sahuagin_priest_loot:   'Dropped after defeating the Sahuagin Priest at the Flooded Altar. Always Sahuagin Priest Staff.',
   sahuagin_baron_loot:    'Dropped after defeating the Sahuagin Baron. Always Barnacle Encrusted Plate (rolled alongside a Sahuagin Sentinel pick).',
   lucky_pebble_loot:      'Awarded by the River Crossing 25% bonus beat. Always a Lucky Pebble.',
@@ -3653,6 +3665,8 @@ async function loadAssets() {
     loadImage('creature_spider', `${BASE}assets/Cards/PetSpider.jpg`),
     loadImage('creature_wolf', `${BASE}assets/Cards/WolfInSnow.jpg`),
     loadImage('creature_piranha', `${BASE}assets/Cards/PiranhasSwarm.jpg`),
+    // Jar of Piranhas summon shares the swarm portrait.
+    loadImage('creature_piranhas', `${BASE}assets/Cards/PiranhasSwarm.jpg`),
     loadImage('creature_shark', `${BASE}assets/Cards/Shark.jpg`),
     loadImage('creature_sahuagin_sentinel', `${BASE}assets/Cards/SahuaginSentinel.jpg`),
     // Giant Frog enemy art. The combat character portrait keys off
@@ -3808,7 +3822,7 @@ canvas.addEventListener('mousedown', (e) => {
       const ally = player.creatures[i];
       // Allow 0-attack allies that apply poison (Pet Spider) to still attack
       if (!ally.isAlive || ally.exhausted) return;
-      if (ally.attack <= 0 && !ally.poisonAttack) return;
+      if (ally.attack <= 0 && !ally.poisonAttack && !(ally.bleedAttack > 0)) return;
       dragSourceAllyIndex = i;
       dragStartX = x;
       dragStartY = y;
@@ -11907,7 +11921,9 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createBloodInTheWater());
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createWhirlpool());
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createScaleArmor());
-    for (let i = 0; i < 5; i++) enemy.deck.addCard(createSahuaginStaffEnemy());
+    // Priest casts the same staff card the player can loot — bleed +
+    // ice + shark summon, one card across both codex sides.
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createSahuaginPriestStaffLoot());
     // 2 starting Sahuagin Sentinels + 0.5 per monster offset
     // (floor) — +1 at offset 2, +2 at offset 4, etc. Keeps the
     // priest's sentinel wall scaling slowly so a +1 run doesn't
@@ -11936,8 +11952,8 @@ function setupEnemyForCombat(enemyId) {
     let starter;
     if (roll === 0) {
       starter = new Creature({
-        name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-        description: 'Bloodfrenzy: +1 Rage after attacking.',
+        name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+        description: 'Atk + Bleed. Bleeding: +2 Damage.',
       });
     } else if (roll === 1) {
       starter = new Creature({
@@ -11967,8 +11983,8 @@ function setupEnemyForCombat(enemyId) {
     }
     for (let i = 0; i < sbExtraSharks; i++) {
       enemy.addCreature(new Creature({
-        name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-        description: 'Bloodfrenzy: +1 Rage after attacking.',
+        name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+        description: 'Atk + Bleed. Bleeding: +2 Damage.',
       }));
     }
   };
@@ -16134,6 +16150,7 @@ function continueCombatPhase2() {
   enemyActionTimer = 0;
   enemyTurnNumber = 0;
   enemyDamageAccumulator = 0;
+  _pendingFatalBleed = 0;
   awaitingEnemyDamage = false;
 
   // Build the new enemy's draw pile + opening hand. masterDeck is
@@ -16656,7 +16673,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -16748,6 +16765,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // gated trigger and pops against the cool On Recharge blue.
         badge = { type: 'badge', label: 'BURNING',
           bg: 'rgba(120,40,20,0.92)', border: '#ff9050', fg: '#ffdcb8' };
+      } else if (phrase === 'Bleeding') {
+        // Conditional rider — fires when the target currently has any
+        // Bleed stacks (Trident Throw, Sahuagin Eye, Shark's bite).
+        // Deep crimson palette so the trigger reads as a blood-gated
+        // bonus and pairs visually with the Bleed status icon.
+        badge = { type: 'badge', label: 'BLEEDING',
+          bg: 'rgba(110,20,30,0.92)', border: '#e06070', fg: '#ffc0c8' };
       } else if (phrase === 'Iced') {
         // Conditional rider on Dragon Tooth Dagger / Dragon Eye Mace
         // / future ice-payoff cards — fires when the target carries
@@ -18803,6 +18827,7 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
     if (creature.poisonAttack) drawRider('icon_poison');
     if (creature.fireAttack > 0) drawRider('icon_fire');
     if (creature.iceAttack > 0 || creature.iceAttackAll > 0) drawRider('icon_ice');
+    if (creature.bleedAttack > 0) drawRider('icon_bleed');
   }
 
   // Buff line: passive states (armor, shield, heroism, rage) drawn just
@@ -19936,6 +19961,7 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
     if (creature.poisonAttack) drawRider('icon_poison', Colors.GREEN);
     if (creature.fireAttack > 0) drawRider('icon_fire', Colors.ORANGE);
     if (creature.iceAttack > 0 || creature.iceAttackAll > 0) drawRider('icon_ice', Colors.ICE_BLUE);
+    if (creature.bleedAttack > 0) drawRider('icon_bleed', Colors.RED);
   }
 
   // Status badges row (above HP/attack): shield, heroism, armor, fire/ice/poison.
@@ -22731,6 +22757,26 @@ function resolveEffect(eff, caster, target) {
           addLog(`  Target Iced! +${icedBonus} damage`, Colors.ICE_BLUE);
         }
       }
+      // Bleeding bonus damage rider (Trident Throw, Shark) — same
+      // pattern as iced_bonus_damage above: the card carries a
+      // `bleeding_bonus_damage` effect with a value, applied when the
+      // target currently has any Bleed stacks. Also reads Sahuagin
+      // Eye's persistent combat buff (read, not consumed).
+      const bleedingBonus = (card && Array.isArray(card.currentEffects))
+        ? card.currentEffects.filter(e => e.effectType === 'bleeding_bonus_damage')
+            .reduce((s, e) => s + e.value, 0)
+        : 0;
+      const bleedingBuffBonus = snapshotBleedingDamageBuff(caster);
+      const bleedingTotal = bleedingBonus + bleedingBuffBonus;
+      if (bleedingTotal > 0) {
+        const targetBleeding = (target instanceof Creature)
+          ? ((target.bleedStacks || 0) > 0)
+          : ((target && target.getStatus && (target.getStatus('BLEED') || 0)) > 0);
+        if (targetBleeding) {
+          dmg += bleedingTotal;
+          addLog(`  Target Bleeding! +${bleedingTotal} damage`, Colors.RED);
+        }
+      }
       // Sahuagin Eye buff (CombatBuff applied by the Sahuagin Eye
       // relic) — consumed on ANY attack; +N if the target was
       // wounded going in. Mirrors PY's damaged_bonus_on_attack.
@@ -23607,6 +23653,33 @@ function resolveEffect(eff, caster, target) {
         buff.stacks = eff.value;
       }
       addLog(`  ${caster.name}: next attack applies +${eff.value} Poison`, Colors.GREEN);
+      break;
+    }
+    case 'grant_bleeding_damage_buff': {
+      // Sahuagin Eye — persistent passive while the relic is in hand:
+      // +N damage to any attack against a Bleeding target, for this
+      // combat. Buff is read (not consumed) at the damage site.
+      const existing = (caster.combatBuffs || []).find(b => b.id === 'sahuagin_eye_bleeding');
+      if (existing) {
+        existing.effectValue = (existing.effectValue || 0) + eff.value;
+        existing.stacks = (existing.stacks || 0) + eff.value;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'sahuagin_eye_bleeding',
+          name: 'Sahuagin Eye',
+          description: `Bleeding: +${eff.value} Damage.`,
+          imageId: 'buff_sahuagin_eye',
+          effectType: 'bleeding_bonus_damage_buff',
+          effectValue: eff.value,
+          trigger: 'on_attack',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+        const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
+        buff._persistent = true;
+        buff.stacks = eff.value;
+      }
+      addLog(`  ${caster.name}: +${eff.value} damage vs Bleeding targets`, Colors.RED);
       break;
     }
     case 'grant_eye_buff': {
@@ -25324,8 +25397,8 @@ function resolveEffect(eff, caster, target) {
       let lastShark;
       for (let n = 0; n < want; n++) {
         const shark = new Creature({
-          name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-          description: 'Bloodfrenzy: +1 Rage after attacking.',
+          name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+          description: 'Atk + Bleed. Bleeding: +2 Damage.',
         });
         if (caster.addCreature(shark)) { lastShark = shark; summoned++; }
         else break;
@@ -25512,6 +25585,32 @@ function resolveEffect(eff, caster, target) {
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry) lastEntry.creature = lastFrog;
       }
+      break;
+    }
+    case 'summon_piranhas': {
+      // Jar of Piranhas — roll 1..value Piranhas on the caster's side.
+      // Each piranha is haste + 0-attack + bleedAttack 1, and crumbles
+      // at end of turn (endOfTurnDeath). gamePlusOffset bumps the max
+      // roll; CREATURE_TIER_OFFSET['Piranhas'] adds +1 bleed per offset.
+      const maxRoll = Math.max(1, eff.value || 1);
+      const count = 1 + Math.floor(Math.random() * maxRoll);
+      let lastPiranha = null;
+      for (let i = 0; i < count; i++) {
+        const p = new Creature({
+          name: 'Piranhas', attack: 0, maxHp: 1,
+          bleedAttack: 1, haste: true, endOfTurnDeath: true,
+          description: 'Atk + Bleed. Haste.\nDies at end of turn.',
+        });
+        scaleCreatureWithOffset(p, playerTierOffset || 0);
+        if (caster.addCreature(p)) { lastPiranha = p; }
+        else break;
+      }
+      addLog(`  ${count} Piranha${count > 1 ? 's' : ''} swarm in!`, Colors.RED);
+      if (lastPiranha) {
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = lastPiranha;
+      }
+      playStaggeredSfx('shark_splash', count, 110, 0.65);
       break;
     }
     case 'summon_small_spider': {
@@ -27785,7 +27884,8 @@ function resolveAllyAttack(ally, target) {
     // in the auto-attack pass — the manual click-and-direct flow used
     // to miss the bonus entirely, so a player-driven Valdrisa swing
     // never got its +2 against the slime / golem / armored targets.
-    const tdmg = applyObsidianAllyBonus(ally, t, dmg);
+    let tdmg = applyObsidianAllyBonus(ally, t, dmg);
+    tdmg = applyAllyBleedingBonus(ally, t, tdmg);
     if (t === enemy) {
       if (ally.unpreventable) {
         const taken = enemy.takeDamageFromDeck(tdmg);
@@ -27794,6 +27894,7 @@ function resolveAllyAttack(ally, target) {
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, tdmg);
         maybeApplyAttackIce(ally, enemy);
+        maybeApplyAttackBleed(ally, enemy, tdmg);
       } else {
         if (tdmg > 0) enemyAutoPlayDefenses(tdmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(tdmg);
@@ -27803,6 +27904,7 @@ function resolveAllyAttack(ally, target) {
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, taken);
         maybeApplyAttackIce(ally, enemy);
+        maybeApplyAttackBleed(ally, enemy, taken);
         // Ally hits also trigger Ruga's Brute (and Slyblade's Vanish).
         onPlayerHitEnemy(taken);
       }
@@ -27814,6 +27916,7 @@ function resolveAllyAttack(ally, target) {
         playAttackHitSfx(tdmg, actual, delay);
         maybeApplyAttackPoison(ally, t, tdmg);
         maybeApplyAttackIce(ally, t);
+        maybeApplyAttackBleed(ally, t, tdmg);
       } else {
         const shieldBefore = t.shield || 0;
         const actual = t.takeDamage(tdmg);
@@ -27823,6 +27926,7 @@ function resolveAllyAttack(ally, target) {
         playAttackHitSfx(tdmg, actual, delay);
         maybeApplyAttackPoison(ally, t, actual);
         maybeApplyAttackIce(ally, t);
+        maybeApplyAttackBleed(ally, t, actual);
       }
       if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
     }
@@ -27923,6 +28027,39 @@ function maybeApplyAttackIce(attacker, target) {
   if (!attacker || !(attacker.iceAttack > 0)) return;
   if (!target) return;
   applyIceToTarget(target, attacker.iceAttack);
+}
+
+// Bleed-rider hook for ally swings (Shark, Piranhas etc.). Lands N
+// stacks of Bleed on the same target the swing picked. Mirrors the
+// poison rule: a fully-absorbed swing (0 damage) doesn't bleed.
+function maybeApplyAttackBleed(attacker, target, damageDealt) {
+  if (!attacker || !(attacker.bleedAttack > 0)) return;
+  if (!target) return;
+  if ((attacker.attack || 0) > 0 && (damageDealt || 0) <= 0) {
+    addLog(`  (Bleed absorbed — no effect)`, Colors.GRAY);
+    return;
+  }
+  const amt = attacker.bleedAttack;
+  if (target instanceof Creature) {
+    target.bleedStacks = (target.bleedStacks || 0) + amt;
+  } else if (typeof target.applyStatus === 'function') {
+    target.applyStatus('BLEED', amt);
+  }
+  addLog(`  +${amt} Bleed on ${target.name || 'target'}`, Colors.RED);
+}
+
+// Per-target +N damage when the target is currently bleeding. Used by
+// the Shark / Piranhas riders (creature.bleedingBonus) — mirrors the
+// card-level bleeding_bonus_damage rider but reads off the swinger.
+function applyAllyBleedingBonus(attacker, target, baseDmg) {
+  const bonus = (attacker && attacker.bleedingBonus) || 0;
+  if (bonus <= 0) return baseDmg;
+  const targetBleeding = (target instanceof Creature)
+    ? ((target.bleedStacks || 0) > 0)
+    : ((target && target.getStatus && (target.getStatus('BLEED') || 0)) > 0);
+  if (!targetBleeding) return baseDmg;
+  addLog(`  ${attacker.name}: Bleeding! +${bonus} damage`, Colors.RED);
+  return baseDmg + bonus;
 }
 
 function handlePowerTargetingClick(x, y) {
@@ -28735,6 +28872,7 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   decayIceAtTurnEnd(player, 'You');
   decayShockAtTurnEnd(player, 'You');
   decayBleedAtTurnEnd(player, 'You');
+  killEndOfTurnDeathCreatures(player);
   if (checkCombatEnd()) return;
 
   // Thorb gains +1 Shield at end of player's turn (matches PY).
@@ -29052,6 +29190,26 @@ function tickBleedOnAttack(attacker, label) {
   }
   if (stacks <= 0) return;
   if (typeof attacker.takeDamageFromDeck === 'function') {
+    // Main monster (enemy character): if the bleed tick would empty
+    // the deck — i.e. kill the enemy — defer the lethal damage so the
+    // queued attack still lands on the player. The enemy turn ends
+    // early (no more actions fire), the defensive window runs, and
+    // the bleed is drained in completePlayerTurnTransition.
+    if (attacker === enemy) {
+      const cardsLeft = typeof attacker.totalCards === 'number' ? attacker.totalCards : 0;
+      if (stacks >= cardsLeft) {
+        _pendingFatalBleed = stacks;
+        addLog(`  ${label} bleeds out — but the blow lands first!`, Colors.RED);
+        spawnDamageOnTarget(attacker, stacks);
+        // Truncate the enemy action queue so finishEnemyTurn fires
+        // next, opening the defensive window without queuing any
+        // more attacks/powers from the dying monster.
+        if (Array.isArray(enemyActions)) {
+          enemyActions.length = enemyActionIndex;
+        }
+        return;
+      }
+    }
     attacker.takeDamageFromDeck(stacks);
   } else if (typeof attacker.takeUnpreventableDamage === 'function') {
     attacker.takeUnpreventableDamage(stacks);
@@ -29093,6 +29251,22 @@ function decayBleedAtTurnEnd(character, label) {
       c.bleedStacks -= 1;
     }
   }
+}
+
+// End-of-turn cleanup for short-lived summons (Piranhas etc.). Any
+// creature with endOfTurnDeath=true is killed and removed from the
+// owner's field. Skip-fired before removeDeadCreatures sweeps, so the
+// death animation hooks still fire.
+function killEndOfTurnDeathCreatures(character) {
+  if (!character || !Array.isArray(character.creatures)) return;
+  for (const c of character.creatures) {
+    if (c && c.isAlive && c.endOfTurnDeath) {
+      c.currentHp = 0;
+      spawnDeathAnimation(c);
+      addLog(`  ${c.name} crumbles at turn end`, Colors.GRAY, null, null, c);
+    }
+  }
+  character.removeDeadCreatures();
 }
 
 // Get damage modifier from ice/shock for a character
@@ -29288,7 +29462,7 @@ function processPlayerAllyAttacks() {
   for (const ally of player.creatures) {
     if (!ally.isAlive || ally.exhausted) continue;
     // Allow 0-attack allies if they have a poisonAttack (Pet Spider).
-    if ((ally.attack || 0) <= 0 && !ally.poisonAttack) continue;
+    if ((ally.attack || 0) <= 0 && !ally.poisonAttack && !((ally.bleedAttack || 0) > 0)) continue;
     // Apply rage (persistent) and heroism (consumed on attack), matching Python.
     const rageBonus = ally.rage || 0;
     const heroismBonus = ally.heroism || 0;
@@ -29304,7 +29478,8 @@ function processPlayerAllyAttacks() {
     if (targets.length > 0) {
       const target = targets[Math.floor(Math.random() * targets.length)];
       const tdmgBase = applyObsidianAllyBonus(ally, target, dmg);
-      const tdmg = applyMarkBonus(target, tdmgBase);
+      const tdmgWithBleed = applyAllyBleedingBonus(ally, target, tdmgBase);
+      const tdmg = applyMarkBonus(target, tdmgWithBleed);
       if (ally.unpreventable) {
         target.takeUnpreventableDamage(tdmg);
         if (tdmg > 0) spawnDamageOnTarget(target, tdmg);
@@ -29313,6 +29488,7 @@ function processPlayerAllyAttacks() {
         playAttackHitSfx(tdmg, tdmg);
         maybeApplyAttackPoison(ally, target, tdmg);
         maybeApplyAttackIce(ally, target);
+        maybeApplyAttackBleed(ally, target, tdmg);
       } else {
         const shieldBefore = target.shield || 0;
         const actual = target.takeDamage(tdmg);
@@ -29322,11 +29498,13 @@ function processPlayerAllyAttacks() {
         playAttackHitSfx(tdmg, actual);
         maybeApplyAttackPoison(ally, target, actual);
         maybeApplyAttackIce(ally, target);
+        maybeApplyAttackBleed(ally, target, actual);
       }
       if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); }
     } else if (enemy.isAlive) {
       const edmgBase = applyObsidianAllyBonus(ally, enemy, dmg);
-      const edmg = applyMarkBonus(enemy, edmgBase);
+      const edmgWithBleed = applyAllyBleedingBonus(ally, enemy, edmgBase);
+      const edmg = applyMarkBonus(enemy, edmgWithBleed);
       if (ally.unpreventable) {
         enemy.takeDamageFromDeck(edmg);
         if (edmg > 0) spawnDamageOnTarget(enemy, edmg);
@@ -29335,6 +29513,7 @@ function processPlayerAllyAttacks() {
         playAttackHitSfx(edmg, edmg);
         maybeApplyAttackPoison(ally, enemy, edmg);
         maybeApplyAttackIce(ally, enemy);
+        maybeApplyAttackBleed(ally, enemy, edmg);
       } else {
         const [blocked, taken] = enemy.takeDamageWithDefense(edmg);
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
@@ -29342,6 +29521,7 @@ function processPlayerAllyAttacks() {
         playAttackHitSfx(edmg, taken);
         maybeApplyAttackPoison(ally, enemy, taken);
         maybeApplyAttackIce(ally, enemy);
+        maybeApplyAttackBleed(ally, enemy, taken);
         // Ally swings also trigger Ruga's Brute draw + Slyblade's Vanish.
         onPlayerHitEnemy(taken);
       }
@@ -29367,6 +29547,11 @@ function processPlayerAllyAttacks() {
 
 // --- Enemy AI ---
 let enemyDamageAccumulator = 0; // total damage from enemy attacks this turn (cards + creatures)
+// Bleed damage parked on the enemy character when a mid-attack bleed
+// tick would kill them. Drained in completePlayerTurnTransition AFTER
+// the defensive window resolves so the queued attack still lands on
+// the player before the fight ends.
+let _pendingFatalBleed = 0;
 // Last-attacker weapon SFX keys, stashed when an enemy queues damage to the
 // player. Read by startIncomingDamage so the auto-mitigated block thud
 // matches the swinging weapon (Large Boulder → boulder_blocked etc.).
@@ -30389,8 +30574,8 @@ function startEnemyTurn() {
           let summoned;
           if (roll === 0) {
             summoned = new Creature({
-              name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-              description: 'Bloodfrenzy: +1 Rage after attacking.',
+              name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+              description: 'Atk + Bleed. Bleeding: +2 Damage.',
             });
             addLog(`  From the Deep! A Shark surfaces!`, Colors.ORANGE);
           } else if (roll === 1) {
@@ -30775,6 +30960,18 @@ function updateEnemyTurn(dt) {
             if (t) spawnTokenOnTarget(t, 1, 'Poison', Colors.GREEN);
           }
         }
+        if (c.bleedAttack > 0) {
+          for (const t of targets) {
+            const amt = c.bleedAttack;
+            if (t instanceof Creature) {
+              t.bleedStacks = (t.bleedStacks || 0) + amt;
+              addLog(`  +${amt} Bleed on ${t.name}`, Colors.RED);
+            } else if (t && typeof t.applyStatus === 'function') {
+              t.applyStatus('BLEED', amt);
+              addLog(`  +${amt} Bleed on ${t.name || 'you'}`, Colors.RED);
+            }
+          }
+        }
         // Bloodfrenzy persists across the attack-all swing too.
         if (c.bloodfrenzy > 0) {
           c.rage = (c.rage || 0) + c.bloodfrenzy;
@@ -30802,6 +30999,9 @@ function updateEnemyTurn(dt) {
       // PY parity (game.py:14326) — applies to both player- and enemy-side
       // Obsidian Slime / Obsidian Construct creatures.
       swingDmg = applyObsidianAllyBonus(c, target || player, swingDmg);
+      // Bleed-bonus rider — +N if the picked target is currently bleeding
+      // (Shark / Piranhas). Mirrors the ally-side applyAllyBleedingBonus.
+      swingDmg = applyAllyBleedingBonus(c, target || player, swingDmg);
       // Track how much damage actually got past passive defenses on
       // this single swing — used below to gate the poison rider, same
       // rule as our own allies' maybeApplyAttackPoison (no damage = no
@@ -30851,6 +31051,19 @@ function updateEnemyTurn(dt) {
         applyIceToTarget(player, c.iceAttackAll);
         for (const ally of (player.creatures || [])) {
           if (ally.isAlive) applyIceToTarget(ally, c.iceAttackAll);
+        }
+      }
+      // Enemy-side bleed rider — same lands-only rule as the ally side.
+      if (c.bleedAttack > 0) {
+        const lands = (c.attack || 0) > 0 ? swingLanded > 0 : true;
+        if (!lands) {
+          addLog(`  (Bleed absorbed — no effect)`, Colors.GRAY);
+        } else if (target instanceof Creature) {
+          target.bleedStacks = (target.bleedStacks || 0) + c.bleedAttack;
+          addLog(`  +${c.bleedAttack} Bleed on ${target.name}`, Colors.RED);
+        } else if (target && typeof target.applyStatus === 'function') {
+          target.applyStatus('BLEED', c.bleedAttack);
+          addLog(`  +${c.bleedAttack} Bleed on ${target.name || 'you'}`, Colors.RED);
         }
       }
       if (c.poisonAttack) {
@@ -32103,8 +32316,8 @@ function updateEnemyTurn(dt) {
         let lastShark;
         for (let n = 0; n < want; n++) {
           const shark = new Creature({
-            name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-            description: 'Bloodfrenzy: +1 Rage after attacking.',
+            name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+            description: 'Atk + Bleed. Bleeding: +2 Damage.',
           });
           if (enemy.addCreature(shark)) { lastShark = shark; summoned++; }
           else break;
@@ -32444,8 +32657,8 @@ function updateEnemyTurn(dt) {
         let lastShark;
         for (let n = 0; n < want; n++) {
           const shark = new Creature({
-            name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-            description: 'Bloodfrenzy: +1 Rage after attacking.',
+            name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+            description: 'Atk + Bleed. Bleeding: +2 Damage.',
           });
           if (enemy.addCreature(shark)) { lastShark = shark; summoned++; }
           else break;
@@ -32492,6 +32705,20 @@ function finishEnemyTurn() {
 function completePlayerTurnTransition() {
   awaitingEnemyDamage = false;
 
+  // Drain any deferred fatal bleed parked on the enemy from a
+  // mid-attack tick. The queued damage has now landed on the player
+  // via startIncomingDamage; finish the bleed-out and let
+  // checkCombatEnd close the fight.
+  if (_pendingFatalBleed > 0 && enemy) {
+    const stacks = _pendingFatalBleed;
+    _pendingFatalBleed = 0;
+    addLog(`  ${enemy.name} bleeds out! (${stacks})`, Colors.RED);
+    if (typeof enemy.takeDamageFromDeck === 'function') {
+      enemy.takeDamageFromDeck(stacks);
+    }
+    if (checkCombatEnd()) return;
+  }
+
   // Ice ticks at the end of the iced character's own turn — for the
   // enemy that's right here, after they've had their attacks resolve
   // (consumeIceForAttack already shaved per-attack stacks during the
@@ -32500,6 +32727,7 @@ function completePlayerTurnTransition() {
     decayIceAtTurnEnd(enemy, enemy.name);
     decayShockAtTurnEnd(enemy, enemy.name);
     decayBleedAtTurnEnd(enemy, enemy.name);
+    killEndOfTurnDeathCreatures(enemy);
   }
 
   // End-of-enemy-turn passive powers. Dire Fury: +1 Rage per turn, stacking
@@ -33246,6 +33474,19 @@ function applyEyeBonus(target, bonus) {
   if (!damaged) return 0;
   addLog(`  Sahuagin Eye! +${bonus} damage on ${target.name}`, Colors.GOLD);
   return bonus;
+}
+// Sahuagin Eye — persistent "Bleeding: +N Damage" passive. Reads
+// the buff value without consuming; the buff dissolves at combat end
+// via combatsRemaining.
+function snapshotBleedingDamageBuff(caster) {
+  if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
+  let total = 0;
+  for (const buff of caster.combatBuffs) {
+    if (buff.effectType === 'bleeding_bonus_damage_buff') {
+      total += buff.effectValue || 0;
+    }
+  }
+  return total;
 }
 function snapshotObsidianBuff(caster) {
   if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
@@ -43452,8 +43693,8 @@ function buildCodexSourceCache() {
   // starter), so the sandbox scan misses the other two — surface
   // them explicitly so each gets its own codex entry.
   const sharkSummon = new Creature({
-    name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-    description: 'Bloodfrenzy: +1 Rage after attacking.',
+    name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+    description: 'Atk + Bleed. Bleeding: +2 Damage.',
   });
   sharkSummon._codexSide = 'enemy';
   sharkSummon._sourceRarity = 'rare';

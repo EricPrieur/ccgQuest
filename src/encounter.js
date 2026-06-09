@@ -1839,6 +1839,11 @@ export function createCozySpotEncounter(variant = 'first') {
 // shadowing it bursts up out of the pool. Fight, then take the fresh
 // fish home as a trophy. SouthOutpostBG backdrop via ENCOUNTER_BG_MAP.
 export function createCozySpotAmbushEncounter() {
+  // Guaranteed Fresh Fish (the catch). 50% bonus roll from the
+  // Sahuagin Sentinel loot pool — the Sentinel was guarding a real
+  // hoard often enough that interrupting the fish makes it pay out.
+  const lootCards = ['fresh_fish'];
+  if (Math.random() < 0.5) lootCards.push('sahuagin_sentinel_loot');
   return new Encounter('cozy_spot_ambush', 'The Big One', 'Something else has been watching that fish.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -1856,7 +1861,7 @@ export function createCozySpotAmbushEncounter() {
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootCards: ['fresh_fish'],
+      lootCards,
     }),
   ]);
 }

@@ -272,24 +272,24 @@ export function createKoboldShield() {
   return new Card({
     id: 'kobold_shield',
     name: 'Kobold Shield',
-    description: 'Deal 1 Damage, Gain Shield.\nStays in hand.',
-    shortDesc: '1 Dmg, +Shield\nStays',
+    description: 'Apply 1 Bleed, Gain Shield.\nStays in hand.',
+    shortDesc: '1 Bleed, +Shield\nStays',
     subtype: 'light_armor',
     cardType: CardType.ATTACK,
     // FREE cost — the card never leaves the hand, so a recharge cost
     // would let you pay once and then ride it free forever. FREE keeps
-    // the math honest: every swing is just "1 dmg + 1 shield" with no
+    // the math honest: every swing is just "1 bleed + 1 shield" with no
     // ramp.
     costType: CostType.FREE,
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
-    // +1 dmg, +0.5 shield (floor) per offset. At +1 shield stays at 1,
+    // +1 bleed, +0.5 shield (floor) per offset. At +1 shield stays at 1,
     // +2 bumps to 2, etc. Stays-in-hand means it pings every turn,
     // so even the fractional shield matters over a long fight.
-    gamePlusOffset: { damage: 1, gain_shield: 0.5 },
+    gamePlusOffset: { apply_bleed: 1, gain_shield: 0.5 },
   });
 }
 
@@ -4172,43 +4172,43 @@ export function createAle() {
 // Enemy Cards - Sahuagin
 // ============================================================
 
-// Mirrors Python create_trident_throw exactly: 1 damage + Draw 1 +
-// 1 bonus if target is damaged.
+// Sahuagin Trident Throw (monster card) — 1 damage, draw, with a
+// Bleeding-only damage rider that pairs with the priest's bleed kit.
 export function createTridentThrow() {
   return new Card({
     id: 'trident_throw',
     name: 'Trident Throw',
-    description: 'Recharge -> Deal 1 Damage, Draw 1. +1 if target is damaged.',
-    shortDesc: 'R->1 Dmg, Draw 1\n+1 if damaged',
+    description: 'Recharge -> Deal 1 Damage, Draw. Bleeding: +1 Damage.',
+    shortDesc: 'R->1 Dmg, Draw\nBleeding: +1',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
-      new CardEffect('damaged_bonus_damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('bleeding_bonus_damage', 1, TargetType.SINGLE_ENEMY),
     ],
-    gamePlusOffset: { damage: 1, damaged_bonus_damage: 1 },
+    gamePlusOffset: { damage: 1, bleeding_bonus_damage: 1 },
   });
 }
 
-// Mirrors Python create_trident_thrust exactly: 3 damage with a
-// 1-card recharge cost + 1 bonus if target is damaged.
+// Sahuagin Trident Thrust (monster card) — 3 damage on a recharge+1
+// cost that also stamps Bleed for the priest's downstream payoff.
 export function createTridentThrust() {
   return new Card({
     id: 'trident_thrust',
     name: 'Trident Thrust',
-    description: 'Recharge +1 -> Deal 3 Damage. +1 if target is damaged.',
-    shortDesc: 'R+1->3 Dmg\n+1 if damaged',
+    description: 'Recharge +1 -> Deal 3 + Bleed.',
+    shortDesc: 'R+1->3 Dmg\n+1 Bleed',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
-      new CardEffect('damaged_bonus_damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
     ],
-    gamePlusOffset: { damage: 2, damaged_bonus_damage: 1 },
+    gamePlusOffset: { damage: 2, apply_bleed: 1 },
   });
 }
 
@@ -4254,31 +4254,6 @@ export function createBloodInTheWater() {
     // +1 to the upper-bound shark roll (1-2 → 1-3 → 1-4 …) and
     // +0.5 rage gained per offset (1 base → 2 at offset 2 → …).
     gamePlusOffset: { summon_shark_random: 1, gain_rage: 0.5 },
-  });
-}
-
-export function createSahuaginStaffEnemy() {
-  // Mirrors PY create_sahuagin_staff_enemy — Recharge +1, 1 dmg +
-  // 1 Ice + summon a Shark. Was incorrectly applying Fire instead
-  // of Ice, with no extra recharge cost or shark summon.
-  return new Card({
-    id: 'sahuagin_staff_enemy',
-    name: 'Sahuagin Staff',
-    description: 'Recharge +1 -> Deal 1 Damage + Ice, Summon a Shark.',
-    shortDesc: 'R+1->1 Dmg+Ice\nSummon Shark',
-    subtype: 'staff',
-    cardType: CardType.ATTACK,
-    costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('recharge_extra', 1, TargetType.SELF),
-      new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('summon_shark', 1, TargetType.SUMMON),
-    ],
-    priority: 2,
-    // +1 dmg, +1 ice, +0.5 max shark per offset (floor — first
-    // extra shark lands at offset 2, second at offset 4…).
-    gamePlusOffset: { damage: 1, apply_ice: 1, summon_shark: 0.5 },
   });
 }
 
@@ -6092,18 +6067,19 @@ export function createSahuaginTridentLoot() {
   return new Card({
     id: 'sahuagin_trident',
     name: 'Sahuagin Trident',
-    description: 'Recharge +1 -> Deal 3 Damage. +3 if target is damaged.',
-    shortDesc: 'R+1->3 Dmg\n+3 if damaged',
+    description: 'Recharge +1 -> Deal 3 + Bleed, Draw.',
+    shortDesc: 'R+1->3 Dmg+Bleed\nDraw',
     subtype: 'martial_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
-      new CardEffect('damaged_bonus_damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
-    gamePlusOffset: { damage: 2, damaged_bonus_damage: 2 },
+    gamePlusOffset: { damage: 2, apply_bleed: 1 },
   });
 }
 
@@ -6133,18 +6109,56 @@ export function createSahuaginEye() {
   return new Card({
     id: 'sahuagin_eye',
     name: 'Sahuagin Eye',
-    description: 'Next Attack: +1 damage if target is damaged. Stays in hand.',
-    shortDesc: 'Next Attack +1\nif damaged',
+    description: 'Bleeding: +1 Damage.\nStays in hand.',
+    shortDesc: 'Bleeding: +1 Dmg\nStays',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.FREE,
     effects: [
-      new CardEffect('grant_eye_buff', 1, TargetType.SELF),
+      new CardEffect('grant_bleeding_damage_buff', 1, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'epic',
-    // +0.5 damage per offset (floored): +1 base, +1 at off 1, +2 at off 2, etc.
-    gamePlusOffset: { grant_eye_buff: 0.5 },
+    // +1 bleeding damage per offset (passive while in hand).
+    gamePlusOffset: { grant_bleeding_damage_buff: 1 },
+  });
+}
+
+// Piranhas swarm summon — disposable bleed swarm that crumbles at end
+// of turn. Reused art from the Piranha Pool swim phase.
+function createPiranhasCreature() {
+  return new Creature({
+    name: 'Piranhas',
+    attack: 0,
+    maxHp: 1,
+    bleedAttack: 1,
+    haste: true,
+    endOfTurnDeath: true,
+    description: 'Atk + Bleed. Haste.\nDies at end of turn.',
+  });
+}
+
+// Jar of Piranhas — Sahuagin Sentinel rare drop. Pops 1-2 Piranhas
+// every recharge for a short bleed burst. The swarm's bleed pings
+// pair with Sahuagin Eye / Trident Throw bleed payoffs.
+export function createJarOfPiranhas() {
+  return new Card({
+    id: 'jar_of_piranhas',
+    name: 'Jar of Piranhas',
+    description: 'Recharge -> Summon 1-2 Piranhas.',
+    shortDesc: 'R->Summon\n1-2 Piranhas',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_piranhas', 2, TargetType.SUMMON),
+    ],
+    previewCreature: createPiranhasCreature(),
+    rarity: 'rare',
+    tier: 1,
+    // +1 max piranhas per offset. Each piranha scales separately via
+    // CREATURE_TIER_OFFSET['Piranhas'] (+1 bleed per offset).
+    gamePlusOffset: { summon_piranhas: 1 },
   });
 }
 
@@ -6258,32 +6272,32 @@ export function createGnikansStaff() {
   });
 }
 
-// Sahuagin Priest Staff — Sahuagin Priest drop. Mirrors PY
-// create_sahuagin_priest_staff: Recharge +1 Card, deal 1 damage +
-// apply 1 Ice, summon a Shark.
+// Sahuagin Priest Staff — Sahuagin Priest drop. Stamps Bleed + Ice and
+// summons a Shark; the Shark's own bite then applies extra Bleed and
+// hits harder on bleeding targets, so the whole package compounds.
 export function createSahuaginPriestStaffLoot() {
   return new Card({
     id: 'sahuagin_priest_staff',
     name: 'Sahuagin Priest Staff',
-    description: 'Recharge +1 -> Deal 1 Damage + Ice, Summon a Shark.',
-    shortDesc: 'R+1->1 Dmg+Ice\nSummon Shark',
+    description: 'Recharge +1 -> Deal Bleed + Ice, Summon a Shark.',
+    shortDesc: 'R+1->Bleed+Ice\nSummon Shark',
     subtype: 'staff',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('summon_shark', 1, TargetType.SUMMON),
     ],
     rarity: 'epic',
     previewCreature: new Creature({
-      name: 'Shark', attack: 1, maxHp: 4, bloodfrenzy: 1,
-      description: 'Bloodfrenzy: +1 Rage after attacking.',
+      name: 'Shark', attack: 1, maxHp: 4, bleedAttack: 1, bleedingBonus: 2,
+      description: 'Atk + Bleed. Bleeding: +2 Damage.',
     }),
-    // +1 dmg / +1 Ice per offset. The Shark summon scales via
-    // CREATURE_TIER_OFFSET['Shark'] (+1/+1 on the player side).
-    gamePlusOffset: { damage: 1, apply_ice: 1 },
+    // +1 Bleed / +1 Ice per offset. The Shark summon scales via
+    // CREATURE_TIER_OFFSET['Shark'].
+    gamePlusOffset: { apply_bleed: 1, apply_ice: 1 },
   });
 }
 

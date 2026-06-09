@@ -186,7 +186,7 @@ export const CARD_ART_MAP = {
   whirlpool: 'Whirlpool.jpg',
   swimming_in_current: 'SwimingInCurrent.jpg',
   sahuagin_priest_staff: 'SahuaginPriestStaff.jpg',
-  sahuagin_staff_enemy: 'SahuaginPriestStaff.jpg',
+  jar_of_piranhas: 'JarOfPirahnas.jpg',
   // Gnikan's Staff — chapter 8 frost-shaman placeholder drop.
   gnikans_staff: 'GnikansStaff.jpg',
   barnacle_encrusted_plate: 'BarnacleEncrustedPlate.jpg',

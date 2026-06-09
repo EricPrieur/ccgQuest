@@ -14,6 +14,9 @@ export class Creature {
     fireAttack = 0,
     iceAttack = 0,
     iceAttackAll = 0,
+    bleedAttack = 0,
+    bleedingBonus = 0,
+    endOfTurnDeath = false,
     fireImmune = false,
     attackAll = false,
     multiAttack = 0,
@@ -75,6 +78,13 @@ export class Creature {
     this.fireAttack = fireAttack;
     this.iceAttack = iceAttack;
     this.iceAttackAll = iceAttackAll;
+    this.bleedAttack = bleedAttack;
+    // +N swing damage when the target is currently Bleeding. Read by
+    // applyAllyBleedingBonus on player-ally and enemy-creature swings.
+    this.bleedingBonus = bleedingBonus;
+    // Piranhas-style "dies at end of turn" rider — checked during the
+    // owner's end-of-turn cleanup so the summon crumbles automatically.
+    this.endOfTurnDeath = endOfTurnDeath;
     this.fireImmune = fireImmune;
     this.attackAll = attackAll;
     this.multiAttack = multiAttack;
