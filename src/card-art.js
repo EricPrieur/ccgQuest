@@ -111,6 +111,7 @@ export const CARD_ART_MAP = {
   wrath: 'WrathDruid.jpg',
   regrowth: 'RegrowthDruid.jpg',
   feral_swipe: 'FeralSwipe.jpg',
+  feral_swipe_legacy: 'FeralSwipe.jpg',
   cat_form_token: 'DruidFelineForm.jpg',
   bear_form_token: 'BearForm.jpg',
   feral_form: 'DruidFeralForm.jpg',
@@ -118,6 +119,7 @@ export const CARD_ART_MAP = {
   feral_bite: 'FeralBite.jpg',
   starfire: 'Starfire.jpg',
   healing_touch: 'HealingTouch.jpg',
+  natures_healing: 'HealingTouch.jpg',
 
   // === Enemy Cards - Rat ===
   bite: 'BiteRat.jpg',

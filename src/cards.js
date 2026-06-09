@@ -36,14 +36,14 @@ export function createIceToken() {
 export function createCatFormToken() {
   return new Card({
     id: 'cat_form_token', name: 'Feline Form',
-    description: 'Gain 1 Heroism. Draw.',
-    shortDesc: 'Heroism, Draw', subtype: 'ability',
+    description: 'Deal Bleed.\nHeal 1 Negative Effect, Draw.',
+    shortDesc: 'Bleed\nHeal Neg, Draw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
-    effects: [new CardEffect('cat_form', 1, TargetType.SELF)],
-    // +1 Heroism per offset. The cat_form effect handler is a marker
-    // (the runtime grant happens in onPowerChoicePicked); the choice
-    // card preview uses a custom branch in applyGamePlusOffsetInPlace
-    // to rewrite the description with the bumped number.
+    effects: [new CardEffect('cat_form', 1, TargetType.SINGLE_ENEMY)],
+    // +1 Bleed per offset — handler scales via playerTierOffset;
+    // a custom branch in applyGamePlusOffsetInPlace inserts the
+    // number into the description at offset > 0 ("Deal Bleed" →
+    // "Deal 2 Bleed" → "Deal 3 Bleed" …).
     gamePlusOffset: { cat_form: 1 },
   });
 }
@@ -51,8 +51,8 @@ export function createCatFormToken() {
 export function createBearFormToken() {
   return new Card({
     id: 'bear_form_token', name: 'Bear Form',
-    description: 'Gain 1 Shield. Draw.',
-    shortDesc: 'Shield, Draw', subtype: 'ability',
+    description: 'Gain Shield.\nHeal 1 Negative Effect, Draw.',
+    shortDesc: 'Shield\nHeal Neg, Draw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('bear_form', 1, TargetType.SELF)],
     gamePlusOffset: { bear_form: 1 },
@@ -1256,9 +1256,13 @@ export function createRegrowth() {
   });
 }
 
-export function createFeralSwipe() {
+// Legacy Feral Swipe (shield → damage-per-shield version). Kept under
+// the new id so older saves still deserialize cleanly, but no longer
+// offered on level-up / shrine picks. The active Feral Swipe is the
+// bleed-themed rewrite below.
+export function createFeralSwipeLegacy() {
   return new Card({
-    id: 'feral_swipe',
+    id: 'feral_swipe_legacy',
     name: 'Feral Swipe',
     description: 'Recharge -> Gain 2 Shield.\nDeal 2 damage per Shield\nto separate enemies.',
     shortDesc: 'R->Shield 2\n2 Dmg x Shield',
@@ -1273,6 +1277,37 @@ export function createFeralSwipe() {
     tier: 1,
     rarity: 'uncommon',
     gamePlusOffset: { gain_shield: 1, feral_swipe_damage: 1 },
+  });
+}
+
+// Feral Swipe (bleed variant) — Druid tier 1 ability. Applies Bleed
+// to up to 3 alive enemies (auto-target: enemy character + their
+// creatures, in order), then grants Shield per bleeding enemy on the
+// field. Stacks per offset: +1 Bleed per attack, +1 Shield per
+// bleeding target. The shield count reads the final state, so
+// previously bleeding targets also count.
+export function createFeralSwipe() {
+  return new Card({
+    id: 'feral_swipe',
+    name: 'Feral Swipe',
+    description: 'Recharge -> Deal Bleed to up to 3 targets.\nGain Shield for each bleeding enemy.',
+    shortDesc: 'R->Bleed 3 tgts\n+Shield/bleeding',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      // SINGLE_ENEMY target type so the click flow routes to the
+      // multi-target picker (Multi Shot / Wooden Axe style) instead
+      // of self-resolving against the auto-target list.
+      new CardEffect('feral_swipe_bleed', 1, TargetType.SINGLE_ENEMY, 3),
+    ],
+    characterClass: ['druid'],
+    tier: 1,
+    rarity: 'uncommon',
+    // +1 Bleed per attack per offset, +1 Shield per bleeding target
+    // per offset. Both numbers scale together; the picker resolution
+    // reads playerTierOffset directly for the shield-per-bleeding.
+    gamePlusOffset: { feral_swipe_bleed: 1 },
   });
 }
 
@@ -1591,10 +1626,10 @@ export function createElementalWeapon() {
   iceMode.artId = 'buff_elemental_weapon_ice';
   return new Card({
     id: 'elemental_weapon', name: 'Elemental Weapon',
-    description: 'Discard -> Choose:\nYour attacks add Fire,\nOR your attacks add Ice.',
-    shortDesc: 'D->Attacks +Fire\nOR Attacks +Ice',
+    description: 'Recharge -> Choose:\nYour attacks add Fire,\nOR your attacks add Ice.',
+    shortDesc: 'R->Attacks +Fire\nOR Attacks +Ice',
     subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.DISCARD,
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [],
     modes: [fireMode, iceMode],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
@@ -1985,34 +2020,39 @@ export function createSummonTreants() {
   });
 }
 
+// Feral Wrath — Druid Tier 2 ability. Discard cost, grants a
+// stacking "Your attacks add Bleed" buff (mirrors Elemental Weapon's
+// fire/ice imbue but for Bleed). Card id stays `feral_bite` so older
+// saves still deserialize cleanly; only the display name + mechanic
+// changed.
 export function createFeralBite() {
   return new Card({
-    id: 'feral_bite', name: 'Feral Bite',
-    description: 'Recharge -> Deal 3 Damage. Gain 3 Shield.',
-    shortDesc: 'R->3 Dmg, 3 Shield', subtype: 'ability',
-    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    id: 'feral_bite', name: 'Feral Wrath',
+    description: 'Recharge -> Your attacks also deal Bleed.',
+    shortDesc: 'R->Attacks +Bleed', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
-      new CardEffect('gain_shield', 3, TargetType.SELF),
+      new CardEffect('grant_bleed_weapon', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { damage: 1.5, gain_shield: 1.5 },
+    noTierOffset: true,
   });
 }
 
 export function createStarfire() {
   return new Card({
     id: 'starfire', name: 'Starfire',
-    description: 'Recharge +1 Card -> Deal 6 Damage. Draw.',
-    shortDesc: 'R+1->6 Dmg, Draw', subtype: 'ability',
+    description: 'Recharge +1 Card -> Deal 3 Damage and 3 Fire, Draw.',
+    shortDesc: 'R+1->3 Dmg+3 Fire\nDraw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 6, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_fire', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { damage: 4 },
+    gamePlusOffset: { damage: 2, apply_fire: 1 },
   });
 }
 
@@ -2028,6 +2068,25 @@ export function createHealingTouch() {
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { heal: 4 },
+  });
+}
+
+// Nature's Healing — Druid Tier 2. Heal every stack of every negative
+// effect on the player (Bleed, Poison, Fire, Ice, Shock), gain
+// Heroism equal to the number of distinct effect types healed, then
+// Heal 5 HP. Shares Healing Touch's art.
+export function createNaturesHealing() {
+  return new Card({
+    id: 'natures_healing', name: "Nature's Healing",
+    description: 'Recharge -> Heal all negative effects.\nGain Heroism per effect healed.\nHeal 5.',
+    shortDesc: 'R->Heal All Neg\n+H per healed\nHeal 5', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('heal_all_negative_effects', 0, TargetType.SELF),
+      new CardEffect('heal', 5, TargetType.SELF),
+    ],
+    characterClass: ['druid'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { heal: 2 },
   });
 }
 
@@ -2069,7 +2128,11 @@ export function getWarriorAbilityChoices() {
 
 export function getDruidAbilityChoices() {
   return [createWrath(), createRegrowth(), createFeralSwipe(), createSneakAttack(),
-          createSummonTreants(), createFeralBite(), createStarfire(), createHealingTouch()];
+          // Healing Touch retired from the pool in favor of Nature's
+          // Healing; its creator stays in CARD_REGISTRY so older
+          // saves that already had it still deserialize cleanly.
+          createSummonTreants(), createFeralBite(), createStarfire(),
+          createNaturesHealing()];
 }
 
 export function getAbilityChoices(className, count = 3, tier = 1) {
@@ -2560,21 +2623,19 @@ export function createWardensWhip() {
   return new Card({
     id: 'wardens_whip',
     name: "The Warden's Whip",
-    description: 'Recharge -> Deal 1 Damage, Allies gain 1 Heroism.',
-    shortDesc: "R->1 Dmg\n+1 Ally Heroism",
+    description: 'Recharge -> Deal 1 Bleed, Allies gain 1 Heroism.',
+    shortDesc: "R->1 Bleed\n+1 Ally Heroism",
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
-    // Second effect buffs all player creature allies with +1 Heroism on
-    // play. Matches PY: the card was missing this half of its effect list.
+    // Swapped raw damage for Bleed — the whip flays rather than thuds.
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
-    // +1 dmg, +0.5 ally heroism (floor) per offset. At +1 ally heroism
-    // stays at 1, +2 makes it 2, etc.
-    gamePlusOffset: { damage: 1, buff_allies_heroism: 0.5 },
+    // +1 Bleed per offset, +0.5 ally heroism (floor) per offset.
+    gamePlusOffset: { apply_bleed: 1, buff_allies_heroism: 0.5 },
   });
 }
 
@@ -5971,7 +6032,7 @@ export function createWhitescaleBrew() {
   return new Card({
     id: 'whitescale_brew',
     name: 'Whitescale Brew',
-    description: 'Consume -> Heal 2, Gain 1 Heroism, Gain 1 Ice.\nBeverage: +Heroism, Ice Randomly for 4 turns.',
+    description: 'Consume -> Heal 2, Gain 1 Heroism, Gain 1 Ice.\nBeverage: +Heroism, Deal Ice Randomly for 4 turns.',
     shortDesc: 'C->Heal 2, +1H\n+1 Ice self\nBev: H+Ice/4T',
     subtype: 'item',
     cardType: CardType.ITEM,

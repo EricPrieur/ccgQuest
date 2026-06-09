@@ -183,6 +183,7 @@ export function saveGame(state, saveName = '') {
     dragonSlain: !!state.dragonSlain,
     staircaseTopDragonDialogSeen: !!state.staircaseTopDragonDialogSeen,
     mithrilRemediesVisited: !!state.mithrilRemediesVisited,
+    templeMoradinPrayed: !!state.templeMoradinPrayed,
     dwarvenTavernFreebieGiven: !!state.dwarvenTavernFreebieGiven,
     dragonEggDamage: typeof state.dragonEggDamage === 'number' ? state.dragonEggDamage : 0,
     heroesOfQualibaf: !!state.heroesOfQualibaf,

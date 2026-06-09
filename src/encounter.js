@@ -1601,6 +1601,22 @@ export function createOutpostMeetingEncounter() {
 // dwarven apothecary Olbrim Goldbalm, then talks over whether to
 // chase him into the mountain. Side-quest seed for the
 // Stairs of the Infinite content. WIP — debug-only for now.
+// Mithril Remedies revisit — once the first-visit dialog has fired
+// (mithrilRemediesVisited latch), subsequent visits play a short
+// reminder: Olbrim still hasn't returned, the shop stays closed.
+// No purchases until the side quest concludes.
+export function createMithrilRemediesRevisitEncounter() {
+  return new Encounter('mithril_remedies_revisit', 'Mithril Remedies', "Olbrim's apothecary stands quiet — still no sign of the master.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The shelves are still half-stocked, the ledger still open to the same dusty page. No Olbrim.', '!'),
+        new EncounterText("\"Stairs of the Infinite,\" Thorb mutters, already turning for the door. \"He's up there somewhere. We just have to climb.\"", 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
 export function createMithrilRemediesEncounter() {
   return new Encounter('mithril_remedies', 'Mithril Remedies',
     'A small workshop tucked between two larger forges, dark glass jars stacked behind the counter.', [
@@ -3745,6 +3761,48 @@ export function createCathedralShrineEncounter() {
   ]);
 }
 
+// Temple of Moradin Altar revisit — skips the intro TEXT and drops
+// straight into the choice screen. Fires once templeMoradinPrayed
+// latches; the pray choice is gated separately so it can only be
+// taken once even though it stays visible in the menu.
+export function createTempleMoradinAltarRevisitEncounter() {
+  return new Encounter('temple_moradin_altar_revisit', 'Altar of Moradin', "The altar hums faintly with old fire.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The altar glows faintly. Will you pray to Moradin?',
+      choices: [
+        new EncounterChoice('Pray and donate (200 GP)', 'You kneel before the altar and place a heavy purse of dwarven gold on the rim. The runes flare gold; Moradin answers with a fragment of remembered craft.', 'pray_temple_moradin', 200, { returnToChoices: true }),
+        new EncounterChoice('Leave the temple alone', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Temple of Moradin Altar — post-dragon side quest. Pay 200 gp and
+// receive a Tier 2 class ability pick (same flow as the Ancient Shrine
+// in the obsidian cathedral, but gated on Tharnag's restored temple
+// instead of the ruined chapter-8 city). The first prayer is one-shot;
+// revisits show the prayer choice as exhausted via templeMoradinPrayed.
+export function createTempleMoradinAltarEncounter() {
+  return new Encounter('temple_moradin_altar', 'Altar of Moradin', "The all-father's altar hums with the old fire.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The temple is silent except for the slow drip of meltwater somewhere far above. Mithril threads laid into the floor mark the eight tenets of Moradin in spiraling rings around the altar, every line pristine."),
+        new EncounterText('"This place was sealed when the dragon came," Thorb says quietly, hand brushing one of the runes. "Moradin\'s old fire is still here. He hasn\'t forgotten us."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'The altar glows faintly. Will you pray to Moradin?',
+      choices: [
+        new EncounterChoice('Pray and donate (200 GP)', 'You kneel before the altar and place a heavy purse of dwarven gold on the rim. The runes flare gold; Moradin answers with a fragment of remembered craft.', 'pray_temple_moradin', 200, { returnToChoices: true }),
+        new EncounterChoice('Leave the temple alone', '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
 // Heart of the Volcano — temple_deep_chamber. The party stands on a
 // ledge above the lava and may sacrifice one piece of gear into the
 // magma (permanently banished). Mirrors PY
@@ -4797,6 +4855,7 @@ export const ENCOUNTER_REGISTRY = {
   outpost_kraken_report: createOutpostKrakenReportEncounter,
   post_dragon_staircase: createPostDragonStaircaseDialogEncounter,
   mithril_remedies: createMithrilRemediesEncounter,
+  mithril_remedies_revisit: createMithrilRemediesRevisitEncounter,
   watchtower_check: createWatchtowerCheckEncounter,
   supply_pile: createSupplyPileEncounter,
   outpost_tent: createOutpostTentEncounter,
@@ -4857,6 +4916,8 @@ export const ENCOUNTER_REGISTRY = {
   cathedral_arrival: createCathedralArrivalEncounter,
   cathedral_shrine: createCathedralShrineEncounter,
   cathedral_shrine_revisit: createCathedralShrineRevisitEncounter,
+  temple_moradin_altar: createTempleMoradinAltarEncounter,
+  temple_moradin_altar_revisit: createTempleMoradinAltarRevisitEncounter,
   obsidian_oracle: createObsidianOracleEncounter,
   obsidian_plaza_arrival: createObsidianPlazaArrivalEncounter,
   obsidian_streets_arrival: createObsidianStreetsArrivalEncounter,

@@ -534,12 +534,22 @@ export function createTharnagMap() {
     { id: 'siege_gauntlet_2', name: 'Siege Gauntlet 2', description: 'The second siege line.', encounterId: 'siege_gauntlet_2', connections: ['siege_gauntlet_1', 'siege_gauntlet_3'], position: [440, 700], mapArea: 'tharnag', isLocked: true, unlocks: ['siege_gauntlet_3'], hiddenName: 'Siege Line' },
     { id: 'siege_gauntlet_3', name: 'Siege Gauntlet 3', description: 'The third siege line.', encounterId: 'siege_gauntlet_3', connections: ['siege_gauntlet_2', 'siege_gauntlet_dialog', 'north_pass'], position: [450, 570], mapArea: 'tharnag', isLocked: true, unlocks: ['siege_gauntlet_dialog'], hiddenName: 'Siege Line' },
     { id: 'siege_gauntlet_dialog', name: 'Siege Gauntlet Dialog', description: 'Beyond the siege lines.', encounterId: 'siege_gauntlet_dialog', connections: ['siege_gauntlet_3', 'tharnag_side_door'], position: [640, 580], mapArea: 'tharnag', isLocked: true, unlocks: ['tharnag_side_door'], hiddenName: '???' },
-    { id: 'tharnag_side_door', name: 'Tharnag Side Door', description: 'A side entrance to Tharnag.', encounterId: 'tharnag_side_door', connections: ['siege_gauntlet_dialog'], position: [790, 450], mapArea: 'tharnag', isLocked: true, canRevisit: true, hiddenName: '???' },
-    // Main Door — sits west of the Side Door. Eventual gateway up
-    // to the Stairs of the Infinite side-quest line (post-dragon,
-    // WIP / debug-only for now). Reached by cross-map from the
-    // Grand Hall Main Entrance node.
-    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['tharnag_side_door'], position: [560, 340], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.' },
+    { id: 'tharnag_side_door', name: 'Tharnag Side Door', description: 'A side entrance to Tharnag.', encounterId: 'tharnag_side_door', connections: ['siege_gauntlet_dialog', 'tharnag_main_door'], position: [790, 450], mapArea: 'tharnag', isLocked: true, canRevisit: true, hiddenName: '???' },
+    // Main Door — sits west of the Side Door. Cross-map back into
+    // Tharnag's Grand Hall Main Entrance. Bidirectional path to the
+    // Side Door once the Main Door unlocks (post-Mithril dialog), so
+    // the two cliff-face entries are a proper loop. Post-dragon
+    // mithril side quest chain branches off via the Mountain Path.
+    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['tharnag_side_door', 'mountain_path'], position: [540, 410], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.' },
+    // Post-dragon Stairs of the Infinite chain — unlocked once
+    // mithrilRemediesVisited fires (the dialog tells the party to
+    // climb the stairs after Olbrim). All three nodes start locked
+    // and chain unlock via the standard `unlocks` field. The third
+    // node (climbing_stairs) will cross-map to the upper-mountain
+    // map once that art lands; for now it just sits as a placeholder.
+    { id: 'mountain_path', name: 'Mountain Path', description: 'A narrow switchback path climbs the cliff face toward an old stairway carved into the rock.', encounterId: '', connections: ['tharnag_main_door', 'bottom_stairs'], position: [360, 450], mapArea: 'tharnag', canRevisit: true, isLocked: true, unlocks: ['bottom_stairs'], hiddenName: '???', hiddenDescription: 'A mountain path winds up the cliff.' },
+    { id: 'bottom_stairs', name: 'Bottom of the Infinite Stairs', description: 'The mountain path ends at the foot of a colossal stairway. The dwarves call it the Stairs of the Infinite.', encounterId: '', connections: ['mountain_path', 'climbing_stairs'], position: [280, 360], mapArea: 'tharnag', canRevisit: true, isLocked: true, unlocks: ['climbing_stairs'], hiddenName: '???', hiddenDescription: 'A colossal stairway climbs the mountain.' },
+    { id: 'climbing_stairs', name: 'Climbing the Stairs', description: 'You set foot on the Stairs of the Infinite. The climb begins.', encounterId: '', connections: ['bottom_stairs'], position: [420, 200], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'The stairway disappears into the mist.' },
     // North Pass — unlocked after the throne audience. Clicking it
     // hops to the Obsidian Wastes map (wastes_entry). Mirrors PY
     // map.py:1088-1099 + game.py:2322-2341.
@@ -1303,7 +1313,7 @@ export function createTharnagInteriorMap() {
     // Tharnag exterior at the new Main Door node west of the
     // Side Door (eventual gateway to the Stairs of the Infinite
     // side-quest line).
-    { id: 'grand_hall_main_entrance', name: 'Main Entrance', description: 'The grand front doors of Tharnag — the path out to the mountain road.', encounterId: '', connections: ['grand_hall_lower_stairs'], position: [580, 880], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors leads out of the city.' },
+    { id: 'grand_hall_main_entrance', name: 'Main Entrance', description: 'The grand front doors of Tharnag — the path out to the mountain road.', encounterId: '', connections: ['grand_hall_lower_stairs'], position: [420, 970], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors leads out of the city.' },
     { id: 'grand_hall_mid_stairs', name: 'Middle Stairs', description: 'The stairs continue upward past towering pillars.', encounterId: '', connections: ['grand_hall_lower_stairs', 'grand_hall_upper_stairs'], position: [690, 520], mapArea: 'grand_hall', canRevisit: true },
     { id: 'grand_hall_upper_stairs', name: 'Upper Stairs', description: 'The top of the grand stairway. A massive archway leads deeper into Tharnag.', encounterId: '', connections: ['grand_hall_mid_stairs', 'staircase_entry'], position: [740, 420], mapArea: 'grand_hall', canRevisit: true, passthroughTo: 'staircase_entry' },
     // Grand Staircase area — Thorb's homecoming dialog at the entry,
@@ -1318,8 +1328,13 @@ export function createTharnagInteriorMap() {
     // the bounce when fromNodeId already matches the paired node, so
     // the encounter-complete re-fire doesn't ping-pong forever.
     { id: 'staircase_landing', name: 'To the Throne Room', description: 'A wide landing where the passage turns toward the Throne Room.', encounterId: '', connections: ['staircase_top', 'throne_room_entry'], position: [400, 580], mapArea: 'grand_staircase', canRevisit: true, passthroughTo: 'throne_room_entry' },
-    { id: 'throne_room_entry', name: 'Throne Room', description: 'Massive iron doors stand open, revealing the Throne Room of Tharnag.', encounterId: 'throne_room_arrival', connections: ['staircase_landing', 'throne'], position: [500, 970], mapArea: 'throne_room', canRevisit: false, passthroughTo: 'staircase_landing' },
+    { id: 'throne_room_entry', name: 'Throne Room', description: 'Massive iron doors stand open, revealing the Throne Room of Tharnag.', encounterId: 'throne_room_arrival', connections: ['staircase_landing', 'throne', 'temple_moradin_door'], position: [500, 970], mapArea: 'throne_room', canRevisit: false, passthroughTo: 'staircase_landing' },
     { id: 'throne', name: 'The Throne', description: "The ancient stone throne of Tharnag's king sits upon a raised dais.", encounterId: 'throne_audience', connections: ['throne_room_entry'], position: [510, 820], mapArea: 'throne_room', canRevisit: false },
+    // Temple of Moradin doorway — post-dragon side quest. Locked
+    // until dragonSlain (hydrate unlocks + _stateRevealed). Walking
+    // here cross-maps to the Temple of Moradin via the teleport pair
+    // in arriveAtNode (temple_moradin_door ↔ temple_moradin_entry).
+    { id: 'temple_moradin_door', name: 'To the Temple of Moradin', description: 'A side passage opens toward an old temple devoted to Moradin.', encounterId: '', connections: ['throne_room_entry'], position: [110, 920], mapArea: 'throne_room', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A passage leads off the throne room.', passthroughTo: 'temple_moradin_entry' },
     // Personal Quarters lane — locked until the throne audience
     // completes (handled by the throne_audience completion hook in
     // main.js, which flips quarters_hallway.isLocked off and reveals
@@ -1336,9 +1351,14 @@ export function createTharnagInteriorMap() {
     // which then connects city-style to the tavern + smithy.
     // Mirrors PY map.py:1375-1418.
     { id: 'artisan_hall_entry', name: 'To the Artisan Hall', description: "A wide passage leads to the Artisan Hall where Tharnag's craftsmen work.", encounterId: '', connections: ['grand_hall_lower_stairs', 'artisan_hall'], position: [350, 500], mapArea: 'grand_hall', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A passage leads somewhere deeper into Tharnag.', passthroughTo: 'artisan_hall' },
-    { id: 'artisan_hall', name: 'Artisan Hall', description: "The great workshop of Tharnag's master craftsmen.", encounterId: '', connections: ['artisan_hall_entry', 'dwarven_tavern', 'dwarven_smithy'], position: [770, 870], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', passthroughTo: 'artisan_hall_entry' },
+    { id: 'artisan_hall', name: 'Artisan Hall', description: "The great workshop of Tharnag's master craftsmen.", encounterId: '', connections: ['artisan_hall_entry', 'dwarven_tavern', 'dwarven_smithy', 'mithril_remedies'], position: [770, 870], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', passthroughTo: 'artisan_hall_entry' },
     { id: 'dwarven_tavern', name: 'Dwarven Tavern', description: 'A warm tavern filled with the smell of ale and roasting meat.', encounterId: 'dwarven_tavern', connections: ['artisan_hall', 'dwarven_smithy'], position: [400, 500], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???' },
     { id: 'dwarven_smithy', name: 'Dwarven Smithy', description: 'A massive forge where master smiths craft the finest dwarven arms and armor.', encounterId: 'dwarven_smithy', connections: ['artisan_hall', 'dwarven_tavern'], position: [400, 800], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???' },
+    // Mithril Remedies — Olbrim Goldbalm's apothecary in Tharnag's
+    // Artisan Hall. Locked until dragonSlain (hydrate flips it open +
+    // stamps _stateRevealed so it shows from any artisan_hall node).
+    // Post-visit it's a shop (mithril_remedies_revisit + auto-open).
+    { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.' },
   ];
 
   for (const data of nodes) {
@@ -1627,14 +1647,7 @@ export function createArtisanDistrictMap() {
   const nodes = [
     { id: 'artisan_entry', name: 'District Entry', description: 'The tunnel opens into a vast cavern of workshops and forges, lit by rivers of lava below.', encounterId: 'artisan_district_entry', connections: ['artisan_lower_shops'], position: [1340, 760], mapArea: 'artisan_district', canRevisit: false, unlocks: ['artisan_lower_shops'], hiddenName: '???', hiddenDescription: 'A wide cavern opens here.' },
     { id: 'artisan_lower_shops', name: 'Lower Workshops', description: 'Rows of abandoned workshops line the lower level. Anvils, quenching troughs, and scattered tools.', encounterId: '', connections: ['artisan_entry', 'artisan_upper_shops'], position: [1020, 640], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_upper_shops'], hiddenName: '???', hiddenDescription: 'A lower row of abandoned workshops.' },
-    { id: 'artisan_upper_shops', name: 'Upper Workshops', description: 'The upper level workshops. Finer work was done here — jewelry, enchanting, runecraft.', encounterId: '', connections: ['artisan_lower_shops', 'artisan_walkway', 'artisan_mithril_remedies'], position: [330, 410], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_walkway'], hiddenName: '???', hiddenDescription: 'An upper row of finer workshops.' },
-    // Mithril Remedies — post-dragon apothecary shop. WIP / debug-only
-    // for now; encounter is a dialog about the missing owner Olbrim
-    // Goldbalm. `wip: true` hides the node + its edges from
-    // non-debug renders (the existing wip + debugMode gate in
-    // drawMap handles it). When the side quest is ready, drop the
-    // wip flag and gate on the dragon-slain check instead.
-    { id: 'artisan_mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary — a small workshop tucked between two larger forges.", encounterId: 'mithril_remedies', connections: ['artisan_upper_shops'], position: [120, 320], mapArea: 'artisan_district', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the forges.' },
+    { id: 'artisan_upper_shops', name: 'Upper Workshops', description: 'The upper level workshops. Finer work was done here — jewelry, enchanting, runecraft.', encounterId: '', connections: ['artisan_lower_shops', 'artisan_walkway'], position: [330, 410], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_walkway'], hiddenName: '???', hiddenDescription: 'An upper row of finer workshops.' },
     { id: 'artisan_walkway', name: 'Iron Walkway', description: 'A narrow iron walkway spans the gap between workshop platforms. Lava glows far below.', encounterId: '', connections: ['artisan_upper_shops', 'artisan_overlook'], position: [620, 380], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_overlook'], hiddenName: '???', hiddenDescription: 'A narrow iron walkway.' },
     { id: 'artisan_overlook', name: 'Forge Overlook', description: 'A raised platform overlooking the entire district. The central forge sits cold and dark below.', encounterId: '', connections: ['artisan_walkway', 'artisan_exit', 'artisan_workshop'], position: [890, 260], mapArea: 'artisan_district', isLocked: true, canRevisit: true, unlocks: ['artisan_exit', 'artisan_workshop'], hiddenName: '???', hiddenDescription: 'A raised platform above the district.' },
     { id: 'artisan_workshop', name: 'Intact Workshop', description: 'A sealed workshop door, untouched by kobold hands. Dwarven runes glow faintly around the frame.', encounterId: 'artisan_workshop', connections: ['artisan_overlook'], position: [580, 200], mapArea: 'artisan_district', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'A sealed dwarven workshop.' },
@@ -1645,5 +1658,25 @@ export function createArtisanDistrictMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'artisan_entry';
+  return map;
+}
+
+// Temple of Moradin — post-dragon side quest side-map reached from the
+// Tharnag throne room. Two nodes: the entry (teleport pair back to the
+// throne) and the altar (prayer encounter — 200 gp for a Tier 2 class
+// ability, mirrors the Cathedral Shrine pattern in PY).
+export function createTempleOfMoradinMap() {
+  const map = new GameMap('temple_of_moradin', 'Temple of Moradin');
+  map.mapImages = {
+    temple_of_moradin: 'Maps/TempleofMoradin.jpg',
+  };
+  const nodes = [
+    { id: 'temple_moradin_entry', name: 'To the Throne Room', description: 'The doorway leads back to the throne room of Tharnag.', encounterId: '', connections: ['temple_moradin_altar'], position: [1230, 760], mapArea: 'temple_of_moradin', canRevisit: true, passthroughTo: 'temple_moradin_door' },
+    { id: 'temple_moradin_altar', name: 'Altar of Moradin', description: 'A massive stone altar carved with the runes of Moradin, the dwarven all-father.', encounterId: 'temple_moradin_altar', connections: ['temple_moradin_entry'], position: [720, 550], mapArea: 'temple_of_moradin', canRevisit: true },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'temple_moradin_entry';
   return map;
 }

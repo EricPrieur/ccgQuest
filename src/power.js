@@ -163,16 +163,15 @@ export function createFeralForm() {
     id: 'feral_form',
     name: 'Feral Form',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Gain 1 Heroism or 1 Shield. Draw.',
+    effectDescription: 'Deal Bleed or Gain Shield. Heal 1 Negative Effect, Draw.',
     rechargeCost: 1,
-    // Uses keyword names ("Heroism", "Shield", "Draw") so the inline icon
-    // tokenizer substitutes them with their icons on the small power card.
-    // Forced to 2 lines so the small card's frame doesn't overlap the text.
-    shortDesc: 'R1->Heroism\nor Shield, Draw',
+    // Inline keywords ("Bleed", "Shield", "Draw") get auto-iconified by
+    // the small-power tokenizer.
+    shortDesc: 'R1->Bleed or Shield\nHeal-, Draw',
     choices: [createCatFormToken(), createBearFormToken()],
-    // Cat Form (Heroism) and Bear Form (Shield) each gain +1 per
-    // offset point. Codex rewrites both numbers in the text.
-    gamePlusOffset: { gain_heroism: 1, gain_shield: 1 },
+    // Feline pick scales Bleed +1/offset, Bear pick scales Shield
+    // +1/offset. Heal Negative Effect + Draw stay flat.
+    gamePlusOffset: { apply_bleed: 1, gain_shield: 1 },
   });
 }
 

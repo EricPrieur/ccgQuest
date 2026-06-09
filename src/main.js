@@ -58,7 +58,7 @@ import {
   createGreaterCleave, createCharge, createRecklessStrike, createShieldBash,
   createMultiShot, createAimedShotCard, createGoodberries, createGoodberry, createTamedRat,
   createFireToken, createIceToken, createCatFormToken, createBearFormToken,
-  createWrath, createRegrowth, createFeralSwipe,
+  createWrath, createRegrowth, createFeralSwipe, createFeralSwipeLegacy,
   createSpearThrow, createIcyBreath, createShieldBashEnemy, createZhostsBuckler,
   createWhiteClaw, createGreatclub, createQuarterstaff, createAle,
   createTravelRations, createBandages, createTravelersClothing, createSack,
@@ -110,8 +110,9 @@ import {
   createFanOfBlades, createBackstab, createPoisonedDagger, createSprint,
   createThunderclap, createShieldWall, createBattleShout, createExecute,
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
+  createNaturesHealing,
 } from './cards.js';
-import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -427,8 +428,10 @@ const EFFECT_DESC_PATTERNS = {
   // ("Choose N") is handled by the custom branch in
   // applyGamePlusOffsetInPlace which rewrites both numbers together.
   revivify: [/up\s+to\s+(\d+)/i, /(\d+)\s+dead/i],
-  // Druid Feral Form picker tokens — "Gain N Heroism" / "Gain N Shield".
-  cat_form:  [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  // Druid Feral Form picker tokens — Feline pick deals Bleed, Bear
+  // pick gains Shield. Both add Heal 1 Negative Effect + Draw, but
+  // those bits don't carry a number that scales.
+  cat_form:  [/Deal\s+(\d+)\s+Bleed/i, /(\d+)\s+Bleed/i],
   bear_form: [/Gain\s+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
   // Specter Ectoplasm — "Heal N. Discard. If you healed, Draw."
   heal_draw_if_healed: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
@@ -1664,6 +1667,7 @@ let shrineAbilityMode = false; // True when the ability-select screen is trigger
 let prayStatueMode = false;    // True when the ability-select screen is triggered by the Old God Statue
 let churchAbilityMode = false; // True when triggered by the Qualibaf Chapel (pray_church)
 let cathedralPrayMode = false; // True when the ability-select screen is triggered by the Cathedral Shrine
+let templeMoradinPrayMode = false; // True when the ability-select screen is triggered by the Temple of Moradin altar
 let levelUpAbilityMode = false; // True when ABILITY_SELECT is the level-up reward (Calm Grove etc.)
 
 // Map / Encounter state
@@ -1830,6 +1834,10 @@ let staircaseTopDragonDialogSeen = false;
 // Stairs of the Infinite — the next side quest beat). Persisted via
 // save.js below; reset in resetStoryFlags / startNewGame.
 let mithrilRemediesVisited = false;
+// Post-dragon Temple of Moradin one-time prayer — pay 200 gp once for
+// a Tier 2 class ability. Flag is persisted and gates the prayer
+// choice as exhausted on revisits.
+let templeMoradinPrayed = false;
 // Tracks whether the barkeep has already handed the post-dragon
 // freebie Whitescale Brew to the player. One-shot: the LOOT phase
 // only fires on the first post-dragon visit; subsequent visits
@@ -2002,6 +2010,9 @@ const EXTRA_VISION_MAPS = new Set();
 // scenes like the Summit Ridge plateau.
 const NO_FOG_MAPS = new Set([
   'volcano_summit_ridge',
+  // Temple of Moradin — small 2-node side map; the player sees the
+  // whole layout (entry + altar) at a glance.
+  'temple_of_moradin',
 ]);
 
 const HIDE_UNTIL_VISIT_MAPS = new Set([
@@ -2984,6 +2995,10 @@ const CARD_REGISTRY = {
   aimed_shot_card: createAimedShotCard,
   goodberries: createGoodberries, tamed_rat: createTamedRat,
   wrath: createWrath, regrowth: createRegrowth, feral_swipe: createFeralSwipe,
+  // Legacy shield-then-damage Feral Swipe; kept registered so older
+  // saves that already had the card still deserialize cleanly. No
+  // level-up / shrine pick ever offers it.
+  feral_swipe_legacy: createFeralSwipeLegacy,
   // Tier 2 abilities (Tharnag arrival level-up + Cathedral Shrine)
   consecration: createConsecration, hammer_of_wrath: createHammerOfWrath,
   holy_sword: createHolySword, revivify: createRevivify,
@@ -3008,6 +3023,7 @@ const CARD_REGISTRY = {
   battle_shout: createBattleShout, execute: createExecute,
   summon_treants: createSummonTreants, feral_bite: createFeralBite,
   starfire: createStarfire, healing_touch: createHealingTouch,
+  natures_healing: createNaturesHealing,
   // Loot / Story
   sharp_rock: createSharpRock, lucky_pebble: createLuckyPebble, bone_wand: createBoneWand,
   baby_frog_swarm: createBabyFrogSwarm, frog_bite: createFrogBite, acid_spit: createAcidSpit,
@@ -3595,6 +3611,7 @@ async function loadAssets() {
     loadImage('map_map_room', `${BASE}assets/Maps/DwarvenCityMapRoom.jpg`),
     loadImage('map_deeper_tunnels', `${BASE}assets/Maps/DwarvenCityDeeperTunnels.jpg`),
     loadImage('map_artisan_district', `${BASE}assets/Maps/DwarvenCityArtisanDistrict.jpg`),
+    loadImage('map_temple_of_moradin', `${BASE}assets/Maps/TempleofMoradin.jpg`),
     loadImage('map_tunnel_to_bridge', `${BASE}assets/Maps/DwarvenCityTunnelToBridge.jpg`),
     // UI assets
     loadImage('backpack_bg', `${BASE}assets/Backgrounds/BackpackBackground.jpg`),
@@ -5086,6 +5103,16 @@ const MUSIC_TAGS = {
   // Varimatras phase-3 dragon fight. Crossfaded in when combat
   // starts against the varimatras enemyId.
   'Music/music_the_trailer_01': ['boss: Varimatras (Phase 3 — frost dragon)'],
+  // Howling mountain-wind loop — layered ambience for any fight
+  // whose boss carries the blizzard passive (Overseer Gnikan Phase
+  // 2 + Varimatras Phase 3), and also the area bed for the
+  // mountain_path / plains overworld.
+  'Music/ambience_mountain_wind_01': ['area: mountain_path', 'area: plains', 'combat ambience: Overseer Gnikan (Phase 2)', 'combat ambience: Varimatras (Phase 3)'],
+  // Post-dragon hero theme — crossfaded in when Varimatras dies and
+  // the party teleports back to the throne room for the Part 1
+  // ending dialog. Carries through the title-card swap, the final
+  // rest in the personal quarters, and the slow-scrolling end credits.
+  'Music/music_alter_hero_01': ['ending: Tharnag throne room (post-dragon)', 'ending: Part 1 end credits'],
 };
 
 // Per-node overrides — win over MUSIC_FOR_AREA for specific nodes
@@ -5402,6 +5429,7 @@ function resetStoryFlags() {
   dragonSlain = false;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
+  templeMoradinPrayed = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -5488,6 +5516,7 @@ function startNewGame() {
   dragonSlain = false;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
+  templeMoradinPrayed = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -6282,6 +6311,27 @@ function handleAbilitySelectClick(x, y) {
         state = currentEncounter ? GameState.ENCOUNTER_CHOICE : GameState.MAP;
         return;
       }
+      if (templeMoradinPrayMode) {
+        // Temple of Moradin: same Tier 2 grant flow as the Cathedral
+        // Shrine, but gated on the 200 gp donation paid at choice
+        // time. Returns to the encounter's choice screen so the
+        // player can still browse / leave.
+        const ability = abilityChoices[i];
+        player.deck.addCard(ability);
+        const copy = ability.copy();
+        if (player.deck.hand.length < MAX_HAND_SIZE) {
+          player.deck.hand.push(copy);
+          addLog(`Moradin grants: ${ability.name}!`, Colors.GOLD);
+        } else {
+          player.deck.drawPile.unshift(copy);
+          addLog(`Moradin grants: ${ability.name} (top of deck — hand is full).`, Colors.GOLD);
+        }
+        templeMoradinPrayMode = false;
+        abilityChoices = [];
+        encounterChoiceResult = null;
+        state = currentEncounter ? GameState.ENCOUNTER_CHOICE : GameState.MAP;
+        return;
+      }
       if (prayStatueMode) {
         // Old God Statue: add the chosen ability + queue the Old
         // God's Blessing buff for the next combat. Mirrors PY.
@@ -6408,10 +6458,17 @@ function drawAbilitySelect() {
   ctx.fillStyle = Colors.GOLD;
   ctx.font = 'bold 36px serif';
   ctx.textAlign = 'center';
+  // Generic "in-game ability grant" — Cathedral Shrine + Temple of
+  // Moradin both pay-then-pick flows that aren't a level-up and
+  // aren't character creation. They share one title + subtitle so
+  // any future in-game grant (paid shrines, quest rewards, etc.)
+  // can flip the same flag and reuse the layout.
+  const inGameAbilityGrant = cathedralPrayMode || templeMoradinPrayMode;
   let titleText;
   if (shrineAbilityMode) titleText = "The Shrine's Blessing";
   else if (prayStatueMode) titleText = "The Old God's Gift";
   else if (churchAbilityMode) titleText = 'The Church Blessing';
+  else if (inGameAbilityGrant) titleText = 'Choose your new ability';
   else if (pendingChapter2Transition || levelUpAbilityMode) titleText = 'Level Up! Choose a New Ability';
   else titleText = 'Choose Your Starting Ability';
   ctx.fillText(titleText, SCREEN_WIDTH / 2, 80);
@@ -6431,6 +6488,10 @@ function drawAbilitySelect() {
     ctx.fillStyle = '#e0e0e0';
     ctx.font = '20px sans-serif';
     ctx.fillText(`${selectedClass} — The priest's blessing grants you a new ability.`, SCREEN_WIDTH / 2, 120);
+  } else if (inGameAbilityGrant) {
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = '20px sans-serif';
+    ctx.fillText(`${selectedClass} — Pick one ability card to add to your deck`, SCREEN_WIDTH / 2, 120);
   } else if (!pendingChapter2Transition && !levelUpAbilityMode) {
     ctx.fillStyle = '#e0e0e0';
     ctx.font = '20px sans-serif';
@@ -6476,9 +6537,9 @@ function drawAbilitySelect() {
   // Initial character-creation pick: surface the class's static power
   // and starting hand size below the ability cards so the player can
   // weigh the full starting kit (ability + power + hand) before
-  // committing. Level-up / shrine / church flows skip this — the
-  // class is already locked in.
-  if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !pendingChapter2Transition && !levelUpAbilityMode) {
+  // committing. Level-up / shrine / church / in-game grant flows skip
+  // this — the class is already locked in.
+  if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !inGameAbilityGrant && !pendingChapter2Transition && !levelUpAbilityMode) {
     // 3 / 2 pyramid: 3 ability cards on top, 2 supporting panels
     // (Class Power + Starting Hand Size) side-by-side below. The two
     // bottom items center under the abilities so the shape reads as
@@ -6530,9 +6591,10 @@ function drawAbilitySelect() {
   }
 
   // Back button (matches character select style) — only on the initial
-  // character-creation pick. Shrine + every level-up flow are mandatory:
-  // the player must commit to one ability before continuing.
-  if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !pendingChapter2Transition && !levelUpAbilityMode) {
+  // character-creation pick. Shrine + every level-up flow + paid
+  // in-game ability grants (Cathedral Shrine, Temple of Moradin) are
+  // mandatory: the player must commit to one ability before continuing.
+  if (!shrineAbilityMode && !prayStatueMode && !churchAbilityMode && !inGameAbilityGrant && !pendingChapter2Transition && !levelUpAbilityMode) {
     drawStyledButton(40, SCREEN_HEIGHT - 100, 200, 70, '< Back', () => { state = GameState.CHARACTER_SELECT; }, 'large', 22);
   }
 
@@ -7797,6 +7859,37 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     currentMap.currentNodeId = 'bridge_tunnel_entry';
     arriveAtNode('bridge_tunnel_entry', 'artisan_exit');
     autosaveNow();
+    return;
+  }
+  // Throne Room ↔ Temple of Moradin teleport pair (post-dragon side
+  // quest). The temple_moradin_door node on the Tharnag interior map
+  // cross-maps to the temple's entry; the temple's entry cross-maps
+  // back. Unconditional — once the door is unlocked by dragonSlain
+  // hydrate, the player can shuttle freely between the two.
+  if (nodeId === 'temple_moradin_door'
+      && currentMap.id === 'tharnag_interior'
+      && fromNodeId !== 'temple_moradin_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('temple_of_moradin', createTempleOfMoradinMap);
+    const tme = currentMap.getNode('temple_moradin_entry');
+    if (tme) { tme.isLocked = false; tme.hiddenName = ''; tme.hiddenDescription = ''; }
+    const tma = currentMap.getNode('temple_moradin_altar');
+    if (tma) { tma.isLocked = false; tma.hiddenName = ''; tma.hiddenDescription = ''; }
+    visitedNodes = new Set(['temple_moradin_entry']);
+    currentMap.currentNodeId = 'temple_moradin_entry';
+    arriveAtNode('temple_moradin_entry', 'temple_moradin_door');
+    return;
+  }
+  if (nodeId === 'temple_moradin_entry'
+      && currentMap.id === 'temple_of_moradin'
+      && fromNodeId !== 'temple_moradin_door') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+    const tmd = currentMap.getNode('temple_moradin_door');
+    if (tmd) { tmd.isLocked = false; tmd.hiddenName = ''; tmd.hiddenDescription = ''; }
+    visitedNodes = new Set(['temple_moradin_door']);
+    currentMap.currentNodeId = 'temple_moradin_door';
+    arriveAtNode('temple_moradin_door', 'temple_moradin_entry');
     return;
   }
   // Tunnel Entrance → District Exit (direct pair-teleport). After
@@ -9690,17 +9783,26 @@ function hydrateMapFromGlobalState(map) {
       }
     }
   }
-  // Post-dragon side quest: Mithril Remedies opens once the dragon
-  // is dead (the player is now hero-level, the apothecary's
-  // missing-note dialog becomes available). After the dialog fires
-  // the player flips mithrilRemediesVisited which unlocks the
-  // Tharnag Main Door teleport pair below.
-  if (map.id === 'artisan_district' && dragonSlain) {
-    const n = map.getNode('artisan_mithril_remedies');
-    if (n) {
-      n.isLocked = false;
-      n.hiddenName = '';
-      n.hiddenDescription = '';
+  // Post-dragon side quest unlocks on the Tharnag interior map.
+  // Temple of Moradin doorway in the throne_room area + Mithril
+  // Remedies in the artisan_hall area both open the moment the
+  // dragon is dead. _stateRevealed forces visibility regardless of
+  // the player's current node (otherwise the indoor-area render gate
+  // hides them until the player stands on a direct neighbor).
+  if (map.id === 'tharnag_interior' && dragonSlain) {
+    const tmd = map.getNode('temple_moradin_door');
+    if (tmd) {
+      tmd.isLocked = false;
+      tmd.hiddenName = '';
+      tmd.hiddenDescription = '';
+      tmd._stateRevealed = true;
+    }
+    const mr = map.getNode('mithril_remedies');
+    if (mr) {
+      mr.isLocked = false;
+      mr.hiddenName = '';
+      mr.hiddenDescription = '';
+      mr._stateRevealed = true;
     }
   }
   // Tharnag interior — Grand Hall Main Entrance unlocks once the
@@ -9719,11 +9821,18 @@ function hydrateMapFromGlobalState(map) {
   // the same trigger. The pair lights up together so the player can
   // walk through immediately.
   if (map.id === 'tharnag' && mithrilRemediesVisited) {
-    const n = map.getNode('tharnag_main_door');
-    if (n) {
-      n.isLocked = false;
-      n.hiddenName = '';
-      n.hiddenDescription = '';
+    // Tharnag Main Door + the Stairs of the Infinite side quest
+    // chain (Mountain Path → Bottom of the Infinite Stairs →
+    // Climbing the Stairs) all open at the same moment so the
+    // player can walk straight from the throne room out and start
+    // climbing.
+    for (const id of ['tharnag_main_door', 'mountain_path', 'bottom_stairs', 'climbing_stairs']) {
+      const n = map.getNode(id);
+      if (n) {
+        n.isLocked = false;
+        n.hiddenName = '';
+        n.hiddenDescription = '';
+      }
     }
   }
   // Obsidian Wastes: if the rest stop is complete, ensure the
@@ -10556,6 +10665,25 @@ function startNodeEncounter(nodeId) {
       ? ENCOUNTER_REGISTRY.cathedral_shrine_revisit
       : ENCOUNTER_REGISTRY.cathedral_shrine;
     currentEncounter = fac ? fac() : factory();
+  } else if (node.encounterId === 'mithril_remedies') {
+    // Mithril Remedies — first visit fires the full "Olbrim is gone"
+    // dialog (latches mithrilRemediesVisited and unlocks the Tharnag
+    // main door + Stairs of the Infinite chain). Subsequent visits
+    // run a short revisit dialog reminding the player Olbrim still
+    // hasn't returned — the shop will open when the side quest
+    // wraps up (future content).
+    const fac = mithrilRemediesVisited
+      ? ENCOUNTER_REGISTRY.mithril_remedies_revisit
+      : ENCOUNTER_REGISTRY.mithril_remedies;
+    currentEncounter = fac ? fac() : factory();
+  } else if (node.encounterId === 'temple_moradin_altar') {
+    // Temple of Moradin altar — once the player has prayed, skip the
+    // intro TEXT and drop straight to the choice prompt. The prayer
+    // choice is gated separately so it can't be re-claimed.
+    const fac = templeMoradinPrayed
+      ? ENCOUNTER_REGISTRY.temple_moradin_altar_revisit
+      : ENCOUNTER_REGISTRY.temple_moradin_altar;
+    currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'tomb_sarcophagus') {
     // Sarcophagus — pre-defeat plays the full TEXT→fight→rest flow.
     // Post-defeat (ancestorSpiritsDefeated) plays the rest-only
@@ -10656,6 +10784,17 @@ function startNodeEncounter(nodeId) {
     _lastMusicNodeId = null;
   }
 
+  // Backfill exhaustedChoices from the global one-shot prayer latches
+  // (cathedralPrayed, templeMoradinPrayed) so a save written before the
+  // exhaustedChoices system existed — or any session where the click
+  // handler didn't get a chance to stamp — still grays out the prayer.
+  if (!Array.isArray(node.exhaustedChoices)) node.exhaustedChoices = [];
+  if (cathedralPrayed && !node.exhaustedChoices.includes('pray_cathedral')) {
+    node.exhaustedChoices.push('pray_cathedral');
+  }
+  if (templeMoradinPrayed && !node.exhaustedChoices.includes('pray_temple_moradin')) {
+    node.exhaustedChoices.push('pray_temple_moradin');
+  }
   // Re-apply persisted exhaustedChoices to the freshly-built encounter so
   // already-used options stay grayed out across visits / saves.
   const persisted = Array.isArray(node.exhaustedChoices) ? node.exhaustedChoices : [];
@@ -10744,6 +10883,16 @@ function advanceEncounterPhase() {
     if (completedEncounterId === 'dwarven_tavern' && dragonSlain && !dwarvenTavernFreebieGiven) {
       dwarvenTavernFreebieGiven = true;
     }
+    // Mithril Remedies first-visit latch — fires BEFORE the shop
+    // auto-open below so the main-door teleport pair lights up the
+    // moment the side quest is hooked, even though the shop UI is
+    // about to take over the screen.
+    if (completedEncounterId === 'mithril_remedies' && !mithrilRemediesVisited) {
+      mithrilRemediesVisited = true;
+      for (const cached of Object.values(_mapCache)) {
+        hydrateMapFromGlobalState(cached);
+      }
+    }
     // Qualibaf shop encounters: dialog → straight into the 3-column shop UI.
     // The shop's Leave Shop button drops the player back to the map.
     const QUALIBAF_SHOP_IDS = new Set([
@@ -10762,23 +10911,6 @@ function advanceEncounterPhase() {
     // openShop reads `antiquityShopCleared`'s sister buyback inventory
     // through SHOP_INVENTORIES.antiquity_shop, which is built dynamically
     // in resolveShopEntry-style code below.
-    // Mithril Remedies — Olbrim Goldbalm dialog. Latches the visit
-    // flag so the Tharnag Main Door teleport pair (Grand Hall Main
-    // Entrance + exterior Tharnag Main Door) unlocks on the next
-    // map render. Also re-runs the unlock pass on the current map
-    // so the freshly-unlocked node renders immediately without
-    // forcing a map transition.
-    if (completedEncounterId === 'mithril_remedies') {
-      mithrilRemediesVisited = true;
-      // Re-hydrate every cached map so the Tharnag Main Door
-      // teleport pair (Grand Hall Main Entrance + exterior Main
-      // Door) lights up immediately, even on maps the player
-      // already cached pre-Mithril. Without this the player would
-      // have to leave + come back for the unlock to register.
-      for (const cached of Object.values(_mapCache)) {
-        hydrateMapFromGlobalState(cached);
-      }
-    }
     if (completedEncounterId === 'antiquity_shop' || completedEncounterId === 'antiquity_shop_cleared') {
       antiquityShopCleared = true;
       // Mimic-fight boss music (music_tension_01) was crossfaded in for
@@ -12629,8 +12761,12 @@ function drawMap() {
     const isAccessible = accessible.includes(id);
     // node.isDone covers nodes from prior visits on this map that the
     // current visitedNodes set doesn't carry (cross-map teleports reset
-    // visitedNodes to just the entry node).
-    const isVisible = visitedNodes.has(id) || node.isDone || isAccessible || isCurrent;
+    // visitedNodes to just the entry node). _stateRevealed is the
+    // hydrate-time "state flag forced this node visible" marker
+    // (Mithril Remedies on dragonSlain) — without it a node unlocked
+    // by a global state flag still gets hidden by the indoor-area
+    // visibility gate when the player isn't standing on its neighbor.
+    const isVisible = visitedNodes.has(id) || node.isDone || isAccessible || isCurrent || node._stateRevealed;
     // In fog areas (non-outdoor), only show visible nodes
     const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
     if (!outdoorAreas.has(currentArea) && !isVisible && !noFog) continue;
@@ -13409,7 +13545,7 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
@@ -13878,6 +14014,23 @@ function handleEncounterChoiceClick(x, y) {
         showToast(`Not enough gold! Need ${r.choice.effectValue || 50} GP.`);
         return;
       }
+      // Gate: pray_temple_moradin requires 200 GP. Same toast-and-bail
+      // pattern as the Chapel. Belt-and-suspenders: also gate on the
+      // templeMoradinPrayed latch so a save with a missing
+      // exhaustedChoices stamp still can't re-buy.
+      if (r.choice.effectType === 'pray_temple_moradin' && templeMoradinPrayed) {
+        showToast("Moradin's gift has already been granted.");
+        return;
+      }
+      if (r.choice.effectType === 'pray_temple_moradin' && gold < (r.choice.effectValue || 200)) {
+        showToast(`Not enough gold! Need ${r.choice.effectValue || 200} GP.`);
+        return;
+      }
+      // Same one-shot latch for the Cathedral Shrine prayer.
+      if (r.choice.effectType === 'pray_cathedral' && cathedralPrayed) {
+        showToast("The shrine has already answered your prayer.");
+        return;
+      }
       // Obsidian Forge — pick a weapon to forge. Collect every eligible
       // weapon from the player's deck (all piles) + backpack, then drop
       // into the picker. Mirrors PY game.py:6249-6272. If no eligible
@@ -13938,6 +14091,39 @@ function handleEncounterChoiceClick(x, y) {
             if (!phase.choices) continue;
             for (const c of phase.choices) {
               if (c.effectType === 'pray_cathedral') c.exhausted = true;
+            }
+          }
+        }
+        previousState = state;
+        state = GameState.ABILITY_SELECT;
+        return;
+      }
+      // Temple of Moradin altar — 200 gp donation buys a Tier 2 class
+      // ability pick. Mirrors the Cathedral Shrine flow: deduct gold,
+      // stamp the prayer as exhausted (in-memory + on-node), open the
+      // ABILITY_SELECT screen. The encounter's "Leave" choice stays
+      // available so the player can browse the altar then bow out.
+      if (r.choice.effectType === 'pray_temple_moradin') {
+        const cost = r.choice.effectValue || 200;
+        if (gold >= cost) {
+          gold -= cost;
+          addLog(`Donated ${cost} gold at the Temple of Moradin`, Colors.GOLD);
+        }
+        templeMoradinPrayed = true;
+        templeMoradinPrayMode = true;
+        abilityChoices = getOffsetAbilityChoices(selectedClass, 3, 2);
+        const node = currentMap && currentMap.getCurrentNode && currentMap.getCurrentNode();
+        if (node) {
+          if (!Array.isArray(node.exhaustedChoices)) node.exhaustedChoices = [];
+          if (!node.exhaustedChoices.includes('pray_temple_moradin')) {
+            node.exhaustedChoices.push('pray_temple_moradin');
+          }
+        }
+        if (currentEncounter && currentEncounter.phases) {
+          for (const phase of currentEncounter.phases) {
+            if (!phase.choices) continue;
+            for (const c of phase.choices) {
+              if (c.effectType === 'pray_temple_moradin') c.exhausted = true;
             }
           }
         }
@@ -21946,6 +22132,7 @@ function resolveBarrageShot(target) {
     applyPoisonRider(enemy, barragePoisonStacks, taken);
     if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
     if (taken > 0) applyElementalWeaponRider(enemy, taken);
+    if (taken > 0) applyBleedWeaponRider(enemy, taken);
     onPlayerHitEnemy(taken);
   } else if (target.isAlive) {
     const actual = target.takeDamage(dmg);
@@ -21955,6 +22142,7 @@ function resolveBarrageShot(target) {
     applyPoisonRider(target, barragePoisonStacks, actual);
     if (actual > 0) applyIgniteRider(target, barrageIgnite);
     if (actual > 0) applyElementalWeaponRider(target, actual);
+    if (actual > 0) applyBleedWeaponRider(target, actual);
     if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); }
   }
   countAndRemoveDeadCreatures();
@@ -22456,6 +22644,31 @@ function resolveEffect(eff, caster, target) {
   }
   switch (eff.effectType) {
     case 'damage': {
+      // `noAttackCount` means this damage effect is NOT a player swing
+      // (currently only Raena's Called arrow). For these the rider
+      // should skip every buff consumption — Ice, Heroism, Rage, Eye /
+      // Obsidian / Poison / Ignite, Mark, Elemental / Bleed weapon
+      // riders, on-hit reactions. Just land flat eff.value damage so
+      // the arrow doesn't drain player resources or fire combo riders.
+      if (eff.noAttackCount) {
+        let raw = Math.max(0, eff.value);
+        if (target instanceof Creature) {
+          const shieldBefore = target.shield || 0;
+          const actual = target.takeDamage(raw);
+          if (actual > 0) spawnDamageOnTarget(target, actual);
+          playAttackHitSfx(raw, actual);
+          const absSuffix = creatureAbsorbSuffix(raw, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+          if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+        } else {
+          const [blocked, taken] = target.takeDamageWithDefense(raw);
+          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          playAttackHitSfx(raw, taken);
+          const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
+        }
+        break;
+      }
       const heroism = caster.heroism;
       // heroism_double rider (Aimed Shot card): heroism counts an extra
       // `value` times on this attack. value=1 means doubled (1 base + 1
@@ -23055,11 +23268,18 @@ function resolveEffect(eff, caster, target) {
       // damageLanded probe; the helper internally skips on 0.
       if (caster === player) {
         applyElementalWeaponRider(target, mdBaseDmg);
+        applyBleedWeaponRider(target, mdBaseDmg);
         for (const c of (enemy.creatures || [])) {
           if (c === target) continue;
-          if (c.isAlive) applyElementalWeaponRider(c, mdBaseDmg);
+          if (c.isAlive) {
+            applyElementalWeaponRider(c, mdBaseDmg);
+            applyBleedWeaponRider(c, mdBaseDmg);
+          }
         }
-        if (target !== enemy && enemy.isAlive) applyElementalWeaponRider(enemy, mdBaseDmg);
+        if (target !== enemy && enemy.isAlive) {
+          applyElementalWeaponRider(enemy, mdBaseDmg);
+          applyBleedWeaponRider(enemy, mdBaseDmg);
+        }
       }
       // 2 Targets: Draw rider (Dwarven Throwing Axe). Reads the
       // active card's currentEffects for a `draw_on_two_targets`
@@ -23163,11 +23383,18 @@ function resolveEffect(eff, caster, target) {
       // primary damage value, secondaries use the secondary value.
       if (caster === player) {
         applyElementalWeaponRider(target, primary);
+        applyBleedWeaponRider(target, primary);
         for (const c of (enemy.creatures || [])) {
           if (c === target) continue;
-          if (c.isAlive) applyElementalWeaponRider(c, secondary);
+          if (c.isAlive) {
+            applyElementalWeaponRider(c, secondary);
+            applyBleedWeaponRider(c, secondary);
+          }
         }
-        if (target !== enemy && enemy.isAlive) applyElementalWeaponRider(enemy, secondary);
+        if (target !== enemy && enemy.isAlive) {
+          applyElementalWeaponRider(enemy, secondary);
+          applyBleedWeaponRider(enemy, secondary);
+        }
       }
       attacksThisTurn++;
       break;
@@ -23208,6 +23435,47 @@ function resolveEffect(eff, caster, target) {
         spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
       }
       if (targets.length > 0) addLog(`  +${eff.value} Bleed on ${targets.length} target${targets.length > 1 ? 's' : ''}`, Colors.RED);
+      break;
+    }
+    case 'feral_swipe_bleed': {
+      // Druid Feral Swipe (bleed variant) — apply Bleed to up to
+      // maxTargets alive enemies (enemy character first, then creatures
+      // in order), then grant the player Shield per bleeding enemy on
+      // the field. Both numbers scale +1/offset: bleed amount via the
+      // bumped eff.value, shield-per-bleeding via playerTierOffset.
+      // Counts targets bled by THIS cast plus any that were already
+      // bleeding from prior plays. Counts as an attack so the Feral
+      // Wrath bleed_weapon rider layers extra Bleed on every hit.
+      const cap = eff.maxTargets || 3;
+      const off = (caster === player) ? (playerTierOffset || 0) : 0;
+      const shieldPerBleeding = 1 + off;
+      const targets = [];
+      if (enemy && enemy.isAlive && !enemy._invulnerable) targets.push(enemy);
+      for (const c of (enemy.creatures || [])) {
+        if (targets.length >= cap) break;
+        if (c.isAlive && !c._invulnerable) targets.push(c);
+      }
+      const trimmed = targets.slice(0, cap);
+      for (const t of trimmed) {
+        if (t instanceof Creature) t.bleedStacks = (t.bleedStacks || 0) + eff.value;
+        else t.applyStatus('BLEED', eff.value);
+        spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
+        addLog(`  +${eff.value} Bleed on ${t.name}`, Colors.RED);
+        if (caster === player) applyBleedWeaponRider(t, eff.value);
+      }
+      // Count bleeding enemies on the field — character + creatures.
+      let bleedingCount = 0;
+      if (enemy && enemy.isAlive && (enemy.getStatus && (enemy.getStatus('BLEED') || 0) > 0)) bleedingCount++;
+      for (const c of (enemy.creatures || [])) {
+        if (c.isAlive && (c.bleedStacks || 0) > 0) bleedingCount++;
+      }
+      if (bleedingCount > 0 && caster === player) {
+        const shieldGain = bleedingCount * shieldPerBleeding;
+        player.shield = (player.shield || 0) + shieldGain;
+        addLog(`  +${shieldGain} Shield (${bleedingCount} bleeding × ${shieldPerBleeding})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(player, shieldGain, 'Shield', Colors.ALLY_BLUE);
+      }
+      if (caster === player) attacksThisTurn++;
       break;
     }
     case 'apply_poison_vs_armor': {
@@ -23427,6 +23695,34 @@ function resolveEffect(eff, caster, target) {
       // cancelled the opposing element (the element is still imbuing
       // the chosen pool, audibly).
       playSound(isFire ? 'fireball_whoosh_01' : 'cold_whoosh_01', 0.7);
+      break;
+    }
+    case 'grant_bleed_weapon': {
+      // Feral Wrath (Druid Tier 2). Imbue future attacks with Bleed;
+      // the buff stacks per cast. Mirrors the Elemental Weapon
+      // structure but with no cancelation step — Bleed and the
+      // fire/ice stacks coexist on the same swing.
+      const amount = eff.value || 1;
+      const existing = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
+      if (existing) {
+        existing.effectValue = (existing.effectValue || 0) + amount;
+        existing.stacks = (existing.stacks || 1) + amount;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'bleed_weapon',
+          name: 'Feral Wrath',
+          description: 'Your attacks also deal Bleed.',
+          imageId: 'feral_bite',
+          effectType: 'bleed_weapon',
+          effectValue: amount,
+          trigger: 'on_attack',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+        const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
+        buff.stacks = amount;
+      }
+      addLog(`  ${caster.name}: attacks add ${amount} Bleed`, Colors.RED);
       break;
     }
     case 'grant_unpreventable_buff': {
@@ -24337,6 +24633,22 @@ function resolveEffect(eff, caster, target) {
         }
       }
       break;
+    case 'heal_all_negative_effects': {
+      // Nature's Healing — strip every negative status off the player
+      // (Bleed, Poison, Fire, Ice, Shock) and grant 1 Heroism per
+      // TOTAL stack cleansed (3 Bleed + 2 Poison → +5 Heroism). The
+      // subsequent `heal` effect on the same card runs after this and
+      // restores HP separately.
+      if (caster === player) {
+        const stacks = healAllNegativeEffectsOnPlayer();
+        if (stacks > 0) {
+          player.heroism += stacks;
+          addLog(`  +${stacks} Heroism (${stacks} stack${stacks > 1 ? 's' : ''} cleansed)`, Colors.GOLD);
+          spawnTokenOnTarget(player, stacks, 'Heroism', Colors.GOLD);
+        }
+      }
+      break;
+    }
     case 'heal_draw_if_healed': {
       // Specter Ectoplasm: heal N (player-only), then draw 1 ONLY if the
       // heal actually restored damage (i.e. discardPile shrunk). Poison /
@@ -25649,11 +25961,18 @@ function resolveEffect(eff, caster, target) {
           if (c.isAlive && !c._invulnerable) applyIgniteRider(c, aoeIgnite);
         }
       }
-      // Elemental Weapon rider on the AoE — every legal target gets it.
+      // Elemental Weapon + Feral Wrath riders on the AoE — every legal
+      // target gets both.
       if (caster === player) {
-        if (enemy && enemy.isAlive && !enemy._invulnerable) applyElementalWeaponRider(enemy, aoeBaseDmg);
+        if (enemy && enemy.isAlive && !enemy._invulnerable) {
+          applyElementalWeaponRider(enemy, aoeBaseDmg);
+          applyBleedWeaponRider(enemy, aoeBaseDmg);
+        }
         for (const c of (enemy.creatures || [])) {
-          if (c.isAlive && !c._invulnerable) applyElementalWeaponRider(c, aoeBaseDmg);
+          if (c.isAlive && !c._invulnerable) {
+            applyElementalWeaponRider(c, aoeBaseDmg);
+            applyBleedWeaponRider(c, aoeBaseDmg);
+          }
         }
       }
       countAndRemoveDeadCreatures();
@@ -26503,31 +26822,60 @@ function handlePowerChoiceClick(x, y) {
   }
 }
 
+// All status effects the "heal a negative effect" family removes —
+// Bleed and Poison are the obvious ones (HP-side damage), Fire and
+// Ice and Shock also hurt the player (tick damage, lower damage,
+// damage swing) so they're cleansed too. Mark is excluded — it's
+// fired by allies attacking, not by the player carrying it.
+const PLAYER_NEGATIVE_STATUSES = [
+  { key: 'BLEED',  label: 'Bleed',  color: '#c83c3c' },
+  { key: 'POISON', label: 'Poison', color: '#3cc83c' },
+  { key: 'FIRE',   label: 'Fire',   color: '#dc8c28' },
+  { key: 'ICE',    label: 'Ice',    color: '#78c8ff' },
+  { key: 'SHOCK',  label: 'Shock',  color: '#ffe650' },
+];
+
+// Heal one stack of any negative effect on the player, in priority
+// order (Bleed → Poison → Fire → Ice → Shock). Returns true if a
+// stack was removed, false if there was nothing to heal.
+function healOneNegativeEffectOnPlayer() {
+  if (!player) return false;
+  for (const s of PLAYER_NEGATIVE_STATUSES) {
+    if ((player.getStatus(s.key) || 0) > 0) {
+      player.removeStatus(s.key, 1);
+      addLog(`  -1 ${s.label} (healed)`, s.color);
+      return true;
+    }
+  }
+  addLog(`  No negative effect to heal`, Colors.GRAY);
+  return false;
+}
+
+// Heal EVERY stack of EVERY negative effect on the player. Returns
+// the TOTAL stack count removed (3 Bleed + 2 Poison = 5) so callers
+// like Nature's Healing can convert it into Heroism etc.
+function healAllNegativeEffectsOnPlayer() {
+  if (!player) return 0;
+  let totalStacks = 0;
+  for (const s of PLAYER_NEGATIVE_STATUSES) {
+    const stacks = player.getStatus(s.key) || 0;
+    if (stacks > 0) {
+      player.removeStatus(s.key, stacks);
+      addLog(`  -${stacks} ${s.label} (healed)`, s.color);
+      totalStacks += stacks;
+    }
+  }
+  if (totalStacks === 0) addLog(`  No negative effect to heal`, Colors.GRAY);
+  return totalStacks;
+}
+
 function onPowerChoicePicked(choice) {
   const power = selectedPower;
   // Self-targeting choices resolve immediately
-  if (choice.id === 'cat_form_token') {
-    powerChoices = [];
-    powerChoiceRects = [];
-    power.use();
-    playSound('cat_form_attack', 0.7);
-    addLog(`Used power: ${power.name}`, Colors.GREEN, power);
-    addLog(`  Mode: Feline Form`);
-    // +1 Heroism per player tier offset (1 base → 2 → 3…). Mirrors
-    // the cat_form_token gamePlusOffset rule so the runtime grant
-    // matches the picker preview.
-    const cfGain = 1 + (playerTierOffset || 0);
-    player.heroism += cfGain;
-    addLog(`  +${cfGain} Heroism (H:${player.heroism})`, Colors.GOLD);
-    spawnTokenOnTarget(player, cfGain, 'Heroism', Colors.GOLD);
-    const drawn = player.deck.draw(1, MAX_HAND_SIZE);
-    for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
-    selectedPower = null;
-    state = GameState.COMBAT;
-    hideToast();
-    checkCombatEnd();
-    return;
-  }
+  // Cat Form (Feline) — falls through to enterPowerTargeting so the
+  // player picks the bleed target like any other single-enemy attack.
+  // No heal-negative-effect on Cat Form — that's Bear Form's perk.
+  // Bear Form remains self-targeting (auto-resolves below).
   if (choice.id === 'bear_form_token') {
     powerChoices = [];
     powerChoiceRects = [];
@@ -26540,6 +26888,7 @@ function onPowerChoicePicked(choice) {
     player.shield += bfGain;
     addLog(`  +${bfGain} Shield (S:${player.shield})`, Colors.ALLY_BLUE);
     spawnTokenOnTarget(player, bfGain, 'Shield', Colors.ALLY_BLUE);
+    healOneNegativeEffectOnPlayer();
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     selectedPower = null;
@@ -26627,6 +26976,11 @@ function powerTargetCount(power) {
   // style). At base offset the picker still asks for 1 target, so
   // the UX matches the original single-target behavior.
   if (power.id === 'quick_strike') return 1 + (playerTierOffset || 0);
+  // Feral Form's Cat (Feline) pick is a single-target bleed — Bear
+  // resolves self-target in onPowerChoicePicked and never enters
+  // POWER_TARGETING. Returning 1 makes the cursor arrow draw and
+  // the picker accept exactly one enemy.
+  if (power.id === 'feral_form') return 1;
   return 0;
 }
 
@@ -26754,13 +27108,15 @@ function enterFeralSwipeTargeting(handIndex) {
 // === Multi-target attacks (Wooden Axe etc.) ===
 function cardIsMultiTarget(card) {
   return (card.currentEffects || []).some(e =>
-    e.effectType === 'multi_damage' || e.effectType === 'split_damage'
+    e.effectType === 'multi_damage' || e.effectType === 'split_damage' ||
+    e.effectType === 'feral_swipe_bleed'
   );
 }
 
 function getMultiTargetMax(card) {
   for (const e of card.currentEffects || []) {
-    if (e.effectType === 'multi_damage' || e.effectType === 'split_damage') {
+    if (e.effectType === 'multi_damage' || e.effectType === 'split_damage' ||
+        e.effectType === 'feral_swipe_bleed') {
       return e.maxTargets || 2;
     }
   }
@@ -27093,6 +27449,7 @@ function resolveMultiTargeting() {
         applyPoisonRider(enemy, fsPoisonStacks, taken);
         if (taken > 0) applyIgniteRider(enemy, fsIgnite);
         if (taken > 0) applyElementalWeaponRider(enemy, taken);
+        if (taken > 0) applyBleedWeaponRider(enemy, taken);
         onPlayerHitEnemy(taken);
         dmgLanded = taken;
       } else {
@@ -27104,6 +27461,7 @@ function resolveMultiTargeting() {
         applyPoisonRider(t, fsPoisonStacks, actual);
         if (actual > 0) applyIgniteRider(t, fsIgnite);
         if (actual > 0) applyElementalWeaponRider(t, actual);
+        if (actual > 0) applyBleedWeaponRider(t, actual);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         dmgLanded = actual;
       }
@@ -27120,6 +27478,56 @@ function resolveMultiTargeting() {
     // per-card (axe → axe sounds etc.).
     _activePlayCard = card;
     const SFX_STAGGER_MS = 120;
+    // Feral Swipe (bleed variant) — picker resolution. Apply Bleed
+    // to each picked target (per-tier-offset stacks via eff.value),
+    // fire the Feral Wrath rider on top, then count bleeding enemies
+    // on the field and grant Shield per bleeding × (1 + offset).
+    // Branches out early — the multi_damage loop below doesn't run.
+    const fsbEff = (card.currentEffects || []).find(e => e.effectType === 'feral_swipe_bleed');
+    if (fsbEff) {
+      const off = playerTierOffset || 0;
+      const shieldPerBleeding = 1 + off;
+      const bleedAmount = fsbEff.value;
+      for (let i = 0; i < targets.length; i++) {
+        const t = targets[i];
+        const delay = i * SFX_STAGGER_MS;
+        if (t instanceof Creature) t.bleedStacks = (t.bleedStacks || 0) + bleedAmount;
+        else if (t === enemy) t.applyStatus('BLEED', bleedAmount);
+        spawnTokenOnTarget(t, bleedAmount, 'Bleed', Colors.RED);
+        addLog(`  +${bleedAmount} Bleed on ${t.name}`, Colors.RED);
+        // Feral Wrath rider — every pick is an attack.
+        applyBleedWeaponRider(t, bleedAmount);
+        const sfx = getWeaponSfxKeys(card);
+        if (sfx && sfx.flesh) playAttackHitSfx(bleedAmount, bleedAmount, delay);
+      }
+      // Count bleeding enemies and grant shield per × scale.
+      let bleedingCount = 0;
+      if (enemy && enemy.isAlive && (enemy.getStatus && (enemy.getStatus('BLEED') || 0) > 0)) bleedingCount++;
+      for (const c of (enemy.creatures || [])) {
+        if (c.isAlive && (c.bleedStacks || 0) > 0) bleedingCount++;
+      }
+      if (bleedingCount > 0) {
+        const shieldGain = bleedingCount * shieldPerBleeding;
+        player.shield = (player.shield || 0) + shieldGain;
+        addLog(`  +${shieldGain} Shield (${bleedingCount} bleeding × ${shieldPerBleeding})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(player, shieldGain, 'Shield', Colors.ALLY_BLUE);
+      }
+      attacksThisTurn++;
+      _activePlayCard = null;
+      countAndRemoveDeadCreatures();
+      player.deck.placeByCost(card);
+      for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+      pendingRechargeNames = [];
+      cardRechargedCards = [];
+      multiTargets = [];
+      multiMaxTargets = 0;
+      multiCardIndex = -1;
+      selectedCardIndex = -1;
+      state = GameState.COMBAT;
+      hideToast();
+      checkCombatEnd();
+      return;
+    }
     // Split-damage cards encode primary*10 + secondary in eff.value
     // (Steel Greataxe = 43 → first picked target takes 4, rest take 3).
     // multi_damage just deals flat eff.value to every picked target.
@@ -27200,6 +27608,7 @@ function resolveMultiTargeting() {
       }
       if (dmg > 0) applyIgniteRider(t, multiIgnite);
       if (dmg > 0) applyElementalWeaponRider(t, dmg);
+      if (dmg > 0) applyBleedWeaponRider(t, dmg);
     }
     // 2 Targets: Draw rider (Dwarven Throwing Axe). The resolveEffect
     // multi_damage case has the same check, but this picker flow runs
@@ -27440,6 +27849,12 @@ function resolveAllyAttack(ally, target) {
   // Bleed tick fires AFTER all strikes land so the attack is never
   // robbed by a fatal bleed. Multi-attack is one swing = one tick.
   tickBleedOnAttack(ally, ally.name);
+  // Sweep again so an ally that bled out from its OWN attack tick
+  // (Tamed Rat / Dire Rat carrying a few Bleed stacks) leaves the
+  // field immediately. Without this second pass the dead ally's 0-HP
+  // bar lingers visually until the next click-driven swing tries to
+  // clear it.
+  countAndRemoveDeadCreatures();
 
   // Forage rider — Tamed Rat / Dire Rat have a 50% chance to drop
   // a fresh token card into the player's hand on each swing. Helper
@@ -27723,6 +28138,7 @@ function resolvePowerTargeting() {
       // rider on its target (snapshot consumed once above the loop).
       if (dmg > 0) applyIgniteRider(t, cleaveIgnite);
       if (dmg > 0) applyElementalWeaponRider(t, dmg);
+      if (dmg > 0) applyBleedWeaponRider(t, dmg);
     }
     countAndRemoveDeadCreatures();
     // Conditional draw rider: only fires when both swings landed on
@@ -27782,6 +28198,30 @@ function resolvePowerTargeting() {
       if (landed) playSound('fire_apply', 0.7);
       if (landed) firePowerSurgeIfArmed(player, 'fire');
     }
+    chosenPowerEffect = null;
+  } else if (power.id === 'feral_form' && chosenPowerEffect === 'cat_form_token') {
+    // Cat Form — apply Bleed to the picked target. Counts as an
+    // attack (attacksThisTurn++ + bleed weapon rider). +1 Bleed
+    // per offset. NO heal-negative-effect on this branch — that's
+    // Bear Form's perk. Red arrow fires from the player card to the
+    // target so the swing reads visually like a normal claw strike.
+    const t = targets[0];
+    const cfBleed = 1 + (playerTierOffset || 0);
+    playSound('cat_form_attack', 0.7);
+    addLog(`  Mode: Feline Form`);
+    const src = getCharacterCardRect(true);
+    spawnPlayerArrowBatch(src, [t], 450, Colors.RED);
+    if (t === enemy) {
+      t.applyStatus('BLEED', cfBleed);
+    } else if (t instanceof Creature) {
+      t.bleedStacks = (t.bleedStacks || 0) + cfBleed;
+    }
+    spawnTokenOnTarget(t, cfBleed, 'Bleed', Colors.RED);
+    addLog(`  +${cfBleed} Bleed on ${t.name}`, Colors.RED);
+    applyBleedWeaponRider(t, cfBleed);
+    attacksThisTurn++;
+    const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     chosenPowerEffect = null;
   } else if (power.id === 'quick_strike') {
     // Quick Strike — base 1 swing, +1 per player offset; each pick
@@ -27949,6 +28389,7 @@ function executePower(power) {
         applyPoisonRider(enemy, qsPoisonStacks, taken);
         if (taken > 0) applyIgniteRider(enemy, qsIgnite);
         if (taken > 0) applyElementalWeaponRider(enemy, taken);
+        if (taken > 0) applyBleedWeaponRider(enemy, taken);
       }
       const drawn = player.deck.draw(1, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
@@ -28620,6 +29061,18 @@ function tickBleedOnAttack(attacker, label) {
   if (!attacker.isAlive && attacker instanceof Creature) {
     spawnDeathAnimation(attacker);
     addLog(`  ${attacker.name} bleeds out!`, Colors.GOLD, null, null, attacker);
+    // Remove the bled-out ally / enemy creature IMMEDIATELY so the
+    // next swing in any sequence (player ally clicks, enemy creature
+    // queue, etc.) finds an empty slot instead of a 0-HP zombie.
+    // Without this in-line sweep the bled-out body lingers on the
+    // field until the outer flow does its own countAndRemoveDeadCreatures
+    // pass — which for a click-driven series of ally attacks doesn't
+    // happen until the LAST swing in the chain.
+    if (player && Array.isArray(player.creatures) && player.creatures.includes(attacker)) {
+      player.removeDeadCreatures();
+    } else if (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(attacker)) {
+      enemy.removeDeadCreatures();
+    }
   }
 }
 
@@ -32728,6 +33181,10 @@ function consumeIgniteOnAttack(caster, target, attempted) {
   // swing carries the imbued element. Multi-target / barrage / picker
   // flows call applyElementalWeaponRider directly per target.
   applyElementalWeaponRider(target, attempted);
+  // Feral Wrath rider — same single-target site as elemental weapon
+  // and ignite. Multi-target flows call applyBleedWeaponRider
+  // directly per target.
+  applyBleedWeaponRider(target, attempted);
 }
 
 // === Consumable "next attack" buff snapshots ===
@@ -32833,6 +33290,31 @@ function applyElementalWeaponRider(target, damageLanded) {
   // disconnected from the swing.
   if (fireFired) setTimeout(() => playSound('fireball_whoosh_01', 0.7), 180);
   if (iceFired) setTimeout(() => playSound('cold_whoosh_01', 0.7), 180);
+}
+
+// Feral Wrath rider — companion to applyElementalWeaponRider. Reads
+// any `bleed_weapon` combat buff on the player and stamps that many
+// Bleed stacks on the target. Same gates as the elemental rider:
+// player-only, requires damage landed > 0. Wired into every player
+// damage site that already carries the elemental rider — single-
+// target via consumeIgniteOnAttack's chain, multi_damage / split /
+// damage_all / picker / barrage / Quick Strike / Cleave.
+function applyBleedWeaponRider(target, damageLanded) {
+  if (!player || !target || damageLanded <= 0) return;
+  const buffs = player.combatBuffs || [];
+  let stacks = 0;
+  for (const b of buffs) {
+    if (!b || !b.effectValue) continue;
+    if (b.effectType === 'bleed_weapon') stacks += b.effectValue;
+  }
+  if (stacks <= 0) return;
+  if (target instanceof Creature) {
+    target.bleedStacks = (target.bleedStacks || 0) + stacks;
+  } else if (typeof target.applyStatus === 'function') {
+    target.applyStatus('BLEED', stacks);
+  }
+  spawnTokenOnTarget(target, stacks, 'Bleed', Colors.RED);
+  addLog(`  Feral Wrath: +${stacks} Bleed on ${target.name}`, Colors.RED);
 }
 
 // Legacy wrappers — snapshot + apply once. Single-target damage
@@ -37060,7 +37542,7 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
@@ -37708,6 +38190,7 @@ function restoreFromSave(data) {
   dragonSlain = !!data.dragonSlain;
   staircaseTopDragonDialogSeen = !!data.staircaseTopDragonDialogSeen;
   mithrilRemediesVisited = !!data.mithrilRemediesVisited;
+  templeMoradinPrayed = !!data.templeMoradinPrayed;
   dwarvenTavernFreebieGiven = !!data.dwarvenTavernFreebieGiven;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
@@ -42273,7 +42756,15 @@ function drawCodexSoundGrid(L) {
 
   const rowH = 28;
   const totalH = entries.length * rowH;
-  const maxScroll = Math.max(0, totalH - L.gridH);
+  // Reserve the column header (26 px) at the top and the footer-
+  // count line (~20 px) at the bottom — without those, maxScroll
+  // bottoms out one or two rows shy of the last entry (Varimatras's
+  // music_the_trailer_01 was unreachable from the scrollbar even
+  // though it was listed). Footer overlaps the clip rect so we have
+  // to lift the visible area, not the clip.
+  const HEADER_H = 26;
+  const FOOTER_H = 20;
+  const maxScroll = Math.max(0, totalH + HEADER_H + FOOTER_H - L.gridH);
   if (codexScrollY > maxScroll) codexScrollY = maxScroll;
 
   ctx.save();
@@ -42396,7 +42887,7 @@ function drawCodexSoundGrid(L) {
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 
-  drawCodexScrollbar(L, totalH + 26);
+  drawCodexScrollbar(L, totalH + HEADER_H + FOOTER_H);
 
   // Footer count
   ctx.fillStyle = Colors.GRAY;
