@@ -6109,8 +6109,8 @@ export function createSahuaginEye() {
   return new Card({
     id: 'sahuagin_eye',
     name: 'Sahuagin Eye',
-    description: 'Bleeding: +1 Damage.\nStays in hand.',
-    shortDesc: 'Bleeding: +1 Dmg\nStays',
+    description: 'Next Attack: Bleeding: +1 Damage.\nStays in hand.',
+    shortDesc: 'Next Atk:\nBleeding +1\nStays',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.FREE,
@@ -6119,7 +6119,9 @@ export function createSahuaginEye() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'epic',
-    // +1 bleeding damage per offset (passive while in hand).
+    // +1 bleeding damage per offset on the one-shot rider. The card
+    // is FREE + stays-in-hand, so the player re-plays it every turn
+    // to refresh the buff.
     gamePlusOffset: { grant_bleeding_damage_buff: 1 },
   });
 }

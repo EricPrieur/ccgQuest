@@ -16150,7 +16150,7 @@ function continueCombatPhase2() {
   enemyActionTimer = 0;
   enemyTurnNumber = 0;
   enemyDamageAccumulator = 0;
-  _pendingFatalBleed = 0;
+  _deferredEnemyDeath = false;
   awaitingEnemyDamage = false;
 
   // Build the new enemy's draw pile + opening hand. masterDeck is
@@ -23656,9 +23656,11 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'grant_bleeding_damage_buff': {
-      // Sahuagin Eye — persistent passive while the relic is in hand:
-      // +N damage to any attack against a Bleeding target, for this
-      // combat. Buff is read (not consumed) at the damage site.
+      // Sahuagin Eye — one-shot "Next Attack: Bleeding: +N Damage."
+      // The buff is consumed on the next swing (regardless of whether
+      // the target was bleeding), mirroring the original Sahuagin Eye
+      // damaged-target rider. Card is FREE + stays-in-hand, so the
+      // player re-plays it every turn to refresh the rider.
       const existing = (caster.combatBuffs || []).find(b => b.id === 'sahuagin_eye_bleeding');
       if (existing) {
         existing.effectValue = (existing.effectValue || 0) + eff.value;
@@ -23667,7 +23669,7 @@ function resolveEffect(eff, caster, target) {
         caster.addCombatBuff(new CombatBuff({
           id: 'sahuagin_eye_bleeding',
           name: 'Sahuagin Eye',
-          description: `Bleeding: +${eff.value} Damage.`,
+          description: `Next Attack: Bleeding: +${eff.value} Damage.`,
           imageId: 'buff_sahuagin_eye',
           effectType: 'bleeding_bonus_damage_buff',
           effectValue: eff.value,
@@ -23676,10 +23678,9 @@ function resolveEffect(eff, caster, target) {
           turnsRemaining: 0,
         }));
         const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
-        buff._persistent = true;
         buff.stacks = eff.value;
       }
-      addLog(`  ${caster.name}: +${eff.value} damage vs Bleeding targets`, Colors.RED);
+      addLog(`  ${caster.name}: next attack +${eff.value} if target is Bleeding`, Colors.RED);
       break;
     }
     case 'grant_eye_buff': {
@@ -29190,27 +29191,23 @@ function tickBleedOnAttack(attacker, label) {
   }
   if (stacks <= 0) return;
   if (typeof attacker.takeDamageFromDeck === 'function') {
-    // Main monster (enemy character): if the bleed tick would empty
-    // the deck — i.e. kill the enemy — defer the lethal damage so the
-    // queued attack still lands on the player. The enemy turn ends
-    // early (no more actions fire), the defensive window runs, and
-    // the bleed is drained in completePlayerTurnTransition.
-    if (attacker === enemy) {
-      const cardsLeft = typeof attacker.totalCards === 'number' ? attacker.totalCards : 0;
-      if (stacks >= cardsLeft) {
-        _pendingFatalBleed = stacks;
-        addLog(`  ${label} bleeds out — but the blow lands first!`, Colors.RED);
-        spawnDamageOnTarget(attacker, stacks);
-        // Truncate the enemy action queue so finishEnemyTurn fires
-        // next, opening the defensive window without queuing any
-        // more attacks/powers from the dying monster.
-        if (Array.isArray(enemyActions)) {
-          enemyActions.length = enemyActionIndex;
-        }
-        return;
+    attacker.takeDamageFromDeck(stacks);
+    // Main monster (enemy character): if the bleed tick just killed
+    // the enemy AND there's queued damage to the player, mark the
+    // death deferred. checkCombatEnd reads this flag and skips
+    // firing victory while damage is still queued; the defensive
+    // window opens via finishEnemyTurn, the player takes the hit,
+    // then completePlayerTurnTransition re-runs checkCombatEnd to
+    // close the fight. Truncate the action queue so the dead monster
+    // doesn't keep swinging.
+    if (attacker === enemy && !attacker.isAlive && enemyDamageAccumulator > 0) {
+      _deferredEnemyDeath = true;
+      addLog(`  ${label} bleeds out — but the blow lands first!`, Colors.RED);
+      if (Array.isArray(enemyActions)) {
+        enemyActions.length = enemyActionIndex;
+        enemyActions.push({ type: 'end' });
       }
     }
-    attacker.takeDamageFromDeck(stacks);
   } else if (typeof attacker.takeUnpreventableDamage === 'function') {
     attacker.takeUnpreventableDamage(stacks);
   }
@@ -29547,11 +29544,12 @@ function processPlayerAllyAttacks() {
 
 // --- Enemy AI ---
 let enemyDamageAccumulator = 0; // total damage from enemy attacks this turn (cards + creatures)
-// Bleed damage parked on the enemy character when a mid-attack bleed
-// tick would kill them. Drained in completePlayerTurnTransition AFTER
-// the defensive window resolves so the queued attack still lands on
-// the player before the fight ends.
-let _pendingFatalBleed = 0;
+// Set true when a mid-attack tick (bleed etc.) kills the enemy
+// character while damage is queued in enemyDamageAccumulator.
+// checkCombatEnd reads this flag and skips firing victory until
+// completePlayerTurnTransition delivers the damage, so the player
+// still takes the hit before the fight ends.
+let _deferredEnemyDeath = false;
 // Last-attacker weapon SFX keys, stashed when an enemy queues damage to the
 // player. Read by startIncomingDamage so the auto-mitigated block thud
 // matches the swinging weapon (Large Boulder → boulder_blocked etc.).
@@ -32705,17 +32703,13 @@ function finishEnemyTurn() {
 function completePlayerTurnTransition() {
   awaitingEnemyDamage = false;
 
-  // Drain any deferred fatal bleed parked on the enemy from a
-  // mid-attack tick. The queued damage has now landed on the player
-  // via startIncomingDamage; finish the bleed-out and let
-  // checkCombatEnd close the fight.
-  if (_pendingFatalBleed > 0 && enemy) {
-    const stacks = _pendingFatalBleed;
-    _pendingFatalBleed = 0;
-    addLog(`  ${enemy.name} bleeds out! (${stacks})`, Colors.RED);
-    if (typeof enemy.takeDamageFromDeck === 'function') {
-      enemy.takeDamageFromDeck(stacks);
-    }
+  // Resolve a deferred enemy death (mid-attack tick that killed the
+  // monster while damage was still queued). The damage has now landed
+  // on the player via startIncomingDamage; clear the suppression flag
+  // and let checkCombatEnd close the fight.
+  if (_deferredEnemyDeath) {
+    _deferredEnemyDeath = false;
+    if (enemy) addLog(`  ${enemy.name} bleeds out!`, Colors.RED);
     if (checkCombatEnd()) return;
   }
 
@@ -33199,6 +33193,12 @@ function checkCombatEnd() {
   // Normal victory: enemy character is dead. Surviving minions don't matter
   // (matches py game's check_enemy_defeated). Skipped if the boss is invulnerable.
   if (!enemy._invulnerable && !enemy.isAlive) {
+    // Deferred-death guard: if a mid-attack tick (bleed etc.) killed
+    // the enemy while damage was still queued for the player, hold
+    // off on the victory until completePlayerTurnTransition has run
+    // the defensive window. The death is real (cards already gone)
+    // but the fight closes after the player takes the hit.
+    if (_deferredEnemyDeath) return false;
     // Overseer Gnikan phase-1 → phase-2 transition. Don't fire the
     // VICTORY screen / combatVictory teardown — that would wipe the
     // player's creatures, hand, deck shuffle, ice stacks, shield,
@@ -33475,16 +33475,18 @@ function applyEyeBonus(target, bonus) {
   addLog(`  Sahuagin Eye! +${bonus} damage on ${target.name}`, Colors.GOLD);
   return bonus;
 }
-// Sahuagin Eye — persistent "Bleeding: +N Damage" passive. Reads
-// the buff value without consuming; the buff dissolves at combat end
-// via combatsRemaining.
+// Sahuagin Eye — one-shot "Next Attack: Bleeding: +N Damage" rider.
+// Consumes the buff on read (mirrors snapshotEyeBuff). Caller checks
+// the target's Bleed status to decide whether to add the bonus; the
+// buff burns on next attack either way.
 function snapshotBleedingDamageBuff(caster) {
   if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
   let total = 0;
-  for (const buff of caster.combatBuffs) {
-    if (buff.effectType === 'bleeding_bonus_damage_buff') {
-      total += buff.effectValue || 0;
-    }
+  for (let i = caster.combatBuffs.length - 1; i >= 0; i--) {
+    const buff = caster.combatBuffs[i];
+    if (buff.effectType !== 'bleeding_bonus_damage_buff') continue;
+    if (!buff._persistent) caster.combatBuffs.splice(i, 1);
+    total += buff.effectValue || 0;
   }
   return total;
 }
@@ -40574,6 +40576,13 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // creature_attack (see _activeAttacker hook below).
     if (name === 'shark') {
       return { flesh: 'shark_chew', blocked: 'shark_chew', play: 'shark_splash' };
+    }
+    // Piranhas (Jar of Piranhas swarm) — quick splash on the swing and
+    // a smaller chew on the bite. Same shape as Shark; the swarm pass
+    // sample doubles for both ambient and hit so each piranha reads as
+    // a tiny flurry.
+    if (name === 'piranhas') {
+      return { flesh: 'piranha_swarm', blocked: 'piranha_swarm', play: 'shark_splash' };
     }
   }
   const c = card || _activePlayCard;
