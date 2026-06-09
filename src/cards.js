@@ -150,7 +150,7 @@ export function createRockMace() {
     name: 'Rock Mace',
     description: 'Recharge -> Deal 2 damage (+2 vs Armor or Shield).',
     shortDesc: 'R->2 Dmg\n(+2 vs Armor/Shield)',
-    subtype: 'martial',
+    subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
@@ -371,7 +371,7 @@ export function createDragonBoneBow() {
     id: 'dragon_bone_bow', name: 'Dragon Bone Bow',
     description: 'Recharge +1 -> Deal 4 Damage to up to 3 targets. Draw.',
     shortDesc: 'R+1->4 Dmg x3\nDraw',
-    subtype: 'ranged_2h',
+    subtype: 'ranged',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('recharge_extra', 1, TargetType.SELF),
@@ -1938,15 +1938,23 @@ export function createSprint() {
 }
 
 // --- Warrior Tier 2 ---
+// Mortal Strike (replaces Thunderclap as the Warrior T2 third option).
+// Single-target burst that stamps a fat Bleed chunk for the warrior to
+// keep working in subsequent turns. Card id stays `thunderclap` so
+// older saves keep deserializing; only the display name + art +
+// effects changed.
 export function createThunderclap() {
   return new Card({
-    id: 'thunderclap', name: 'Thunderclap',
-    description: 'Recharge -> Apply 1 Shock to ALL enemies.',
-    shortDesc: 'R->Shock ALL', subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    effects: [new CardEffect('apply_shock_all', 1, TargetType.ALL_ENEMIES)],
+    id: 'thunderclap', name: 'Mortal Strike',
+    description: 'Recharge -> Deal 3 Damage and 3 Bleed.',
+    shortDesc: 'R->3 Dmg + 3 Bleed', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 3, TargetType.SINGLE_ENEMY),
+    ],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { apply_shock_all: 0.5 },
+    gamePlusOffset: { damage: 2, apply_bleed: 1 },
   });
 }
 
@@ -1984,13 +1992,12 @@ export function createBattleShout() {
 export function createExecute() {
   return new Card({
     id: 'execute', name: 'Execute',
-    description: 'Recharge -> Deal 5 Damage, Draw.\nMust target enemy below half HP.',
-    shortDesc: 'R->5 Dmg, Draw\n(<50% HP)', subtype: 'ability',
+    description: 'Recharge -> Deal 5 Damage.\nHalf-HP: Draw.',
+    shortDesc: 'R->5 Dmg\nHalf-HP: Draw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
-      new CardEffect('execute_restriction', 0, TargetType.SELF),
+      new CardEffect('half_hp_draw', 1, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { damage: 3 },
@@ -2020,16 +2027,17 @@ export function createSummonTreants() {
   });
 }
 
-// Feral Wrath — Druid Tier 2 ability. Discard cost, grants a
-// stacking "Your attacks add Bleed" buff (mirrors Elemental Weapon's
-// fire/ice imbue but for Bleed). Card id stays `feral_bite` so older
-// saves still deserialize cleanly; only the display name + mechanic
-// changed.
+// Feral Wrath — Druid Tier 2 ability. Each cast adds 1 charge to a
+// Feral Wrath buff; the main damage handler consumes 1 charge per
+// attack and splits the swing — half damage stays as damage, half is
+// converted to Bleed on the target. Card id stays `feral_bite` so
+// older saves still deserialize cleanly; only the display name +
+// mechanic changed.
 export function createFeralBite() {
   return new Card({
     id: 'feral_bite', name: 'Feral Wrath',
-    description: 'Recharge -> Your attacks also deal Bleed.',
-    shortDesc: 'R->Attacks +Bleed', subtype: 'ability',
+    description: 'Recharge -> Gain Feral Wrath.\nHalf your damage is converted\nto Bleed. Consume a charge.',
+    shortDesc: 'R->Wrath +1\nhalf dmg→Bleed', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('grant_bleed_weapon', 1, TargetType.SELF),
@@ -2453,7 +2461,7 @@ export function createBoneClub() {
     name: 'Bone Club',
     description: 'Recharge +1 Card -> Deal 4 damage. +1 Poison vs Armor/Shield.',
     shortDesc: 'R+1->4 Dmg\n+1 Poison vs\nArmor/Shield',
-    subtype: 'martial_2h',
+    subtype: 'simple_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     // Poison rider resolves BEFORE damage so it reads pre-hit
@@ -2473,7 +2481,7 @@ export function createBoneMace() {
     name: 'Bone Mace',
     description: 'Recharge -> Deal 3 damage. +1 Poison vs Armor/Shield.',
     shortDesc: 'R->3 Dmg\n+1 Poison vs\nArmor/Shield',
-    subtype: 'martial',
+    subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     // Poison rider resolves BEFORE damage so it reads the target's
@@ -4098,7 +4106,7 @@ export function createGreatclub() {
     name: 'Greatclub',
     description: 'Recharge +1 -> Deal 4 damage (+4 vs Armor/Shield).',
     shortDesc: 'R+1->4 Dmg\n(+4 Armor)',
-    subtype: 'martial_2h',
+    subtype: 'simple_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
@@ -4703,7 +4711,7 @@ export function createOgreMaul() {
     name: 'Ogre Maul',
     description: 'Recharge +3 Cards -> Deal 8 damage (+6 vs Armor/Shield).',
     shortDesc: 'R+3->8 Dmg\n(+6 Armor)',
-    subtype: 'martial_2h',
+    subtype: 'simple_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [

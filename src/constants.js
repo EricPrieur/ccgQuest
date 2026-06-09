@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.116';
+export const GAME_VERSION = '2.122';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -152,8 +152,8 @@ export const SUBTYPE_COLORS = Object.freeze({
   martial: '#b43c3c',       // Red (weapon)
   simple: '#b43c3c',        // Red
   martial_2h: '#b43c3c',    // Red
+  simple_2h: '#b43c3c',     // Red (Bone Club, Greatclub)
   ranged: '#b43c3c',        // Red
-  ranged_2h: '#b43c3c',     // Red
   wand: '#b43c3c',          // Red
   staff: '#b43c3c',         // Red
   ability: '#8c3c8c',       // Purple

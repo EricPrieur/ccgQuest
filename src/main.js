@@ -486,6 +486,7 @@ const EFFECT_DESC_PATTERNS = {
   transform_shield_to_ice_target: [/Transform\s+up\s+to\s+(\d+)/i, /Transform\s+(\d+)/i],
   iced_bonus_damage: [/Iced:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Iced/i, /\+(\d+)\s+Iced/i, /Iced.*?(\d+)/i],
   bleeding_bonus_damage: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Bleeding/i, /\+(\d+)\s+Bleeding/i, /Bleeding.*?(\d+)/i],
+  half_hp_draw: [/Half-HP:\s*Draw\s+(\d+)/i, /Draw\s+(\d+)/i],
   grant_bleeding_damage_buff: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+damage/i, /\+(\d+)\s+Dmg/i],
   destroy_shield: [/Strip\s+(\d+)\s+Shield/i, /Destroy\s+(\d+)\s+Shield/i],
   apply_ice_self: [/Gain\s+(\d+)\s+Ice/i],
@@ -2065,7 +2066,7 @@ let _shopConfirm = null;
 
 // Class equip rules (only enforced during deck rebalancing, not gameplay loot)
 const ARMOR_SUBTYPES = new Set(['heavy_armor', 'light_armor', 'clothing']);
-const WEAPON_SUBTYPES = new Set(['martial', 'simple', 'martial_2h', 'ranged', 'ranged_2h', 'wand', 'staff']);
+const WEAPON_SUBTYPES = new Set(['martial', 'simple', 'martial_2h', 'simple_2h', 'ranged', 'wand', 'staff']);
 const CLASS_ARMOR = {
   Paladin: new Set(['clothing', 'light_armor', 'heavy_armor']),
   Ranger:  new Set(['clothing', 'light_armor']),
@@ -2074,13 +2075,17 @@ const CLASS_ARMOR = {
   Warrior: new Set(['clothing', 'light_armor', 'heavy_armor']),
   Druid:   new Set(['clothing', 'light_armor']),
 };
+// simple_2h is the bludgeoning 2H tier (Bone Club, Greatclub, Ogre Maul)
+// — every class that can wield martial_2h also gets it for free, plus
+// Druid (whose only 2H option). Wizard stays restricted to staves /
+// wands. Ranged is the unified bow tier (crossbows stay 'simple').
 const CLASS_WEAPONS = {
-  Paladin: new Set(['martial', 'simple', 'martial_2h']),
-  Ranger:  new Set(['martial', 'simple', 'ranged', 'ranged_2h', 'martial_2h']),
+  Paladin: new Set(['martial', 'simple', 'martial_2h', 'simple_2h']),
+  Ranger:  new Set(['martial', 'simple', 'ranged', 'martial_2h', 'simple_2h']),
   Wizard:  new Set(['simple', 'staff', 'wand']),
   Rogue:   new Set(['martial', 'simple', 'ranged']),
-  Warrior: new Set(['martial', 'martial_2h', 'simple']),
-  Druid:   new Set(['simple', 'staff', 'wand']),
+  Warrior: new Set(['martial', 'martial_2h', 'simple', 'simple_2h', 'ranged']),
+  Druid:   new Set(['simple', 'simple_2h', 'staff', 'wand']),
 };
 const CLASS_ITEMS = {
   Paladin: new Set(['item', 'potion', 'relic']),
@@ -2118,8 +2123,8 @@ const DECK_LIMIT_CATEGORIES = [
 // section of the inventory character panel).
 const SUBTYPE_LABELS = {
   clothing: 'Clothing', light_armor: 'Light Armor', heavy_armor: 'Heavy Armor',
-  martial: 'Martial', simple: 'Simple', martial_2h: '2H Martial',
-  ranged: 'Ranged', ranged_2h: '2H Ranged', staff: 'Staff', wand: 'Wand',
+  martial: 'Martial', simple: 'Simple', martial_2h: '2H Martial', simple_2h: '2H Simple',
+  ranged: 'Ranged', staff: 'Staff', wand: 'Wand',
 };
 
 function canClassEquip(card) {
@@ -3895,11 +3900,6 @@ canvas.addEventListener('mousemove', (e) => {
         } else if (needsTarget(card)) {
           const rechargeNeeded = getCardRechargeExtra(card);
           if (rechargeNeeded > 0) { clearDragState(); return; }
-          if (card.id === 'execute' && !executeHasValidTarget()) {
-            showStyledToast('Execute requires an enemy below half HP', 'recharge', 1800);
-            clearDragState();
-            return;
-          }
           selectedCardIndex = dragSourceCardIndex;
           // Snapshot the hand BEFORE we promote to TARGETING so a
           // mouseup-on-empty cancel can restore the slot. Without
@@ -16673,7 +16673,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -16786,6 +16786,12 @@ function tokenizeKeywordText(text, opts = {}) {
         // keyword so it pairs visually with other recharge mechanics.
         badge = { type: 'badge', label: 'WHEN RECHARGED',
           bg: 'rgba(40,70,110,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Half-HP') {
+        // Execute's conditional rider — fires when the target is at
+        // or below half its max HP. Crimson palette pairs with the
+        // "going for the throat" execute flavor.
+        badge = { type: 'badge', label: 'HALF-HP',
+          bg: 'rgba(120,30,40,0.92)', border: '#e07080', fg: '#ffd0d8' };
       } else if (phrase === 'Was Undamaged') {
         // Backstab's conditional draw — fires only when the target
         // was at full HP at the moment of resolution (pre-swing).
@@ -17381,8 +17387,9 @@ function getSubtypeLabel(card) {
   const sub = (card.subtype || '').toLowerCase();
   const LABELS = {
     clothing: 'Clothing', light_armor: 'Light Armor', heavy_armor: 'Heavy Armor',
-    martial: 'Martial', simple: 'Simple', martial_2h: '2H Martial',
-    ranged: 'Ranged', ranged_2h: '2H Ranged',
+    martial: 'Martial', simple: 'Simple',
+    martial_2h: '2H Martial', simple_2h: '2H Simple',
+    ranged: 'Ranged',
     staff: 'Staff', wand: 'Wand',
     ability: 'Ability', ally: 'Ally', allies: 'Ally', companion: 'Companion',
     item: 'Item', potion: 'Potion', food: 'Food', scroll: 'Scroll', relic: 'Relic',
@@ -21136,9 +21143,6 @@ function handleCombatClick(x, y) {
         // multi-targets.
         if (cardIsFeralSwipe(card)) {
           enterFeralSwipeTargeting(i);
-        } else if (card.id === 'execute' && !executeHasValidTarget()) {
-          showStyledToast('Execute requires an enemy below half HP', 'recharge', 1800);
-          return;
         } else if (cardNeedsAllyTarget(card)) {
           // Heal spells — pick yourself or any ally to receive the heal.
           selectedCardIndex = i;
@@ -21958,10 +21962,6 @@ function handleTargetingClick(x, y) {
       showStyledToast('Backstab: target must be undamaged', 'recharge', 1500);
       return;
     }
-    if (_selCard && _selCard.id === 'execute' && !isBelowHalfHp(enemy)) {
-      showStyledToast('Execute: target must be below half HP', 'recharge', 1500);
-      return;
-    }
     if (beamMode) prepareBeamFire(_selCard);
     const rechargedCards = cardRechargedCards.slice();
     cardRechargedCards = [];
@@ -21986,10 +21986,6 @@ function handleTargetingClick(x, y) {
       const _selCard = player.deck.hand[selectedCardIndex];
       if (_selCard && _selCard.id === 'backstab' && !isUndamaged(t)) {
         showStyledToast('Backstab: target must be undamaged', 'recharge', 1500);
-        return;
-      }
-      if (_selCard && _selCard.id === 'execute' && !isBelowHalfHp(t)) {
-        showStyledToast('Execute: target must be below half HP', 'recharge', 1500);
         return;
       }
       if (beamMode) prepareBeamFire(_selCard);
@@ -22788,6 +22784,22 @@ function resolveEffect(eff, caster, target) {
       dmg += incomingMod;
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
+      // Feral Wrath split — consume 1 charge of the Feral Wrath buff
+      // (if any) and convert half the finalized damage to Bleed. Half-
+      // up to bleed, half-down to damage so odd damage favors bleed.
+      // The bleed lands AFTER damage applies, below the dispatch.
+      let wrathBleed = 0;
+      const wrathBuff = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
+      if (wrathBuff && (wrathBuff.stacks || 0) > 0 && dmg > 0) {
+        wrathBleed = Math.ceil(dmg / 2);
+        dmg = Math.floor(dmg / 2);
+        wrathBuff.stacks -= 1;
+        wrathBuff.effectValue = wrathBuff.stacks;
+        if (wrathBuff.stacks <= 0) {
+          caster.combatBuffs = caster.combatBuffs.filter(b => b !== wrathBuff);
+        }
+        addLog(`  Feral Wrath: half → ${wrathBleed} Bleed`, Colors.RED);
+      }
       const unpreventable = consumeUnpreventableBuff(caster);
       // Enemy reactively plays defense cards before damage lands on enemy character —
       // skipped when the Slime Jar buff makes this attack unpreventable.
@@ -22830,6 +22842,18 @@ function resolveEffect(eff, caster, target) {
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
+      // Stamp the Feral Wrath bleed AFTER damage lands so a fatal
+      // bleed never robs the swing of its hit (mirrors the rest of
+      // the bleed-on-attack timing). One charge already consumed
+      // above; here we just apply the stored stack count.
+      if (wrathBleed > 0) {
+        if (target instanceof Creature) {
+          target.bleedStacks = (target.bleedStacks || 0) + wrathBleed;
+        } else if (typeof target.applyStatus === 'function') {
+          target.applyStatus('BLEED', wrathBleed);
+        }
+        spawnTokenOnTarget(target, wrathBleed, 'Bleed', Colors.RED);
+      }
       // Ally-rider attacks (Raena's Called arrow) flag noAttackCount so
       // they don't inflate Sneak Attack's per-turn scaling — the shot
       // is conceptually the ally's, not the player's own swing.
@@ -23210,13 +23234,29 @@ function resolveEffect(eff, caster, target) {
       const mdEyeBonus = snapshotEyeBuff(caster);
       const mdObsBonus = snapshotObsidianBuff(caster);
       const mdPoisonStacks = snapshotPoisonBuff(caster);
+      // Feral Wrath — one swing = one charge, regardless of how many
+      // targets the multi-attack lands on. Snapshot the charge once;
+      // every target then gets the half-damage / half-bleed split.
+      const mdWrathActive = snapshotFeralWrathCharge(caster);
+      const mdWrathBleeds = new Map();
       // Per-target damage helper: applies Shock-on-target + Mark + the
       // per-target Eye/Obsidian bonus on top of the shared base damage.
+      // When Feral Wrath fired, splits the per-target damage in half
+      // (floor → damage, ceil → bleed) and parks the bleed amount for
+      // the post-damage stamp pass below.
       const mdPerTarget = (t) => {
         let d = mdBaseDmg + getIncomingDamageModifier(t);
         d += applyEyeBonus(t, mdEyeBonus);
         d += applyObsidianBonus(t, mdObsBonus);
-        return applyMarkBonus(t, Math.max(0, d));
+        d = applyMarkBonus(t, Math.max(0, d));
+        if (mdWrathActive && d > 0) {
+          const split = feralWrathSplit(d);
+          if (split) {
+            mdWrathBleeds.set(t, split.bleed);
+            return split.damage;
+          }
+        }
+        return d;
       };
       let hits = 0;
       const maxT = eff.maxTargets || 2;
@@ -23296,6 +23336,14 @@ function resolveEffect(eff, caster, target) {
         }
       }
       countAndRemoveDeadCreatures();
+      // Feral Wrath bleed pass — stamp the parked bleed amounts after
+      // damage lands on each target so a fatal bleed never robs the
+      // swing of its hit. mdWrathBleeds is empty when no charge fired.
+      if (mdWrathBleeds.size > 0) {
+        for (const [t, bleed] of mdWrathBleeds) {
+          if (t && t.isAlive) applyFeralWrathBleed(t, bleed);
+        }
+      }
       // Ignite rider — snapshot once, apply to every target the
       // chain landed on. Mirrors the picker-driven multi_damage path
       // for cards like Wooden Axe routed through the click flow.
@@ -23772,20 +23820,21 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'grant_bleed_weapon': {
-      // Feral Wrath (Druid Tier 2). Imbue future attacks with Bleed;
-      // the buff stacks per cast. Mirrors the Elemental Weapon
-      // structure but with no cancelation step — Bleed and the
-      // fire/ice stacks coexist on the same swing.
+      // Feral Wrath (Druid Tier 2) — charge-based buff. Each cast adds
+      // `eff.value` charges; the main damage handler reads + consumes
+      // 1 charge per swing and splits the damage (half lands as
+      // damage, half converts to Bleed on the target). Mirrors Mark's
+      // "stacks consumed on use" shape, just held on the caster.
       const amount = eff.value || 1;
       const existing = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
       if (existing) {
-        existing.effectValue = (existing.effectValue || 0) + amount;
-        existing.stacks = (existing.stacks || 1) + amount;
+        existing.stacks = (existing.stacks || 0) + amount;
+        existing.effectValue = existing.stacks;
       } else {
         caster.addCombatBuff(new CombatBuff({
           id: 'bleed_weapon',
           name: 'Feral Wrath',
-          description: 'Your attacks also deal Bleed.',
+          description: 'Next attack: half damage converts to Bleed. Consume a charge.',
           imageId: 'feral_bite',
           effectType: 'bleed_weapon',
           effectValue: amount,
@@ -23796,7 +23845,7 @@ function resolveEffect(eff, caster, target) {
         const buff = caster.combatBuffs[caster.combatBuffs.length - 1];
         buff.stacks = amount;
       }
-      addLog(`  ${caster.name}: attacks add ${amount} Bleed`, Colors.RED);
+      addLog(`  ${caster.name}: Feral Wrath +${amount} charge`, Colors.RED);
       break;
     }
     case 'grant_unpreventable_buff': {
@@ -24970,6 +25019,32 @@ function resolveEffect(eff, caster, target) {
       // Marker effect — the actual draw is fired by Character.takeDamageFromDeck
       // when the card lands in the discard pile passively (deck damage, hand
       // discard effects, etc.). Playing the card does nothing.
+      break;
+    }
+    case 'half_hp_draw': {
+      // Execute — Half-HP rider. Draws eff.value cards iff the target
+      // is at or below half its max HP at resolution time. For
+      // creatures: currentHp <= maxHp/2. For characters: alive-pile
+      // cards (draw+hand+recharge) <= masterDeck.length/2.
+      const halfHp = (() => {
+        if (!target) return false;
+        if (target instanceof Creature) {
+          return (target.currentHp || 0) <= (target.maxHp || 0) / 2;
+        }
+        if (target.deck && Array.isArray(target.deck.masterDeck)) {
+          const max = Math.max(1, target.deck.masterDeck.length);
+          const cur = (target.deck.drawPile.length || 0)
+            + (target.deck.hand.length || 0)
+            + (target.deck.rechargePile.length || 0);
+          return cur <= max / 2;
+        }
+        return false;
+      })();
+      if (halfHp) {
+        const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Half-HP! Draw: ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+      }
       break;
     }
     case 'draw_if_target_undamaged': {
@@ -33535,29 +33610,52 @@ function applyElementalWeaponRider(target, damageLanded) {
   if (iceFired) setTimeout(() => playSound('cold_whoosh_01', 0.7), 180);
 }
 
-// Feral Wrath rider — companion to applyElementalWeaponRider. Reads
-// any `bleed_weapon` combat buff on the player and stamps that many
-// Bleed stacks on the target. Same gates as the elemental rider:
-// player-only, requires damage landed > 0. Wired into every player
-// damage site that already carries the elemental rider — single-
-// target via consumeIgniteOnAttack's chain, multi_damage / split /
-// damage_all / picker / barrage / Quick Strike / Cleave.
-function applyBleedWeaponRider(target, damageLanded) {
-  if (!player || !target || damageLanded <= 0) return;
-  const buffs = player.combatBuffs || [];
-  let stacks = 0;
-  for (const b of buffs) {
-    if (!b || !b.effectValue) continue;
-    if (b.effectType === 'bleed_weapon') stacks += b.effectValue;
+// Feral Wrath legacy hook — kept as a no-op because Feral Wrath is now
+// charge-based. Single-target damage handles its own consume/split
+// inline; multi-target damage paths use snapshotFeralWrathCharge +
+// applyFeralWrathSplit (below) to consume ONE charge per swing and
+// split per-target damage.
+function applyBleedWeaponRider(_target, _damageLanded) {
+  return;
+}
+
+// Snapshot the Feral Wrath buff for a multi-target swing. Returns
+// true if a charge was consumed (callers should then split damage
+// across every target in the swing). 1 charge = 1 cast = 1 swing —
+// regardless of how many targets the swing lands on.
+function snapshotFeralWrathCharge(caster) {
+  if (!caster) return false;
+  const buff = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
+  if (!buff || (buff.stacks || 0) <= 0) return false;
+  buff.stacks -= 1;
+  buff.effectValue = buff.stacks;
+  if (buff.stacks <= 0) {
+    caster.combatBuffs = caster.combatBuffs.filter(b => b !== buff);
   }
-  if (stacks <= 0) return;
+  addLog(`  Feral Wrath consumed`, Colors.RED);
+  return true;
+}
+
+// Split a per-target damage value into (dmg, bleed) according to the
+// Feral Wrath rule — half-down to damage, half-up to bleed. Only
+// meaningful when the caller already burned the charge via
+// snapshotFeralWrathCharge. Returns null when dmg is 0 (no split).
+function feralWrathSplit(dmg) {
+  if (dmg <= 0) return null;
+  return { damage: Math.floor(dmg / 2), bleed: Math.ceil(dmg / 2) };
+}
+
+// Apply a Feral Wrath bleed to a target after the damage already
+// landed. Mirrors the per-target bleed stamp in the main 'damage'
+// case.
+function applyFeralWrathBleed(target, bleed) {
+  if (!target || bleed <= 0) return;
   if (target instanceof Creature) {
-    target.bleedStacks = (target.bleedStacks || 0) + stacks;
+    target.bleedStacks = (target.bleedStacks || 0) + bleed;
   } else if (typeof target.applyStatus === 'function') {
-    target.applyStatus('BLEED', stacks);
+    target.applyStatus('BLEED', bleed);
   }
-  spawnTokenOnTarget(target, stacks, 'Bleed', Colors.RED);
-  addLog(`  Feral Wrath: +${stacks} Bleed on ${target.name}`, Colors.RED);
+  spawnTokenOnTarget(target, bleed, 'Bleed', Colors.RED);
 }
 
 // Legacy wrappers — snapshot + apply once. Single-target damage
@@ -37474,19 +37572,60 @@ function drawInventoryCharacter(rect) {
   drawSectionInfoBadge({ x: rect.x, y: nextY - 12, w: rect.w, h: 16 }, 'inventory_can_equip', 0);
   ctx.fillStyle = '#bbb';
   ctx.font = '11px sans-serif';
+  // Render "Label: a, b, c, …" with automatic wrap onto continuation
+  // lines so wide subtype lists (Ranger weapons especially) don't
+  // overflow the right edge of the panel. The first line carries the
+  // header ("Weapons: "); continuation lines indent under the values.
+  const maxLineW = limitsW - 4;
+  const drawWrappedSubtypeRow = (label, items) => {
+    if (!items || items.length === 0) return;
+    const headerText = `${label}: `;
+    const headerW = ctx.measureText(headerText).width;
+    const indent = limitsBaseX + 4;
+    const valuesStart = indent + headerW;
+    let line = '';
+    let lineStartX = valuesStart;
+    let lineY = nextY;
+    let firstOnLine = true;
+    let isFirstLine = true;
+    const flush = () => {
+      if (isFirstLine) ctx.fillText(headerText + line, indent, lineY);
+      else ctx.fillText(line, indent + 6, lineY);
+      lineY += 14;
+      line = '';
+      firstOnLine = true;
+      isFirstLine = false;
+      lineStartX = indent + 6;
+    };
+    for (let i = 0; i < items.length; i++) {
+      const token = items[i] + (i < items.length - 1 ? ', ' : '');
+      const tokenW = ctx.measureText(token).width;
+      const availForLine = (limitsBaseX + maxLineW) - lineStartX;
+      const lineW = ctx.measureText(line).width;
+      if (!firstOnLine && lineW + tokenW > availForLine) {
+        flush();
+      }
+      line += token;
+      firstOnLine = false;
+    }
+    if (line.length > 0) {
+      if (isFirstLine) ctx.fillText(headerText + line, indent, lineY);
+      else ctx.fillText(line, indent + 6, lineY);
+      lineY += 14;
+    }
+    nextY = lineY;
+  };
   // Armor types
   const armorTypes = CLASS_ARMOR[selectedClass];
   if (armorTypes) {
-    const labels = [...armorTypes].map(s => SUBTYPE_LABELS[s] || s).sort().join(', ');
-    ctx.fillText(`Armor: ${labels}`, limitsBaseX + 4, nextY);
-    nextY += 14;
+    const labels = [...armorTypes].map(s => SUBTYPE_LABELS[s] || s).sort();
+    drawWrappedSubtypeRow('Armor', labels);
   }
   // Weapon types
   const weaponTypes = CLASS_WEAPONS[selectedClass];
   if (weaponTypes) {
-    const labels = [...weaponTypes].map(s => SUBTYPE_LABELS[s] || s).sort().join(', ');
-    ctx.fillText(`Weapons: ${labels}`, limitsBaseX + 4, nextY);
-    nextY += 14;
+    const labels = [...weaponTypes].map(s => SUBTYPE_LABELS[s] || s).sort();
+    drawWrappedSubtypeRow('Weapons', labels);
   }
   // Scrolls
   const canScroll = CLASS_ITEMS[selectedClass] && CLASS_ITEMS[selectedClass].has('scroll');
@@ -40217,10 +40356,9 @@ const CARD_SFX_OVERRIDES = {
   // same sample on cast + impact for the same wind_blast sample).
   starfire:                 { flesh: 'wind_blast', blocked: 'wind_blast' },
   summon_treants:           { playMulti: { key: 'leaf_fall', count: 2, stagger: 240 } },
-  // Thunderclap — sparkle bell pulses fired imperatively from the
-  // apply_shock_all handler (cap 3). The playMulti override here also
-  // makes the cast cue audible directly when the card is played.
-  thunderclap:              { playMulti: { key: 'sparkle_spell', count: 3, stagger: 140 } },
+  // Mortal Strike — heavy single-target chop. Uses the execute axe
+  // sample so the weapon SFX matches the warrior's other heavy hits.
+  thunderclap:              { flesh: 'execute_axe', blocked: 'axe_blocked' },
   consecration:             { flesh: 'fire_blast', blocked: 'fire_blast' },
   heroic_strike:            { play: 'heroic_strike_cast' },
   defensive_formation:      { play: 'arcane_shield' },
@@ -40375,8 +40513,6 @@ const CARD_SFX_HINTS = {
   ice_nova:         ['ice_flesh'],
   consecration:     ['fire_blast'],
   fan_of_blades:    ['dagger_flesh'],
-  // apply_shock_all stutters sparkle_spell per shocked enemy (cap 3).
-  thunderclap:      ['sparkle_spell'],
   // Magma Drake — Fire Breath layers the alien scream on cast in
   // playCardAmbient (alongside the fire_spell_01 from CARD_SFX_OVERRIDES.play).
   fire_breath:      ['monster_alien_scream_01'],
@@ -40598,12 +40734,12 @@ function getWeaponSfxKeys(card = null, creature = null) {
   // column. The lookup keeps the same behavior.
   if (CARD_SFX_OVERRIDES[id]) return CARD_SFX_OVERRIDES[id];
   // 2H is detected from subtype OR a "great*" prefix in the id.
-  const isTwoHanded = sub === 'martial_2h' || id.includes('great');
+  const isTwoHanded = sub === 'martial_2h' || sub === 'simple_2h' || id.includes('great');
   // Bows + crossbows. Subtype catches the ranger's Bow / Short Bow;
   // id-substring catches outliers like Dwarven Crossbow whose subtype
   // is 'simple'. "crossbow" already contains "bow", so a single check
   // covers both.
-  if (sub === 'ranged' || sub === 'ranged_2h' || id.includes('bow')) {
+  if (sub === 'ranged' || id.includes('bow')) {
     return { flesh: 'bow_flesh', blocked: 'bow_blocked' };
   }
   // Staves & batons — subtype 'staff' covers Short Staff / Bone Staff /
@@ -41417,7 +41553,8 @@ const PLAYER_POWER_IDS = new Set([
 const CODEX_SUBTYPE_TO_CATEGORY = {
   // Weapons
   weapon: 'weapons', martial: 'weapons', simple: 'weapons',
-  martial_2h: 'weapons', ranged: 'weapons', ranged_2h: 'weapons',
+  martial_2h: 'weapons', simple_2h: 'weapons',
+  ranged: 'weapons',
   wand: 'weapons', staff: 'weapons', shield: 'weapons',
   // Armor
   armor: 'armor', heavy_armor: 'armor', light_armor: 'armor', clothing: 'armor',
@@ -42217,11 +42354,32 @@ function _codexSearchMatches(haystack) {
 
 // Card/power text search: name, id, and the full rules text. Lets players
 // find cards by keyword (e.g. "Scry", "Bleed") instead of only by name.
+// Also matches the card's subtype both raw ("light_armor", "martial_2h")
+// and label form ("Light Armor", "2H Martial"), plus a few class-tag
+// aliases ("ranged", "two-handed") so players can search the codex with
+// the same words the inventory shows under "Can equip".
 function _codexCardTextMatches(c) {
   if (!c) return false;
-  return _codexSearchMatches(c.name) || _codexSearchMatches(c.id) ||
-         _codexSearchMatches(c.description) || _codexSearchMatches(c.shortDesc) ||
-         _codexSearchMatches(c.effectDescription);
+  if (_codexSearchMatches(c.name) || _codexSearchMatches(c.id) ||
+      _codexSearchMatches(c.description) || _codexSearchMatches(c.shortDesc) ||
+      _codexSearchMatches(c.effectDescription)) {
+    return true;
+  }
+  const sub = (c.subtype || '').toLowerCase();
+  if (!sub) return false;
+  if (_codexSearchMatches(sub)) return true;
+  // Space-form: "light_armor" → "light armor", "martial_2h" → "martial 2h".
+  if (_codexSearchMatches(sub.replace(/_/g, ' '))) return true;
+  // Friendly label ("Light Armor", "2H Martial", "2H Simple", etc.).
+  const label = SUBTYPE_LABELS[sub];
+  if (label && _codexSearchMatches(label)) return true;
+  // Generic aliases — let "2h" / "two-handed" / "two handed" match any
+  // *_2h subtype regardless of weapon family.
+  if (sub.endsWith('_2h')) {
+    const q = (codexSearchText || '').toLowerCase().trim();
+    if (q === '2h' || q === 'two-handed' || q === 'two handed' || q === '2-handed') return true;
+  }
+  return false;
 }
 
 // Renders one section per loot table: title bar, optional note, then a row of

@@ -101,7 +101,7 @@ export const CARD_ART_MAP = {
   charge: 'ChargeWarriorAbility.jpg',
   reckless_strike: 'RecklessStrike.jpg',
   shield_bash: 'ShieldBash.jpg',
-  thunderclap: 'Thunderclap.jpg',
+  thunderclap: 'MortalStrike.jpg',
   shield_wall: 'ShieldWall.jpg',
   battle_shout: 'BattleShout.jpg',
   execute: 'Execute.jpg',
