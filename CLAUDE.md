@@ -174,6 +174,56 @@ the PNG first, **then** run `npm run png-to-jpg`.
 5. `git status` should show one `.png` deletion + one `.jpg` add per
    image — commit both together.
 
+## Map backgrounds — register in BOTH the map data AND the asset loader
+
+A new map area's image needs **two** registrations:
+
+1. **`map.mapImages = { <mapArea>: 'Maps/<File>.jpg' }`** in the
+   `createXxxMap` function (`src/map.js`). This is what the map view
+   reads when it composes the background.
+2. **`loadImage('map_<mapArea>', '...')`** in `loadAssets`
+   (`src/main.js`, the cluster around the existing `map_throne_room` /
+   `map_grand_hall` lines). Without this preload, the image element
+   never gets into `images[]` and the map view draws a blank frame
+   even though `map.mapImages` is set.
+
+Symptom of skipping step 2: the map background is broken but
+encounter dialog backgrounds (which go through
+`ENCOUNTER_BG_MAP` + the `bg_<name>` preload) still render fine on
+the same art.
+
+## Teleporter nodes — wire both directions by default
+
+A "teleporter" is a map node with `passthroughTo` set. The standard
+expectation is that it fires **both** on walk-onto **and** on
+click-on-self, in **both** directions of the pair, **once unlocked**.
+Don't gate either side on `isDone` or any "you walked here first"
+heuristic — once the player can interact with the node at all, it
+should teleport. The pair is symmetric: from A you reach B, and from
+B you reach A, with no extra clicks.
+
+When you add a new teleporter pair (or unlock a previously-locked
+gate so it becomes a teleporter), the checklist is:
+
+1. **Walk-onto** — add the matching cross-map branch in `arriveAtNode`
+   (`src/main.js`, e.g. the `temple_moradin_door ↔ temple_moradin_entry`
+   pattern at ~7886-7910). Both directions, fromNodeId-guarded against
+   bounce-back.
+2. **Click-on-self** — add both node ids to the `isCrossMapGate` ladder
+   in `handleMapClick` (`src/main.js`, ~9150-9320). Gate on
+   `!node.isLocked` (or whatever unlock latch you have), **not** on
+   `node.isDone`. Same-map teleporters (`passthroughTo` to another
+   node in the same `currentMap`) flow through the existing
+   `hasActiveTeleport` check automatically — no entry needed.
+3. **Map data** — set `passthroughTo` on both nodes pointing at each
+   other, and put the paired id in each node's `connections` array so
+   the visual line + adjacency check works.
+
+If a teleporter ever feels asymmetric to the player ("I can walk
+into it but not back out"), it's almost always because step 2 was
+skipped — the cross-map gate runs only on walk-onto, never on the
+self-click.
+
 ## Versioning
 
 `GAME_VERSION` in `src/constants.js` is bumped manually before every push.

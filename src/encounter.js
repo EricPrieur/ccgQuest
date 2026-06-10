@@ -1605,6 +1605,83 @@ export function createOutpostMeetingEncounter() {
 // (mithrilRemediesVisited latch), subsequent visits play a short
 // reminder: Olbrim still hasn't returned, the shop stays closed.
 // No purchases until the side quest concludes.
+// Top of the Stairs arrival — party staggers off the Stairs of the
+// Infinite, exhausted; Thorb nudges them toward the Skyforge Outpost
+// for rest and food. Fires once when the player first cross-maps into
+// top_of_infinite_stairs; revisits stay quiet via the node.isDone
+// canRevisit-false rule that arriveAtNode already honors.
+export function createTopStairsArrivalEncounter() {
+  return new Encounter('top_stairs_arrival', 'Top of the Stairs',
+    'The Stairs of the Infinite end at last.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Hours of climbing. Stair after stair after endless dwarf-cut stair. The party finally crests the last rise and stumbles out onto a windswept plateau, lungs burning, legs shaking.', '!'),
+          new EncounterText("Raena drops to one knee, hands on her thighs, breathing in ragged gulps. \"Whose idea... was it... to build a kingdom... up a wall.\"", 'Raena'),
+          new EncounterText("Valdrisa leans on her staff, every breath a small cloud in the thin air. She looks back the way they came and shakes her head. \"Olbrim climbed this on his own. He must have been hauling supplies the whole way. The man is tougher than he looks.\"", 'Valdrisa'),
+          new EncounterText("Thorb is the only one still standing more or less straight, though even he is wheezing a bit. He points up the ridge, grinning. \"Don't lie down on me yet. There's a Watch up the ridge — the Last Watch, they call it. Bench t'sit on, hot stove, an' — gods willin' — a stew with somethin' in it that ain't moss.\"", 'Thorb'),
+          new EncounterText("\"Food,\" Raena says into the stone, with great feeling. \"Yes. Food. Lead on, dwarf.\"", 'Raena'),
+        ],
+      }),
+    ]);
+}
+
+// Last Watch — Guard Captain audience. Fires once on the courtyard
+// node when the player first arrives. Captain greets the party with
+// deference (My Prince, Thorbadin), Thorb hushes him; quick exchange
+// about Olbrim (Captain saw him 3 days ago, has been worried). Ends
+// in a Rest / Leave choice. Rest fires an inn-style rebalance +
+// setWellRested and latches lastWatchRested so the Down to the
+// Valley exit unlocks. Leave keeps the dialog open for next visit.
+export function createLastWatchAudienceEncounter() {
+  return new Encounter('last_watch_audience', 'The Last Watch',
+    'The keep doors stand half-open; a dwarven captain steps out to meet you.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("A broad-shouldered dwarf in mail steps out from the keep, a warhammer slung across his back. He stops short the instant he sees your party — then drops to one knee with the kind of clean salute that says years of drill.", '!'),
+          new EncounterText('"My Prince," the captain says, voice low and steady. "Prince Thorbadin. We were not told you would honor the Watch with a visit. Forgive me — had I known, I would have had a proper guard turned out."', 'Captain'),
+          new EncounterText("Thorb's eyes go wide. He waves both hands in a frantic hushing motion. \"Hushhh, hushh, lad — up, up, on yer feet. None o' that. Yer doin' fine. Real fine.\"", 'Thorb'),
+          new EncounterText("\"Look — between us, all right? The prince thing. Keep it quiet for now. We're not exactly travelin' under official banner. Just a few friends, lookin' for somebody.\"", 'Thorb'),
+          new EncounterText("The captain rises, still stiff with formality, but he gives a small nod. \"As you wish, my — sir. Quietly, then.\"", 'Captain'),
+          new EncounterText("\"Good man. Now — we've climbed those stairs at a pace that'd put a goat in the ground, an' my friends here are about t'collapse where they stand. Any chance o' some supplies, an' a corner to lay our heads for the night?\"", 'Thorb'),
+          new EncounterText('"Of course, sir. The barracks are warm, the larder is open. You will not lack for either while you are under this roof."', 'Captain'),
+          new EncounterText("Thorb glances at his companions, then back. \"One more thing. We're lookin' for Olbrim Goldbalm — old apothecary outta Tharnag. Have ye seen him?\"", 'Thorb'),
+          new EncounterText("The captain's face tightens. \"Olbrim. Yes. Three days ago — he passed through on his way further up. Said he was after a rare flower that only blooms above the Watch.\"", 'Captain'),
+          new EncounterText('"Three days?" Valdrisa says sharply.', 'Valdrisa'),
+          new EncounterText('"Three days. Normally he\'d rest here on the way back down — a bowl of stew, a complaint about the wind, and he\'s off again within the day. He has not returned. I have been... uneasy. I am very glad to see that someone was sent to look for him."', 'Captain'),
+          new EncounterText('Raena meets Thorb\'s eye. There is nothing to say. The decision is already made.', 'Raena'),
+          new EncounterText('"Right." Thorb nods to the captain. "We\'ll find him. But first — rest, food, a bench that doesn\'t move under us. We\'ll head down at first light."', 'Thorb'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: 'The barracks are warm. Will you stay the night?',
+        choices: [
+          new EncounterChoice('Rest at the Last Watch', "You bed down in the barracks. Warm food, warm fire, and for the first time since the climb began, you sleep.", 'last_watch_rest', 0, { completesEncounter: true }),
+          new EncounterChoice('Leave without resting', "You touch your forehead in thanks, turn the party around, and head back out into the wind. The captain watches you go.", 'last_watch_leave', 0, { completesEncounter: true }),
+        ],
+      }),
+    ]);
+}
+
+// Last Watch — repeat-visit audience. After the first full dialog,
+// the player gets straight back to the Rest / Leave decision without
+// the captain re-introducing himself or re-explaining about Olbrim.
+export function createLastWatchAudienceRevisitEncounter() {
+  return new Encounter('last_watch_audience_revisit', 'The Last Watch',
+    "The captain looks up as you enter. \"Back so soon?\"", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: 'The barracks are warm. Stay the night?',
+        choices: [
+          new EncounterChoice('Rest at the Last Watch', "You bed down in the barracks. Warm food, warm fire, and for the first time since the climb began, you sleep.", 'last_watch_rest', 0, { completesEncounter: true }),
+          new EncounterChoice('Leave without resting', "You touch your forehead in thanks, turn the party around, and head back out into the wind. The captain watches you go.", 'last_watch_leave', 0, { completesEncounter: true }),
+        ],
+      }),
+    ]);
+}
+
 export function createMithrilRemediesRevisitEncounter() {
   return new Encounter('mithril_remedies_revisit', 'Mithril Remedies', "Olbrim's apothecary stands quiet — still no sign of the master.", [
     new EncounterPhaseData({
@@ -1631,10 +1708,11 @@ export function createMithrilRemediesEncounter() {
           new EncounterText("\"Days. The siege has been over for days, and Olbrim is still 'back soon'? Something's wrong.\"", 'Valdrisa'),
           new EncounterText("Thorb crosses his arms. \"Wasn't there s'posed t'be a doctor here? Sittin' behind the counter, askin' too many questions about yer bowels?\"", 'Thorb'),
           new EncounterText("\"That's the one. Olbrim. Apothecary. Best balm man on the mountain.\" Valdrisa lifts the ledger. The last entry is dated weeks ago. \"He wouldn't just walk off. Not without telling someone.\"", 'Valdrisa'),
-          new EncounterText("Raena — for once not scowling — actually leans in to read over Val's shoulder. The dragon is dead. Raena's mood, against all odds, is improving.", 'Raena'),
+          new EncounterText("Raena — for once not scowling — actually leans in to read over Val's shoulder. The siege is over, the throne has spoken, and for the first time in days nobody is bleeding. She looks almost interested.", 'Raena'),
           new EncounterText("\"Side quest,\" Raena says. \"Save a dwarf, get on the good side of the locals. Better than another throne audience. I'm in.\"", 'Raena'),
+          new EncounterText("She glances back at the ledger, quieter: \"...a side quest with a point to it, for once. Different feeling, that.\"", 'Raena'),
           new EncounterText("\"Out the main door, then up the mountain,\" Thorb says, already moving. \"Stairs of the Infinite — that's the supply route. He'll be up there if he's anywhere.\"", 'Thorb'),
-          new EncounterText("(The Stairs of the Infinite have unlocked from the Grand Hall's Main Entrance.)", '!'),
+          new EncounterText("The Stairs of the Infinite can be reached from the Grand Hall's Main Entrance.", '!'),
         ],
       }),
     ]);
@@ -4861,6 +4939,9 @@ export const ENCOUNTER_REGISTRY = {
   post_dragon_staircase: createPostDragonStaircaseDialogEncounter,
   mithril_remedies: createMithrilRemediesEncounter,
   mithril_remedies_revisit: createMithrilRemediesRevisitEncounter,
+  top_stairs_arrival: createTopStairsArrivalEncounter,
+  last_watch_audience: createLastWatchAudienceEncounter,
+  last_watch_audience_revisit: createLastWatchAudienceRevisitEncounter,
   watchtower_check: createWatchtowerCheckEncounter,
   supply_pile: createSupplyPileEncounter,
   outpost_tent: createOutpostTentEncounter,

@@ -36,8 +36,8 @@ export function createIceToken() {
 export function createCatFormToken() {
   return new Card({
     id: 'cat_form_token', name: 'Feline Form',
-    description: 'Deal Bleed.\nHeal 1 Negative Effect, Draw.',
-    shortDesc: 'Bleed\nHeal Neg, Draw', subtype: 'ability',
+    description: 'Deal Bleed, Draw.',
+    shortDesc: 'Bleed, Draw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('cat_form', 1, TargetType.SINGLE_ENEMY)],
     // +1 Bleed per offset — handler scales via playerTierOffset;
@@ -51,8 +51,8 @@ export function createCatFormToken() {
 export function createBearFormToken() {
   return new Card({
     id: 'bear_form_token', name: 'Bear Form',
-    description: 'Gain Shield.\nHeal 1 Negative Effect, Draw.',
-    shortDesc: 'Shield\nHeal Neg, Draw', subtype: 'ability',
+    description: 'Gain Shield.\nHeal 1 Ailment, Draw.',
+    shortDesc: 'Shield\nHeal Ailment\nDraw', subtype: 'ability',
     cardType: CardType.SKILL, costType: CostType.FREE,
     effects: [new CardEffect('bear_form', 1, TargetType.SELF)],
     gamePlusOffset: { bear_form: 1 },
@@ -2027,17 +2027,16 @@ export function createSummonTreants() {
   });
 }
 
-// Feral Wrath — Druid Tier 2 ability. Each cast adds 1 charge to a
-// Feral Wrath buff; the main damage handler consumes 1 charge per
-// attack and splits the swing — half damage stays as damage, half is
-// converted to Bleed on the target. Card id stays `feral_bite` so
-// older saves still deserialize cleanly; only the display name +
-// mechanic changed.
+// Feral Wrath — Druid Tier 2 ability. Each cast adds 1 charge. On the
+// next attack, ALL of the swing's damage converts to Bleed on the
+// target (no damage lands, all of it sits on the target as bleed
+// stacks). Charge consumed. Card id stays `feral_bite` so older saves
+// deserialize cleanly; only the display name + mechanic changed.
 export function createFeralBite() {
   return new Card({
     id: 'feral_bite', name: 'Feral Wrath',
-    description: 'Recharge -> Gain Feral Wrath.\nHalf your damage is converted\nto Bleed. Consume a charge.',
-    shortDesc: 'R->Wrath +1\nhalf dmg→Bleed', subtype: 'ability',
+    description: 'Recharge -> Gain Feral Wrath.\nNext attack: all damage\nconverts to Bleed. Consume a charge.',
+    shortDesc: 'R->Wrath +1\nall dmg→Bleed', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('grant_bleed_weapon', 1, TargetType.SELF),
@@ -2086,8 +2085,8 @@ export function createHealingTouch() {
 export function createNaturesHealing() {
   return new Card({
     id: 'natures_healing', name: "Nature's Healing",
-    description: 'Recharge -> Heal all negative effects.\nGain Heroism per effect healed.\nHeal 5.',
-    shortDesc: 'R->Heal All Neg\n+H per healed\nHeal 5', subtype: 'ability',
+    description: 'Recharge -> Heal all Ailments.\nGain Heroism per Ailment healed.\nHeal 5.',
+    shortDesc: 'R->Heal Ailments\n+H per healed\nHeal 5', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heal_all_negative_effects', 0, TargetType.SELF),
@@ -3230,7 +3229,7 @@ export function createHarpoonOfTheDeep() {
     name: 'Harpoon of the Deep',
     description: 'Recharge ->\nDeal 4 Damage + 2 Bleed.',
     shortDesc: 'R->4 Dmg\n+2 Bleed',
-    subtype: 'martial',
+    subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
@@ -5757,7 +5756,7 @@ export function createThorbCreature() {
   return new Creature({
     name: 'Thorb',
     attack: 2,
-    maxHp: 4,
+    maxHp: 5,
     isCompanion: true,
     description: 'Turn End: +Shield',
     // Companion-chain creature — the upgraded / Tier-3 variants are
@@ -5771,7 +5770,7 @@ export function createThorbUpgradedCreature() {
   return new Creature({
     name: 'Thorb',
     attack: 2,
-    maxHp: 5,
+    maxHp: 6,
     sentinel: true,
     isCompanion: true,
     description: 'Sentinel. Turn End: +Shield',
@@ -5787,7 +5786,7 @@ export function createThorbTier3Creature() {
   return new Creature({
     name: 'Thorb',
     attack: 3,
-    maxHp: 7,
+    maxHp: 8,
     sentinel: true,
     isCompanion: true,
     shieldsAllAllies: true,
@@ -6077,7 +6076,7 @@ export function createSahuaginTridentLoot() {
     name: 'Sahuagin Trident',
     description: 'Recharge +1 -> Deal 3 + Bleed, Draw.',
     shortDesc: 'R+1->3 Dmg+Bleed\nDraw',
-    subtype: 'martial_2h',
+    subtype: 'simple_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
@@ -6144,7 +6143,7 @@ function createPiranhasCreature() {
     bleedAttack: 1,
     haste: true,
     endOfTurnDeath: true,
-    description: 'Atk + Bleed. Haste.\nDies at end of turn.',
+    description: 'Atk + Bleed. Haste.\nDies at end of turn.\nOccasionally Edible.',
   });
 }
 

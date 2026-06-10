@@ -113,7 +113,7 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -1846,6 +1846,20 @@ let mithrilRemediesVisited = false;
 // a Tier 2 class ability. Flag is persisted and gates the prayer
 // choice as exhausted on revisits.
 let templeMoradinPrayed = false;
+// Set true after the party rests at the Last Watch keep (Guard
+// Captain dialog → Rest choice → inn-style rebalance). The "Down to
+// the Valley" exit cross-map gate ALSO checks isWellRested() at
+// click time, so adding cards between rest and descent still locks
+// the path until the player rests again.
+let lastWatchRested = false;
+// Set true once the player has seen the full Guard Captain audience
+// (the prince / hush / Olbrim conversation). Subsequent visits route
+// to the revisit factory which jumps straight to Rest / Leave.
+let lastWatchAudienceComplete = false;
+// Latched when the player picks the Rest choice at the keep so the
+// inventory-rest exit knows to set lastWatchRested + unlock the
+// valley descent. Cleared after the rest finishes.
+let _lastWatchRestPending = false;
 // Tracks whether the barkeep has already handed the post-dragon
 // freebie Whitescale Brew to the player. One-shot: the LOOT phase
 // only fires on the first post-dragon visit; subsequent visits
@@ -2021,6 +2035,25 @@ const NO_FOG_MAPS = new Set([
   // Temple of Moradin — small 2-node side map; the player sees the
   // whole layout (entry + altar) at a glance.
   'temple_of_moradin',
+  // Top of the Infinite Stairs — open ridge, the player can see every
+  // node on the plateau at a glance.
+  'top_of_infinite_stairs',
+  // The Last Watch — exterior courtyard; same open-layout treatment.
+  'last_watch',
+  // High Valley — open trail across the mountain valley below the
+  // Last Watch. Two maps in sequence, both no-fog so the player can
+  // see every node on the trail at a glance.
+  'high_valley_1',
+  'high_valley_2',
+  // Mountain Cave — small 3-node interior. Open layout so the player
+  // sees Cave Entrance + Circular Ruins + Ice Waterfall at a glance.
+  'mountain_cave',
+  // Roc Nest Approach — open ridge above the cave. Same no-fog rule
+  // so the player can see the whole switchback at a glance.
+  'roc_nest_far',
+  // Nest Interior — inside the Roc's nest. Two-node side map, open
+  // layout.
+  'nest_interior',
 ]);
 
 const HIDE_UNTIL_VISIT_MAPS = new Set([
@@ -2237,12 +2270,21 @@ function getEnemySpeedMul() {
 // Loaded once at boot, saved whenever any option changes via the
 // shared saveOptions() call below.
 const OPTIONS_LS_KEY = 'cq_options_v1';
+// True by default — show a confirm modal when the player clicks End
+// Turn while at least one ally is still ready to attack. Toggled off
+// from Options; persisted in localStorage alongside the other prefs.
+let _endTurnWarnAllies = true;
+// Modal flag — flipped on when the End Turn click finds unused
+// allies; cleared by the Yes/No handler.
+let _endTurnConfirmOpen = false;
+
 function loadOptionsFromStorage() {
   try {
     const raw = localStorage.getItem(OPTIONS_LS_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw) || {};
     if (typeof parsed.runFast === 'boolean') runFast = parsed.runFast;
+    if (typeof parsed.endTurnWarnAllies === 'boolean') _endTurnWarnAllies = parsed.endTurnWarnAllies;
     // Only honor the saved enemySpeed when the player explicitly
     // picked one in Options (enemySpeedExplicit flag). Older saves
     // and untouched-options saves fall through to the new 'fast'
@@ -2275,6 +2317,7 @@ function saveOptions() {
       musicEnabled: isMusicEnabled(),
       soundVolume: getSoundVolume(),
       musicVolume: getMusicVolume(),
+      endTurnWarnAllies: _endTurnWarnAllies,
     }));
   } catch (e) { /* private mode / quota — silently skip */ }
 }
@@ -3629,6 +3672,13 @@ async function loadAssets() {
     loadImage('map_deeper_tunnels', `${BASE}assets/Maps/DwarvenCityDeeperTunnels.jpg`),
     loadImage('map_artisan_district', `${BASE}assets/Maps/DwarvenCityArtisanDistrict.jpg`),
     loadImage('map_temple_of_moradin', `${BASE}assets/Maps/TempleofMoradin.jpg`),
+    loadImage('map_top_of_infinite_stairs', `${BASE}assets/Maps/TopOfStairsOfInfinite.jpg`),
+    loadImage('map_last_watch', `${BASE}assets/Maps/TheLastWatch.jpg`),
+    loadImage('map_high_valley_1', `${BASE}assets/Maps/HighValley1.jpg`),
+    loadImage('map_high_valley_2', `${BASE}assets/Maps/HighValley2.jpg`),
+    loadImage('map_mountain_cave', `${BASE}assets/Maps/HighValleyMountainCave.jpg`),
+    loadImage('map_roc_nest_far', `${BASE}assets/Maps/RocNestFromFar.jpg`),
+    loadImage('map_nest_interior', `${BASE}assets/Maps/NestInterior.jpg`),
     loadImage('map_tunnel_to_bridge', `${BASE}assets/Maps/DwarvenCityTunnelToBridge.jpg`),
     // UI assets
     loadImage('backpack_bg', `${BASE}assets/Backgrounds/BackpackBackground.jpg`),
@@ -5049,6 +5099,23 @@ const MUSIC_FOR_AREA = {
   throne_room: 'Music/music_guild_of_unlikely_heroes_01',
   personal_quarters: 'Music/music_guild_of_unlikely_heroes_01',
   artisan_hall: 'Music/music_guild_of_unlikely_heroes_01',
+  // Temple of Moradin — sacred drone for the all-father's shrine, same
+  // bed the Lost Shrine / Old God's Statue / Cathedral Shrine use.
+  temple_of_moradin: 'Music/ambience_shrine_drone_01',
+  // Top of the Infinite Stairs + Last Watch + High Valley — high-
+  // altitude mountain wind, same bed the mountain path / plains use
+  // further down.
+  top_of_infinite_stairs: 'Music/ambience_mountain_wind_01',
+  last_watch: 'Music/ambience_mountain_wind_01',
+  high_valley_1: 'Music/ambience_mountain_wind_01',
+  high_valley_2: 'Music/ambience_mountain_wind_01',
+  // Mountain Cave — interior, cave dripping bed (same one used in the
+  // chapter 2 underground cave map further south).
+  mountain_cave: 'Music/ambience_cave_dripping_01',
+  // Roc Nest Approach — back out into the wind, top of the world.
+  roc_nest_far: 'Music/ambience_mountain_wind_01',
+  // Nest Interior — still up at the summit; same wind bed.
+  nest_interior: 'Music/ambience_mountain_wind_01',
   // Obsidian Wastes labyrinth — cold wind / storm bed. Holds until
   // the party crosses into the volcano interior. The Qualibaf Volcano
   // approach + slopes share the same bed so the unnatural-cold motif
@@ -5444,6 +5511,9 @@ function resetStoryFlags() {
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
+  lastWatchRested = false;
+  lastWatchAudienceComplete = false;
+  _lastWatchRestPending = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -5531,6 +5601,9 @@ function startNewGame() {
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
+  lastWatchRested = false;
+  lastWatchAudienceComplete = false;
+  _lastWatchRestPending = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -7906,6 +7979,173 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     arriveAtNode('temple_moradin_door', 'temple_moradin_entry');
     return;
   }
+  // Climbing the Stairs ↔ Top of the Infinite Stairs teleport pair.
+  // The climbing_stairs node sits on the Tharnag exterior map and
+  // cross-maps onto the new plateau map at top_stairs_arrival, which
+  // fires the exhausted-companions dialog on first arrival. Reverse
+  // brings the party back to climbing_stairs.
+  if (nodeId === 'climbing_stairs'
+      && currentMap.id === 'tharnag'
+      && fromNodeId !== 'top_stairs_arrival') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('top_of_infinite_stairs', createTopOfInfiniteStairsMap);
+    visitedNodes = new Set(['top_stairs_arrival']);
+    currentMap.currentNodeId = 'top_stairs_arrival';
+    arriveAtNode('top_stairs_arrival', 'climbing_stairs');
+    return;
+  }
+  if (nodeId === 'top_stairs_arrival'
+      && currentMap.id === 'top_of_infinite_stairs'
+      && fromNodeId !== 'climbing_stairs') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag', createTharnagMap);
+    visitedNodes = new Set(['climbing_stairs']);
+    currentMap.currentNodeId = 'climbing_stairs';
+    arriveAtNode('climbing_stairs', 'top_stairs_arrival');
+    return;
+  }
+  // Top of the Infinite Stairs ↔ The Last Watch teleport pair. The
+  // final ridge node cross-maps into the high-altitude dwarven
+  // outpost; reverse hops back to the ridge gate.
+  if (nodeId === 'top_stairs_to_outpost'
+      && currentMap.id === 'top_of_infinite_stairs'
+      && fromNodeId !== 'last_watch_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('last_watch', createLastWatchMap);
+    visitedNodes = new Set(['last_watch_entry']);
+    currentMap.currentNodeId = 'last_watch_entry';
+    arriveAtNode('last_watch_entry', 'top_stairs_to_outpost');
+    return;
+  }
+  if (nodeId === 'last_watch_entry'
+      && currentMap.id === 'last_watch'
+      && fromNodeId !== 'top_stairs_to_outpost') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('top_of_infinite_stairs', createTopOfInfiniteStairsMap);
+    visitedNodes = new Set(['top_stairs_to_outpost']);
+    currentMap.currentNodeId = 'top_stairs_to_outpost';
+    arriveAtNode('top_stairs_to_outpost', 'last_watch_entry');
+    return;
+  }
+  // Last Watch — Down to the Valley descent. Stays inside the
+  // last_watch map (walks to last_watch_valley_path) until the
+  // player walks one more step onto the Valley Path teleport node.
+  // The well-rested gate fires here so a stale state (cards added
+  // between rest and descent) can't sneak the player past.
+  if (nodeId === 'last_watch_to_valley'
+      && currentMap.id === 'last_watch'
+      && fromNodeId !== 'last_watch_valley_path') {
+    if (!isWellRested()) {
+      showStyledToast('Go Rest in the Keep.', 'recharge', 2200);
+      state = GameState.MAP;
+      return;
+    }
+  }
+  // Last Watch ↔ High Valley 1 teleport pair.
+  if (nodeId === 'last_watch_valley_path'
+      && currentMap.id === 'last_watch'
+      && fromNodeId !== 'high_valley_1_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('high_valley_1', createHighValley1Map);
+    visitedNodes = new Set(['high_valley_1_entry']);
+    currentMap.currentNodeId = 'high_valley_1_entry';
+    arriveAtNode('high_valley_1_entry', 'last_watch_valley_path');
+    return;
+  }
+  if (nodeId === 'high_valley_1_entry'
+      && currentMap.id === 'high_valley_1'
+      && fromNodeId !== 'last_watch_valley_path') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('last_watch', createLastWatchMap);
+    visitedNodes = new Set(['last_watch_valley_path']);
+    currentMap.currentNodeId = 'last_watch_valley_path';
+    arriveAtNode('last_watch_valley_path', 'high_valley_1_entry');
+    return;
+  }
+  // High Valley 1 ↔ High Valley 2 teleport pair.
+  if (nodeId === 'high_valley_1_exit'
+      && currentMap.id === 'high_valley_1'
+      && fromNodeId !== 'high_valley_2_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('high_valley_2', createHighValley2Map);
+    visitedNodes = new Set(['high_valley_2_entry']);
+    currentMap.currentNodeId = 'high_valley_2_entry';
+    arriveAtNode('high_valley_2_entry', 'high_valley_1_exit');
+    return;
+  }
+  if (nodeId === 'high_valley_2_entry'
+      && currentMap.id === 'high_valley_2'
+      && fromNodeId !== 'high_valley_1_exit') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('high_valley_1', createHighValley1Map);
+    visitedNodes = new Set(['high_valley_1_exit']);
+    currentMap.currentNodeId = 'high_valley_1_exit';
+    arriveAtNode('high_valley_1_exit', 'high_valley_2_entry');
+    return;
+  }
+  // High Valley 2 ↔ Mountain Cave teleport pair.
+  if (nodeId === 'high_valley_2_cave_entrance'
+      && currentMap.id === 'high_valley_2'
+      && fromNodeId !== 'mountain_cave_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('mountain_cave', createMountainCaveMap);
+    visitedNodes = new Set(['mountain_cave_entry']);
+    currentMap.currentNodeId = 'mountain_cave_entry';
+    arriveAtNode('mountain_cave_entry', 'high_valley_2_cave_entrance');
+    return;
+  }
+  if (nodeId === 'mountain_cave_entry'
+      && currentMap.id === 'mountain_cave'
+      && fromNodeId !== 'high_valley_2_cave_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('high_valley_2', createHighValley2Map);
+    visitedNodes = new Set(['high_valley_2_cave_entrance']);
+    currentMap.currentNodeId = 'high_valley_2_cave_entrance';
+    arriveAtNode('high_valley_2_cave_entrance', 'mountain_cave_entry');
+    return;
+  }
+  // Mountain Cave Ice Waterfall ↔ Roc Nest Approach teleport pair.
+  if (nodeId === 'mountain_cave_ice_waterfall'
+      && currentMap.id === 'mountain_cave'
+      && fromNodeId !== 'roc_nest_far_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('roc_nest_far', createRocNestFromFarMap);
+    visitedNodes = new Set(['roc_nest_far_entry']);
+    currentMap.currentNodeId = 'roc_nest_far_entry';
+    arriveAtNode('roc_nest_far_entry', 'mountain_cave_ice_waterfall');
+    return;
+  }
+  if (nodeId === 'roc_nest_far_entry'
+      && currentMap.id === 'roc_nest_far'
+      && fromNodeId !== 'mountain_cave_ice_waterfall') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('mountain_cave', createMountainCaveMap);
+    visitedNodes = new Set(['mountain_cave_ice_waterfall']);
+    currentMap.currentNodeId = 'mountain_cave_ice_waterfall';
+    arriveAtNode('mountain_cave_ice_waterfall', 'roc_nest_far_entry');
+    return;
+  }
+  // Roc Nest Approach ↔ Nest Interior teleport pair.
+  if (nodeId === 'roc_nest_far_exit'
+      && currentMap.id === 'roc_nest_far'
+      && fromNodeId !== 'nest_interior_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('nest_interior', createNestInteriorMap);
+    visitedNodes = new Set(['nest_interior_entry']);
+    currentMap.currentNodeId = 'nest_interior_entry';
+    arriveAtNode('nest_interior_entry', 'roc_nest_far_exit');
+    return;
+  }
+  if (nodeId === 'nest_interior_entry'
+      && currentMap.id === 'nest_interior'
+      && fromNodeId !== 'roc_nest_far_exit') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('roc_nest_far', createRocNestFromFarMap);
+    visitedNodes = new Set(['roc_nest_far_exit']);
+    currentMap.currentNodeId = 'roc_nest_far_exit';
+    arriveAtNode('roc_nest_far_exit', 'nest_interior_entry');
+    return;
+  }
   // Tunnel Entrance → District Exit (direct pair-teleport). After
   // the first arrival has fired the tunnel dialog, clicking
   // bridge_tunnel_entry hops the player back to artisan_exit;
@@ -9195,6 +9435,35 @@ function handleMapClick(x, y) {
         // click-on-self while the party is already standing at the
         // entry should also hop back out to the siege map's side door.
         (r.nodeId === 'grand_hall_side_entry' && currentMap.id === 'tharnag_interior' && node.isDone) ||
+        // Grand Hall Main Entrance ↔ Tharnag Main Door pair. Unlocked
+        // once Mithril Remedies dialog fires (mithrilRemediesVisited).
+        // Click-on-self teleports across the pair the same way walk-
+        // onto does — no isDone gate, so the very first click after
+        // unlock works.
+        (r.nodeId === 'grand_hall_main_entrance' && currentMap.id === 'tharnag_interior' && !node.isLocked) ||
+        (r.nodeId === 'tharnag_main_door' && currentMap.id === 'tharnag' && !node.isLocked) ||
+        // Climbing the Stairs ↔ Top of the Infinite Stairs pair, and
+        // Top of the Infinite Stairs ↔ The Last Watch pair. Click-on-
+        // self teleports the same way walking onto the node does.
+        (r.nodeId === 'climbing_stairs' && currentMap.id === 'tharnag' && !node.isLocked) ||
+        (r.nodeId === 'top_stairs_arrival' && currentMap.id === 'top_of_infinite_stairs') ||
+        (r.nodeId === 'top_stairs_to_outpost' && currentMap.id === 'top_of_infinite_stairs') ||
+        (r.nodeId === 'last_watch_entry' && currentMap.id === 'last_watch') ||
+        (r.nodeId === 'last_watch_courtyard' && currentMap.id === 'last_watch') ||
+        // Last Watch ↔ High Valley 1 ↔ High Valley 2 chain.
+        (r.nodeId === 'last_watch_valley_path' && currentMap.id === 'last_watch') ||
+        (r.nodeId === 'high_valley_1_entry' && currentMap.id === 'high_valley_1') ||
+        (r.nodeId === 'high_valley_1_exit' && currentMap.id === 'high_valley_1') ||
+        (r.nodeId === 'high_valley_2_entry' && currentMap.id === 'high_valley_2') ||
+        // High Valley 2 ↔ Mountain Cave pair.
+        (r.nodeId === 'high_valley_2_cave_entrance' && currentMap.id === 'high_valley_2') ||
+        (r.nodeId === 'mountain_cave_entry' && currentMap.id === 'mountain_cave') ||
+        // Mountain Cave Ice Waterfall ↔ Roc Nest Approach pair.
+        (r.nodeId === 'mountain_cave_ice_waterfall' && currentMap.id === 'mountain_cave') ||
+        (r.nodeId === 'roc_nest_far_entry' && currentMap.id === 'roc_nest_far') ||
+        // Roc Nest Approach ↔ Nest Interior pair.
+        (r.nodeId === 'roc_nest_far_exit' && currentMap.id === 'roc_nest_far') ||
+        (r.nodeId === 'nest_interior_entry' && currentMap.id === 'nest_interior') ||
         // Lava Chamber back-teleport entry node: once the arrival
         // dialog has fired, click-on-self sends the party back to
         // lower_caverns/cavern_exit. cavern_entrance is intentionally
@@ -9384,6 +9653,9 @@ const ENCOUNTER_BG_MAP = {
   outpost_meeting: 'bg_south_outpost',
   // Mithril Remedies — apothecary shop dialog (artisan district).
   mithril_remedies: 'bg_mithril_remedies',
+  // Top of the Infinite Stairs arrival — companions exhausted dialog
+  // uses the same plateau art as the map background.
+  top_stairs_arrival: 'bg_top_of_infinite_stairs',
   outpost_kraken_report: 'bg_south_outpost',
   // Watchtower check-in reuses the same outpost-gate backdrop so the
   // dialog reads as continuous with the first meeting rather than
@@ -9559,6 +9831,8 @@ const ENCOUNTER_BG_FILES = {
   bg_artisan_district: 'Maps/DwarvenCityArtisanDistrict.jpg',
   // Mithril Remedies — apothecary shop interior, post-dragon WIP node.
   bg_mithril_remedies: 'MithrilRemediesBG.jpg',
+  // Top of the Infinite Stairs — backdrop for the arrival dialog.
+  bg_top_of_infinite_stairs: 'Maps/TopOfStairsOfInfinite.jpg',
   bg_tomb_of_ancestor: 'Maps/DwarvenCityTombOfAncestor.jpg',
   bg_dwarven_throne_room: 'Maps/DwarvenCityThroneRoom.jpg',
   bg_map_room: 'Maps/DwarvenCityMapRoom.jpg',
@@ -9796,13 +10070,23 @@ function hydrateMapFromGlobalState(map) {
         n.hiddenDescription = '';
       }
     }
+    // Mithril Remedies — the Olbrim side quest seed. Opens at the
+    // same beat as the rest of the artisan hall lane. _stateRevealed
+    // forces visibility regardless of the player's current node
+    // (otherwise the indoor-area render gate hides it until the
+    // player stands on a direct neighbor).
+    const mr = map.getNode('mithril_remedies');
+    if (mr) {
+      mr.isLocked = false;
+      mr.hiddenName = '';
+      mr.hiddenDescription = '';
+      mr._stateRevealed = true;
+    }
   }
   // Post-dragon side quest unlocks on the Tharnag interior map.
-  // Temple of Moradin doorway in the throne_room area + Mithril
-  // Remedies in the artisan_hall area both open the moment the
-  // dragon is dead. _stateRevealed forces visibility regardless of
-  // the player's current node (otherwise the indoor-area render gate
-  // hides them until the player stands on a direct neighbor).
+  // Temple of Moradin doorway in the throne_room area opens the moment
+  // the dragon is dead. _stateRevealed forces visibility regardless of
+  // the player's current node.
   if (map.id === 'tharnag_interior' && dragonSlain) {
     const tmd = map.getNode('temple_moradin_door');
     if (tmd) {
@@ -9810,13 +10094,6 @@ function hydrateMapFromGlobalState(map) {
       tmd.hiddenName = '';
       tmd.hiddenDescription = '';
       tmd._stateRevealed = true;
-    }
-    const mr = map.getNode('mithril_remedies');
-    if (mr) {
-      mr.isLocked = false;
-      mr.hiddenName = '';
-      mr.hiddenDescription = '';
-      mr._stateRevealed = true;
     }
   }
   // Tharnag interior — Grand Hall Main Entrance unlocks once the
@@ -10698,6 +10975,13 @@ function startNodeEncounter(nodeId) {
       ? ENCOUNTER_REGISTRY.temple_moradin_altar_revisit
       : ENCOUNTER_REGISTRY.temple_moradin_altar;
     currentEncounter = fac ? fac() : factory();
+  } else if (node.encounterId === 'last_watch_audience') {
+    // Last Watch — first visit fires the full captain dialog; after
+    // that, the revisit variant skips straight to Rest / Leave.
+    const fac = lastWatchAudienceComplete
+      ? ENCOUNTER_REGISTRY.last_watch_audience_revisit
+      : ENCOUNTER_REGISTRY.last_watch_audience;
+    currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'tomb_sarcophagus') {
     // Sarcophagus — pre-defeat plays the full TEXT→fight→rest flow.
     // Post-defeat (ancestorSpiritsDefeated) plays the rest-only
@@ -10798,17 +11082,19 @@ function startNodeEncounter(nodeId) {
     _lastMusicNodeId = null;
   }
 
-  // Backfill exhaustedChoices from the global one-shot prayer latches
-  // (cathedralPrayed, templeMoradinPrayed) so a save written before the
-  // exhaustedChoices system existed — or any session where the click
-  // handler didn't get a chance to stamp — still grays out the prayer.
+  // Backfill exhaustedChoices from the global one-shot prayer latch
+  // (cathedralPrayed) so a save written before the exhaustedChoices
+  // system existed still grays out the prayer. Note: the Temple of
+  // Moradin altar is intentionally NOT backfilled — its prayer is
+  // repeatable (pay 200 gp, pick a Tier 2 ability, come back later).
   if (!Array.isArray(node.exhaustedChoices)) node.exhaustedChoices = [];
   if (cathedralPrayed && !node.exhaustedChoices.includes('pray_cathedral')) {
     node.exhaustedChoices.push('pray_cathedral');
   }
-  if (templeMoradinPrayed && !node.exhaustedChoices.includes('pray_temple_moradin')) {
-    node.exhaustedChoices.push('pray_temple_moradin');
-  }
+  // Clean any stale 'pray_temple_moradin' stamp from older saves that
+  // marked the altar as one-shot — the prayer is now repeatable.
+  const tmIdx = node.exhaustedChoices.indexOf('pray_temple_moradin');
+  if (tmIdx !== -1) node.exhaustedChoices.splice(tmIdx, 1);
   // Re-apply persisted exhaustedChoices to the freshly-built encounter so
   // already-used options stay grayed out across visits / saves.
   const persisted = Array.isArray(node.exhaustedChoices) ? node.exhaustedChoices : [];
@@ -10831,7 +11117,12 @@ function startNodeEncounter(nodeId) {
         return repeats.length > 0 && repeats.every(c => c.exhausted);
       })()
     );
-    if (allRepeatsDone && node.isDone) {
+    // Altar of Moradin: always replay the dialog on click so the
+    // player can re-read the flavor + see the exhausted prayer option.
+    // (Skipping the early-return here means the revisit encounter
+    // renders even when the only repeat — "Pray and donate" — is gray.)
+    const isAlwaysReplay = node.encounterId === 'temple_moradin_altar';
+    if (allRepeatsDone && node.isDone && !isAlwaysReplay) {
       currentMap.completeCurrentNode();
       currentEncounter = null;
       state = GameState.MAP;
@@ -12766,9 +13057,11 @@ function drawMap() {
     if (node.wip && !debugMode) continue;
     const { x: nx, y: ny } = toScreen(node.position);
     // discoverable nodes hide unless visited / done / accessible /
-    // current — even on outdoor maps where the global fog filter is
-    // bypassed. accessible is computed below; pre-compute here.
-    if (node.discoverable && !noFog) {
+    // current — applies even on NO_FOG_MAPS so a single open-layout
+    // map can still chain-reveal its inner nodes one hop at a time
+    // (used by the post-dragon valley → cave → nest chain). Click
+    // gate in getMapNodeRects already honors the same rule.
+    if (node.discoverable) {
       const accessibleNow = accessible.includes(id);
       const visibleNow = visitedNodes.has(id) || node.isDone || accessibleNow || id === currentMap.currentNodeId;
       if (!visibleNow) continue;
@@ -13528,6 +13821,21 @@ function handleEncounterChoiceClick(x, y) {
         currentEncounter = null;
         return;
       }
+      case 'last_watch_rest': {
+        // Last Watch keep — drop into the inventory in restMode so the
+        // player must rebalance before being marked Well Rested. The
+        // exitInventory tail picks up _lastWatchRestPending and
+        // latches lastWatchRested = true after the rebalance lands.
+        restMode = true;
+        _restBonusCat = null;
+        _levelUpBonusPending = false;
+        _restErrorMsg = '';
+        previousState = state;
+        state = GameState.INVENTORY;
+        encounterChoiceResult = null;
+        currentEncounter = null;
+        return;
+      }
       case 'quarters_rest': {
         // Personal Quarters bed — same flow as the inn rest: drop into
         // inventory rest mode for a free rebalance and full heal. Mirrors
@@ -13561,7 +13869,7 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
@@ -14030,14 +14338,11 @@ function handleEncounterChoiceClick(x, y) {
         showToast(`Not enough gold! Need ${r.choice.effectValue || 50} GP.`);
         return;
       }
-      // Gate: pray_temple_moradin requires 200 GP. Same toast-and-bail
-      // pattern as the Chapel. Belt-and-suspenders: also gate on the
-      // templeMoradinPrayed latch so a save with a missing
-      // exhaustedChoices stamp still can't re-buy.
-      if (r.choice.effectType === 'pray_temple_moradin' && templeMoradinPrayed) {
-        showToast("Moradin's gift has already been granted.");
-        return;
-      }
+      // Gate: pray_temple_moradin requires 200 GP. Repeatable as long
+      // as the player can afford the donation — every prayer opens a
+      // fresh Tier 2 ability pick. templeMoradinPrayed stays as a
+      // first-visit latch (suppresses the intro text on revisits) but
+      // no longer blocks the prayer itself.
       if (r.choice.effectType === 'pray_temple_moradin' && gold < (r.choice.effectValue || 200)) {
         showToast(`Not enough gold! Need ${r.choice.effectValue || 200} GP.`);
         return;
@@ -14115,10 +14420,11 @@ function handleEncounterChoiceClick(x, y) {
         return;
       }
       // Temple of Moradin altar — 200 gp donation buys a Tier 2 class
-      // ability pick. Mirrors the Cathedral Shrine flow: deduct gold,
-      // stamp the prayer as exhausted (in-memory + on-node), open the
-      // ABILITY_SELECT screen. The encounter's "Leave" choice stays
-      // available so the player can browse the altar then bow out.
+      // ability pick. Repeatable: every donation opens a fresh picker,
+      // so the player can keep coming back as long as they can afford
+      // it. templeMoradinPrayed latches on the first cast so the intro
+      // text is skipped on revisits, but the prayer choice itself is
+      // never marked exhausted.
       if (r.choice.effectType === 'pray_temple_moradin') {
         const cost = r.choice.effectValue || 200;
         if (gold >= cost) {
@@ -14128,21 +14434,6 @@ function handleEncounterChoiceClick(x, y) {
         templeMoradinPrayed = true;
         templeMoradinPrayMode = true;
         abilityChoices = getOffsetAbilityChoices(selectedClass, 3, 2);
-        const node = currentMap && currentMap.getCurrentNode && currentMap.getCurrentNode();
-        if (node) {
-          if (!Array.isArray(node.exhaustedChoices)) node.exhaustedChoices = [];
-          if (!node.exhaustedChoices.includes('pray_temple_moradin')) {
-            node.exhaustedChoices.push('pray_temple_moradin');
-          }
-        }
-        if (currentEncounter && currentEncounter.phases) {
-          for (const phase of currentEncounter.phases) {
-            if (!phase.choices) continue;
-            for (const c of phase.choices) {
-              if (c.effectType === 'pray_temple_moradin') c.exhausted = true;
-            }
-          }
-        }
         previousState = state;
         state = GameState.ABILITY_SELECT;
         return;
@@ -14226,6 +14517,8 @@ function handleEncounterChoiceClick(x, y) {
       // splash already reads correctly.
       if (r.choice.effectType === 'outpost_tent_rest') resolveOutpostTentRest(r.choice);
       if (r.choice.effectType === 'outpost_tent_full_rest') resolveOutpostTentFullRest(r.choice);
+      if (r.choice.effectType === 'last_watch_rest') resolveLastWatchRest(r.choice);
+      if (r.choice.effectType === 'last_watch_leave') resolveLastWatchLeave(r.choice);
       // South Hill pre-board rest: simple +N heal, no latch — south_hill
       // is one-shot via the encounter itself so the rest naturally only
       // fires once.
@@ -14362,6 +14655,33 @@ function resolveOutpostTentFullRest(_choice) {
   respawnSouthernMonsters();
   showStyledToast('Full rest — you wake up ready.', 'heal', 2600);
   autosaveNow();
+}
+
+// Last Watch — pick handler for the Rest choice. The actual
+// rebalance + setWellRested fires inside exitInventory once the
+// player has confirmed their deck (same flow as the Qualibaf inn).
+// We just latch the audience-complete flag, park the pending-rest
+// marker, heal the discard pile, and stamp the result text. The
+// advanceEncounterPhase hook below flips into INVENTORY rest mode.
+function resolveLastWatchRest(choice) {
+  if (!player) return;
+  lastWatchAudienceComplete = true;
+  _lastWatchRestPending = true;
+  const beforeDiscard = player.deck.discardPile.length;
+  healPlayer(99);
+  const healed = beforeDiscard - player.deck.discardPile.length;
+  const healLine = healed > 0
+    ? `You wake fully rested (+${healed} healed).`
+    : 'You wake feeling refreshed.';
+  choice.resultText = `Warm food, warm fire, then sleep. ${healLine} Adjust your deck before you leave.`;
+}
+
+// Last Watch — pick handler for the Leave-without-resting choice.
+// Latches audience-complete so the next visit skips the dialog, but
+// does not flip the rest pending marker — the descent path stays
+// gated until the player comes back and rests.
+function resolveLastWatchLeave(_choice) {
+  lastWatchAudienceComplete = true;
 }
 
 function resolveSouthHillRest(choice) {
@@ -15474,12 +15794,22 @@ function drawEncounterChoice() {
     for (const r of rects) {
       const choice = r.choice;
       const exhausted = choice.exhausted;
-      const hovered = !exhausted && hitTest(mouseX, mouseY, r);
+      // Gold-gated prayers (Temple of Moradin: 200 gp; Chapel: 50 gp).
+      // Grey out the choice when the player can't afford it — same
+      // treatment as exhausted, just labeled "(Need X GP)" instead of
+      // "(Done)" so the player understands why it's locked.
+      const costType = choice.effectType;
+      const cost = costType === 'pray_temple_moradin' ? (choice.effectValue || 200)
+                 : costType === 'pray_church'         ? (choice.effectValue || 50)
+                 : 0;
+      const unaffordable = cost > 0 && gold < cost;
+      const disabled = exhausted || unaffordable;
+      const hovered = !disabled && hitTest(mouseX, mouseY, r);
 
       // Transparent background with white border
-      ctx.fillStyle = exhausted ? 'rgba(40,40,40,0.6)' : (hovered ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.3)');
+      ctx.fillStyle = disabled ? 'rgba(40,40,40,0.6)' : (hovered ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.3)');
       ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.strokeStyle = exhausted ? '#555' : (hovered ? Colors.WHITE : 'rgba(255,255,255,0.6)');
+      ctx.strokeStyle = disabled ? '#555' : (hovered ? Colors.WHITE : 'rgba(255,255,255,0.6)');
       ctx.lineWidth = 2;
       ctx.strokeRect(r.x, r.y, r.w, r.h);
 
@@ -15490,6 +15820,9 @@ function drawEncounterChoice() {
       if (exhausted) {
         ctx.fillStyle = '#666';
         ctx.fillText(`${choice.text}  (Done)`, r.x + r.w / 2, r.y + r.h / 2);
+      } else if (unaffordable) {
+        ctx.fillStyle = '#666';
+        ctx.fillText(`${choice.text}  (Need ${cost} GP)`, r.x + r.w / 2, r.y + r.h / 2);
       } else {
         ctx.fillStyle = hovered ? Colors.WHITE : 'rgba(255,255,255,0.85)';
         ctx.fillText(choice.text, r.x + r.w / 2, r.y + r.h / 2);
@@ -16151,6 +16484,7 @@ function continueCombatPhase2() {
   enemyTurnNumber = 0;
   enemyDamageAccumulator = 0;
   _deferredEnemyDeath = false;
+  _pendingPiranhaFish = 0;
   awaitingEnemyDamage = false;
 
   // Build the new enemy's draw pile + opening hand. masterDeck is
@@ -16564,6 +16898,15 @@ const KEYWORD_ICONS = {
   mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Each stack is a charge: the next attack on the target consumes 1 stack and deals double damage (before armor / shield). Stacks persist until used up or the target dies.' },
   rage: { iconKey: 'icon_rage', label: 'Rage', desc: 'Permanent bonus damage to all attacks' },
   scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards of your draw pile. Pick 1 to draw, recharge the rest. Variant: Scry N from your discard pile — pick 1 to draw, the unpicked cards stay in the discard pile.' },
+  // "Ailments" — the negative-status family that "Heal N Ailments" /
+  // "Heal all Ailments" strips. Matches the priority order the engine
+  // walks in healOneNegativeEffectOnPlayer: Bleed → Poison → Fire →
+  // Ice → Shock. Same definition reused for singular and plural so
+  // hover-over works on either form.
+  ailment:  { isTextKeyword: true, color: '#dcb070', label: 'Ailment',
+              desc: 'Negative statuses you can carry: Bleed, Poison, Fire, Ice, Shock. "Heal N Ailments" removes 1 stack per N, in priority order (Bleed → Poison → Fire → Ice → Shock); "Heal all Ailments" wipes every stack.' },
+  ailments: { isTextKeyword: true, color: '#dcb070', label: 'Ailments',
+              desc: 'Negative statuses you can carry: Bleed, Poison, Fire, Ice, Shock. "Heal N Ailments" removes 1 stack per N, in priority order (Bleed → Poison → Fire → Ice → Shock); "Heal all Ailments" wipes every stack.' },
   heal: { isTextKeyword: true, color: '#7cff9c', label: 'Heal N', desc: 'Restore up to N cards from your discard pile. If you have Poison, each stack is cleared first (1 heal = 1 Poison removed); any leftover heals cards.' },
   sentinel: { isTextKeyword: true, color: '#c8a060', label: 'Sentinel', desc: 'Attacks must target this creature first while it is alive.' },
   haste: { isTextKeyword: true, color: '#9cf07c', label: 'Haste', desc: 'Ready to attack the turn it enters play.' },
@@ -16867,6 +17210,7 @@ function tokenizeKeywordText(text, opts = {}) {
   const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Ignite', 'Sentinel', 'Haste',
+    'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
   let lastIdx = 0;
@@ -18458,6 +18802,11 @@ function drawCombat() {
   // --- Character card splash overlay ---
   if (characterSplashCharacter) drawCharacterSplash();
 
+  // End Turn warning modal — drawn last so it sits above everything
+  // else in the combat scene. Click handler in handleCombatClick eats
+  // every click while the modal is open.
+  drawEndTurnConfirm();
+
   ctx.textAlign = 'left';
 }
 
@@ -19362,8 +19711,8 @@ function getSummonPreview(card) {
     tamed_rat: { name: 'Tamed Rat', atk: 1, hp: 1 },
     pet_spider: { name: 'Spider', atk: 0, hp: 1, abilities: 'Poison Attack' },
     guards: { name: 'Kobold Guard', atk: 2, hp: 1 },
-    thorb_card: { name: 'Thorb', atk: 2, hp: 4, abilities: 'Companion' },
-    thorb_card_2: { name: 'Thorb', atk: 2, hp: 5, abilities: 'Sentinel, Companion' },
+    thorb_card: { name: 'Thorb', atk: 2, hp: 5, abilities: 'Companion' },
+    thorb_card_2: { name: 'Thorb', atk: 2, hp: 6, abilities: 'Sentinel, Companion' },
     summon_treants: { name: 'Treant', atk: 2, hp: 1, abilities: 'Haste' },
     magma_mephit_summon: { name: 'Magma Mephit', atk: 2, hp: 5, abilities: 'Fire Immune' },
     large_boulder: { name: 'Large Boulder', atk: 6, hp: 4, abilities: '1 Armor, Self-Destruct' },
@@ -20461,7 +20810,7 @@ function drawCombatButtons() {
       );
     }
   } else if (enabled) {
-    drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'End Turn', endPlayerTurn, 'large', 20);
+    drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'End Turn', tryEndPlayerTurn, 'large', 20);
   } else {
     ctx.globalAlpha = 0.4;
     drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'End Turn', null, 'large', 20);
@@ -20734,6 +21083,22 @@ function drawEnemyPowerArea() {
 
 // --- Combat click handling ---
 function handleCombatClick(x, y) {
+  // End Turn warning modal — eat every click while the confirm is up.
+  if (_endTurnConfirmOpen) {
+    const m = getEndTurnConfirmRects();
+    if (hitTest(x, y, m.yes)) {
+      _endTurnConfirmOpen = false;
+      playSound('click');
+      endPlayerTurn();
+      return;
+    }
+    if (hitTest(x, y, m.no) || !hitTest(x, y, m.panel)) {
+      _endTurnConfirmOpen = false;
+      playSound('click');
+      return;
+    }
+    return;
+  }
   // Click dismisses combat intro splash
   if (combatIntroTimer > 0) {
     combatIntroTimer = 0;
@@ -22784,21 +23149,22 @@ function resolveEffect(eff, caster, target) {
       dmg += incomingMod;
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
-      // Feral Wrath split — consume 1 charge of the Feral Wrath buff
-      // (if any) and convert half the finalized damage to Bleed. Half-
-      // up to bleed, half-down to damage so odd damage favors bleed.
-      // The bleed lands AFTER damage applies, below the dispatch.
+      // Feral Wrath conversion — consume 1 charge of the Feral Wrath
+      // buff (if any) and convert ALL of the finalized damage to Bleed
+      // on the target. No damage lands; the whole swing becomes bleed
+      // stacks. Stamped AFTER the damage dispatch below (no-op for the
+      // damage call since dmg is zeroed here).
       let wrathBleed = 0;
       const wrathBuff = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
       if (wrathBuff && (wrathBuff.stacks || 0) > 0 && dmg > 0) {
-        wrathBleed = Math.ceil(dmg / 2);
-        dmg = Math.floor(dmg / 2);
+        wrathBleed = dmg;
+        dmg = 0;
         wrathBuff.stacks -= 1;
         wrathBuff.effectValue = wrathBuff.stacks;
         if (wrathBuff.stacks <= 0) {
           caster.combatBuffs = caster.combatBuffs.filter(b => b !== wrathBuff);
         }
-        addLog(`  Feral Wrath: half → ${wrathBleed} Bleed`, Colors.RED);
+        addLog(`  Feral Wrath: damage → ${wrathBleed} Bleed`, Colors.RED);
       }
       const unpreventable = consumeUnpreventableBuff(caster);
       // Enemy reactively plays defense cards before damage lands on enemy character —
@@ -23834,7 +24200,7 @@ function resolveEffect(eff, caster, target) {
         caster.addCombatBuff(new CombatBuff({
           id: 'bleed_weapon',
           name: 'Feral Wrath',
-          description: 'Next attack: half damage converts to Bleed. Consume a charge.',
+          description: 'Next attack: all damage converts to Bleed. Consume a charge.',
           imageId: 'feral_bite',
           effectType: 'bleed_weapon',
           effectValue: amount,
@@ -25157,7 +25523,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_thorb': {
       const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 4, isCompanion: true,
+        name: 'Thorb', attack: 2, maxHp: 5, isCompanion: true,
         description: 'Turn End: +Shield',
       });
       // Link to the source card so when Thorb dies, the card moves from
@@ -25217,7 +25583,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_thorb_upgraded': {
       const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 5, sentinel: true, isCompanion: true,
+        name: 'Thorb', attack: 2, maxHp: 6, sentinel: true, isCompanion: true,
         description: 'Sentinel. Turn End: +Shield',
       });
       thorb.sourceCard = _activePlayCard || null;
@@ -25675,7 +26041,7 @@ function resolveEffect(eff, caster, target) {
         const p = new Creature({
           name: 'Piranhas', attack: 0, maxHp: 1,
           bleedAttack: 1, haste: true, endOfTurnDeath: true,
-          description: 'Atk + Bleed. Haste.\nDies at end of turn.',
+          description: 'Atk + Bleed. Haste.\nDies at end of turn.\nOccasionally Edible.',
         });
         scaleCreatureWithOffset(p, playerTierOffset || 0);
         if (caster.addCreature(p)) { lastPiranha = p; }
@@ -27022,7 +27388,7 @@ function healOneNegativeEffectOnPlayer() {
       return true;
     }
   }
-  addLog(`  No negative effect to heal`, Colors.GRAY);
+  addLog(`  No Ailment to heal`, Colors.GRAY);
   return false;
 }
 
@@ -28932,6 +29298,83 @@ function drawDamageSourceOverlay() {
   ctx.textAlign = 'left';
 }
 
+// True if the player still has at least one ally creature that could
+// attack this turn — alive, not exhausted, with attack > 0 OR a
+// poison / bleed rider that lands without needing real damage.
+// Mirrors the eligibility check in pickAlly / processPlayerAllyAttacks.
+function hasUnusedAllyAttacker() {
+  if (!player || !Array.isArray(player.creatures)) return false;
+  for (const ally of player.creatures) {
+    if (!ally || !ally.isAlive || ally.exhausted) continue;
+    if ((ally.attack || 0) > 0) return true;
+    if (ally.poisonAttack) return true;
+    if ((ally.bleedAttack || 0) > 0) return true;
+  }
+  return false;
+}
+
+// End Turn click wrapper. Pops a confirm modal if the player still
+// has allies that haven't swung yet AND the warning isn't disabled
+// in Options. Falls through to the real endPlayerTurn either way.
+function tryEndPlayerTurn() {
+  if (_endTurnConfirmOpen) return;
+  if (_endTurnWarnAllies && hasUnusedAllyAttacker()) {
+    _endTurnConfirmOpen = true;
+    return;
+  }
+  endPlayerTurn();
+}
+
+// Centered Yes/No confirm panel for the End Turn warning. Same shape
+// the in-game quit dialog uses (the click handler pattern in
+// handleCombatClick mirrors handleIngameMenuClick's quit confirm).
+function getEndTurnConfirmRects() {
+  const panelW = 460, panelH = 200;
+  const px = (SCREEN_WIDTH - panelW) / 2;
+  const py = (SCREEN_HEIGHT - panelH) / 2;
+  const btnW = 160, btnH = 50;
+  const gap = 30;
+  const btnsTotalW = btnW * 2 + gap;
+  const btnsX = px + (panelW - btnsTotalW) / 2;
+  const btnsY = py + panelH - btnH - 24;
+  return {
+    panel: { x: px, y: py, w: panelW, h: panelH },
+    yes: { x: btnsX, y: btnsY, w: btnW, h: btnH },
+    no: { x: btnsX + btnW + gap, y: btnsY, w: btnW, h: btnH },
+  };
+}
+
+function drawEndTurnConfirm() {
+  if (!_endTurnConfirmOpen) return;
+  // Dim background.
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  const r = getEndTurnConfirmRects();
+  // Panel
+  ctx.fillStyle = 'rgba(45,45,55,0.96)';
+  ctx.fillRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  // Title
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 24px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Allies Still Ready', r.panel.x + r.panel.w / 2, r.panel.y + 42);
+  // Body
+  ctx.fillStyle = '#ddd';
+  ctx.font = '16px Georgia, serif';
+  ctx.fillText('You still have allies that can attack.', r.panel.x + r.panel.w / 2, r.panel.y + 76);
+  ctx.fillText('End your turn anyway?', r.panel.x + r.panel.w / 2, r.panel.y + 100);
+  // Buttons (drawStyledButton wires its own hit area; we eat clicks
+  // ourselves in handleCombatClick, so pass null callbacks here).
+  drawStyledButton(r.yes.x, r.yes.y, r.yes.w, r.yes.h, 'End Turn', null, 'large', 18);
+  menuButtons.pop();
+  drawStyledButton(r.no.x, r.no.y, r.no.w, r.no.h, 'Keep Playing', null, 'large', 18);
+  menuButtons.pop();
+  ctx.textAlign = 'left';
+}
+
 function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   if (!isPlayerTurn) return;
   if (powerRechargeMode) return;
@@ -29117,6 +29560,18 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   if (toDraw > 0) {
     const drawn = player.deck.draw(toDraw, MAX_HAND_SIZE);
     if (drawn.length > 0) { addLog(`You draw ${drawn.length} card${drawn.length > 1 ? 's' : ''}`, Colors.GREEN); playDrawSounds(drawn.length); }
+  }
+  // Piranha-fish bonus drops — appended AFTER the refill draw so the
+  // fish arrives ON TOP of the normal draw rather than displacing one.
+  // Hand-size cap is bypassed: the fish is a flavor bonus, not a
+  // regular draw, so it can push the hand to MAX_HAND_SIZE + 1 etc.
+  if (_pendingPiranhaFish > 0) {
+    for (let i = 0; i < _pendingPiranhaFish; i++) {
+      const fish = createFreshFish();
+      player.deck.hand.push(fish);
+      addLog(`  A piranha washes up — Fresh Fish!`, Colors.GREEN, fish);
+    }
+    _pendingPiranhaFish = 0;
   }
   // Wipe stays-in-hand exhaustion off every hand card so the enemy turn
   // doesn't show stale Zzz overlays on cards the player will ready next
@@ -29336,6 +29791,13 @@ function killEndOfTurnDeathCreatures(character) {
       c.currentHp = 0;
       spawnDeathAnimation(c);
       addLog(`  ${c.name} crumbles at turn end`, Colors.GRAY, null, null, c);
+      // "Occasionally Edible" — 10% per dying Piranha to wash up as
+      // a Fresh Fish for the player. Player-side only; the drop is
+      // queued and applied AFTER the end-of-turn refill so the fish
+      // doesn't displace a normal draw.
+      if (character === player && c.name === 'Piranhas' && Math.random() < 0.1) {
+        _pendingPiranhaFish += 1;
+      }
     }
   }
   character.removeDeadCreatures();
@@ -29625,6 +30087,12 @@ let enemyDamageAccumulator = 0; // total damage from enemy attacks this turn (ca
 // completePlayerTurnTransition delivers the damage, so the player
 // still takes the hit before the fight ends.
 let _deferredEnemyDeath = false;
+// Piranhas swarm "Occasionally Edible" — each Piranha that dies on
+// the player's side at end of turn rolls a 10% chance to drop a
+// Fresh Fish into the hand. Queued here in killEndOfTurnDeathCreatures
+// and drained AFTER the end-of-turn refill so the fish arrives in
+// addition to the normal draw rather than displacing one.
+let _pendingPiranhaFish = 0;
 // Last-attacker weapon SFX keys, stashed when an enemy queues damage to the
 // player. Read by startIncomingDamage so the auto-mitigated block thud
 // matches the swinging weapon (Large Boulder → boulder_blocked etc.).
@@ -33636,13 +34104,14 @@ function snapshotFeralWrathCharge(caster) {
   return true;
 }
 
-// Split a per-target damage value into (dmg, bleed) according to the
-// Feral Wrath rule — half-down to damage, half-up to bleed. Only
-// meaningful when the caller already burned the charge via
-// snapshotFeralWrathCharge. Returns null when dmg is 0 (no split).
+// Convert a per-target damage value to a full Bleed stamp per the
+// Feral Wrath rule — no damage lands, the whole swing turns into
+// Bleed stacks on the target. Only meaningful when the caller already
+// burned the charge via snapshotFeralWrathCharge. Returns null when
+// dmg is 0 (no conversion).
 function feralWrathSplit(dmg) {
   if (dmg <= 0) return null;
-  return { damage: Math.floor(dmg / 2), bleed: Math.ceil(dmg / 2) };
+  return { damage: 0, bleed: dmg };
 }
 
 // Apply a Feral Wrath bleed to a target after the damage already
@@ -36317,6 +36786,15 @@ function exitInventory() {
     // level-up rest, so the south gate accepts the player after an inn
     // stay too. Idempotent if already wellRested.
     setWellRested();
+    // Last Watch rest follow-through: latch lastWatchRested so the
+    // hydration hook leaves the Down to the Valley node ready for the
+    // descent on the next map render. autosave so the flag survives a
+    // refresh between rest and walking out the gate.
+    if (_lastWatchRestPending) {
+      _lastWatchRestPending = false;
+      lastWatchRested = true;
+      autosaveNow();
+    }
     restMode = false;
     _restBonusCat = null;
     _levelUpBonusPending = false;
@@ -37924,7 +38402,7 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
@@ -38573,6 +39051,8 @@ function restoreFromSave(data) {
   staircaseTopDragonDialogSeen = !!data.staircaseTopDragonDialogSeen;
   mithrilRemediesVisited = !!data.mithrilRemediesVisited;
   templeMoradinPrayed = !!data.templeMoradinPrayed;
+  lastWatchRested = !!data.lastWatchRested;
+  lastWatchAudienceComplete = !!data.lastWatchAudienceComplete;
   dwarvenTavernFreebieGiven = !!data.dwarvenTavernFreebieGiven;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
@@ -38736,6 +39216,17 @@ function restoreFromSave(data) {
     volcano_stairs_2: createVolcanoStairs2Map,
     volcano_stairs_3: createVolcanoStairs3Map,
     volcano_summit_ridge: createVolcanoSummitRidgeMap,
+    // Post-dragon side-quest maps. Saves landing on any of these
+    // would fall back to createPrisonCellMap (purple/empty screen)
+    // without these entries.
+    temple_of_moradin: createTempleOfMoradinMap,
+    top_of_infinite_stairs: createTopOfInfiniteStairsMap,
+    last_watch: createLastWatchMap,
+    high_valley_1: createHighValley1Map,
+    high_valley_2: createHighValley2Map,
+    mountain_cave: createMountainCaveMap,
+    roc_nest_far: createRocNestFromFarMap,
+    nest_interior: createNestInteriorMap,
   };
   const mapCreator = MAP_CREATORS[data.mapId] || createPrisonCellMap;
   currentMap = mapCreator();
@@ -39276,6 +39767,14 @@ function handleOptionsClick(x, y) {
     playSound('click');
     return;
   }
+  // End-Turn warn-allies toggle.
+  const etwY = resetY + resetH + 16;
+  if (hitTest(x, y, { x: btnX, y: etwY, w: btnW, h: btnH })) {
+    _endTurnWarnAllies = !_endTurnWarnAllies;
+    playSound('click');
+    saveOptions();
+    return;
+  }
   // Back button
   const backY = boxY + boxH - btnH - 20;
   if (hitTest(x, y, { x: btnX, y: backY, w: btnW, h: btnH })) {
@@ -39421,6 +39920,18 @@ function drawOptionsScreen() {
   const resetX = btnX + (btnW - resetW) / 2;
   drawStyledButton(resetX, resetY, resetW, resetH, 'Reset Tutorial', null, 'small', 14);
   menuButtons.pop();
+
+  // End Turn warning toggle — warn when the player tries to end the
+  // turn with un-swung allies on the field. Default on.
+  const etwY = resetY + resetH + 16;
+  const etwLabel = _endTurnWarnAllies ? '✓ Warn: Idle Allies' : 'Warn: Idle Allies';
+  drawStyledButton(btnX, etwY, btnW, btnH, etwLabel, null, 'large', 20);
+  menuButtons.pop();
+  if (_endTurnWarnAllies) {
+    ctx.strokeStyle = Colors.GREEN;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(btnX + 1, etwY + 1, btnW - 2, btnH - 2);
+  }
 
   // Back button
   const backY = boxY + boxH - btnH - 20;
@@ -43822,7 +44333,7 @@ function buildCodexSourceCache() {
   restlessBone._sourceRarity = 'common';
   restlessBone._sourceSubtype = 'armor'; // Loose Bone is a defense (armor) card
   addCreature(restlessBone, 'Summoned by: Loose Bone');
-  const thorbCreature = new Creature({ name: 'Thorb', attack: 2, maxHp: 4, isCompanion: true });
+  const thorbCreature = new Creature({ name: 'Thorb', attack: 2, maxHp: 5, isCompanion: true });
   thorbCreature._codexSide = 'player';
   thorbCreature._sourceRarity = 'rare'; // thorb_card is rare
   thorbCreature._sourceSubtype = 'allies';

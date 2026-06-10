@@ -163,14 +163,14 @@ export function createFeralForm() {
     id: 'feral_form',
     name: 'Feral Form',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Deal Bleed or Gain Shield. Heal 1 Negative Effect, Draw.',
+    effectDescription: 'Deal Bleed, Draw. Or Gain Shield, Heal 1 Ailment, Draw.',
     rechargeCost: 1,
-    // Inline keywords ("Bleed", "Shield", "Draw") get auto-iconified by
-    // the small-power tokenizer.
-    shortDesc: 'R1->Bleed or Shield\nHeal-, Draw',
+    // Inline keywords ("Bleed", "Shield", "Draw", "Ailment") get auto-
+    // iconified by the small-power tokenizer.
+    shortDesc: 'R1->Bleed+Draw\nor Shield+Heal\nAilment+Draw',
     choices: [createCatFormToken(), createBearFormToken()],
     // Feline pick scales Bleed +1/offset, Bear pick scales Shield
-    // +1/offset. Heal Negative Effect + Draw stay flat.
+    // +1/offset. Heal Ailment + Draw stay flat.
     gamePlusOffset: { apply_bleed: 1, gain_shield: 1 },
   });
 }

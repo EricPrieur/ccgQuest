@@ -534,13 +534,13 @@ export function createTharnagMap() {
     { id: 'siege_gauntlet_2', name: 'Siege Gauntlet 2', description: 'The second siege line.', encounterId: 'siege_gauntlet_2', connections: ['siege_gauntlet_1', 'siege_gauntlet_3'], position: [440, 700], mapArea: 'tharnag', isLocked: true, unlocks: ['siege_gauntlet_3'], hiddenName: 'Siege Line' },
     { id: 'siege_gauntlet_3', name: 'Siege Gauntlet 3', description: 'The third siege line.', encounterId: 'siege_gauntlet_3', connections: ['siege_gauntlet_2', 'siege_gauntlet_dialog', 'north_pass'], position: [450, 570], mapArea: 'tharnag', isLocked: true, unlocks: ['siege_gauntlet_dialog'], hiddenName: 'Siege Line' },
     { id: 'siege_gauntlet_dialog', name: 'Siege Gauntlet Dialog', description: 'Beyond the siege lines.', encounterId: 'siege_gauntlet_dialog', connections: ['siege_gauntlet_3', 'tharnag_side_door'], position: [640, 580], mapArea: 'tharnag', isLocked: true, unlocks: ['tharnag_side_door'], hiddenName: '???' },
-    { id: 'tharnag_side_door', name: 'Tharnag Side Door', description: 'A side entrance to Tharnag.', encounterId: 'tharnag_side_door', connections: ['siege_gauntlet_dialog', 'tharnag_main_door'], position: [790, 450], mapArea: 'tharnag', isLocked: true, canRevisit: true, hiddenName: '???' },
+    { id: 'tharnag_side_door', name: 'Tharnag Side Door', description: 'A side entrance to Tharnag.', encounterId: 'tharnag_side_door', connections: ['siege_gauntlet_dialog'], position: [790, 450], mapArea: 'tharnag', isLocked: true, canRevisit: true, hiddenName: '???' },
     // Main Door — sits west of the Side Door. Cross-map back into
-    // Tharnag's Grand Hall Main Entrance. Bidirectional path to the
-    // Side Door once the Main Door unlocks (post-Mithril dialog), so
-    // the two cliff-face entries are a proper loop. Post-dragon
-    // mithril side quest chain branches off via the Mountain Path.
-    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['tharnag_side_door', 'mountain_path'], position: [540, 410], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.' },
+    // Tharnag's Grand Hall Main Entrance via the teleport pair in
+    // arriveAtNode. Branches up the cliff into the Stairs of the
+    // Infinite side quest. No direct link to the Side Door — the two
+    // exterior gates are intentionally separate paths.
+    { id: 'tharnag_main_door', name: 'Tharnag Main Door', description: 'The great front doors of Tharnag, scarred and propped open. A switchback road climbs up the cliff above.', encounterId: '', connections: ['mountain_path'], position: [540, 410], mapArea: 'tharnag', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors stands in the cliff face.' },
     // Post-dragon Stairs of the Infinite chain — unlocked once
     // mithrilRemediesVisited fires (the dialog tells the party to
     // climb the stairs after Olbrim). All three nodes start locked
@@ -1327,9 +1327,14 @@ export function createTharnagInteriorMap() {
     // room hops you onto the landing. The teleport guard suppresses
     // the bounce when fromNodeId already matches the paired node, so
     // the encounter-complete re-fire doesn't ping-pong forever.
-    { id: 'staircase_landing', name: 'To the Throne Room', description: 'A wide landing where the passage turns toward the Throne Room.', encounterId: '', connections: ['staircase_top', 'throne_room_entry'], position: [400, 580], mapArea: 'grand_staircase', canRevisit: true, passthroughTo: 'throne_room_entry' },
-    { id: 'throne_room_entry', name: 'Throne Room', description: 'Massive iron doors stand open, revealing the Throne Room of Tharnag.', encounterId: 'throne_room_arrival', connections: ['staircase_landing', 'throne', 'temple_moradin_door'], position: [500, 970], mapArea: 'throne_room', canRevisit: false, passthroughTo: 'staircase_landing' },
+    { id: 'staircase_landing', name: 'To the Throne Room', description: 'A wide landing where the passage turns toward the Throne Room.', encounterId: '', connections: ['staircase_top', 'throne_room_to_grand_stairway'], position: [400, 580], mapArea: 'grand_staircase', canRevisit: true, passthroughTo: 'throne_room_to_grand_stairway' },
+    { id: 'throne_room_entry', name: 'Throne Room', description: 'Massive iron doors stand open, revealing the Throne Room of Tharnag.', encounterId: 'throne_room_arrival', connections: ['throne', 'temple_moradin_door', 'throne_room_to_grand_stairway'], position: [500, 950], mapArea: 'throne_room', canRevisit: false },
     { id: 'throne', name: 'The Throne', description: "The ancient stone throne of Tharnag's king sits upon a raised dais.", encounterId: 'throne_audience', connections: ['throne_room_entry'], position: [510, 820], mapArea: 'throne_room', canRevisit: false },
+    // Throne Room exit node — pairs with `staircase_landing` (in the
+    // Grand Staircase area) as a teleport gate. Walking onto either
+    // half auto-hops to the other; the anti-bounce check on the
+    // passthrough chase keeps the player from ping-ponging.
+    { id: 'throne_room_to_grand_stairway', name: 'To the Grand Stairway', description: 'A wide landing opens toward the grand staircase out of the throne room.', encounterId: '', connections: ['throne_room_entry'], position: [860, 930], mapArea: 'throne_room', canRevisit: true, passthroughTo: 'staircase_landing' },
     // Temple of Moradin doorway — post-dragon side quest. Locked
     // until dragonSlain (hydrate unlocks + _stateRevealed). Walking
     // here cross-maps to the Temple of Moradin via the teleport pair
@@ -1355,10 +1360,13 @@ export function createTharnagInteriorMap() {
     { id: 'dwarven_tavern', name: 'Dwarven Tavern', description: 'A warm tavern filled with the smell of ale and roasting meat.', encounterId: 'dwarven_tavern', connections: ['artisan_hall', 'dwarven_smithy'], position: [400, 500], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???' },
     { id: 'dwarven_smithy', name: 'Dwarven Smithy', description: 'A massive forge where master smiths craft the finest dwarven arms and armor.', encounterId: 'dwarven_smithy', connections: ['artisan_hall', 'dwarven_tavern'], position: [400, 800], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???' },
     // Mithril Remedies — Olbrim Goldbalm's apothecary in Tharnag's
-    // Artisan Hall. Locked until dragonSlain (hydrate flips it open +
-    // stamps _stateRevealed so it shows from any artisan_hall node).
-    // Post-visit it's a shop (mithril_remedies_revisit + auto-open).
-    { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.' },
+    // Artisan Hall. Unlock gate: throne audience complete (the side
+    // quest fires while the party is still in Tharnag, regardless of
+    // dragonSlain). Still wip:true for now — invisible in non-debug
+    // — because the downstream chain (Stairs of the Infinite → Last
+    // Watch → Valley → Cave → Nest) is unfinished. Flip wip off when
+    // the chain ships.
+    { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.', wip: true },
   ];
 
   for (const data of nodes) {
@@ -1658,6 +1666,189 @@ export function createArtisanDistrictMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'artisan_entry';
+  return map;
+}
+
+// Top of the Infinite Stairs — windswept plateau above Tharnag. Reached
+// by climbing past `climbing_stairs` on the exterior map; the arrival
+// node fires the "we made it; let's rest at the outpost" dialog. The
+// path winds across the ridge to the Skyforge Outpost gate, which
+// cross-maps into the outpost interior.
+export function createTopOfInfiniteStairsMap() {
+  const map = new GameMap('top_of_infinite_stairs', 'Top of the Infinite Stairs');
+  map.mapImages = {
+    top_of_infinite_stairs: 'Maps/TopOfStairsOfInfinite.jpg',
+  };
+  const nodes = [
+    { id: 'top_stairs_arrival', name: 'Top of the Stairs', description: 'The Stairs of the Infinite open onto a windswept plateau.', encounterId: 'top_stairs_arrival', connections: ['top_stairs_ridge'], position: [780, 750], mapArea: 'top_of_infinite_stairs', canRevisit: false, passthroughTo: 'climbing_stairs' },
+    { id: 'top_stairs_ridge', name: 'Mountain Trail', description: 'A narrow trail picks its way along the ridge.', encounterId: '', connections: ['top_stairs_arrival', 'top_stairs_overlook'], position: [910, 570], mapArea: 'top_of_infinite_stairs', canRevisit: true },
+    { id: 'top_stairs_overlook', name: 'Cliffside Overlook', description: 'The trail rounds a shoulder of stone; the kingdom spreads out below.', encounterId: '', connections: ['top_stairs_ridge', 'top_stairs_approach'], position: [960, 370], mapArea: 'top_of_infinite_stairs', canRevisit: true },
+    { id: 'top_stairs_approach', name: 'Outpost Approach', description: 'Dwarven banners snap against a low watchtower up ahead.', encounterId: '', connections: ['top_stairs_overlook', 'top_stairs_to_outpost'], position: [1080, 230], mapArea: 'top_of_infinite_stairs', canRevisit: true },
+    { id: 'top_stairs_to_outpost', name: 'The Last Watch Gate', description: 'Iron-banded gates marked with the hammer of Moradin. A weather-beaten sign reads THE LAST WATCH.', encounterId: '', connections: ['top_stairs_approach'], position: [770, 100], mapArea: 'top_of_infinite_stairs', canRevisit: true, passthroughTo: 'last_watch_entry' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'top_stairs_arrival';
+  return map;
+}
+
+// The Last Watch — dwarven garrison at the highest altitude in
+// Tharnag's reach, named for being the final outpost before the
+// kingdom's edge. Exterior courtyard map. The bottom gate links back
+// to the ridge; the courtyard fires the Guard Captain audience
+// (one-shot dialog + Rest/Leave choice). After resting at the keep
+// the path Down to the Valley unlocks.
+export function createLastWatchMap() {
+  const map = new GameMap('last_watch', 'The Last Watch');
+  map.mapImages = {
+    last_watch: 'Maps/TheLastWatch.jpg',
+  };
+  const nodes = [
+    { id: 'last_watch_entry', name: 'Watch Gate', description: 'You step through the gates of the Last Watch — the highest outpost in Tharnag.', encounterId: '', connections: ['last_watch_courtyard'], position: [920, 660], mapArea: 'last_watch', canRevisit: true, passthroughTo: 'top_stairs_to_outpost' },
+    // The courtyard is just a junction now — the dialog + rest happen
+    // at the Watch Keep node. Connects out to the keep AND down to the
+    // valley descent (which itself gates on isWellRested at click time
+    // with the "Go Rest in the Keep" toast).
+    { id: 'last_watch_courtyard', name: 'Watch Courtyard', description: 'A windswept courtyard. The keep stands at the far side; a switchback path drops away to the south.', encounterId: '', connections: ['last_watch_entry', 'last_watch_keep', 'last_watch_to_valley'], position: [480, 430], mapArea: 'last_watch', canRevisit: true },
+    // Watch Keep — Guard Captain audience + Rest/Leave choice. First
+    // visit runs the full dialog (createLastWatchAudienceEncounter);
+    // subsequent visits route to the revisit factory (choice only).
+    { id: 'last_watch_keep', name: 'Watch Keep', description: 'The interior of the keep. The captain of the watch greets you here.', encounterId: 'last_watch_audience', connections: ['last_watch_courtyard'], position: [560, 340], mapArea: 'last_watch', canRevisit: true },
+    // Down to the Valley — always visible. Walking onto it walks to
+    // the Valley Path node on the same map; the well-rested gate is
+    // enforced at click time on last_watch_to_valley (toasts "Go Rest
+    // in the Keep" otherwise).
+    { id: 'last_watch_to_valley', name: 'Down to the Valley', description: 'A switchback path drops away into the valley far below.', encounterId: '', connections: ['last_watch_courtyard', 'last_watch_valley_path'], position: [100, 450], mapArea: 'last_watch', canRevisit: true },
+    // Valley Path — placeholder node sitting next to Down to the
+    // Valley. Future content cross-maps from here into the actual
+    // valley map; for now it just sits open with TODO positioning
+    // (user will tune coords). Same map area as the rest of the Last
+    // Watch so the player doesn't see "all nodes vanish" when the
+    // descent fires (which is what happens when the cross-map jump
+    // lands on a near-empty target map).
+    { id: 'last_watch_valley_path', name: 'Valley Path', description: 'The path opens into the valley proper.', encounterId: '', connections: ['last_watch_to_valley'], position: [70, 350], mapArea: 'last_watch', canRevisit: true, passthroughTo: 'high_valley_1_entry' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'last_watch_entry';
+  return map;
+}
+
+// High Valley — first of two valley maps below the Last Watch. Four
+// nodes laid along a winding mountain trail. The entry pairs back to
+// the Last Watch (Valley Path); the exit cross-maps to the second
+// half (createHighValley2Map). Placeholder positions — user will
+// tune.
+export function createHighValley1Map() {
+  const map = new GameMap('high_valley_1', 'High Valley');
+  map.mapImages = {
+    high_valley_1: 'Maps/HighValley1.jpg',
+  };
+  const nodes = [
+    { id: 'high_valley_1_entry', name: 'Valley Floor', description: 'The trail flattens into the valley proper.', encounterId: '', connections: ['high_valley_1_b'], position: [90, 720], mapArea: 'high_valley_1', canRevisit: true, passthroughTo: 'last_watch_valley_path' },
+    { id: 'high_valley_1_b',     name: 'Stone Cairn',  description: 'A stack of stones marks the trail.',           encounterId: '', connections: ['high_valley_1_entry', 'high_valley_1_c'], position: [740, 700], mapArea: 'high_valley_1', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something on the trail ahead.' },
+    { id: 'high_valley_1_c',     name: 'Ridge Bend',   description: 'The path bends along a rocky ridge.',          encounterId: '', connections: ['high_valley_1_b', 'high_valley_1_exit'],    position: [820, 560], mapArea: 'high_valley_1', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The trail bends out of sight.' },
+    { id: 'high_valley_1_exit',  name: 'Onward',       description: 'The valley narrows ahead.',                    encounterId: '', connections: ['high_valley_1_c'],                          position: [610, 510], mapArea: 'high_valley_1', canRevisit: true, passthroughTo: 'high_valley_2_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'The valley narrows ahead.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'high_valley_1_entry';
+  return map;
+}
+
+// High Valley — second of two valley maps. Four nodes: entry, the
+// Frostbloom patch (the rare flower Olbrim was after), then two
+// more nodes after the patch leading deeper in. Placeholder
+// positions — user will tune.
+export function createHighValley2Map() {
+  const map = new GameMap('high_valley_2', 'High Valley');
+  map.mapImages = {
+    high_valley_2: 'Maps/HighValley2.jpg',
+  };
+  const nodes = [
+    { id: 'high_valley_2_entry',     name: 'Upper Valley', description: 'The trail opens into a quiet upper valley.', encounterId: '', connections: ['high_valley_2_frostbloom'], position: [750, 750], mapArea: 'high_valley_2', canRevisit: true, passthroughTo: 'high_valley_1_exit' },
+    // Frostbloom patch — the rare flower Olbrim was after. Encounter
+    // hook left blank for now; future content fills in the find.
+    { id: 'high_valley_2_frostbloom', name: 'Frostbloom Patch', description: 'A scattering of pale blue flowers blooms among the rocks.', encounterId: '', connections: ['high_valley_2_entry', 'high_valley_2_c'], position: [930, 570], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something pale catches the light ahead.' },
+    { id: 'high_valley_2_c',         name: 'Cold Spring', description: 'A spring trickles out of the rock face — startlingly cold.', encounterId: '', connections: ['high_valley_2_frostbloom', 'high_valley_2_d'], position: [800, 520], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A glint of water on the rocks.' },
+    { id: 'high_valley_2_d',         name: 'Deeper Path', description: 'The valley narrows further, the air thinner still.', encounterId: '', connections: ['high_valley_2_c', 'high_valley_2_cave_entrance'], position: [660, 500], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The valley narrows further.' },
+    // Cave Entrance — cross-maps into the Mountain Cave map at the
+    // foot of the cliff face.
+    { id: 'high_valley_2_cave_entrance', name: 'Cave Entrance', description: 'A dark opening yawns at the base of the cliff face.', encounterId: '', connections: ['high_valley_2_d'], position: [750, 420], mapArea: 'high_valley_2', canRevisit: true, passthroughTo: 'mountain_cave_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'A dark opening in the cliff face.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'high_valley_2_entry';
+  return map;
+}
+
+// High Valley Mountain Cave — interior cave reached from the High
+// Valley 2 trail. Three nodes: the entry (pairs back to the valley),
+// the Circular Ruins in the middle, and the Ice Waterfall which will
+// cross-map to the next area when it's built. Placeholder positions
+// — tune to taste.
+export function createMountainCaveMap() {
+  const map = new GameMap('mountain_cave', 'Mountain Cave');
+  map.mapImages = {
+    mountain_cave: 'Maps/HighValleyMountainCave.jpg',
+  };
+  const nodes = [
+    { id: 'mountain_cave_entry',         name: 'Cave Entrance',  description: 'You step in out of the wind. Dwarven runes are scratched into the stone above the doorway.', encounterId: '', connections: ['mountain_cave_ruins'], position: [900, 40], mapArea: 'mountain_cave', canRevisit: true, passthroughTo: 'high_valley_2_cave_entrance' },
+    { id: 'mountain_cave_ruins',         name: 'Circular Ruins', description: 'The cave opens around a ring of broken stone — a circular ruin half-swallowed by ice.',           encounterId: '', connections: ['mountain_cave_entry', 'mountain_cave_ice_waterfall'], position: [750, 400], mapArea: 'mountain_cave', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Stone shapes loom in the gloom ahead.' },
+    { id: 'mountain_cave_ice_waterfall', name: 'Ice Waterfall',  description: 'A frozen waterfall sheets the back wall. A narrow passage threads through the ice beyond.',  encounterId: '', connections: ['mountain_cave_ruins'], position: [340, 220], mapArea: 'mountain_cave', canRevisit: true, passthroughTo: 'roc_nest_far_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'Pale light glints further in.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'mountain_cave_entry';
+  return map;
+}
+
+// Roc Nest From Far — open ridge approach to the Roc's nest, glimpsed
+// at distance. Entry pairs back to the Mountain Cave Ice Waterfall;
+// four more nodes wind across the ridge toward the final approach.
+// The last node will cross-map into the nest interior when that map
+// exists. Placeholder positions — tune to taste.
+export function createRocNestFromFarMap() {
+  const map = new GameMap('roc_nest_far', 'Roc Nest Approach');
+  map.mapImages = {
+    roc_nest_far: 'Maps/RocNestFromFar.jpg',
+  };
+  const nodes = [
+    { id: 'roc_nest_far_entry', name: 'Ridge Trail',     description: 'You step out of the cave onto a high mountain ridge. Far ahead, something massive crowns the peak.', encounterId: '', connections: ['roc_nest_far_b'], position: [450, 760], mapArea: 'roc_nest_far', canRevisit: true, passthroughTo: 'mountain_cave_ice_waterfall' },
+    { id: 'roc_nest_far_b',     name: 'Windward Pass',   description: 'The wind picks up. Loose feathers — far too large for any hawk — drift across the trail.',           encounterId: '', connections: ['roc_nest_far_entry', 'roc_nest_far_c'], position: [600, 660], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something blows on the wind ahead.' },
+    { id: 'roc_nest_far_c',     name: 'Bone Field',       description: 'The path crosses a slope littered with bleached bones — old kills, picked clean.',                   encounterId: '', connections: ['roc_nest_far_b', 'roc_nest_far_d'],     position: [630, 470], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'White shapes scattered on the slope.' },
+    { id: 'roc_nest_far_d',     name: 'Final Approach',  description: 'The nest looms close now — woven from whole tree trunks. Something stirs inside.',                     encounterId: '', connections: ['roc_nest_far_c', 'roc_nest_far_exit'],  position: [180, 280], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A massive shape crowns the ridge.' },
+    // Exit — cross-maps into the nest interior.
+    { id: 'roc_nest_far_exit',  name: 'Into the Nest',   description: 'The lip of the nest. There is no walking up here unseen.',                                            encounterId: '', connections: ['roc_nest_far_d'],                          position: [350, 240], mapArea: 'roc_nest_far', canRevisit: true, passthroughTo: 'nest_interior_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'The lip of the nest itself.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'roc_nest_far_entry';
+  return map;
+}
+
+// Nest Interior — inside the Roc's nest. Two nodes for now: the
+// entry (pairs back to the Roc Nest Approach map) and the middle of
+// the nest. Future content fills in the actual confrontation.
+export function createNestInteriorMap() {
+  const map = new GameMap('nest_interior', "The Roc's Nest");
+  map.mapImages = {
+    nest_interior: 'Maps/NestInterior.jpg',
+  };
+  const nodes = [
+    { id: 'nest_interior_entry',  name: 'Edge of the Nest', description: 'You crest the rim. The nest spreads out like a small clearing, woven from whole tree trunks.', encounterId: '', connections: ['nest_interior_middle'], position: [260, 520], mapArea: 'nest_interior', canRevisit: true, passthroughTo: 'roc_nest_far_exit' },
+    { id: 'nest_interior_middle', name: 'Middle of the Nest', description: 'Bones and broken armor crunch underfoot. Something dark stirs deeper in the nest.',         encounterId: '', connections: ['nest_interior_entry'],  position: [700, 440], mapArea: 'nest_interior', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something stirs deeper inside.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'nest_interior_entry';
   return map;
 }
 
