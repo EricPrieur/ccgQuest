@@ -25072,9 +25072,9 @@ function resolveEffect(eff, caster, target) {
     case 'grant_bleed_weapon': {
       // Feral Wrath (Druid Tier 2) — charge-based buff. Each cast adds
       // `eff.value` charges; the main damage handler reads + consumes
-      // 1 charge per swing and splits the damage (half lands as
-      // damage, half converts to Bleed on the target). Mirrors Mark's
-      // "stacks consumed on use" shape, just held on the caster.
+      // 1 charge per swing and splits the damage (half lands as damage,
+      // half converts to Bleed on the target, rounded UP toward Bleed).
+      // Mirrors Mark's "stacks consumed on use" shape, held on the caster.
       const amount = eff.value || 1;
       const existing = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
       if (existing) {
@@ -25084,7 +25084,7 @@ function resolveEffect(eff, caster, target) {
         caster.addCombatBuff(new CombatBuff({
           id: 'bleed_weapon',
           name: 'Feral Wrath',
-          description: 'Next attack: all damage converts to Bleed. Consume a charge.',
+          description: 'Next attack: half damage converts to Bleed (rounded up). Consume a charge.',
           imageId: 'feral_bite',
           effectType: 'bleed_weapon',
           effectValue: amount,
@@ -35577,14 +35577,16 @@ function snapshotFeralWrathCharge(caster) {
   return true;
 }
 
-// Convert a per-target damage value to a full Bleed stamp per the
-// Feral Wrath rule — no damage lands, the whole swing turns into
-// Bleed stacks on the target. Only meaningful when the caller already
-// burned the charge via snapshotFeralWrathCharge. Returns null when
-// dmg is 0 (no conversion).
+// Convert a per-target damage value into a half-damage + half-Bleed
+// split per the Feral Wrath rule. Half the swing lands as raw damage,
+// the other half stamps Bleed on the target — rounded UP toward Bleed
+// (so a 1-damage swing converts cleanly to 1 Bleed and 0 damage). Only
+// meaningful when the caller already burned the charge via
+// snapshotFeralWrathCharge. Returns null when dmg is 0 (no conversion).
 function feralWrathSplit(dmg) {
   if (dmg <= 0) return null;
-  return { damage: 0, bleed: dmg };
+  const bleed = Math.ceil(dmg / 2);
+  return { damage: dmg - bleed, bleed };
 }
 
 // Apply a Feral Wrath bleed to a target after the damage already

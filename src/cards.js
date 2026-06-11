@@ -2071,15 +2071,15 @@ export function createSummonTreants() {
 }
 
 // Feral Wrath — Druid Tier 2 ability. Each cast adds 1 charge. On the
-// next attack, ALL of the swing's damage converts to Bleed on the
-// target (no damage lands, all of it sits on the target as bleed
-// stacks). Charge consumed. Card id stays `feral_bite` so older saves
-// deserialize cleanly; only the display name + mechanic changed.
+// next attack, HALF of the swing's damage (rounded UP) converts to
+// Bleed on the target — so the swing still lands a damage chunk AND
+// stamps Bleed. Charge consumed. Card id stays `feral_bite` so older
+// saves deserialize cleanly; only the display name + mechanic changed.
 export function createFeralBite() {
   return new Card({
     id: 'feral_bite', name: 'Feral Wrath',
-    description: 'Recharge -> Gain Feral Wrath.\nNext attack: all damage\nconverts to Bleed. Draw.',
-    shortDesc: 'R->Wrath +1\nall dmg→Bleed\nDraw', subtype: 'ability',
+    description: 'Recharge -> Gain Feral Wrath.\nNext attack: half damage\nconverts to Bleed (rounded up). Draw.',
+    shortDesc: 'R->Wrath +1\nhalf dmg→Bleed\nDraw', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('grant_bleed_weapon', 1, TargetType.SELF),
