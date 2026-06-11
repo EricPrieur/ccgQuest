@@ -101,6 +101,10 @@ export function saveGame(state, saveName = '') {
     // Storehouse one-time pickup. Latches when the player takes any
     // card off the supply pile; never re-armed.
     supplyPileTaken: !!state.supplyPileTaken,
+    // Last Watch supply cache one-time latch — the captain's gear
+    // hand-off before the descent into the valley. Same shape as
+    // supplyPileTaken; pulls from dwarven_market_loot.
+    lastWatchSupplyTaken: !!state.lastWatchSupplyTaken,
     // Lake Giant Frog ambush placement — rolled lazily on the first
     // reef-stone arrival, holds up to 2 rock node ids. Persisted so a
     // save/load in the middle of crossing the reef doesn't re-roll
@@ -117,6 +121,30 @@ export function saveGame(state, saveName = '') {
     // any explicit rest beat so walking back onto the cog refires
     // the short revisit encounter.
     harpiesDefeated: !!state.harpiesDefeated,
+    // Dire Bear (Circular Ruins) — same latch shape as harpies. Set
+    // by the post-combat dispatch; cleared on rest via setWellRested
+    // so the ruins re-arm for a fresh ambush.
+    direBearDefeated: !!state.direBearDefeated,
+    // Baby Roc rescue beat — latches when the nest fight ends
+    // (rocRescued) and again when the post-Roc dialog at the Watch
+    // Keep finishes (lastWatchPostRocClaimed). One-shot story flags.
+    rocRescued: !!state.rocRescued,
+    lastWatchPostRocClaimed: !!state.lastWatchPostRocClaimed,
+    // Stormwatcher's Shrine — Marthammor reactivation latch.
+    // Set when Olbrim's Frostbloom lights the brazier; from then on,
+    // the active shrine offers the 200 gp Contemplate rite.
+    shrineReactivated: !!state.shrineReactivated,
+    // First-time active-shrine intro latch — once seen, every later
+    // shrine visit skips the brazier-burning TEXT and drops straight
+    // into the Contemplate / Walk-on choice.
+    stormwatchersShrineActiveSeen: !!state.stormwatchersShrineActiveSeen,
+    // Baby Roc repeat-ambush latch — same shape as direBearDefeated.
+    // Cleared on rest so the nest re-arms for another run.
+    babyRocDefeated: !!state.babyRocDefeated,
+    // Olbrim's Mithril Remedies — one-shot greet latch. Fires the
+    // first post-shrine walk-in; revisits go straight into the
+    // open-revisit-then-shop flow.
+    mithrilRemediesOlbrimGreeted: !!state.mithrilRemediesOlbrimGreeted,
     // Tomb of the Ancestor + Dwarven Workshop + Map Room one-time
     // flags. Each drives a revisit-encounter selector AND a
     // mechanical buff (ancestor rest pool, workbench armor enchant,

@@ -1626,6 +1626,445 @@ export function createTopStairsArrivalEncounter() {
     ]);
 }
 
+// Valley Floor arrival — fires once on the player's first step into
+// High Valley 1. Raena spots fresh sign of flower-picking and the
+// party realizes they're on Olbrim's trail.
+export function createValleyFloorArrivalEncounter() {
+  return new Encounter('valley_floor_arrival', 'High Valley',
+    "The trail flattens. Raena drops to a crouch almost immediately.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("Raena holds up a hand — the rest of the party stops mid-stride. She's already crouched, two fingers brushing the moss at the edge of the trail.", '!'),
+          new EncounterText("\"Recent picking. Last day or so. Stems cut clean — not torn — so somebody who knew what they were doing.\" She straightens, scanning further up the valley. \"Olbrim was here.\"", 'Raena'),
+          new EncounterText("Thorb leans over her shoulder. \"How d'ye know it's him an' not just some local with shears?\"", 'Thorb'),
+          new EncounterText("Raena gives him a flat look. \"Because there are no locals up here, dwarf. And he was going deeper.\" She points up the trail. \"Looking for Frostbloom would be my guess — it likes the rocks higher up.\"", 'Raena'),
+          new EncounterText("\"Then we follow the tracks,\" Valdrisa says. \"And we hope he's still ahead of us.\"", 'Valdrisa'),
+        ],
+      }),
+    ]);
+}
+
+// Upper Valley arrival — fires once on first arrival at High Valley 2.
+// Raena spots an actual patch of Frostbloom up ahead.
+export function createUpperValleyArrivalEncounter() {
+  return new Encounter('upper_valley_arrival', 'Upper Valley',
+    "Higher, colder. Raena's already moving.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The trail crests a low rise and Raena stops dead — then points, sharp and certain, at something the rest of you can't quite see yet.", 'Raena'),
+          new EncounterText("\"There! Patch of Frostbloom — that pale blue, that's it. Big one. Let's go investigate.\"", 'Raena'),
+        ],
+      }),
+    ]);
+}
+
+// Frostbloom Patch — fires once on first arrival at the patch. Party
+// finds Olbrim's sign on a half-picked patch and a hurried departure
+// trail. LOOT phase awards one Frostbloom card to the party.
+export function createFrostbloomPatchEncounter() {
+  return new Encounter('frostbloom_patch', 'Frostbloom Patch',
+    "A scattering of pale blue blooms clings to the rocks.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The party fans out across the patch, looking for anything that says where Olbrim went next — a footprint, a dropped tool, a scrap of cloth caught on a thorn.", '!'),
+          new EncounterText("Valdrisa kneels carefully beside one of the blooms and brushes the petals with her thumb, almost reverent. She works one free of the stone — a single, intact bloom — and tucks it into a pouch.", 'Valdrisa'),
+          new EncounterText("She looks up, frowning. \"This patch is half picked. Cleanly, in a rush — he was here, and he was harvesting. But he stopped partway through. He never finished.\"", 'Valdrisa'),
+          new EncounterText("Raena has already drifted to the edge of the patch, eyes on the ground. \"Tracks here. Deep. He pushed off hard — running, not walking.\" She follows them with her gaze. \"Back down into the valley. Something spooked him.\"", 'Raena'),
+          new EncounterText("\"Spooked him bad enough to leave half a payday on the rocks,\" Thorb mutters. \"That ain't like a man who climbs mountains for moss.\"", 'Thorb'),
+          new EncounterText("\"Let's hurry,\" Raena says, already moving. \"He had a head start, but he was carrying. We're not.\"", 'Raena'),
+          new EncounterText('You gained a new card: Frostbloom!', '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootCards: ['frostbloom'],
+      }),
+    ]);
+}
+
+// Deeper Path — fires once on first arrival at high_valley_2_d.
+// Raena picks Olbrim's tracks back up beyond the spring; Thorb
+// finds the dropped herb bag. The party spots the cave he was likely
+// running for. Awards the Bag of Herbs card via the LOOT phase.
+export function createDeeperPathFindEncounter() {
+  return new Encounter('deeper_path_find', 'Deeper Path',
+    "The trail narrows. Raena drops to a crouch.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("Past the spring the trail narrows again. Raena is already ahead, crouched over the loose scree, fingers flat to the ground. \"Tracks pick up again past the water. Same boot, same hurry.\"", 'Raena'),
+          new EncounterText("Thorb crouches beside something dark in the moss and lifts it carefully. A leather satchel — herb-stained, the strap snapped clean.", 'Thorb'),
+          new EncounterText("\"Herb bag,\" he says, turning it in his hands. \"Half the harvest still inside. He didn't drop this 'cause it slipped — he dropped it because he was runnin'. Hard. Tryin' to get t'cover, most like.\"", 'Thorb'),
+          new EncounterText("Raena straightens, suddenly very still. She points to something the others can barely make out against the cliff face — a darker patch in the rock, half-hidden behind a fall of ice.", 'Raena'),
+          new EncounterText("\"There. Cave in the mountainside. Olbrim probably knew of its existence — old supply route, maybe. If he was looking for shelter, that's where he was going. Let's hurry.\"", 'Raena'),
+          new EncounterText("Thorb slings the bag over his shoulder as the party breaks into a run.", 'Thorb'),
+          new EncounterText('You gained a new card: Bag of Herbs!', '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootCards: ['bag_of_herbs'],
+      }),
+    ]);
+}
+
+// Cave Entrance arrival — fires once when the party first crosses
+// into the Mountain Cave. Raena warns that Olbrim's tracks have been
+// overwritten by something much bigger.
+export function createCaveEntranceArrivalEncounter() {
+  return new Encounter('cave_entrance_arrival', 'Cave Entrance',
+    "Cold air rolls out of the dark mouth of the cave.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The party slips inside, out of the wind. Raena drops to a crouch immediately by the threshold — and her face goes very still.", 'Raena'),
+          new EncounterText("\"His tracks are still here. But...\" She traces an outline with two fingers — much wider, deeper, claws splayed where Olbrim's boots had been. \"They're swallowed up in bigger tracks. Something else came through right after him.\"", 'Raena'),
+          new EncounterText("Thorb adjusts the grip on his hammer. \"How much bigger?\"", 'Thorb'),
+          new EncounterText("\"Bigger than us. Let's go deeper — carefully.\"", 'Raena'),
+        ],
+      }),
+    ]);
+}
+
+// Circular Ruins — fires once when the party reaches the middle of
+// the Mountain Cave. The Dire Bear ambushes them. Encounter starts
+// in COMBAT phase straight after the TEXT preamble, mirroring the
+// pattern other ambush encounters (cozy_spot_ambush etc.) use.
+export function createCircularRuinsCombatEncounter() {
+  return new Encounter('circular_ruins_combat', 'Circular Ruins',
+    "Broken stone teeth ring an old ritual floor, half-swallowed by ice.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("The party fans out into the ring of broken stones, weapons up. Valdrisa kneels by a dark patch on the floor — old blood, smeared, not quite dry.", 'Valdrisa'),
+          new EncounterText("\"Olbrim was here,\" she says softly. \"He was bleeding when he got here.\"", 'Valdrisa'),
+          new EncounterText("From somewhere deeper in the cave — a low, rumbling growl. Stone shivers underfoot.", '!'),
+          new EncounterText("Thorb's eyes go wide. \"Guys... I think I know what Olbrim was fleeing from.\"", 'Thorb'),
+          new EncounterText("Everyone turns at once. A mass of teeth and fur unfolds out of the dark — a bear the size of a small wagon, ice clinging to its hide, eyes black and bright and hungry.", '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.COMBAT,
+        enemyId: 'dire_bear',
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The dire bear crashes to the stone with a final, shuddering breath. The cave is suddenly, deeply quiet.'),
+          new EncounterText('Among the bones and torn fur, the party gathers what the beast leaves behind.'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootGoldDice: [3, 6],
+        lootCards: ['dire_bear_loot'],
+      }),
+      // Post-loot Olbrim investigation + short rest beat. Raena reads
+      // the room, the party concludes Olbrim climbed the ice waterfall
+      // to escape, Thorb forages cave shrooms from the cave's mossy
+      // crannies, and the player decides whether to take a break
+      // (Heal 8) or push on. Both branches grant the shroom hand-out;
+      // only the break heals. The flow then continues into the climb
+      // sequence + Roc-nest discovery before completing.
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Raena moves carefully around the broken ring of stones, fingers brushing the rock, eyes narrowed at every dark patch and scuff mark.', 'Raena'),
+          new EncounterText('"He was here," she says finally. "He came in fast. Bleeding. Limping. The bear was already on him."', 'Raena'),
+          new EncounterText('"There." She points to a smear of blood climbing the back wall of the cave. "He didn\'t lie down. He went up. Right up the ice waterfall."', 'Raena'),
+          new EncounterText('Everyone looks. The frozen sheet of water glints at the back of the cave — slick, hard, treacherous, and tall. The kind of climb you only make when nothing else is left.', '!'),
+          new EncounterText('"If he made the top, there\'s an exit up there. There has t\' be." Thorb scrubs his beard, jaw set. "He\'s tougher than he looks, our Olbrim. He made it. I\'m tellin\' ye, he made it."', 'Thorb'),
+          new EncounterText('"Hope," Raena says softly. "He went up. That means he was still moving."', 'Raena'),
+          new EncounterText('Valdrisa rests a hand on the rim of a broken stone, looking at the climb. "We follow him. But not bruised and bleeding. Let\'s breathe for a moment before we go up."', 'Valdrisa'),
+          new EncounterText('Thorb wanders off along the cave wall and crouches in the mossy seam where the water seeps in. After a minute of careful foraging he comes up with a small handful of pale cave shrooms — the kind that grow where nothing else does. "Aye. Found a few o\' these. Could be useful when the climb starts."', 'Thorb'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: 'Catch your breath before the climb?',
+        choices: [
+          new EncounterChoice(
+            'Take a break',
+            'You sit down hard on the broken stones. Thorb hands the shrooms around the circle. By the time you stand, the worst of the night has gone out of your bones.',
+            'circular_ruins_break', 8,
+            { completesEncounter: true }
+          ),
+          new EncounterChoice(
+            'Push on after Olbrim',
+            'You take the shrooms Thorb offers and tuck them away for the climb. No time for rest — every minute Olbrim is up there alone is one too many.',
+            'circular_ruins_break', 0,
+            { completesEncounter: true }
+          ),
+        ],
+      }),
+    ]);
+}
+
+// Ice Waterfall climb — one-shot story beat that fires the first
+// time the player walks onto the mountain_cave_ice_waterfall node
+// after defeating the bear. The party hauls itself up the frozen
+// falls, follows a meltwater stream to daylight, emerges on a high
+// ledge, tracks Olbrim's prints to where they STOP — a feather, a
+// shadow, the silhouette of a Roc nest. Background swaps to
+// bg_roc_nest_far at the nest reveal so the dialog visibly moves
+// from the cave interior to the open ridge; the music swap to the
+// mountain-wind ambience hooks off the same bg-override in
+// advanceEncounterPhase (the underground_river pattern). After the
+// encounter completes, the node's passthroughTo fires and the
+// player teleports onto roc_nest_far_entry (Ridge Trail).
+export function createIceWaterfallClimbEncounter() {
+  return new Encounter('ice_waterfall_climb', 'Ice Waterfall',
+    'A frozen waterfall sheets the back wall. Olbrim came this way.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The climb is brutal. The ice cracks under every grip, the cold knifes into your fingers, and the spray off the meltwater never stops. Halfway up your arms are shaking. Twice the stone gives and Raena hauls someone back by the rope.', '!'),
+          new EncounterText('"If Olbrim made this," Valdrisa pants, jamming a piton, "he\'s harder than half the dwarves I\'ve fought beside."', 'Valdrisa'),
+          new EncounterText('Near the top, the falls thin out into a small icy stream cutting along a stone shelf. You follow it deeper — and ahead of you, daylight. Real daylight, knifing down through a crack in the cave roof.', '!'),
+          new EncounterText('"There IS an exit," Thorb breathes. "There IS. He was right."', 'Thorb'),
+          new EncounterText('You haul yourselves up through the gap and the wind hits you like a slap. You\'re on a high ledge of bare rock, the valley spread out far, far below. The sky is wide and pale and very cold.', '!'),
+          new EncounterText('Raena drops to her hands and knees at once, brushing crusted snow off the stone. "Tracks. He came out here. Walking. Limping but walking."', 'Raena'),
+          new EncounterText('She follows them along the ledge — three steps, four, five — and then she stops dead. The tracks just END. Mid-stride. As if Olbrim had been picked up out of the air.', '!'),
+          new EncounterText('She crouches down and gently picks something out of the snow — a single feather, longer than her forearm, broader than her hand. Dark brown, banded with white. She lifts it slowly.', 'Raena'),
+          new EncounterText('Every head tilts back at once. High above the ridge, balanced on the spire of a black crag, sits a nest — a tangled, mountain-sized cradle of branches and bones. The kind of nest that could only belong to one animal in the whole world.', '!', 'bg_roc_nest_far'),
+          new EncounterText('"A Roc," Raena whispers, the feather trembling slightly in her hand. "A Roc has him."', 'Raena', 'bg_roc_nest_far'),
+          new EncounterText('Valdrisa swears under her breath. Thorb\'s knuckles whiten on his hammer. The mood crashes — for a long, terrible moment nobody can speak. A Roc. Of course it had to be a Roc.', 'Valdrisa', 'bg_roc_nest_far'),
+          new EncounterText('"OLBRIM!" Thorb roars suddenly, hands cupped to his mouth. "OLBRIM, LAD!"', 'Thorb', 'bg_roc_nest_far'),
+          new EncounterText('The shout rolls off the cliffs in long echoes. Silence. Wind. Silence.', '!', 'bg_roc_nest_far'),
+          new EncounterText('And then — thin, faint, almost lost in the gale — a voice from somewhere up there: "...help..."', '!', 'bg_roc_nest_far'),
+          new EncounterText('It\'s him. He\'s alive. He\'s up there.', 'Thorb', 'bg_roc_nest_far'),
+          new EncounterText('You exchange one fast look. There\'s no time. You finish the climb. You get him out of that nest before the Roc comes back.', '!', 'bg_roc_nest_far'),
+        ],
+      }),
+    ]);
+}
+
+// Repeat ambush — after a rest, another bear has claimed the ruins.
+// Short setup, same fight, same loot table (re-rolls fresh on each
+// re-fight). Triggered by the arriveAtNode dispatch when the
+// player walks onto the ruins with direBearDefeated cleared.
+export function createCircularRuinsRepeatCombatEncounter() {
+  return new Encounter('circular_ruins_combat_repeat', 'Circular Ruins',
+    "The ruins are quiet — until they aren't.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText("You step back into the ring of broken stones. The old blood is gone — and so is the carcass.", '!'),
+          new EncounterText("A heavy paw scrapes on stone. Another dire bear has decided this cave is home now.", '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.COMBAT,
+        enemyId: 'dire_bear',
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The second bear collapses beside the bones of the first. The ruins are yours again — for now.'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootGoldDice: [3, 6],
+        lootCards: ['dire_bear_loot'],
+      }),
+    ]);
+}
+
+// Final Approach — quick one-beat check before stepping onto the
+// nest's rim. The party scans for the Roc and finds nothing — wind,
+// silence, an empty patch of sky. The bird is out hunting. They
+// commit to going in.
+export function createFinalApproachCheckEncounter() {
+  return new Encounter('final_approach_check', 'Final Approach',
+    'The nest is right above you now.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You crouch behind a spur of rock and scan the sky. Raena watches the south ridge, Valdrisa the north. Thorb cranes his neck up at the nest itself.', '!'),
+          new EncounterText('"Nothin\'," Thorb says after a long minute. "No shadow on the rocks. No call. The big bird\'s out huntin\'."', 'Thorb'),
+          new EncounterText('"It won\'t be long," Raena murmurs, eyes still on the wind. "Birds that size don\'t leave a nest for long."', 'Raena'),
+          new EncounterText('Valdrisa adjusts her grip on her shield. "Then we don\'t waste it. In. Get him. Out. Move."', 'Valdrisa'),
+          new EncounterText('You go in.', '!'),
+        ],
+      }),
+    ]);
+}
+
+// Middle of the Nest — Olbrim rescue + Baby Roc reveal. Two huge
+// eggs, the apothecary wedged between them and badly hurt, Val drops
+// to her knees to tend his wounds, Olbrim tries to wave them off,
+// a shell cracks open, and a chicken-sized-but-also-the-size-of-a-
+// barn predator gets a look at the party. Combat hook is wired
+// inline (enemyId 'baby_roc') but the bird's deck/character isn't
+// authored yet — the COMBAT phase is parked behind a TODO until the
+// fight is built.
+export function createNestMiddleOlbrimEncounter() {
+  return new Encounter('nest_middle_olbrim', 'Middle of the Nest',
+    'You climb over the lip of the nest. Inside, two massive eggs.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You climb over the lip of the nest and stop dead. Three huge eggs — each the size of a barrel, mottled brown and white — sit cradled in a bowl of woven trunks at the nest\'s center.', '!'),
+          new EncounterText('And wedged between them, half-buried in the broken straw and bone, is Olbrim.', '!'),
+          new EncounterText('"OLBRIM!" Thorb shouts, already vaulting in across the nest floor.', 'Thorb'),
+          new EncounterText('He\'s alive. Just. One leg is twisted at an angle a leg is not supposed to make, blood crusts the side of his face, and his apothecary\'s satchel is empty around him — herbs and tinctures scattered all over the bones.', '!'),
+          new EncounterText('Valdrisa drops to her knees beside him before anyone else moves, hands already pulling clean cloth from her pack. "Hold still. Hold still, old friend, I\'ve got you."', 'Valdrisa'),
+          new EncounterText('"Y\'... shouldn\'ta..." Olbrim rasps, eyes barely open. "Shouldn\'ta come up here. Too dangerous. The bird\'ll be back. Get... get out, the lot o\' ye..."', 'Olbrim'),
+          new EncounterText('"Hush," Valdrisa says quietly, fingers already finding the worst of it. "You can scold us later. Stay with me."', 'Valdrisa'),
+          new EncounterText('CRAAACK.', '!'),
+          new EncounterText('Every head whips around. The closest of the three eggs has split right down the middle. A long, slow fissure widens across its shell as something INSIDE pushes — pushes hard.', '!'),
+          new EncounterText('A whole chunk of shell tumbles off. A wet, glistening shape heaves itself out — bald, slick, raw, and the size of a draft horse already. Two yellow eyes the size of saucers blink at the party, focus, and very clearly decide that you are food.', '!'),
+          new EncounterText('Thorb takes one full step backward. "...That\'s a HUGE chicken."', 'Thorb'),
+          new EncounterText('The Baby Roc shrieks, and the sound bounces off every wall of the nest. It is a sound full of teeth.', '!'),
+        ],
+      }),
+      // COMBAT — Baby Roc fight. Invulnerable Roc parent + 1 Chick +
+      // 2 Unhatched Eggs. Win by clearing every creature on the
+      // field. ENEMY_DECKS.baby_roc handles the spawn shape and the
+      // egg-hatch chain.
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.COMBAT,
+        enemyId: 'baby_roc',
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The last shriek dies in the wind. The nest is yours — for the few minutes you have before the adult Roc returns.'),
+          new EncounterText('Among the broken shells, the bones, and Olbrim\'s scattered satchel, the party gathers what the nest gives up.'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootGoldDice: [3, 6],
+        lootCards: ['baby_roc_loot'],
+      }),
+      // Escape sequence — the mother Roc is back on the wind. The
+      // party hauls Olbrim out of the nest and runs the climb in
+      // reverse: rope-down off the ledge, half-slide back down the
+      // waterfall ice, into the cave, and out into the high valley.
+      // Everyone carries. Nobody talks much. The encounter ends
+      // with the party staggering back into the Watch Keep door.
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('A long shadow rolls across the rocks at the far end of the ridge. Then the SOUND hits — wings the size of sails, slow and deep, the kind of wingbeats you feel in your teeth before you hear them. The mother is back.', '!'),
+          new EncounterText('"GO," Raena hisses. "GO GO GO."', 'Raena'),
+          new EncounterText('You don\'t bother arguing. Thorb scoops Olbrim under one arm without slowing down. Valdrisa takes the other side. Raena is already off the lip of the nest with rope playing through her hands, calling fast-rappel anchors over her shoulder.', 'Raena'),
+          new EncounterText('"DON\'T look up. DON\'T look up. DON\'T LOOK UP."', 'Raena'),
+          new EncounterText('Everyone looks up. Once. Just for a second. There is something the size of a small barn coming out of the sun, and it is not happy.', '!'),
+          new EncounterText('Then your boot is back on the ledge and you\'re going down the cliff faster than you should be, the ice waterfall already screaming past you, the dark of the cave swallowing you whole.', '!'),
+          new EncounterText('You half-slide, half-fall through the bear ruins, through the cave entrance, out into the wind of the high valley. Nobody slows. Nobody can.', '!'),
+          new EncounterText('Somewhere behind you, a cry like a torn brass horn fills the whole sky. Then nothing — just wind, and the sound of four sets of boots running and Olbrim half-carried between the rest of you.', '!'),
+          new EncounterText('You don\'t remember most of the descent. You remember Thorb cursing in a language you don\'t know. You remember Valdrisa\'s hand under Olbrim\'s elbow, steady, refusing to let go. You remember the Last Watch coming into view through a gap in the rocks like a lantern in a storm.', '!'),
+          new EncounterText('And then the keep doors, and warm light, and the captain\'s startled face.', '!'),
+        ],
+      }),
+    ]);
+}
+
+// Post-Roc Watch Keep arrival. Fires once when the party drags
+// Olbrim through the keep doors after the Roc rescue. Captain
+// reacts to the state of everyone, an inn-style rest is forced (no
+// choice — the party can barely stand), the LOOT phase rolls a
+// tier-2 level-up (capstone moment, same shape as outpost_kraken_report).
+// The morning-after dialog plays automatically: Olbrim wakes,
+// explains the Frostbloom errand and the Stormwatcher Shrine, sees
+// his recovered herb bag, gifts the player one Frostbloom (Frostbloom
+// card lands as the final LOOT phase). Background reuses the Last
+// Watch keep panel from the captain audience.
+export function createLastWatchPostRocEncounter() {
+  return new Encounter('last_watch_post_roc', 'The Last Watch',
+    'You stagger through the keep doors with Olbrim between you.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The keep doors crash open and the five of you tumble inside — Olbrim half-carried between the others, all of you hauling for breath. The captain is at the hearth — he turns at the noise and the color drops out of his face all at once.', 'Captain'),
+          new EncounterText('"Bring him to the barracks. NOW." He\'s already shouting at two of his guards in the same breath. "Hot water, clean cloth, the medicine kit from the supply room, the WHOLE kit, MOVE."', 'Captain'),
+          new EncounterText('You don\'t remember letting go of Olbrim. You remember him being lifted gently onto a bunk by hands that have done this before. You remember Valdrisa sliding to her knees beside him, already pulling tools from her own pack to keep working.', 'Valdrisa'),
+          new EncounterText('"He\'s breathing." She doesn\'t look up. "He\'ll keep breathing. Go sit down before YOU stop breathing. All of you. Now. I\'ve got him."', 'Valdrisa'),
+          new EncounterText('"Aye, lass," Thorb says, already half-collapsed against the wall. "Aye."', 'Thorb'),
+          new EncounterText('The captain pushes a steaming mug into your hand. You don\'t remember drinking it. The next thing you remember is the bunk against your back, and a slow heavy darkness pulling you under.', '!'),
+          new EncounterText('You sleep harder than you have slept in weeks.', '!'),
+        ],
+      }),
+      // Level-up + deck rebalance — same shape as outpost_kraken_report.
+      // Empty LOOT phase, triggersLevelUp on the noLoot branch routes
+      // straight into ABILITY_SELECT (tier 2 pool) and then the
+      // standard rest-style inventory rebalance.
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        triggersLevelUp: true,
+        levelUpTier: 2,
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Sunlight on stone. The smell of porridge somewhere down a corridor. You sit up slowly and your whole body informs you of its many opinions about yesterday.', '!'),
+          new EncounterText('A voice from the next bunk over: "...took yer sweet time wakin\' up, didn\'t ye?"', 'Olbrim'),
+          new EncounterText('Olbrim Goldbalm is sitting up, one leg splinted, one eye swollen mostly shut, and he is grinning like an idiot. Valdrisa is asleep in the chair beside him with her hand still on his wrist.', 'Olbrim'),
+          new EncounterText('"By Moradin, lad," Thorb breathes from the doorway. "By every god in the mountain. We thought ye were a smear of feathers."', 'Thorb'),
+          new EncounterText('"Aye, well. Got lucky. Got the wind knocked out o\' me, got carried off, got dropped in a nest, an\' then you mad fools came up after me." Olbrim tries to wave a hand, winces, gives up. "Should\'ve stayed home. I\'m sorry, lads. I\'m sorry."', 'Olbrim'),
+          new EncounterText('"What were ye DOIN\' up there, ye old daft?" Thorb asks.', 'Thorb'),
+          new EncounterText('"Stormwatcher\'s Shrine. Above the keep. Marthammor\'s old place — ye saw it on the way down?"', 'Olbrim'),
+          new EncounterText('"We saw it," Raena says. "Brazier\'s cold. No keeper."', 'Raena'),
+          new EncounterText('"Aye. It\'s been dormant a long time. But it can be lit again. Ye need a Frostbloom — the wee blue mountain flower that only grows above the snow line. Burn one in the brazier an\' the old fire takes again. The watchers come back. Marthammor\'s blessin\' returns t\' the wanderers."', 'Olbrim'),
+          new EncounterText('Olbrim\'s eye drifts to the bag the party hauled out of the nest with him. "Ah — me satchel! Praise the makers. I picked half a dozen Frostbloom up there before the bird got me. They\'re still in here if the wrappin\' held."', 'Olbrim'),
+          new EncounterText('He rummages with his good hand, then sets the satchel down with a satisfied grunt. "Tell ye what. Meet me at the shrine. I\'ll bring the flower. I want t\' be there when the brazier takes again."', 'Olbrim'),
+          new EncounterText('"Marthammor\'s a road god," he adds, quiet. "Feels right to light him together. Ye carried me down off the mountain. Least I can do is carry the flower up the steps."', 'Olbrim'),
+        ],
+      }),
+    ]);
+}
+
+// Nest Interior — repeat ambush. Fires every time the player walks
+// back into the middle of the nest after a rest has cleared
+// babyRocDefeated. Mother is away laying more eggs; the nest has
+// re-filled with another hatched chick + two unhatched eggs. Same
+// fight shape as the first encounter, same loot table, then a
+// teleport back to the Watch Keep so the player doesn't have to
+// re-walk the whole descent.
+export function createNestMiddleOlbrimRepeatEncounter() {
+  return new Encounter('nest_middle_olbrim_repeat', 'Middle of the Nest',
+    'The nest is full again. The mother is somewhere over the ridge.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You climb over the lip of the nest a second time. Three more eggs. The bones of the last brood haven\'t even cooled.', '!'),
+          new EncounterText('"She\'s a busy bird," Thorb mutters, scanning the sky over the ridge. "No sign of her on the wind."', 'Thorb'),
+          new EncounterText('"Then we move fast," Raena says. "Same as last time. Get in, take what we came for, get out before the sky goes dark."', 'Raena'),
+          new EncounterText('A familiar CRAAACK rolls across the nest as one of the eggs splits open. The chick inside is already screaming as it slides out.', '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.COMBAT,
+        enemyId: 'baby_roc',
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The last shriek dies in the wind. The nest is yours again — and the mother\'s wingbeats are already a long way off.'),
+          new EncounterText('You sweep the broken shells for anything worth carrying out, then GO.'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootGoldDice: [3, 6],
+        lootCards: ['baby_roc_loot'],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You half-fall down the same descent as before — ledge, ice waterfall, cave, ruins, valley. The wind is at your back the whole way down.', '!'),
+          new EncounterText('The keep comes into view through the rocks. Warm light. The captain on the steps with a fresh mug, raising it at the sight of you. "Back again, are ye? Inside, then. Inside."', 'Captain'),
+        ],
+      }),
+    ]);
+}
+
 // Last Watch — Guard Captain audience. Fires once on the courtyard
 // node when the player first arrives. Captain greets the party with
 // deference (My Prince, Thorbadin), Thorb hushes him; quick exchange
@@ -1665,6 +2104,210 @@ export function createLastWatchAudienceEncounter() {
     ]);
 }
 
+// Last Watch — Supply Cache. One-time captain hand-off in the keep's
+// storerooms before the descent into the valley. Pulls 1 random item
+// from the dwarven_market_loot table (same table as the Obsidian
+// Market salvage), gated by lastWatchSupplyTaken so it only fires
+// once per save. Subsequent visits are short-circuited in
+// startNodeEncounter (no replay).
+export function createLastWatchSupplyCacheEncounter() {
+  return new Encounter('last_watch_supply_cache', 'Supply Cache',
+    "The captain leads you to a long room hung with cloaks and stacked with crates.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('"You will not climb back up to this keep before nightfall," the captain says, sliding a crate into the lamplight. "Whatever you take from here, take to use. The valley does not care what you brought up the stairs."', 'Captain'),
+          new EncounterText('He sweeps a hand across the racks — dwarven steel, oiled leather, mountain-tested gear. "One piece. Pick well."', 'Captain'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootGoldDice: [0, 0],
+        lootCards: ['dwarven_market_loot'],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — Marthammor Duin shrine above the Last
+// Watch keep. Dormant for now: brief introduction to the god (the
+// Watcher Over Wanderers, Finder-of-Trails, dwarven god of travel,
+// lightning, and safe passage), Thorb identifies the mark on the
+// lintel, then the dialog closes on the brazier being cold.
+// Mechanical payoff is intentionally absent — the node is here so
+// future content can rekindle the brazier or hand out a traveler's
+// blessing. Background art: Stormwatcher's Shrine wide shot.
+export function createStormwatchersShrineDormantEncounter() {
+  return new Encounter('stormwatchers_shrine_dormant', "Stormwatcher's Shrine",
+    'A small stone shrine, open to the wind on three sides.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('A small stone shrine clings to the rock above the keep, open to the wind on three sides. A bronze brazier sits cold in the center; rust streaks the rim. Carved into the lintel: a mace standing upright on a traveler\'s boot.', '!'),
+          new EncounterText('Thorb stops short, then touches his forehead with two fingers. "Marthammor\'s mark," he says quietly.', 'Thorb'),
+          new EncounterText('"Marthammor Duin. The Watcher Over Wanderers. Finder-of-Trails. He\'s the dwarf-god folk pray to when they\'re leavin\' the mountain — travelers, scouts, surface-walkers, anybody who has t\' look up at the sky instead of the ceilin\'."', 'Thorb'),
+          new EncounterText('"His blessin\'s a steady step and a kind storm — lightnin\' when ye need it, lightnin\' that keeps ye away when ye don\'t. Used t\' be ye\'d stop here before the descent, light the brazier, ask him t\' read the weather kindly."', 'Thorb'),
+          new EncounterText('Valdrisa looks at the cold brazier. "And now?"', 'Valdrisa'),
+          new EncounterText('"Now it\'s dormant. No keeper, no flame, no one tendin\' it. Just an old shrine waitin\' for somebody to remember why it\'s here." Thorb lingers a moment, then turns back toward the keep.', 'Thorb'),
+          new EncounterText('The shrine watches the sky in silence.', '!'),
+        ],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — revisit beat. The first arrival runs the
+// full Marthammor-introduction dialog (5+ texts); every subsequent
+// visit is a single quiet line so the player can swing through
+// without re-reading the whole exposition. Triggered by the
+// arriveAtNode dispatch when the shrine node is already isDone.
+export function createStormwatchersShrineRevisitEncounter() {
+  return new Encounter('stormwatchers_shrine_revisit', "Stormwatcher's Shrine",
+    'The brazier is still cold. The shrine still watches the sky.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The shrine is as you left it — cold brazier, the carved mace on its boot still watching the sky.', '!'),
+        ],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — post-Roc visit, BEFORE the brazier has
+// been lit. Plays whenever the player has heard Olbrim's "meet me
+// at the shrine, I'll bring the Frostbloom" pitch but Olbrim hasn't
+// made it up the steps yet. Replays freely until shrineReactivated
+// latches.
+export function createStormwatchersShrinePostRocEncounter() {
+  return new Encounter('stormwatchers_shrine_post_roc', "Stormwatcher's Shrine",
+    'The shrine is empty. Olbrim is not here yet.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You climb the path to the shrine and step under the lintel. The brazier is still cold. The carved mace on its boot still watches the sky. The wind sounds different now that you know what it\'s watching for.', '!'),
+          new EncounterText('"Not here yet," Thorb says quietly, scanning the slope back down toward the keep.', 'Thorb'),
+          new EncounterText('"He said a day or two," Raena reminds him. "He could barely walk on that leg. Give him the time."', 'Raena'),
+          new EncounterText('"Aye." Thorb touches his forehead with two fingers, the same salute he gave the lintel the first time. "We\'ll be back when he\'s on his feet, old friend. We\'ll light ye proper."', 'Thorb'),
+          new EncounterText('The shrine watches the sky, patient as stone.', '!'),
+        ],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — reactivation. Fires the one time the
+// player returns to the shrine and finds Olbrim there with the
+// Frostbloom. Brazier takes, Marthammor's blessing returns, every
+// subsequent visit reads as the active shrine. Latches
+// shrineReactivated on encounter completion.
+export function createStormwatchersShrineReactivationEncounter() {
+  return new Encounter('stormwatchers_shrine_reactivation', "Stormwatcher's Shrine",
+    'Olbrim is at the shrine, leaning on a carved walking stick.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You come up the path one more time and stop short. There\'s a figure at the shrine, hunched against the wind, one leg still splinted, leaning on a carved walking stick the captain must have given him.', '!'),
+          new EncounterText('Olbrim turns and grins through the bruises. "Took ye long enough."', 'Olbrim'),
+          new EncounterText('Thorb laughs once and crosses to him in three strides. "Ye old daft. Should ye even be up here?"', 'Thorb'),
+          new EncounterText('"Should\'ve been here years ago," Olbrim says. "But aye, today\'ll do."', 'Olbrim'),
+          new EncounterText('He unwraps the small wax-paper bundle in his good hand. A single Frostbloom — frost-pale, deep blue at the center, silver-edged — rests in his palm like a piece of sky.', 'Olbrim'),
+          new EncounterText('Valdrisa kneels at the brazier and sweeps it clean of grit. Raena hands her a striker. Thorb steps up to the lintel and touches the carved mace on its boot with two fingers, the dwarven traveler\'s salute.', 'Valdrisa'),
+          new EncounterText('Olbrim sets the Frostbloom into the brazier. Valdrisa strikes a spark.', '!'),
+          new EncounterText('The flower catches with a soft blue light that doesn\'t flicker. Then the brass behind it catches. Then the old oil in the brazier basin remembers what it\'s for — and a clean white fire takes, low and steady, and does not go out.', '!'),
+          new EncounterText('The wind drops for a moment. Just a moment. As if something old and watchful had drawn one slow breath.', '!'),
+          new EncounterText('"Marthammor Duin," Thorb says quietly. "Watcher Over Wanderers. Finder of Trails. The brazier\'s lit again. Watch over them as walks past."', 'Thorb'),
+          new EncounterText('"Old roads remembered," Olbrim murmurs, eyes closed. "Old fire kept."', 'Olbrim'),
+          new EncounterText('A small hush passes through the four of you. None of you would call yourselves devout. But something in the cold bones of the mountain settled just then — and a long-asleep watcher took its post again.', '!'),
+          new EncounterText('Olbrim opens his eyes. "Right. That\'s done. The shop\'s callin\' me, lads — herbs don\'t mix themselves. Come up an\' sit with the brazier whenever ye like — Marthammor\'s a good god to think near. Quiet. He listens."', 'Olbrim'),
+          new EncounterText('He nods once at each of you and starts the slow careful walk back down the path with his stick. The brazier keeps burning behind him.', 'Olbrim'),
+          new EncounterText('You stay a little longer. The mountain feels watched in a way it didn\'t before.', '!'),
+        ],
+      }),
+      // Reactivation chains straight into the Contemplate choice so
+      // the player gets the favor menu the moment the brazier takes.
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: "Marthammor's quiet feels heavy today.",
+        choices: [
+          new EncounterChoice(
+            'Contemplate our life at the shrine (200 gp)',
+            'You sit. The wind drops. You look at the road you walked to get here, and the road still ahead, and you let the new fire help you see them clearly. Some priorities shift.',
+            'shrine_contemplate', 200,
+            { completesEncounter: true }
+          ),
+          new EncounterChoice(
+            'Walk on',
+            'You touch your forehead at the lintel and head back down the path. The brazier keeps burning behind you.',
+            '', 0,
+            { completesEncounter: true }
+          ),
+        ],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — quick revisit. Fires after the player has
+// seen the active-shrine TEXT beat once. No replay of the empty-
+// bench / brazier-burning intro just because the player walked
+// away to grab more gold and came back — drop straight to the
+// Contemplate / Walk on choice.
+export function createStormwatchersShrineActiveQuickEncounter() {
+  return new Encounter('stormwatchers_shrine_active_quick', "Stormwatcher's Shrine",
+    'The brazier still burns. The bench is still empty.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: "The shrine is open. What do you do?",
+        choices: [
+          new EncounterChoice(
+            'Contemplate our life at the shrine (200 gp)',
+            'You sit. The wind drops. Some priorities shift.',
+            'shrine_contemplate', 200,
+            { completesEncounter: true }
+          ),
+          new EncounterChoice(
+            'Walk on',
+            'You touch your forehead at the lintel and head back down. The brazier keeps burning behind you.',
+            '', 0,
+            { completesEncounter: true }
+          ),
+        ],
+      }),
+    ]);
+}
+
+// Stormwatcher's Shrine — active. Plays once the brazier has taken
+// (shrineReactivated). Olbrim has hobbled back down to his shop;
+// the shrine itself is quiet and the brazier burns clean. Offers
+// the 200 gp Contemplate rite — a deck-limit reassign + forced rest.
+// Choice repeats every visit.
+export function createStormwatchersShrineActiveEncounter() {
+  return new Encounter('stormwatchers_shrine_active', "Stormwatcher's Shrine",
+    'The brazier burns clean and blue. The shrine is quiet.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The brazier is burning when you crest the path. Clean blue at the heart, soft white at the rim, a steady column of warmth that the mountain wind seems to part around rather than fight.', '!'),
+          new EncounterText('Olbrim isn\'t here — he hobbled back down to his shop hours ago, muttering about herbs that wouldn\'t mix themselves. The bench is empty. The wind is quiet. The mountain feels watched.', '!'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choicePrompt: "Marthammor's quiet feels heavy today.",
+        choices: [
+          new EncounterChoice(
+            'Contemplate our life at the shrine (200 gp)',
+            'You sit. The wind drops. You look at the road you walked to get here, and the road still ahead, and you let the old fire help you see them clearly. Some priorities shift.',
+            'shrine_contemplate', 200,
+            { completesEncounter: true }
+          ),
+          new EncounterChoice(
+            'Walk on',
+            'You touch your forehead at the lintel and head back down the path. The brazier keeps burning behind you.',
+            '', 0,
+            { completesEncounter: true }
+          ),
+        ],
+      }),
+    ]);
+}
+
 // Last Watch — repeat-visit audience. After the first full dialog,
 // the player gets straight back to the Rest / Leave decision without
 // the captain re-introducing himself or re-explaining about Olbrim.
@@ -1677,6 +2320,45 @@ export function createLastWatchAudienceRevisitEncounter() {
         choices: [
           new EncounterChoice('Rest at the Last Watch', "You bed down in the barracks. Warm food, warm fire, and for the first time since the climb began, you sleep.", 'last_watch_rest', 0, { completesEncounter: true }),
           new EncounterChoice('Leave without resting', "You touch your forehead in thanks, turn the party around, and head back out into the wind. The captain watches you go.", 'last_watch_leave', 0, { completesEncounter: true }),
+        ],
+      }),
+    ]);
+}
+
+// Mithril Remedies — post-brazier first visit. Olbrim is finally
+// back behind the counter and greets the old friends who hauled him
+// out of the nest. Plays once (mithrilRemediesOlbrimGreeted); the
+// encounter id is in the auto-open-shop list, so completing the
+// dialog drops the player straight into the storefront.
+export function createMithrilRemediesOlbrimGreetEncounter() {
+  return new Encounter('mithril_remedies_olbrim_greet', 'Mithril Remedies',
+    'A bell over the door rings — and a familiar voice calls "BACK!"', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('You push the door open and a small brass bell on a strap of leather rings overhead. The shelves are full again — rows of stoppered vials, wrapped bundles of dried herbs, a basket of Frostbloom in wax-paper, mortar and pestle clean and ready.', '!'),
+          new EncounterText('"AYE, ye made it!" Olbrim is behind the counter on a high stool, the splint off his leg now and an apron tied loose around his middle. He grins through what\'s left of the bruise around his eye. "Come in, come in — I was wonderin\' when ye\'d wander down."', 'Olbrim'),
+          new EncounterText('"Look at ye," Thorb laughs. "Open f\'r business already. Marthammor\'s a fast healer."', 'Thorb'),
+          new EncounterText('"Marthammor\'s a slow one, lad — ye don\'t hurry an old god. THIS is just stubbornness, mostly." Olbrim taps his temple. "Once the brazier was lit I had no excuse left. Herbs don\'t mix themselves an\' my customers were gettin\' twitchy."', 'Olbrim'),
+          new EncounterText('Valdrisa is already drifting toward the shelves, fingers brushing labels. Raena leans on the counter with an actually-interested expression. "Anything new in?"', 'Raena'),
+          new EncounterText('"Aye, plenty. Frostbloom while it lasts — picked the rest of the basket on the way down off the ridge, can ye believe it. Greater Healin\' potion or two in the back room — only for them as can pay for it, mind. Cave shrooms, herbs, the usual lifters." Olbrim spreads his hands at the shelves. "Help yerselves. An\' for what it\'s worth — me prices are friendly today."', 'Olbrim'),
+          new EncounterText('"For old friends?" Thorb grins.', 'Thorb'),
+          new EncounterText('"For the ones as climbed up a Roc\'s nest after a daft apothecary. Aye. For them. Now look about — herbs\'re fresh, the brews are honest, an\' if I\'ve got somethin\' ye need just shout."', 'Olbrim'),
+        ],
+      }),
+    ]);
+}
+
+// Mithril Remedies — quiet revisit (post-greet). Tiny "shop's still
+// open" beat that completes immediately so the auto-open hook drops
+// the player back into the storefront on every subsequent walk-in.
+export function createMithrilRemediesOpenRevisitEncounter() {
+  return new Encounter('mithril_remedies_open', 'Mithril Remedies',
+    "Olbrim looks up from a mortar. \"Back for more, are ye?\"", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Olbrim glances up from grinding something pale and dry into a fine green powder. "Door\'s open. Help yerself."', 'Olbrim'),
         ],
       }),
     ]);
@@ -4939,9 +5621,30 @@ export const ENCOUNTER_REGISTRY = {
   post_dragon_staircase: createPostDragonStaircaseDialogEncounter,
   mithril_remedies: createMithrilRemediesEncounter,
   mithril_remedies_revisit: createMithrilRemediesRevisitEncounter,
+  mithril_remedies_olbrim_greet: createMithrilRemediesOlbrimGreetEncounter,
+  mithril_remedies_open: createMithrilRemediesOpenRevisitEncounter,
   top_stairs_arrival: createTopStairsArrivalEncounter,
   last_watch_audience: createLastWatchAudienceEncounter,
   last_watch_audience_revisit: createLastWatchAudienceRevisitEncounter,
+  last_watch_supply_cache: createLastWatchSupplyCacheEncounter,
+  last_watch_post_roc: createLastWatchPostRocEncounter,
+  stormwatchers_shrine_dormant: createStormwatchersShrineDormantEncounter,
+  stormwatchers_shrine_revisit: createStormwatchersShrineRevisitEncounter,
+  stormwatchers_shrine_post_roc: createStormwatchersShrinePostRocEncounter,
+  stormwatchers_shrine_reactivation: createStormwatchersShrineReactivationEncounter,
+  stormwatchers_shrine_active: createStormwatchersShrineActiveEncounter,
+  stormwatchers_shrine_active_quick: createStormwatchersShrineActiveQuickEncounter,
+  valley_floor_arrival: createValleyFloorArrivalEncounter,
+  upper_valley_arrival: createUpperValleyArrivalEncounter,
+  frostbloom_patch: createFrostbloomPatchEncounter,
+  deeper_path_find: createDeeperPathFindEncounter,
+  cave_entrance_arrival: createCaveEntranceArrivalEncounter,
+  circular_ruins_combat: createCircularRuinsCombatEncounter,
+  circular_ruins_combat_repeat: createCircularRuinsRepeatCombatEncounter,
+  ice_waterfall_climb: createIceWaterfallClimbEncounter,
+  final_approach_check: createFinalApproachCheckEncounter,
+  nest_middle_olbrim: createNestMiddleOlbrimEncounter,
+  nest_middle_olbrim_repeat: createNestMiddleOlbrimRepeatEncounter,
   watchtower_check: createWatchtowerCheckEncounter,
   supply_pile: createSupplyPileEncounter,
   outpost_tent: createOutpostTentEncounter,

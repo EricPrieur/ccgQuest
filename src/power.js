@@ -195,10 +195,13 @@ export function createDireFury() {
     id: 'dire_fury',
     name: 'Dire Fury',
     costDescription: 'Passive',
-    effectDescription: 'Turn End: Gain 1 Rage.',
+    // "Overwhelm" reads as an inline keyword pill — hovering it pops
+    // the Overwhelm power card so the player can see the overflow
+    // rule without leaving the combat.
+    effectDescription: 'Turn End: Gain 1 Rage. Overwhelm.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'Turn End:\n+1 Rage',
+    shortDesc: 'Turn End:\n+1 Rage\nOverwhelm',
     // +0.5 Rage per monster tier offset (floor — +0 at +1, +1 at +2,
     // +1 at +3, +2 at +4…). Same gentle ramp as Armor power; the
     // base 1-Rage-per-turn already snowballs fast across a long
@@ -242,6 +245,26 @@ export function createGoblinSapperSquad() {
     // +1 to the upper bound of the random sapper roll per offset
     // (1-2 → 1-3 → 1-4 …) — runtime handler reads monsterTierOffset.
     gamePlusOffset: {},
+  });
+}
+
+// Dire Bear passive — every swing the bear lands converts half of
+// the damage that ACTUALLY lands (post block/shield/armor) into
+// Bleed on the target, rounded UP toward Bleed. A fully soaked swing
+// applies no Bleed. Mechanically handled in main.js's
+// applyEnemyFeralWrathSplit (projects landed damage first, then
+// extracts the bleed from that).
+export function createFeralWrathPower() {
+  return new Power({
+    id: 'feral_wrath',
+    name: 'Feral Wrath',
+    costDescription: 'Passive',
+    effectDescription: 'On Attack: half of damage that lands converts to Bleed (rounded up).',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Half landed\n-> Bleed',
+    // Doesn't scale — the split is fractional, not numeric.
+    noTierOffset: true,
   });
 }
 

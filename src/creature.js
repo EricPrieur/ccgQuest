@@ -19,6 +19,11 @@ export class Creature {
     endOfTurnDeath = false,
     fireImmune = false,
     attackAll = false,
+    // Roc Chick rider — extends attackAll to also hit the attacker's
+    // own teammates (sibling chicks + unhatched eggs) on the same
+    // swing. Read inside the attackAll branch in the enemy-creature
+    // attack flow; ignored when attackAll is false.
+    attackAllIncludingOwn = false,
     multiAttack = 0,
     sentinel = false,
     haste = false,
@@ -87,6 +92,7 @@ export class Creature {
     this.endOfTurnDeath = endOfTurnDeath;
     this.fireImmune = fireImmune;
     this.attackAll = attackAll;
+    this.attackAllIncludingOwn = attackAllIncludingOwn;
     this.multiAttack = multiAttack;
 
     this.sentinel = sentinel;

@@ -33,7 +33,7 @@ import {
   createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createKrakenWhip, createInkCloud,
   createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
   createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
-  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish,
+  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish, createFrostbloom, createBagOfHerbs,
   createThorbCreature, createThorbUpgradedCreature, createThorbTier3Creature,
   createRaenaCreature, createRaenaUpgradedCreature, createRaenaTier3Creature,
   createValdrisaTier3Creature,
@@ -65,7 +65,7 @@ import {
   createSteelAxe, createSteelMace, createSteelSword, createSteelGreataxe,
   createBow, createSteelDagger,
   createStuddedLeatherArmor, createRingMail,
-  createScrollOfPotency, createMinorHealingPotion, createWandOfFire,
+  createScrollOfPotency, createMinorHealingPotion, createPotionOfGreaterHealing, createWandOfFire,
   createTridentThrow, createTridentThrust, createScaleArmor,
   createBloodInTheWater, createBarnacleEncrustedPlateEnemy,
   createBarnacleEncrustedPlate, createBarnacle,
@@ -96,7 +96,13 @@ import {
   createJarOfPiranhas,
   createSahuaginPriestStaffLoot, createWhirlpool, createSwimmingShowcase,
   createGnikansStaff,
-  createEnragedStrike,
+  createEnragedStrike, createDireClaws, createDireBite, createDireHide, createBearRoar,
+  createAStormIsComing,
+  createBearTeethNecklace, createBearClaw, createBearHideArmor, createBearFatRations,
+  createRoaringHelm, createWinterheartPelt,
+  createStormwingFeather, createRocChickLeg, createRocTalonDagger, createRocEggshellShield,
+  createLostAdventurersRing, createUnhatchedRocEggCard, createUnhatchedRocEggCreature,
+  createRocChickCreature,
   createQueensLocket, createValdrisaCard, createValdrisaCreature,
   createObsidianRock, createObsidianEdge, createObsidianStaff, createObsidianSpear,
   createObsidianShard, createObsidianCore, createObsidianSlimeCard, createObsidianShardToken,
@@ -120,7 +126,7 @@ import {
   Power, getClassPower,
   createCleave, createAimedShot, createElementalInfusion,
   createQuickStrike, createBattleFury, createFeralForm,
-  createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower,
+  createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower, createFeralWrathPower,
   createMassiveOgreRam, createGoblinSapperSquad,
   createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite,
   createPiranhasSwarm, createFromTheDeep,
@@ -476,6 +482,15 @@ const EFFECT_DESC_PATTERNS = {
   gain_ignite: [/Gain\s+(\d+)\s+Ignite/i, /(\d+)\s+Ignite/i],
   on_recharge_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
   on_draw_heroism: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
+  on_draw_ignite: [/Gain\s+(\d+)\s+Ignite/i, /(\d+)\s+Ignite/i],
+  on_draw_poison_random: [/(\d+)\s+Poison/i],
+  on_draw_ice_random: [/(\d+)\s+Ice/i],
+  on_draw_bleed_random: [/(\d+)\s+Bleed/i],
+  on_draw_shock_random: [/(\d+)\s+Shock/i],
+  on_draw_heal: [/Heal\s+(\d+)/i, /(\d+)\s+Heal/i],
+  on_draw_obsidian_buff: [/\+(\d+)\s+vs\s+Armor/i, /(\d+)\s+vs\s+Armor/i],
+  block_per_enemy: [/Gain\s+(\d+)\s+Block/i, /(\d+)\s+Block/i],
+  heroism_per_enemy: [/Gain\s+(\d+)\s+Heroism/i, /(\d+)\s+Heroism/i],
   grant_eye_buff: [/\+(\d+)\s+damage/i, /\+(\d+)\s+Dmg/i],
   grant_obsidian_buff: [/\+(\d+)\s+vs\s+Armor/i, /(\d+)\s+vs\s+Armor/i],
   on_discard: [/Draw\s+(\d+)/i],
@@ -488,6 +503,7 @@ const EFFECT_DESC_PATTERNS = {
   bleeding_bonus_damage: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+if\s+Bleeding/i, /\+(\d+)\s+Bleeding/i, /Bleeding.*?(\d+)/i],
   half_hp_draw: [/Half-HP:\s*Draw\s+(\d+)/i, /Draw\s+(\d+)/i],
   grant_bleeding_damage_buff: [/Bleeding:\s*\+(\d+)/i, /\+(\d+)\s+damage/i, /\+(\d+)\s+Dmg/i],
+  heal_n_negative_effects: [/Heal\s+(\d+)\s+Ailments?/i, /(\d+)\s+Ailments?/i],
   destroy_shield: [/Strip\s+(\d+)\s+Shield/i, /Destroy\s+(\d+)\s+Shield/i],
   apply_ice_self: [/Gain\s+(\d+)\s+Ice/i],
   apply_ice_multi: [/Ice\s+(\d+)\s+times/i, /(\d+)\s+times/i],
@@ -515,6 +531,7 @@ const EFFECT_DESC_PATTERNS = {
   // count. The shield_bash effect value is the on-cast Shield gain;
   // the description swap targets that gain.
   shield_bash:         [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
+  shield_bash_half:    [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i, /(\d+)\s+Shield/i],
   // Harpy Screaming Charm — "discard 1 card or take N damage". The
   // discard count stays at 1; the damage tail is what scales.
   luring_song:         [/take\s+(\d+)\s+damage/i, /(\d+)\s+damage\b/i],
@@ -1955,6 +1972,11 @@ let outpostTentRested = false;
 // any loot card from the pile so the dialog can't refire. Cleared
 // only by starting a new run.
 let supplyPileTaken = false;
+// Last Watch Supply Cache — one-time, the captain offers gear from
+// the keep's stores before the descent into the valley. Pulls 1
+// random item from the dwarven_market_loot table. Latches when the
+// LOOT phase resolves so the cache node goes quiet on revisit.
+let lastWatchSupplyTaken = false;
 // Lake Giant Frog ambush placement — rolled lazily on first arrival
 // to any reef stone, holds up to 2 rock ids out of [1..4]. Wiped on
 // rest (setWellRested) so a fresh run after recharging the deck
@@ -1969,6 +1991,50 @@ let _currentFrogRockId = null;
 // Spawn is a one-time boss.
 let harpiesDefeated = false;
 let krakenDefeated = false;
+// Dire Bear (Circular Ruins) — same latch shape as harpiesDefeated.
+// Set true the first time the bear (or any subsequent re-fight)
+// dies, cleared on the next inn-style rest so the player can
+// re-claim the ruins for fresh loot.
+let direBearDefeated = false;
+// Baby Roc rescue beat. rocRescued latches when the nest fight ends
+// (Olbrim recovered, party descended). last_watch_post_roc_claimed
+// gates the morning-after dialog so the wake-up + Frostbloom gift
+// only fires once even if the player saves/loads inside the dialog.
+let rocRescued = false;
+let lastWatchPostRocClaimed = false;
+// Baby Roc repeat-ambush latch. Mirrors direBearDefeated: set true
+// on every nest_middle_olbrim / nest_middle_olbrim_repeat completion,
+// cleared on the next inn-style rest so the player can run the
+// nest again for fresh loot. Independent of rocRescued (which is a
+// one-shot story latch).
+let babyRocDefeated = false;
+// Stormwatcher's Shrine — Marthammor's reactivation arc. shrineReactivated
+// latches when Olbrim makes it back up to the shrine and lights the
+// brazier with the Frostbloom. After that the active-shrine dialog
+// offers a 200 gp "Contemplate" rite that opens the inventory in a
+// reassign mode (move one deck-limit +1 between categories) and
+// chains a full rest after the reassign lands.
+let shrineReactivated = false;
+// Stormwatcher's Shrine — track whether the player has already
+// seen the active-shrine TEXT beat. Set after the first active
+// visit so subsequent visits skip straight to the Contemplate
+// choice (no replay of the "brazier is burning / Olbrim isn't
+// here" intro just because the player walked off to fetch more
+// gold and came back).
+let stormwatchersShrineActiveSeen = false;
+// Mithril Remedies — Olbrim's apothecary. mithrilRemediesOlbrimGreeted
+// latches the one-shot "back behind the counter" greet dialog that
+// fires the first time the player walks in post-shrine; subsequent
+// visits route through the short open-revisit beat into the shop.
+let mithrilRemediesOlbrimGreeted = false;
+// Contemplate state — flags set when the player pays 200 gp at the
+// reactivated shrine. _shrineContemplatePending opens the inventory
+// in reassign mode. _shrineContemplateMinusCat / PlusCat track the
+// chosen categories so the exit validator can confirm a net-zero
+// move on a different pair before firing the rest.
+let _shrineContemplatePending = false;
+let _shrineContemplateMinusCat = null;
+let _shrineContemplatePlusCat = null;
 // One-time post-Kraken tier-1 level-up + deck rebalance. Latches
 // when the player lands on South Hill after the Kraken fight so the
 // award only fires once even on save/reload.
@@ -2045,9 +2111,10 @@ const NO_FOG_MAPS = new Set([
   // see every node on the trail at a glance.
   'high_valley_1',
   'high_valley_2',
-  // Mountain Cave — small 3-node interior. Open layout so the player
-  // sees Cave Entrance + Circular Ruins + Ice Waterfall at a glance.
-  'mountain_cave',
+  // Mountain Cave intentionally NOT in NO_FOG_MAPS — the interior
+  // uses standard cave fog (only the current node + 1-hop neighbors
+  // visible) so the Circular Ruins ambush reads as a discovery
+  // beat instead of a foregone conclusion.
   // Roc Nest Approach — open ridge above the cave. Same no-fog rule
   // so the player can see the whole switchback at a glance.
   'roc_nest_far',
@@ -3079,6 +3146,18 @@ const CARD_REGISTRY = {
   summon_treants: createSummonTreants, feral_bite: createFeralBite,
   starfire: createStarfire, healing_touch: createHealingTouch,
   natures_healing: createNaturesHealing,
+  // Dire Bear card pool — enemy attack/ability cards + the loot drops.
+  dire_claws: createDireClaws, dire_bite: createDireBite, dire_hide: createDireHide,
+  bear_roar: createBearRoar,
+  a_storm_is_coming: createAStormIsComing,
+  bear_teeth_necklace: createBearTeethNecklace, bear_claw: createBearClaw,
+  bear_hide_armor: createBearHideArmor, bear_fat_rations: createBearFatRations,
+  roaring_helm: createRoaringHelm, winterheart_pelt: createWinterheartPelt,
+  // Baby Roc loot — Nest Interior drops.
+  stormwing_feather: createStormwingFeather, roc_chick_leg: createRocChickLeg,
+  roc_talon_dagger: createRocTalonDagger, roc_eggshell_shield: createRocEggshellShield,
+  lost_adventurers_ring: createLostAdventurersRing,
+  unhatched_roc_egg: createUnhatchedRocEggCard,
   // Loot / Story
   sharp_rock: createSharpRock, lucky_pebble: createLuckyPebble, bone_wand: createBoneWand,
   baby_frog_swarm: createBabyFrogSwarm, frog_bite: createFrogBite, acid_spit: createAcidSpit,
@@ -3089,8 +3168,14 @@ const CARD_REGISTRY = {
   harpy_egg_omelette: createHarpyEggOmelette, harpy_talon_blade: createHarpyTalonBlade,
   harpy_screaming_charm: createHarpyScreamingCharm,
   tentacle_grab: createTentacleGrab,
-  kraken_tentacle: createKrakenTentacleCard,
-  kraken_tentacle_block: createKrakenTentacleBlock,
+  // Tentacle + Tentacle Block — Kraken Spawn enemy cards. Kept OUT
+  // of CARD_REGISTRY so the codex shows them under the Enemy Cards
+  // tab via cache.enemyOnlyCards (the buildCodexSourceCache scan
+  // picks them up off the Kraken Spawn deck). They're imported
+  // above for ENEMY_DECKS.kraken_spawn + the boss-side defense
+  // summon path.
+  // kraken_tentacle: createKrakenTentacleCard,
+  // kraken_tentacle_block: createKrakenTentacleBlock,
   swallowing_bite: createSwallowingBite,
   kraken_whip: createKrakenWhip,
   ink_cloud: createInkCloud,
@@ -3106,6 +3191,8 @@ const CARD_REGISTRY = {
   obsidian_shard: createObsidianShard, obsidian_core: createObsidianCore,
   obsidian_slime_card: createObsidianSlimeCard,
   lambas_bread: createLambasBread, fresh_fish: createFreshFish,
+  frostbloom: createFrostbloom,
+  bag_of_herbs: createBagOfHerbs,
   bone_club: createBoneClub, bone_mace: createBoneMace, bone_staff: createBoneStaff, torch: createTorch,
   bad_rations: createBadRations, sturdy_boots: createSturdyBoots,
   chicken_leg: createChickenLeg, wardens_whip: createWardensWhip,
@@ -3121,6 +3208,7 @@ const CARD_REGISTRY = {
   studded_leather_armor: createStuddedLeatherArmor, ring_mail: createRingMail,
   scale_armor: createScaleArmor,
   scroll_of_potency: createScrollOfPotency, minor_healing_potion: createMinorHealingPotion,
+  potion_of_greater_healing: createPotionOfGreaterHealing,
   wand_of_fire: createWandOfFire,
   frost_drake_scale: createFrostDrakeScale,
   magma_rock: createMagmaRock,
@@ -3336,6 +3424,30 @@ const LOOT_TABLES = {
     { creator: createDragonBoneBow,          weight: 1.0 },
     { creator: createDragonEyeMace,          weight: 1.0 },
   ], { pickCount: 2, distinct: true }),
+  // Dire Bear loot — Circular Ruins boss drops. Pick 2 distinct from a
+  // weighted pool of bear-themed gear. Bleed-leaning Necklace + Claw,
+  // utility Armor / Pelt, big-purge Rations, swarm-scaling Helm.
+  dire_bear_loot: Object.assign([
+    { creator: createBearTeethNecklace, weight: 0.25 }, // rare relic
+    { creator: createBearClaw,          weight: 0.50 }, // uncommon weapon
+    { creator: createBearHideArmor,     weight: 0.50 }, // uncommon light armor
+    { creator: createBearFatRations,    weight: 1.00 }, // common item / meal
+    { creator: createRoaringHelm,       weight: 0.25 }, // rare heavy armor
+    { creator: createWinterheartPelt,   weight: 0.50 }, // uncommon clothing
+  ], { pickCount: 2, distinct: true }),
+  // Baby Roc loot — Nest Interior boss drops. Pick 2 distinct from a
+  // pool of Roc-themed gear: shock-on-draw feather weapon, big 2H
+  // chick leg, light bleed dagger, eggshell shield, healing ring,
+  // and the Egg-as-ally summon that hatches into a player Roc Chick
+  // when killed.
+  baby_roc_loot: Object.assign([
+    { creator: createStormwingFeather,     weight: 0.25 }, // rare relic-weapon
+    { creator: createRocChickLeg,          weight: 0.50 }, // uncommon 2H weapon
+    { creator: createRocTalonDagger,       weight: 0.50 }, // uncommon dagger
+    { creator: createRocEggshellShield,    weight: 0.50 }, // uncommon defense
+    { creator: createLostAdventurersRing,  weight: 0.25 }, // rare item
+    { creator: createUnhatchedRocEggCard,  weight: 0.10 }, // epic ally
+  ], { pickCount: 2, distinct: true }),
   // Lucky Pebble — guaranteed drop from the River Crossing 25% bonus.
   // Mirrors PY get_lucky_pebble_loot.
   lucky_pebble_loot: [
@@ -3485,6 +3597,8 @@ const LOOT_TABLE_LABELS = {
   dwarven_specter_loot:   'Dwarven Specter',
   overseer_gnikan_loot:   'Overseer Gnikan',
   varimatras_loot:        'Varimatras (Dragon)',
+  dire_bear_loot:         'Dire Bear',
+  baby_roc_loot:          'Baby Roc',
 };
 
 // Wired below in CARD_SFX_OVERRIDES so the drake rider's roar plays at
@@ -3520,6 +3634,8 @@ const LOOT_TABLE_NOTES = {
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
   overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
   varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace.",
+  dire_bear_loot:         'Dropped after defeating the Dire Bear in the Circular Ruins (resets on rest). Pick TWO distinct — Rations common, Claw / Hide Armor / Winterheart Pelt uncommon, Bear Teeth Necklace / Roaring Helm rare.',
+  baby_roc_loot:          "Dropped after clearing the Roc's Nest (Baby Roc + eggs). Pick TWO distinct — Chick Leg / Talon Dagger / Eggshell Shield uncommon, Stormwing Feather / Adventurer's Ring rare, Unhatched Roc Egg ally epic.",
 };
 
 function rollLootTable(id) {
@@ -3724,6 +3840,22 @@ async function loadAssets() {
     loadImage('creature_piranhas', `${BASE}assets/Cards/PiranhasSwarm.jpg`),
     loadImage('creature_shark', `${BASE}assets/Cards/Shark.jpg`),
     loadImage('creature_sahuagin_sentinel', `${BASE}assets/Cards/SahuaginSentinel.jpg`),
+    // Dire Bear boss — Mountain Cave ambush. Lives under both the
+    // boss character key (`dire_bear`) and the creature key so the
+    // codex preview + character splash both resolve.
+    loadImage('dire_bear', `${BASE}assets/Cards/DireBear.jpg`),
+    loadImage('creature_dire_bear', `${BASE}assets/Cards/DireBear.jpg`),
+    // Roc boss — Nest Interior fight. The boss panel uses RocCircling
+    // (the adult Roc hovering at altitude); the splash + chick creature
+    // panels use RocChick (the baby that hatches in the dialog). The
+    // egg creature has its own art. NAME_REMAP['Roc'] = 'roc_chick'
+    // routes the combat-intro splash to RocChick instead of the
+    // distant adult shot.
+    loadImage('roc', `${BASE}assets/Cards/RocCircling.jpg`),
+    loadImage('roc_chick', `${BASE}assets/Cards/RocChick.jpg`),
+    loadImage('creature_roc_chick', `${BASE}assets/Cards/RocChick.jpg`),
+    loadImage('unhatched_roc_egg', `${BASE}assets/Cards/UnhatchedRocEgg.jpg`),
+    loadImage('creature_unhatched_roc_egg', `${BASE}assets/Cards/UnhatchedRocEgg.jpg`),
     // Giant Frog enemy art. The combat character portrait keys off
     // `enemy.name.toLowerCase().replace(/ /g, '_')` (see
     // drawCharacterCard) — so the boss image lives under 'giant_frog'
@@ -5170,7 +5302,7 @@ const MUSIC_FOR_AREA = {
 // shows up in the codex Sound tab "Wired To" column as `tag:role`.
 const MUSIC_TAGS = {
   'Music/music_heroic_01': ['title', 'chapter-end / level-up'],
-  'Music/music_tension_01': ['boss: General Zhost (army + boss)', 'boss: General Zhost (Revenge — upper bridge)'],
+  'Music/music_tension_01': ['boss: General Zhost (army + boss)', 'boss: General Zhost (Revenge — upper bridge)', 'boss: Dire Bear (Mountain Cave ambush)'],
   'Music/music_tension_02': ['area: lower_caverns', 'area: lava_chamber', 'area: obsidian_tunnels', 'area: obsidian_forge', 'area: temple_district', 'area: obsidian_cathedral', 'area: obsidian_plaza', 'area: obsidian_streets', 'area: obsidian_market', 'area: upper_bridge', 'area: tunnel_to_bridge'],
   'Music/music_final_streak_01': ['area: volcano_stairs_1', 'area: volcano_stairs_2', 'area: volcano_stairs_3', 'area: volcano_summit_ridge'],
   // Awakened-master phase 2 of the Overseer Gnikan summit fight.
@@ -5535,9 +5667,20 @@ function resetStoryFlags() {
   _cozySpotFishAttempts = 0;
   outpostTentRested = false;
   supplyPileTaken = false;
+  lastWatchSupplyTaken = false;
   _lakeFrogRocks = null;
   _currentFrogRockId = null;
   harpiesDefeated = false;
+  direBearDefeated = false;
+  rocRescued = false;
+  lastWatchPostRocClaimed = false;
+  babyRocDefeated = false;
+  shrineReactivated = false;
+  stormwatchersShrineActiveSeen = false;
+  mithrilRemediesOlbrimGreeted = false;
+  _shrineContemplatePending = false;
+  _shrineContemplateMinusCat = null;
+  _shrineContemplatePlusCat = null;
   krakenDefeated = false;
   krakenLevelUpClaimed = false;
   forgeUsed = false;
@@ -5629,9 +5772,20 @@ function startNewGame() {
   _cozySpotFishAttempts = 0;
   outpostTentRested = false;
   supplyPileTaken = false;
+  lastWatchSupplyTaken = false;
   _lakeFrogRocks = null;
   _currentFrogRockId = null;
   harpiesDefeated = false;
+  direBearDefeated = false;
+  rocRescued = false;
+  lastWatchPostRocClaimed = false;
+  babyRocDefeated = false;
+  shrineReactivated = false;
+  stormwatchersShrineActiveSeen = false;
+  mithrilRemediesOlbrimGreeted = false;
+  _shrineContemplatePending = false;
+  _shrineContemplateMinusCat = null;
+  _shrineContemplatePlusCat = null;
   krakenDefeated = false;
   krakenLevelUpClaimed = false;
   forgeUsed = false;
@@ -6722,7 +6876,7 @@ function getMapNodeRects() {
   const currentArea = currentMap.getCurrentNode()?.mapArea || '';
   const { toScreen } = getMapTransform(currentArea);
   const rects = [];
-  const accessibleIds = currentMap.getAccessibleNodes().map(n => n.id);
+  const accessibleIds = getReachableNodeIds();
   for (const [id, node] of Object.entries(currentMap.nodes)) {
     if (node.mapArea !== currentArea) continue;
     // wip nodes are unclickable unless debug mode is on — matches the
@@ -6822,6 +6976,70 @@ let _lastArrivalFrom = null;
 // city-grid where the player picks any shop/landmark directly.
 const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_hall', 'south_outpost']);
 
+// Per-edge visual suppression. The connection still functions
+// (movement adjacency is honored, the player can walk between
+// these nodes), but no line is drawn between them on the map.
+// Keys are 'min|max' of the two node ids so the lookup is
+// direction-agnostic. Used by the Last Watch keep cluster where
+// the keep / shrine / supply cache / courtyard / gate all sit
+// inside a single building footprint that the background art
+// already implies — the drawn arrows just clutter the scene.
+const HIDDEN_EDGE_PAIRS = new Set([
+  'last_watch_courtyard|last_watch_entry',
+  'last_watch_courtyard|last_watch_keep',
+  'last_watch_keep|last_watch_supplies',
+  'last_watch_keep|last_watch_shrine',
+]);
+function edgeKey(a, b) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+// Per-node-cluster free movement. Every node id in the same Set is
+// reachable from every other id in that Set, regardless of what's
+// listed in `connections`. Combined with HIDDEN_EDGE_PAIRS this
+// lets a tightly packed area (the Last Watch keep — gate /
+// courtyard / keep / supplies / shrine) read as a single building
+// footprint: no visible arrows, but the player can click any of
+// the five nodes from any of the others. Movement out of the
+// cluster (Courtyard → Down to the Valley) still falls back to
+// the standard adjacency rule. Each id maps to its cluster Set.
+const NODE_FREE_MOVE_CLUSTERS = (() => {
+  const lastWatchKeep = new Set([
+    'last_watch_entry',
+    'last_watch_courtyard',
+    'last_watch_keep',
+    'last_watch_supplies',
+    'last_watch_shrine',
+  ]);
+  const m = new Map();
+  for (const id of lastWatchKeep) m.set(id, lastWatchKeep);
+  return m;
+})();
+function inSameNodeCluster(a, b) {
+  const ca = NODE_FREE_MOVE_CLUSTERS.get(a);
+  return !!ca && ca === NODE_FREE_MOVE_CLUSTERS.get(b);
+}
+// Wraps GameMap.getAccessibleNodes(): returns the connection-based
+// reachable id list AND any cluster siblings of the current node, so
+// the gold "accessible" dot lights up the whole keep cluster the
+// moment the player walks into any one of its nodes.
+function getReachableNodeIds() {
+  if (!currentMap) return [];
+  const ids = currentMap.getAccessibleNodes().map(n => n.id);
+  const currentId = currentMap.currentNodeId;
+  const cluster = NODE_FREE_MOVE_CLUSTERS.get(currentId);
+  if (cluster) {
+    for (const id of cluster) {
+      if (id === currentId) continue;
+      if (ids.includes(id)) continue;
+      const n = currentMap.getNode(id);
+      if (!n || n.isLocked) continue;
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
 // === Well Rested ===
 // PY mirror: the city's south gate is gated behind a "Well Rested"
 // state. The player becomes well rested after a level-up rebalance
@@ -6832,6 +7050,19 @@ const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_
 let _wellRestedDeckSize = -1;
 function setWellRested() {
   if (player && player.deck) _wellRestedDeckSize = player.deck.masterDeck.length;
+  // Dire Bear (Circular Ruins) is the chapter 5/6 Mountain repeatable.
+  // Every inn-style rest funnels through setWellRested — clearing
+  // the latch here means walking back into the ruins re-arms the
+  // ambush. Level-up rests also fire setWellRested, but the bear
+  // fight is gated behind discovery + the audience anyway, so an
+  // early reset is harmless.
+  direBearDefeated = false;
+  // Baby Roc nest — same shape as the bear. Resting at the keep
+  // means the mother's been gone long enough for another brood to
+  // hatch / a fresh chick to climb out of an egg. Gated behind
+  // rocRescued at the dispatch site, so a pre-rescue rest doesn't
+  // ambush a confused player.
+  babyRocDefeated = false;
   // Rest also clears any active Provisions (Ale, future food/drink
   // buffs). The buff was "until next rest" so this is the trigger.
   clearActiveProvisions();
@@ -6990,6 +7221,41 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       && node.isDone && !harpiesDefeated) {
     currentMap.currentNodeId = nodeId;
     const factory = ENCOUNTER_REGISTRY['wreckage_harpy_revisit'];
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // Circular Ruins dire-bear revisit — same shape as the harpies
+  // wreckage revisit. Once the first kill has marked the node done
+  // AND the next rest has cleared direBearDefeated, walking back
+  // onto the ruins triggers the short repeat encounter ("another
+  // bear has decided this cave is home").
+  if (!skipEncounter && nodeId === 'mountain_cave_ruins' && currentMap.id === 'mountain_cave'
+      && node.isDone && !direBearDefeated) {
+    currentMap.currentNodeId = nodeId;
+    const factory = ENCOUNTER_REGISTRY['circular_ruins_combat_repeat'];
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // Nest Interior repeat ambush — same shape as the bear ruins
+  // revisit. Only after the player has actually rescued Olbrim
+  // (rocRescued) and the next rest has cleared babyRocDefeated.
+  // Otherwise standard arrival flow handles the first nest dialog.
+  if (!skipEncounter && nodeId === 'nest_interior_middle' && currentMap.id === 'nest_interior'
+      && rocRescued && !babyRocDefeated && node.isDone) {
+    currentMap.currentNodeId = nodeId;
+    const factory = ENCOUNTER_REGISTRY['nest_middle_olbrim_repeat'];
     if (factory) {
       currentEncounter = factory();
       encounterTextIndex = 0;
@@ -8027,24 +8293,35 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     arriveAtNode('top_stairs_to_outpost', 'last_watch_entry');
     return;
   }
-  // Last Watch — Down to the Valley descent. Stays inside the
-  // last_watch map (walks to last_watch_valley_path) until the
-  // player walks one more step onto the Valley Path teleport node.
-  // The well-rested gate fires here so a stale state (cards added
-  // between rest and descent) can't sneak the player past.
-  if (nodeId === 'last_watch_to_valley'
+  // Last Watch — Down to the Valley descent. The well-rested gate
+  // sits on the FORWARD step from Down to the Valley → Valley Path
+  // (and on the cross-map teleport itself, below). Standing on Down
+  // to the Valley while not rested is fine — the player can walk up,
+  // see the warning, and head back to the Keep. The warning fires
+  // when they try to take the next step.
+  if (nodeId === 'last_watch_valley_path'
       && currentMap.id === 'last_watch'
-      && fromNodeId !== 'last_watch_valley_path') {
-    if (!isWellRested()) {
-      showStyledToast('Go Rest in the Keep.', 'recharge', 2200);
-      state = GameState.MAP;
-      return;
-    }
+      && fromNodeId === 'last_watch_to_valley'
+      && !isWellRested()) {
+    showStyledToast('You need to be well rested before venturing into the valley.', 'recharge', 3200);
+    state = GameState.MAP;
+    return;
   }
-  // Last Watch ↔ High Valley 1 teleport pair.
+  // Last Watch ↔ High Valley 1 teleport pair. Re-check the
+  // well-rested gate here too — the same clearer message — so a
+  // player who somehow lands on last_watch_valley_path from any
+  // other entry path (save/load mid-descent, etc.) can't slip
+  // through. Skip the check when coming BACK from the valley
+  // (fromNodeId is the valley entry), so returning to the keep
+  // isn't blocked.
   if (nodeId === 'last_watch_valley_path'
       && currentMap.id === 'last_watch'
       && fromNodeId !== 'high_valley_1_entry') {
+    if (!isWellRested()) {
+      showStyledToast('You need to be well rested before venturing into the valley.', 'recharge', 3200);
+      state = GameState.MAP;
+      return;
+    }
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('high_valley_1', createHighValley1Map);
     visitedNodes = new Set(['high_valley_1_entry']);
@@ -8105,9 +8382,18 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     return;
   }
   // Mountain Cave Ice Waterfall ↔ Roc Nest Approach teleport pair.
+  // Suppressed on FIRST arrival until the ice_waterfall_climb dialog
+  // has run — otherwise the cross-map teleport hijacks the arrival
+  // and the climb / Roc-nest reveal never fires going forward. After
+  // the dialog completes, advanceEncounterPhase re-fires arriveAtNode
+  // with skipEncounter=true and the teleport lands the party on the
+  // Ridge Trail. Subsequent walk-backs go through this branch as
+  // before, with the fromNodeId !== teleId guard already handling
+  // bounce.
   if (nodeId === 'mountain_cave_ice_waterfall'
       && currentMap.id === 'mountain_cave'
-      && fromNodeId !== 'roc_nest_far_entry') {
+      && fromNodeId !== 'roc_nest_far_entry'
+      && completedEncounters.has('ice_waterfall_climb')) {
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('roc_nest_far', createRocNestFromFarMap);
     visitedNodes = new Set(['roc_nest_far_entry']);
@@ -8959,6 +9245,23 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // startNodeEncounter branch switches to the rest-only variant.
   // Once the rest is claimed (ancestorRested), the node goes quiet.
   if (canRunEncounter && nodeId === 'tomb_sarcophagus' && ancestorSpiritsDefeated && ancestorRested) canRunEncounter = false;
+  // Circular Ruins: canRevisit is on so the rest-cleared dispatch
+  // above can fire the bear repeat. Without this gate the regular
+  // encounter pipeline would also re-run circular_ruins_combat
+  // (full intro + fight) every time the player walks back when
+  // direBearDefeated is still true. The dispatch already handles
+  // the post-rest path, so silence the standard pipeline whenever
+  // the bear is currently latched as dead.
+  if (canRunEncounter && nodeId === 'mountain_cave_ruins' && currentMap.id === 'mountain_cave' && direBearDefeated) {
+    canRunEncounter = false;
+  }
+  // Nest Interior — same gate as the bear ruins. The repeat
+  // dispatch above handles fresh ambushes when the rest cycle
+  // re-arms babyRocDefeated; the standard pipeline never re-fires
+  // the original nest_middle_olbrim once it's been completed.
+  if (canRunEncounter && nodeId === 'nest_interior_middle' && currentMap.id === 'nest_interior' && babyRocDefeated) {
+    canRunEncounter = false;
+  }
   // Encounter families — multiple entry nodes share the same arrival
   // dialog (plaza_entry / plaza_west / plaza_northwest all narrate
   // arriving in the Obsidian Plaza). Each carries a UNIQUE encounter
@@ -9266,9 +9569,12 @@ function moveToMapNode(node) {
   }
   // Free-movement areas (Qualibaf city) skip the adjacency check —
   // any unlocked node is a valid destination from any other unlocked
-  // node, regardless of what's listed in `connections`.
-  const freeMove = CITY_FREE_MOVE_AREAS.has(current.mapArea) &&
-                   CITY_FREE_MOVE_AREAS.has(node.mapArea);
+  // node, regardless of what's listed in `connections`. Per-node
+  // clusters (Last Watch keep cluster) give the same free-pick
+  // behavior scoped to a Set of node ids.
+  const freeMove = (CITY_FREE_MOVE_AREAS.has(current.mapArea) &&
+                    CITY_FREE_MOVE_AREAS.has(node.mapArea))
+                || inSameNodeCluster(current.id, node.id);
   if (!freeMove && !current.connections.includes(node.id)) return;
 
   // Cross-area hop: positions live in different image coord spaces,
@@ -9604,10 +9910,13 @@ function handleMapClick(x, y) {
 
     // Clicking connected node — animate the move. Free-movement
     // areas (Qualibaf city) skip the adjacency check so any
-    // unlocked node is reachable from any other.
+    // unlocked node is reachable from any other. Per-node clusters
+    // (Last Watch keep cluster) give the same free-pick scoped to
+    // a Set of node ids.
     const current = currentMap.getCurrentNode();
-    const freeMove = CITY_FREE_MOVE_AREAS.has(current.mapArea) &&
-                     CITY_FREE_MOVE_AREAS.has(node.mapArea);
+    const freeMove = (CITY_FREE_MOVE_AREAS.has(current.mapArea) &&
+                      CITY_FREE_MOVE_AREAS.has(node.mapArea))
+                  || inSameNodeCluster(current.id, r.nodeId);
     if (!freeMove && !current.connections.includes(r.nodeId)) continue;
     if (node.isLocked) continue;
     moveToMapNode(node);
@@ -9656,6 +9965,9 @@ const ENCOUNTER_BG_MAP = {
   // Top of the Infinite Stairs arrival — companions exhausted dialog
   // uses the same plateau art as the map background.
   top_stairs_arrival: 'bg_top_of_infinite_stairs',
+  // Stormwatcher's Shrine — Marthammor Duin's dormant chapel above
+  // the Last Watch keep. Standalone background art.
+  stormwatchers_shrine_dormant: 'bg_stormwatchers_shrine',
   outpost_kraken_report: 'bg_south_outpost',
   // Watchtower check-in reuses the same outpost-gate backdrop so the
   // dialog reads as continuous with the first meeting rather than
@@ -9774,6 +10086,8 @@ const ENCOUNTER_BG_FILES = {
   bg_leaving_prison: 'LeavingPrisonBackground.jpg',
   bg_sewer: 'SewerBackground.jpg', bg_sewer_camp: 'SewereCampBackground.jpg',
   bg_lost_shrine: 'LostShrineBackground.jpg',
+  bg_stormwatchers_shrine: 'StormwatchersShrine.jpg',
+  bg_roc_nest_far: 'Maps/RocNestFromFar.jpg',
   bg_mountain_pass: 'MountainPass.jpg', bg_small_stream: 'SmallStream.jpg',
   bg_kobold_bridge: 'KoboldBridgeBackground.jpg', bg_calm_grove: 'CalmGrove.jpg',
   bg_mountain_overlook: 'MountainOverlook.jpg',
@@ -10766,6 +11080,14 @@ function startNodeEncounter(nodeId) {
     state = GameState.MAP;
     return;
   }
+  // Last Watch Supply Cache — same one-time shape as supply_pile.
+  // Once the player has pulled gear off the dwarven_market_loot
+  // table, the cache node short-circuits quietly on every revisit.
+  if (node.encounterId === 'last_watch_supply_cache' && lastWatchSupplyTaken) {
+    currentMap.completeCurrentNode();
+    state = GameState.MAP;
+    return;
+  }
   // River Cave Mouth arrival — one-time reveal dialog. Gated on the
   // saved-and-reliable `completedEncounters` set rather than
   // node.isDone, because the river_cave_mouth map can drop out of
@@ -10957,15 +11279,23 @@ function startNodeEncounter(nodeId) {
       : ENCOUNTER_REGISTRY.cathedral_shrine;
     currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'mithril_remedies') {
-    // Mithril Remedies — first visit fires the full "Olbrim is gone"
-    // dialog (latches mithrilRemediesVisited and unlocks the Tharnag
-    // main door + Stairs of the Infinite chain). Subsequent visits
-    // run a short revisit dialog reminding the player Olbrim still
-    // hasn't returned — the shop will open when the side quest
-    // wraps up (future content).
-    const fac = mithrilRemediesVisited
-      ? ENCOUNTER_REGISTRY.mithril_remedies_revisit
-      : ENCOUNTER_REGISTRY.mithril_remedies;
+    // Mithril Remedies — four-way dispatch:
+    //  - Pre-Olbrim-rescue, first visit: full "Olbrim is gone" dialog
+    //    (latches mithrilRemediesVisited + unlocks the Tharnag main
+    //    door + Stairs of the Infinite chain).
+    //  - Pre-Olbrim-rescue, revisit: short "still no Olbrim" beat.
+    //  - Post-shrine, first visit: greet dialog (one-shot) → shop opens.
+    //  - Post-shrine, revisit: short "door's open" beat → shop opens.
+    let fac;
+    if (shrineReactivated && !mithrilRemediesOlbrimGreeted) {
+      fac = ENCOUNTER_REGISTRY.mithril_remedies_olbrim_greet;
+    } else if (shrineReactivated) {
+      fac = ENCOUNTER_REGISTRY.mithril_remedies_open;
+    } else if (mithrilRemediesVisited) {
+      fac = ENCOUNTER_REGISTRY.mithril_remedies_revisit;
+    } else {
+      fac = ENCOUNTER_REGISTRY.mithril_remedies;
+    }
     currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'temple_moradin_altar') {
     // Temple of Moradin altar — once the player has prayed, skip the
@@ -10981,6 +11311,39 @@ function startNodeEncounter(nodeId) {
     const fac = lastWatchAudienceComplete
       ? ENCOUNTER_REGISTRY.last_watch_audience_revisit
       : ENCOUNTER_REGISTRY.last_watch_audience;
+    currentEncounter = fac ? fac() : factory();
+  } else if (node.encounterId === 'stormwatchers_shrine_dormant') {
+    // Stormwatcher's Shrine — five variants depending on side-quest
+    // progress:
+    //  - Pre-Roc, first visit:        full Marthammor introduction.
+    //  - Pre-Roc, revisit:            quiet one-liner.
+    //  - Post-Roc, pre-reactivation:  "Olbrim not here yet, brazier
+    //                                  still cold" beat. Repeats.
+    //  - Reactivation (one-shot):     Olbrim arrives, lights the
+    //                                  Frostbloom in the brazier,
+    //                                  Marthammor awakens. shrineReactivated
+    //                                  latches at completion.
+    //  - Active (repeats):            brazier burns, Olbrim sits by it,
+    //                                  200 gp "Contemplate" rite offered.
+    let fac;
+    if (shrineReactivated && stormwatchersShrineActiveSeen) {
+      // Player has already seen the brazier-burning intro once. Drop
+      // straight into the Contemplate / Walk on choice on every
+      // revisit, even when the player walked away to grab more gold.
+      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_active_quick;
+    } else if (shrineReactivated) {
+      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_active;
+    } else if (lastWatchPostRocClaimed) {
+      // After Olbrim's wake-up dialog the shrine is immediately
+      // accessible — Olbrim hobbled straight up here with the
+      // Frostbloom, no day-or-two wait. The reactivation beat fires
+      // on the very next walk-up; completion latches shrineReactivated.
+      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_reactivation;
+    } else if (node.isDone) {
+      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_revisit;
+    } else {
+      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_dormant;
+    }
     currentEncounter = fac ? fac() : factory();
   } else if (node.encounterId === 'tomb_sarcophagus') {
     // Sarcophagus — pre-defeat plays the full TEXT→fight→rest flow.
@@ -11055,6 +11418,31 @@ function startNodeEncounter(nodeId) {
   // back to the upper_bridge area track.
   if (node.encounterId === 'zhost_revenge') {
     crossfadeMusic('Music/music_tension_01', 1500, 2500);
+    _lastMusicArea = null;
+    _lastMusicNodeId = null;
+  }
+  // Dire Bear (Mountain Cave ambush) — boss tension theme cross-
+  // fades in with the Circular Ruins growl dialog. Repeat ambushes
+  // share the same theme so re-arming the fight after a rest sounds
+  // exactly like the first kill. _lastMusic* reset so victory
+  // returns to the cave-dripping bed.
+  if (node.encounterId === 'circular_ruins_combat'
+      || node.encounterId === 'circular_ruins_combat_repeat') {
+    crossfadeMusic('Music/music_tension_01', 1500, 2500);
+    _lastMusicArea = null;
+    _lastMusicNodeId = null;
+  }
+  // Baby Roc (Nest Interior) — boss tension theme runs over a thin
+  // mountain-wind bed at ~30% so the open-ridge ambience persists
+  // under the music. Same shape as the Sahuagin Baron pair: lead
+  // theme + atmospheric layer. Cleaned up on encounter end via
+  // advanceEncounterPhase's stopAmbienceLayer tail. Repeat ambushes
+  // share the same pair so re-running the nest sounds the same as
+  // the first kill.
+  if (node.encounterId === 'nest_middle_olbrim'
+      || node.encounterId === 'nest_middle_olbrim_repeat') {
+    crossfadeMusic('Music/music_tension_01', 1500, 2500);
+    playAmbienceLayer('Music/ambience_mountain_wind_01', 0.3);
     _lastMusicArea = null;
     _lastMusicNodeId = null;
   }
@@ -11174,6 +11562,92 @@ function advanceEncounterPhase() {
         || completedEncounterId === 'wreckage_harpy_revisit') {
       harpiesDefeated = true;
     }
+    // Dire Bear — same shape as the harpies latch. Set after the
+    // first kill or any repeat kill so the ruins stay quiet until
+    // the next rest clears direBearDefeated.
+    if (completedEncounterId === 'circular_ruins_combat'
+        || completedEncounterId === 'circular_ruins_combat_repeat') {
+      direBearDefeated = true;
+    }
+    // Last Watch Supply Cache — one-time captain hand-off. Latches
+    // as soon as the encounter completes (the LOOT phase has rolled
+    // its dwarven_market_loot card by this point) so revisits hit
+    // the short-circuit in startNodeEncounter.
+    if (completedEncounterId === 'last_watch_supply_cache') {
+      lastWatchSupplyTaken = true;
+    }
+    // Baby Roc rescue — latch rocRescued and cross-map teleport the
+    // party back to the Watch Keep, then auto-fire the post-Roc
+    // dialog (forced rest + level-up + Olbrim wake-up + Frostbloom
+    // gift). lastWatchPostRocClaimed latches at the END of the
+    // post-Roc dialog so a save/load mid-dialog doesn't lose the
+    // arrival auto-fire.
+    if (completedEncounterId === 'nest_middle_olbrim') {
+      rocRescued = true;
+      babyRocDefeated = true;
+      currentEncounter = null;
+      _encounterBgOverride = null;
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('last_watch', createLastWatchMap);
+      const keepNode = currentMap.getNode('last_watch_keep');
+      if (keepNode) {
+        keepNode.isDone = true;
+        keepNode.hiddenName = '';
+        keepNode.hiddenDescription = '';
+      }
+      currentMap.currentNodeId = 'last_watch_keep';
+      visitedNodes = new Set(['last_watch_keep']);
+      const factory = ENCOUNTER_REGISTRY.last_watch_post_roc;
+      if (factory) {
+        currentEncounter = factory();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        return;
+      }
+    }
+    // Baby Roc repeat run — latch babyRocDefeated and teleport back
+    // to the Watch Keep directly (no level-up, no post-Roc dialog).
+    // Same generosity pattern as the first kill: the descent is
+    // narrated in the encounter's tail text, so the player doesn't
+    // have to re-walk the whole valley → cave → ruins chain.
+    if (completedEncounterId === 'nest_middle_olbrim_repeat') {
+      babyRocDefeated = true;
+      currentEncounter = null;
+      _encounterBgOverride = null;
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('last_watch', createLastWatchMap);
+      const keepNode = currentMap.getNode('last_watch_keep');
+      if (keepNode) {
+        keepNode.isDone = true;
+        keepNode.hiddenName = '';
+        keepNode.hiddenDescription = '';
+      }
+      currentMap.currentNodeId = 'last_watch_keep';
+      visitedNodes = new Set(['last_watch_keep']);
+      state = GameState.MAP;
+      return;
+    }
+    // Post-Roc Watch Keep dialog — latches when the morning-after
+    // dialog finishes (Olbrim wake-up + Frostbloom gift).
+    if (completedEncounterId === 'last_watch_post_roc') {
+      lastWatchPostRocClaimed = true;
+    }
+    // Stormwatcher's Shrine — Marthammor reactivation. Latches when
+    // Olbrim's Frostbloom-lighting beat finishes; every subsequent
+    // shrine visit dispatches to the active-shrine encounter with
+    // the Contemplate rite. The active encounter's TEXT only plays
+    // once — flag stamps so reentries (e.g. player walked off to
+    // grab more gold) skip the intro and drop into the choice.
+    if (completedEncounterId === 'stormwatchers_shrine_reactivation'
+        || completedEncounterId === 'stormwatchers_shrine_active'
+        || completedEncounterId === 'stormwatchers_shrine_active_quick') {
+      if (completedEncounterId === 'stormwatchers_shrine_reactivation') {
+        shrineReactivated = true;
+      }
+      stormwatchersShrineActiveSeen = true;
+    }
     currentEncounter = null;
     // Clear the chapter-7 random-encounter backdrop override so the
     // next encounter (or post-fight map) renders against its own
@@ -11209,6 +11683,17 @@ function advanceEncounterPhase() {
     ]);
     if (QUALIBAF_SHOP_IDS.has(completedEncounterId)) {
       openShop(completedEncounterId, SHOP_LABELS[completedEncounterId] || _titleCase(completedEncounterId));
+      return;
+    }
+    // Mithril Remedies — post-shrine the encounters chain straight
+    // into the shop. The greet variant latches the one-shot greeting
+    // flag so revisits get the short open-revisit beat instead.
+    if (completedEncounterId === 'mithril_remedies_olbrim_greet'
+        || completedEncounterId === 'mithril_remedies_open') {
+      if (completedEncounterId === 'mithril_remedies_olbrim_greet') {
+        mithrilRemediesOlbrimGreeted = true;
+      }
+      openShop('mithril_remedies', 'Mithril Remedies');
       return;
     }
     // Antiquity shop — after the Mimic fight (or a revisit on the cleared
@@ -12037,8 +12522,9 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     // 30 Bite! cards form the Mimic's HP pool — same as PY.
     for (let i = 0; i < 30; i++) enemy.deck.addCard(createMimicBite());
+    // Dire Fury rolls Overwhelm in (its description carries the
+    // keyword + the overflow handler reads dire_fury as a match).
     enemy.addPower(createDireFury());
-    enemy.addPower(createOverwhelm());
   };
   ENEMY_HAND_SIZE.mimic = 1;
 
@@ -12084,11 +12570,19 @@ function setupEnemyForCombat(enemyId) {
     enemy.addPower(createArmorPower(1));
     enemy.addPower(createAmalgam());
     // Starting Bone Amalgam ally — summoning sickness on round 1 (PY parity).
+    // Scales +2/+2 per monsterTierOffset to match the Create Amalgam
+    // power's per-turn spawn (3/3 → 5/5 → 7/7 → 9/9). Without this,
+    // a Game+ run still opened against a vanilla 3/3 starter, only
+    // bumping the SUBSEQUENT spawn line.
+    const amalgamStartBump = 2 * (monsterTierOffset || 0);
+    const startAtk = 3 + amalgamStartBump;
+    const startHp  = 3 + amalgamStartBump;
     const starting = new Creature({
-      name: 'Bone Amalgam', attack: 3, maxHp: 3,
+      name: 'Bone Amalgam', attack: startAtk, maxHp: startHp,
       description: 'A mass of fused bones.',
       // Spawned by the Amalgam power, not by a deck card — no
-      // CREATURE_TIER_OFFSET rule, no codex red badge.
+      // CREATURE_TIER_OFFSET rule, no codex red badge. Per-offset
+      // bump is hand-applied above.
       noTierOffset: true,
     });
     starting.exhausted = true;
@@ -12175,11 +12669,10 @@ function setupEnemyForCombat(enemyId) {
     // a later balance pass. The card stays in CARD_REGISTRY so the
     // codex surfaces it.
     // Dire Fury: +1 Rage per turn, so Swallowing Bite and tentacle
-    // swings ramp the longer the fight drags. Overwhelm: damage
-    // dealt to allies spills onto the player when it kills them, so
-    // tentacle swings on Raena/Thorb still hurt you.
+    // swings ramp the longer the fight drags. Overwhelm (rolled into
+    // Dire Fury): damage dealt to allies spills onto the player when
+    // it kills them, so tentacle swings on Raena/Thorb still hurt you.
     enemy.addPower(createDireFury());
-    enemy.addPower(createOverwhelm());
     // Start with 2 Tentacles already coiled on the field (+0.5 per
     // monster offset, floor: 2 base → 2 at +1 → 3 at +2 → 3 at +3 →
     // 4 at +4 …). Each is the standard 3/5 snag-tentacle and arrives
@@ -12280,6 +12773,82 @@ function setupEnemyForCombat(enemyId) {
     }
   };
   ENEMY_HAND_SIZE.sahuagin_baron = 3;
+
+  // Dire Bear — Mountain Cave ambush boss on the post-throne Olbrim
+  // side quest. Powers: Feral Wrath (half of landed swing converts
+  // to Bleed) + Armor 1. Rage now comes from the active Bear Roar
+  // play instead of a passive turn-end tick, so the bear ramps
+  // when it picks the roar from its hand rather than every turn.
+  // Deck shape: 8 Dire Claws (multi-target 2x), 8 Dire Bite (5 dmg),
+  // 8 Dire Hide (block + heal ailment + draw), 3 Nature's Healing,
+  // 4 Bear Roar (+1 Rage + strip shields).
+  ENEMY_DECKS.dire_bear = () => {
+    enemy = new Character('Dire Bear');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireClaws());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireBite());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 3; i++) enemy.deck.addCard(createNaturesHealing());
+    for (let i = 0; i < 4; i++) enemy.deck.addCard(createBearRoar());
+    enemy.addPower(createFeralWrathPower());
+    enemy.addPower(createArmorPower(1));
+  };
+  ENEMY_HAND_SIZE.dire_bear = 3;
+
+  // Baby Roc — Nest Interior boss fight. The Roc circling above the
+  // nest is invulnerable: every turn it draws + plays "A Storm is
+  // Coming" (deal 1 Shock to a random party target) and recharges
+  // it for next turn — slow, atmospheric chip pressure layered
+  // over the chick/egg melee. The real damage comes from the
+  // trio on the ground: 1 freshly hatched Roc Chick + 2 Unhatched
+  // Roc Eggs. Eggs hatch into chicks on death. Victory is killing
+  // everything below (kill counter of 5: 3 chicks max + 2 eggs).
+  ENEMY_DECKS.baby_roc = () => {
+    enemy = new Character('Roc');
+    enemy.deck = new Deck();
+    enemy._invulnerable = true;
+    enemy._killTarget = 5;
+    enemy.deck.addCard(createAStormIsComing());
+    // 1 starting Roc Chick — fresh from the egg that just cracked
+    // open in the dialog. attackAll hits the player + every alive
+    // player ally; attackAllIncludingOwn adds every other enemy
+    // creature on the field (sibling chicks AND the remaining
+    // eggs) to the same screech volley — the chick is just hungry
+    // and stupid and will peck anything that isn't itself.
+    // bloodfrenzy 1 stacks rage every attack so the chick gets
+    // stronger the longer it lives.
+    const chick = new Creature({
+      name: 'Roc Chick', attack: 4, maxHp: 40,
+      attackAll: true,
+      attackAllIncludingOwn: true,
+      bloodfrenzy: 1,
+      description: 'Attacks every other target (player, allies, eggs, siblings).\nGain 1 Rage per attack.',
+    });
+    chick.exhausted = false;
+    chick.justSummoned = false;
+    enemy.addCreature(chick);
+    // 2 Unhatched Roc Eggs. 0 attack, 10 HP, 1 armor — armor stays
+    // around (Creature.takeDamage doesn't deplete it), so chip damage
+    // pings off until the player commits real attacks. _hitSfxKey
+    // layers the egg-hatch chirp under every blow. _cantAttack stops
+    // the enemy planner from queueing a swing turn for them — eggs
+    // just sit in the nest until something kills them. onDeathSpawnChick
+    // is read in countAndRemoveDeadCreatures: when an egg dies, a
+    // fresh Roc Chick takes its place on the field.
+    for (let i = 0; i < 2; i++) {
+      const egg = new Creature({
+        name: 'Unhatched Roc Egg', attack: 0, maxHp: 10, armor: 1,
+        description: 'On Death: Hatch into a Roc Chick.',
+      });
+      egg._hitSfxKey = 'egg_hatch_01';
+      egg.onDeathSpawnChick = true;
+      egg._cantAttack = true;
+      egg.exhausted = false;
+      egg.justSummoned = false;
+      enemy.addCreature(egg);
+    }
+  };
+  ENEMY_HAND_SIZE.baby_roc = 1;
 
   ENEMY_DECKS.forest_spiders = () => {
     enemy = new Character('Deathjump Spiders');
@@ -12696,7 +13265,8 @@ function setupEnemyForCombat(enemyId) {
     // PY only adds Overwhelm; Dire Fury is a JS addition for the rematch
     // so the wounded general scales up over the fight (matches the
     // siege-arc treatment).
-    enemy.addPower(createOverwhelm());
+    // Dire Fury subsumes Overwhelm — the overflow handler reads
+    // dire_fury as a match and the card text shows the keyword.
     enemy.addPower(createDireFury());
   };
   ENEMY_HAND_SIZE.zhost_revenge = 2;
@@ -12782,7 +13352,6 @@ function setupEnemyForCombat(enemyId) {
     enemy.baseArmor = 1;
     enemy.fireImmune = true;
     enemy.addPower(createDireFury());
-    enemy.addPower(createOverwhelm());
     enemy.addPower(createLavaFloor());
   };
   ENEMY_HAND_SIZE.magma_drake = 2;
@@ -12941,7 +13510,6 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createVarimatrasScale());
     enemy.addPower(createBlizzard());
     enemy.addPower(createDireFury());
-    enemy.addPower(createOverwhelm());
     enemy.addPower(createArmorPower(1));
     enemy.addPower(createAncientWhite());
   };
@@ -13013,7 +13581,7 @@ function drawMap() {
     ctx.lineWidth = 2;
     // Pre-compute discoverable visibility so we can skip drawing edges
     // to/from nodes that aren't supposed to be on screen yet.
-    const connAccessible = currentMap.getAccessibleNodes().map(n => n.id);
+    const connAccessible = getReachableNodeIds();
     const discoverableVisible = (n, id) => {
       if (!n || !n.discoverable) return true;
       return visitedNodes.has(id) || n.isDone
@@ -13031,6 +13599,10 @@ function drawMap() {
         if (!conn || conn.mapArea !== currentArea || conn.isLocked) continue;
         if (conn.wip && !debugMode) continue;
         if (!discoverableVisible(conn, connId)) continue;
+        // Per-edge visual suppression — the connection still works for
+        // movement, but no line is drawn (e.g. the Last Watch keep
+        // cluster reads as a single building footprint).
+        if (HIDDEN_EDGE_PAIRS.has(edgeKey(id, connId))) continue;
         const a = toScreen(node.position);
         const b = toScreen(conn.position);
         ctx.beginPath();
@@ -13045,7 +13617,7 @@ function drawMap() {
   drawFogOfWar(currentArea);
 
   // Draw nodes (on top of fog)
-  const accessible = currentMap.getAccessibleNodes().map(n => n.id);
+  const accessible = getReachableNodeIds();
   // NO_FOG_MAPS show the entire layout — locked nodes drawn too, and
   // the visibility gate is bypassed. Click adjacency still gatekeeps
   // movement so the player can't skip ahead.
@@ -13522,6 +14094,21 @@ function handleEncounterTextClick() {
         // Clear node trackers so leaving / re-entering the cave map
         // re-runs updateMusicForCurrentScene properly afterwards.
         _lastMusicArea = null;
+        _lastMusicNodeId = null;
+      }
+    }
+    // Ice Waterfall climb → Roc nest reveal: the moment the dialog's
+    // background swaps to the open-ridge shot, crossfade off the
+    // cave-dripping bed into the mountain-wind ambience so the audio
+    // moves outside with the visual. Same trick the underground
+    // river uses, just with a softer fade. _lastMusicArea reset so
+    // any later updateMusicForCurrentScene (post-teleport into
+    // roc_nest_far) is a no-op rather than a re-crossfade.
+    if (currentEncounter && currentEncounter.id === 'ice_waterfall_climb') {
+      const t = phase.texts[encounterTextIndex];
+      if (t && t.bgOverride === 'bg_roc_nest_far') {
+        crossfadeMusic('Music/ambience_mountain_wind_01', 1500, 2500);
+        _lastMusicArea = 'roc_nest_far';
         _lastMusicNodeId = null;
       }
     }
@@ -14295,6 +14882,27 @@ function handleEncounterChoiceClick(x, y) {
       // Always mark the node done on a completesEncounter — otherwise one-shot
       // encounters like prison_entrance would re-trigger on the next click.
       currentMap.completeCurrentNode();
+      // Snapshot the completing encounter id BEFORE clearing it so the
+      // global completedEncounters set + the per-flag latches below
+      // fire. Previously the completesEncounter path bypassed
+      // advanceEncounterPhase's completion branch entirely, which
+      // meant Dire Bear / Last Watch Supply / Harpy-revisit flags
+      // never latched if the encounter ended on a choice — the bear
+      // could be re-triggered without resting, the supply cache could
+      // be re-claimed, etc.
+      const completedEncounterId = currentEncounter ? currentEncounter.id : null;
+      if (completedEncounterId) completedEncounters.add(completedEncounterId);
+      if (completedEncounterId === 'wreckage_arrival'
+          || completedEncounterId === 'wreckage_harpy_revisit') {
+        harpiesDefeated = true;
+      }
+      if (completedEncounterId === 'circular_ruins_combat'
+          || completedEncounterId === 'circular_ruins_combat_repeat') {
+        direBearDefeated = true;
+      }
+      if (completedEncounterId === 'last_watch_supply_cache') {
+        lastWatchSupplyTaken = true;
+      }
       encounterChoiceResult = null;
       currentEncounter = null;
       // Clear any encounter-bg override (e.g. the exploding-bridge swap
@@ -14336,6 +14944,13 @@ function handleEncounterChoiceClick(x, y) {
       // when the player can't afford the donation.
       if (r.choice.effectType === 'pray_church' && gold < (r.choice.effectValue || 50)) {
         showToast(`Not enough gold! Need ${r.choice.effectValue || 50} GP.`);
+        return;
+      }
+      // Stormwatcher Contemplate — 200 GP. Same gate shape as the
+      // Temple of Moradin prayer; repeatable as long as the player
+      // can afford it.
+      if (r.choice.effectType === 'shrine_contemplate' && gold < (r.choice.effectValue || 200)) {
+        showToast(`Not enough gold! Need ${r.choice.effectValue || 200} GP.`);
         return;
       }
       // Gate: pray_temple_moradin requires 200 GP. Repeatable as long
@@ -14519,6 +15134,8 @@ function handleEncounterChoiceClick(x, y) {
       if (r.choice.effectType === 'outpost_tent_full_rest') resolveOutpostTentFullRest(r.choice);
       if (r.choice.effectType === 'last_watch_rest') resolveLastWatchRest(r.choice);
       if (r.choice.effectType === 'last_watch_leave') resolveLastWatchLeave(r.choice);
+      if (r.choice.effectType === 'circular_ruins_break') resolveCircularRuinsBreak(r.choice);
+      if (r.choice.effectType === 'shrine_contemplate') resolveShrineContemplate(r.choice);
       // South Hill pre-board rest: simple +N heal, no latch — south_hill
       // is one-shot via the encounter itself so the rest naturally only
       // fires once.
@@ -14688,6 +15305,69 @@ function resolveSouthHillRest(choice) {
   const healAmt = Math.max(1, choice.value || 5);
   healPlayer(healAmt);
   showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
+}
+
+// Post-Dire-Bear Olbrim investigation choice. Both options drop 1-2
+// Cave Shrooms into the player's hand AND surface the added cards
+// in the choice result panel via choice._lootItems (same shape the
+// Calm Stream forage / Storehouse picker uses, so the cards render
+// as physical thumbnails on the result page instead of just a log
+// line). The break option also heals up to choice.effectValue HP.
+// choice.effectValue: 8 for the rest branch, 0 for the push-on
+// branch. (Was reading choice.value, which the EncounterChoice
+// constructor stores as effectValue — so the heal silently no-op'd.)
+// Stormwatcher's Shrine — Contemplate rite. Pay 200 gp, drop into
+// inventory rest mode with a contemplate flag set so the deck-limit
+// +/- handler lets the player reassign one bonus point: -1 from any
+// category that's at +1 or more, +1 to a different category. After
+// the reassign lands, exitInventory runs a full rest (rebalance + Well
+// Rested). The inventory open is gated behind the gold deduction so
+// repeat visits at 200 gp a pop work cleanly.
+function resolveShrineContemplate(choice) {
+  if (!player) return;
+  const cost = Math.max(0, choice.effectValue || 200);
+  gold = Math.max(0, gold - cost);
+  showStyledToast(`-${cost} gp`, 'gold', 1800);
+  // Open the inventory in rest mode with the contemplate flags
+  // primed. The +/- handler reads _shrineContemplatePending below
+  // to allow reassign; exitInventory validates that both picks
+  // landed on different categories before completing the rest.
+  _shrineContemplatePending = true;
+  _shrineContemplateMinusCat = null;
+  _shrineContemplatePlusCat = null;
+  restMode = true;
+  _restBonusCat = null;
+  _levelUpBonusPending = false;
+  _restErrorMsg = '';
+  previousState = state;
+  state = GameState.INVENTORY;
+  encounterChoiceResult = null;
+  currentEncounter = null;
+}
+
+function resolveCircularRuinsBreak(choice) {
+  if (!player || !player.deck) return;
+  const shroomCount = 1 + Math.floor(Math.random() * 2);  // 1 or 2
+  const items = [];
+  for (let i = 0; i < shroomCount; i++) {
+    const shroom = createCaveShroom();
+    if (playerTierOffset > 0) applyGamePlusOffsetInPlace(shroom, playerTierOffset);
+    if (player.deck.hand.length < MAX_HAND_SIZE) {
+      player.deck.hand.push(shroom);
+    } else {
+      player.deck.drawPile.unshift(shroom);
+    }
+    player.deck.masterDeck.push(shroom);
+    items.push(shroom);
+  }
+  choice._lootItems = items;
+  addLog(`Thorb hands over ${shroomCount} Cave Shroom${shroomCount > 1 ? 's' : ''}.`, Colors.GREEN);
+  playSound('gold');
+  const healAmt = Math.max(0, choice.effectValue || 0);
+  if (healAmt > 0) {
+    healPlayer(healAmt);
+    showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
+  }
 }
 
 function resolveFishingAttempt(choice) {
@@ -16234,7 +16914,14 @@ function startCombat() {
   whirlpoolPending = 0;
 
   const hs = getPlayerHandSize();
-  player.deck.startCombat(hs, MAX_HAND_SIZE);
+  // Wire the on-draw / on-discard hooks BEFORE startCombat draws the
+  // opening hand — startCombat ends in a deck.draw() call that fires
+  // onCardDrawn per card, so the hook needs to be in place to catch
+  // opening-hand triggers (Queen's Locket, Specter Ectoplasm, Bear
+  // Teeth Necklace, Molten Scale, etc.). Previously these were
+  // wired AFTER startCombat, which meant any on_draw_* card already
+  // in the opening hand silently skipped its effect on turn 1.
+  //
   // Hook on-discard so every card hitting the discard pile via
   // placeByCost (DISCARD / FREE costType, plus the discard_extra
   // effect below) fires the Feather Cloak / Harpy Feather riders
@@ -16244,6 +16931,20 @@ function startCombat() {
   // any future on_draw_* relic fires every time it lands in hand
   // (start of combat, mid-turn draw, end-of-turn refill).
   player.deck.onCardDrawn = (c) => triggerOnDraw(c);
+  // Snapshot any PERSISTED hand cards before startCombat — these are
+  // cards the player ended last fight (or step) holding. They never
+  // go through deck.draw() this fight, so the onCardDrawn hook above
+  // doesn't fire for them. Manually trigger On Draw after startCombat
+  // so Queen's Locket / Specter Ectoplasm / Bear Teeth Necklace /
+  // etc. fire on turn 1 even when they were already in hand at
+  // combat start.
+  const persistedHand = [...player.deck.hand];
+  player.deck.startCombat(hs, MAX_HAND_SIZE);
+  for (const c of persistedHand) {
+    if (!c) continue;
+    if (!player.deck.hand.includes(c)) continue;
+    triggerOnDraw(c);
+  }
   // Encounter-spawned companions (corner_cell Thorb, general_zhost
   // Raena, etc.) arrive on the field WITHOUT a sourceCard link, so
   // the matching companion card stays in drawPile / hand instead of
@@ -17016,7 +17717,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overwhelm|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -17129,6 +17830,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // keyword so it pairs visually with other recharge mechanics.
         badge = { type: 'badge', label: 'WHEN RECHARGED',
           bg: 'rgba(40,70,110,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Overwhelm') {
+        // Enemy-power keyword (Dire Fury card). Hovering the pill
+        // pops the full Overwhelm power card via the hoveredPower-
+        // Preview hook below the inline badge render. Crimson palette
+        // so it reads as a dangerous boss-side mechanic.
+        badge = { type: 'badge', label: 'OVERWHELM',
+          bg: 'rgba(110,30,30,0.92)', border: '#e07070', fg: '#ffd0c8' };
       } else if (phrase === 'Half-HP') {
         // Execute's conditional rider — fires when the target is at
         // or below half its max HP. Crimson palette pairs with the
@@ -17434,6 +18142,18 @@ function drawIconText(text, centerX, startY, maxWidth, fontSize, color = '#eee',
         cardBadgeHitAreas.push({
           x: pillX, y: pillY, w: pillW, h: pillH, label: u.label,
         });
+        // Overwhelm pill on Dire Fury (and any future card carrying
+        // the keyword) → stamp hoveredPowerPreview directly so the
+        // existing drawHoverPreview pass renders the full Overwhelm
+        // power card. Guarded against Shift-freeze so the player can
+        // pin the preview the normal way.
+        if (u.label === 'OVERWHELM'
+            && !isShiftFrozen()
+            && hitTest(mouseX, mouseY, { x: pillX, y: pillY, w: pillW, h: pillH })) {
+          hoveredPowerPreview = createOverwhelm();
+          hoveredCardPreview = null;
+          hoveredCreaturePreview = null;
+        }
         // Reset font + color for subsequent units on this line.
         ctx.font = `${fontSize}px sans-serif`;
         ctx.fillStyle = color;
@@ -17659,6 +18379,11 @@ const PILL_DESCRIPTIONS = {
 function drawBadgeTooltip() {
   for (const area of cardBadgeHitAreas) {
     if (!hitTest(mouseX, mouseY, area)) continue;
+    // Overwhelm uses the full power-card hover preview instead of the
+    // small tooltip — the hoveredPowerPreview hook in the badge render
+    // already stamped the preview state for drawHoverPreview to pick
+    // up. Skip the badge tooltip so the two don't double-render.
+    if (area.label === 'OVERWHELM') return;
     const desc = PILL_DESCRIPTIONS[area.label];
     // Two layouts: compact (just the label, for obvious pills) and
     // expanded (label header + wrapped description for pills like HIT
@@ -19550,6 +20275,10 @@ function drawCombatIntro() {
     'Kobold Warden':'kobold_warden',
     'Dire Rat':     'dire_rat',
     'Kobold Patrol':'kobold_patrol',
+    // Roc boss splash shows the chick — the boss panel keeps using
+    // RocCircling but the fight-start splash focuses on the threat
+    // that just hatched in the dialog.
+    'Roc':          'roc_chick',
   };
   let art = NAME_REMAP[enemy.name] ? getCardArt(NAME_REMAP[enemy.name]) : null;
   if (!art) {
@@ -21092,6 +21821,20 @@ function handleCombatClick(x, y) {
       endPlayerTurn();
       return;
     }
+    // "Don't show this again" — flips the Options toggle off, closes
+    // the modal, AND ends the turn (the player already meant to). No
+    // confirm: they can re-enable it in Options if they change their
+    // mind. Checked before m.no/outside-click so clicking the link
+    // text doesn't fall through into "Keep Playing".
+    if (hitTest(x, y, m.disable)) {
+      _endTurnWarnAllies = false;
+      saveOptions();
+      _endTurnConfirmOpen = false;
+      playSound('click');
+      showStyledToast('Warning disabled. Re-enable in Options.', 'recharge', 2200);
+      endPlayerTurn();
+      return;
+    }
     if (hitTest(x, y, m.no) || !hitTest(x, y, m.panel)) {
       _endTurnConfirmOpen = false;
       playSound('click');
@@ -21805,6 +22548,14 @@ function handleDefendingClick(x, y) {
           player.removeStatus('ICE', cleared);
           addLog(`  Cleared ${cleared} Ice`, Colors.ICE_BLUE);
         }
+      } else if (eff.effectType === 'heal_n_negative_effects') {
+        // Bear Hide Armor (loot) — strip up to N Ailment stacks off
+        // the player when this card blocks. Uses the same
+        // Bleed → Poison → Fire → Ice → Shock priority order as the
+        // resolveEffect handler so a defense play feels identical to
+        // an on-turn play.
+        let n = Math.max(1, eff.value || 1);
+        while (n > 0 && healOneNegativeEffectOn(player)) n--;
       } else if (eff.effectType === 'transform_ice_to_shield_self') {
         // White Dragonscale Shield payoff: every Ice stack the
         // player is carrying converts 1:1 into Shield. Strips the
@@ -22909,12 +23660,15 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         }
       } else if (eff.effectType === 'heal'
                  || eff.effectType === 'heal_random'
-                 || eff.effectType === 'clear_fire') {
+                 || eff.effectType === 'clear_fire'
+                 || eff.effectType === 'heal_n_negative_effects'
+                 || eff.effectType === 'heal_all_negative_effects') {
         // Route richer defensive riders (Barnacle Plate heal, Varimatras
-        // Scale fire-purge) through resolveEffect so the enemy uses the
-        // same logic the player would. resolveEffect treats `caster` as
-        // the holder — passing `enemy` here heals the enemy's deck and
-        // clears Fire off the enemy character.
+        // Scale fire-purge, Dire Hide's Ailment strip) through
+        // resolveEffect so the enemy uses the same logic the player
+        // would. resolveEffect treats `caster` as the holder — passing
+        // `enemy` here heals the enemy's deck and clears Fire / other
+        // Ailment stacks off the enemy character.
         resolveEffect(eff, enemy, player);
       } else if (eff.effectType === 'summon_kraken_tentacle_block') {
         // Tentacle Block — Kraken DEFENSE card. Spawn a fresh Tentacle
@@ -23519,12 +24273,21 @@ function resolveEffect(eff, caster, target) {
       consumeIgniteOnAttack(caster, target, dmg);
       break;
     }
+    case 'shield_bash_half':
     case 'shield_bash': {
-      // Gain N shield, then deal damage equal to total shield
+      // Gain N shield, then deal damage off the total shield. The
+      // legacy `shield_bash` effect (White Dragonscale Shield)
+      // deals damage equal to the full shield pool; the new
+      // `shield_bash_half` (Shield Bash card) deals half the shield
+      // rounded up — so 1 Shield still hits for 1 but you don't
+      // get a free 1:1 nuke off a stacked 8-Shield pile.
       caster.shield += eff.value;
       addLog(`  +${eff.value} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
       spawnTokenOnTarget(caster, eff.value, 'Shield', Colors.ALLY_BLUE);
-      let dmg = caster.shield + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      const shieldDamage = eff.effectType === 'shield_bash_half'
+        ? Math.ceil(caster.shield / 2)
+        : caster.shield;
+      let dmg = shieldDamage + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
       const sbTargetDamaged = target instanceof Creature
         ? (target.currentHp || 0) < (target.maxHp || 0)
@@ -25122,19 +25885,35 @@ function resolveEffect(eff, caster, target) {
         }
       }
       break;
+    case 'heal_n_negative_effects': {
+      // Cleansing — strip up to N Ailment stacks off the target (or
+      // the caster when self-cast) in the Bleed → Poison → Fire →
+      // Ice → Shock priority order. Routes to the picked ally for
+      // SINGLE_ALLY-targeted effects (Flash Heal / Holy Light /
+      // Healing Touch riders) so the cure follows the heal. Works
+      // on Characters AND Creature allies.
+      const cureTarget =
+        (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
+      let n = Math.max(1, eff.value || 1);
+      while (n > 0 && healOneNegativeEffectOn(cureTarget)) n--;
+      break;
+    }
     case 'heal_all_negative_effects': {
-      // Nature's Healing — strip every negative status off the player
-      // (Bleed, Poison, Fire, Ice, Shock) and grant 1 Heroism per
-      // TOTAL stack cleansed (3 Bleed + 2 Poison → +5 Heroism). The
-      // subsequent `heal` effect on the same card runs after this and
-      // restores HP separately.
-      if (caster === player) {
-        const stacks = healAllNegativeEffectsOnPlayer();
-        if (stacks > 0) {
-          player.heroism += stacks;
-          addLog(`  +${stacks} Heroism (${stacks} stack${stacks > 1 ? 's' : ''} cleansed)`, Colors.GOLD);
-          spawnTokenOnTarget(player, stacks, 'Heroism', Colors.GOLD);
-        }
+      // Nature's Healing — strip every Ailment off the target (or
+      // the caster when self-cast) and grant 1 Heroism per stack
+      // cleansed to whoever owns a heroism pool. The subsequent
+      // `heal` effect on the same card restores HP separately.
+      // Routes through the same SINGLE_ALLY → target path as
+      // heal_n_negative_effects so Nature's Healing on Valdrisa
+      // strips HER ailments, not the caster's.
+      const cureTarget =
+        (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
+      const stacks = healAllNegativeEffectsOn(cureTarget);
+      if (stacks > 0 && cureTarget && typeof cureTarget.heroism === 'number') {
+        cureTarget.heroism += stacks;
+        const who = (cureTarget === player) ? '' : `${cureTarget.name}: `;
+        addLog(`  ${who}+${stacks} Heroism (${stacks} stack${stacks > 1 ? 's' : ''} cleansed)`, Colors.GOLD);
+        spawnTokenOnTarget(cureTarget, stacks, 'Heroism', Colors.GOLD);
       }
       break;
     }
@@ -25161,27 +25940,16 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'heal_all': {
-      // Player heal first (clears poison 1:1 then heals cards from discard).
+      // Player heal first (Bleed → Poison → HP via healPlayer).
       healPlayer(eff.value);
-      // Each ally regains up to N HP. Poison stacks are cured 1:1 with the
-      // heal, mirroring Python's heal_all flow.
+      // Each ally heals through the same shared helper so the
+      // Bleed → Poison → HP cascade is identical to the player path.
+      // Was previously poison-only + HP; bleed stacks on an ally
+      // (from Feral Wrath, Shark / Piranha riders) survived the
+      // heal_all and the ally bled out anyway.
       for (const ally of (caster.creatures || [])) {
         if (!ally.isAlive) continue;
-        let remaining = eff.value;
-        if (ally.poisonStacks > 0) {
-          const cured = Math.min(remaining, ally.poisonStacks);
-          ally.poisonStacks -= cured;
-          remaining -= cured;
-        }
-        if (remaining > 0) {
-          const before = ally.currentHp;
-          ally.currentHp = Math.min(ally.maxHp, ally.currentHp + remaining);
-          const healed = ally.currentHp - before;
-          if (healed > 0) {
-            spawnHealOnTarget(ally, healed);
-            addLog(`  ${ally.name}: +${healed} HP`, Colors.GREEN);
-          }
-        }
+        healCreature(ally, eff.value);
       }
       break;
     }
@@ -25434,6 +26202,57 @@ function resolveEffect(eff, caster, target) {
       addLog(`  +${eff.value} Heroism`, Colors.GOLD);
       spawnTokenOnTarget(caster, eff.value, 'Heroism', Colors.GOLD);
       break;
+    case 'block_per_enemy': {
+      // Roaring Helm — gain N Block per alive enemy target (boss +
+      // every alive enemy creature). Mirrors the per-enemy
+      // scaling used by gain_heroism_per_damaged_enemy but counts
+      // every live enemy, not just the damaged ones.
+      const count = countAliveEnemiesForCaster(caster);
+      const gain = count * (eff.value || 0);
+      if (gain > 0) {
+        caster.addBlock(gain);
+        addLog(`  +${gain} Block (${count} enem${count === 1 ? 'y' : 'ies'})`, Colors.BLUE);
+        spawnTokenOnTarget(caster, gain, 'Block', BLOCK_BLUE);
+      } else {
+        addLog(`  No enemies — no Block gained.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'heroism_per_enemy': {
+      // Roaring Helm sibling — gain N Heroism per alive enemy.
+      const count = countAliveEnemiesForCaster(caster);
+      const gain = count * (eff.value || 0);
+      if (gain > 0) {
+        caster.heroism += gain;
+        addLog(`  +${gain} Heroism (${count} enem${count === 1 ? 'y' : 'ies'})`, Colors.GOLD);
+        spawnTokenOnTarget(caster, gain, 'Heroism', Colors.GOLD);
+      } else {
+        addLog(`  No enemies — no Heroism gained.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'bleeding_draw': {
+      // Bear Claw — draw N cards if the target currently has any
+      // Bleed stack. Resolved after damage so the Claw can stack
+      // its own Bleed via a separate apply_bleed rider on a future
+      // bumped variant; right now Bear Claw only carries the draw
+      // rider so the bleed has to come from elsewhere (Bear Teeth
+      // Necklace on-draw, Feral Wrath, etc).
+      let isBleeding = false;
+      if (target instanceof Creature) {
+        isBleeding = (target.bleedStacks || 0) > 0;
+      } else if (target && target.getStatus) {
+        isBleeding = (target.getStatus('BLEED') || 0) > 0;
+      }
+      if (isBleeding && eff.value > 0 && caster && caster.deck) {
+        const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Bleeding! Draw ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+      } else if (!isBleeding) {
+        addLog(`  Target not Bleeding — no draw.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'gain_heroism_per_damaged_enemy': {
       // Bloody Eye Patch: count enemies + enemy creatures currently
       // below max HP. Boss damage AND any tentacle/baby summon counts.
@@ -25494,7 +26313,26 @@ function resolveEffect(eff, caster, target) {
           spawnTokenOnTarget(caster, 1, 'Heroism', Colors.GOLD);
           parts.push('+1 Heroism');
         } else if (gift === 'Heal') {
-          if (caster.deck && caster.deck.discardPile.length > 0) {
+          // Route through healPlayer so the heal point obeys the
+          // standard priority order — Poison → Bleed → discard-pile
+          // card. The old hand-rolled pop bypassed status clears, so
+          // a player with 10 Bleed picked Queen's Locket via scry
+          // mid-DEFENDING and saw "Heal 1" land WITHOUT touching the
+          // Bleed stack. Player-only — enemy queens_gift casters
+          // (none right now) keep the discard-pop fallback.
+          if (caster === player) {
+            const beforeBleed  = (player.getStatus && player.getStatus('BLEED'))  || 0;
+            const beforePoison = (player.getStatus && player.getStatus('POISON')) || 0;
+            const beforeDmg = player.deck.discardPile.length;
+            healPlayer(1);
+            const clearedBleed  = beforeBleed  - ((player.getStatus && player.getStatus('BLEED'))  || 0);
+            const clearedPoison = beforePoison - ((player.getStatus && player.getStatus('POISON')) || 0);
+            const healedCards = beforeDmg - player.deck.discardPile.length;
+            if (clearedBleed > 0)       parts.push('Heal 1 (Bleed)');
+            else if (clearedPoison > 0) parts.push('Heal 1 (Poison)');
+            else if (healedCards > 0)   parts.push('Heal 1');
+            else                        parts.push('Heal (no damage)');
+          } else if (caster.deck && caster.deck.discardPile.length > 0) {
             const card = caster.deck.discardPile.pop();
             caster.deck.drawPile.unshift(card);
             parts.push('Heal 1');
@@ -26055,6 +26893,30 @@ function resolveEffect(eff, caster, target) {
       playStaggeredSfx('shark_splash', count, 110, 0.65);
       break;
     }
+    case 'summon_unhatched_roc_egg': {
+      // Unhatched Roc Egg ally — drops a player-side egg on the row.
+      // _cantAttack so the planner / manual attack flow skip it;
+      // _hitSfxKey chirps egg_hatch on every blow; onDeathSpawnPlayerChick
+      // is read in countAndRemoveDeadCreatures to replace the egg with
+      // a freshly hatched Roc Chick when it dies.
+      const egg = new Creature({
+        name: 'Unhatched Roc Egg',
+        attack: 0, maxHp: 10, armor: 1,
+        description: 'On Death: Hatch into a Roc Chick.',
+      });
+      egg._cantAttack = true;
+      egg._hitSfxKey = 'egg_hatch_01';
+      egg.onDeathSpawnPlayerChick = true;
+      if (caster.addCreature(egg)) {
+        addLog(`  An Unhatched Roc Egg cradles into the row!`, Colors.GREEN);
+        const lastEntry = combatLog[combatLog.length - 1];
+        if (lastEntry) lastEntry.creature = egg;
+        playSound('egg_hatch_01', 0.6);
+      } else {
+        addLog(`  No room on the field for the Egg.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'summon_small_spider': {
       // Summon 1 spider when value=1 (legacy / enemy slyblade), or roll
       // 1-N when value=N (player Pet Spider card; bumps with player
@@ -26146,6 +27008,25 @@ function resolveEffect(eff, caster, target) {
       reviveCancelRect = null;
       revivePicksRemaining = picks;
       state = GameState.REVIVE_SELECT;
+      break;
+    }
+    case 'gain_random_herbs': {
+      // Bag of Herbs — roll `eff.value` independent picks from a fixed
+      // herb pool (Goodberry / Cave Shroom / Frostbloom) and shove
+      // each rolled card into the player's hand. Bypasses the
+      // MAX_HAND_SIZE cap intentionally — Bag of Herbs is a one-shot
+      // recharge cost, so the player has already paid for the swell.
+      if (caster === player) {
+        const POOL = [createGoodberry, createCaveShroom, createFrostbloom];
+        const n = Math.max(1, eff.value || 1);
+        for (let i = 0; i < n; i++) {
+          const creator = POOL[Math.floor(Math.random() * POOL.length)];
+          const card = creator();
+          player.deck.hand.push(card);
+          addLog(`  Bag of Herbs: ${card.name} added to hand`, Colors.GREEN, card);
+        }
+        playSound('card_draw');
+      }
       break;
     }
     case 'goodberry_sustenance': {
@@ -27086,17 +27967,39 @@ function dealDamageToEnemy(amount, target) {
 // silent. Logs only when at least 1 HP is gained.
 function healCreature(creature, amount) {
   if (!creature || !creature.isAlive) return;
+  // Same priority as healPlayer: Bleed → Poison → HP. Each heal point
+  // first scrubs a Bleed stack, then a Poison stack, then bumps HP
+  // by 1. A 5-heal on a Bleed 2 / Poison 1 / 3 HP ally clears all
+  // ailments and lands 2 HP. Matches the player rule so a single
+  // Healing Touch on Valdrisa or any ally creature feels the same
+  // as one on the player character.
+  let remaining = Math.max(0, amount || 0);
+  let bleedCleared = 0;
+  while (remaining > 0 && (creature.bleedStacks || 0) > 0) {
+    creature.bleedStacks--;
+    bleedCleared++;
+    remaining--;
+  }
+  let poisonCleared = 0;
+  while (remaining > 0 && (creature.poisonStacks || 0) > 0) {
+    creature.poisonStacks--;
+    poisonCleared++;
+    remaining--;
+  }
   const before = creature.currentHp || 0;
   const max = creature.maxHp || before;
-  const next = Math.min(max, before + Math.max(0, amount || 0));
+  const next = Math.min(max, before + remaining);
   const gained = next - before;
-  if (gained <= 0) {
+  if (bleedCleared > 0) addLog(`  ${creature.name}: -${bleedCleared} Bleed (healed)`, '#ff5050');
+  if (poisonCleared > 0) addLog(`  ${creature.name}: -${poisonCleared} Poison (healed)`, Colors.GREEN);
+  if (gained > 0) {
+    creature.currentHp = next;
+    spawnHealOnTarget(creature, gained);
+    addLog(`  ${creature.name}: +${gained} HP (now ${creature.currentHp}/${creature.maxHp})`, Colors.GREEN);
+  } else if (bleedCleared === 0 && poisonCleared === 0) {
     addLog(`  ${creature.name} is already at full HP.`, Colors.GRAY);
     return;
   }
-  creature.currentHp = next;
-  spawnHealOnTarget(creature, gained);
-  addLog(`  ${creature.name}: +${gained} HP (now ${creature.currentHp}/${creature.maxHp})`, Colors.GREEN);
   playSound('heal');
 }
 
@@ -27113,13 +28016,119 @@ function healCreature(creature, amount) {
 function triggerOnDraw(card) {
   if (!player || !card || !Array.isArray(card.currentEffects)) return;
   let heroismGain = 0;
+  let igniteGain = 0;
+  let poisonRandom = 0;
+  let iceRandom = 0;
+  let bleedRandom = 0;
+  let shockRandom = 0;
+  let healFromDiscard = 0;
+  let queensGift = false;
+  let obsidianBuff = 0;
   for (const eff of card.currentEffects) {
-    if (eff && eff.effectType === 'on_draw_heroism') heroismGain += eff.value || 0;
+    if (!eff) continue;
+    if (eff.effectType === 'on_draw_heroism')         heroismGain    += eff.value || 0;
+    if (eff.effectType === 'on_draw_ignite')          igniteGain     += eff.value || 0;
+    if (eff.effectType === 'on_draw_poison_random')   poisonRandom   += eff.value || 0;
+    if (eff.effectType === 'on_draw_ice_random')      iceRandom      += eff.value || 0;
+    if (eff.effectType === 'on_draw_bleed_random')    bleedRandom    += eff.value || 0;
+    if (eff.effectType === 'on_draw_shock_random')    shockRandom    += eff.value || 0;
+    if (eff.effectType === 'on_draw_heal')            healFromDiscard += eff.value || 0;
+    if (eff.effectType === 'on_draw_queens_gift')     queensGift = true;
+    if (eff.effectType === 'on_draw_obsidian_buff')   obsidianBuff   += eff.value || 0;
   }
   if (heroismGain > 0) {
     player.heroism = (player.heroism || 0) + heroismGain;
     addLog(`  ${card.name}: On Draw → +${heroismGain} Heroism (H:${player.heroism})`, Colors.GOLD);
     spawnTokenOnTarget(player, heroismGain, 'Heroism', Colors.GOLD);
+  }
+  if (igniteGain > 0) {
+    player.ignite = (player.ignite || 0) + igniteGain;
+    addLog(`  ${card.name}: On Draw → +${igniteGain} Ignite (Ig:${player.ignite})`, Colors.ORANGE);
+    spawnTokenOnTarget(player, igniteGain, 'Ignite', Colors.ORANGE);
+  }
+  // Random enemy status riders — pick a single alive enemy target
+  // (creature or boss). Skip silently when no enemy is on field
+  // (the card was drawn outside combat, e.g. shop deck preview).
+  const pickRandomEnemy = () => {
+    if (!enemy) return null;
+    const pool = [];
+    for (const c of (enemy.creatures || [])) {
+      if (c && c.isAlive && !c._invulnerable) pool.push(c);
+    }
+    if (enemy.isAlive && !enemy._invulnerable) pool.push(enemy);
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
+  if (poisonRandom > 0) {
+    const t = pickRandomEnemy();
+    if (t) {
+      if (t instanceof Creature) {
+        t.poisonStacks = (t.poisonStacks || 0) + poisonRandom;
+      } else if (typeof t.applyStatus === 'function') {
+        t.applyStatus('POISON', poisonRandom);
+      }
+      spawnTokenOnTarget(t, poisonRandom, 'Poison', Colors.GREEN);
+      addLog(`  ${card.name}: On Draw → +${poisonRandom} Poison on ${t.name || 'enemy'}`, Colors.GREEN);
+    }
+  }
+  if (iceRandom > 0) {
+    const t = pickRandomEnemy();
+    if (t) {
+      applyIceToTarget(t, iceRandom);
+      addLog(`  ${card.name}: On Draw → +${iceRandom} Ice on ${t.name || 'enemy'}`, Colors.ICE_BLUE);
+    }
+  }
+  if (bleedRandom > 0) {
+    const t = pickRandomEnemy();
+    if (t) {
+      if (t instanceof Creature) {
+        t.bleedStacks = (t.bleedStacks || 0) + bleedRandom;
+      } else if (typeof t.applyStatus === 'function') {
+        t.applyStatus('BLEED', bleedRandom);
+      }
+      spawnTokenOnTarget(t, bleedRandom, 'Bleed', Colors.RED);
+      addLog(`  ${card.name}: On Draw → +${bleedRandom} Bleed on ${t.name || 'enemy'}`, Colors.RED);
+    }
+  }
+  if (shockRandom > 0) {
+    const t = pickRandomEnemy();
+    if (t) {
+      if (t instanceof Creature) {
+        t.shockStacks = (t.shockStacks || 0) + shockRandom;
+      } else if (typeof t.applyStatus === 'function') {
+        t.applyStatus('SHOCK', shockRandom);
+      }
+      spawnTokenOnTarget(t, shockRandom, 'Shock', Colors.SHOCK_YELLOW);
+      addLog(`  ${card.name}: On Draw → +${shockRandom} Shock on ${t.name || 'enemy'}`, Colors.SHOCK_YELLOW);
+    }
+  }
+  // Specter Ectoplasm: route through healPlayer so Poison/Bleed
+  // clears and the heal-toast spawn match the normal heal path.
+  if (healFromDiscard > 0) {
+    addLog(`  ${card.name}: On Draw → Heal ${healFromDiscard}`, Colors.GREEN);
+    healPlayer(healFromDiscard);
+  }
+  // Queen's Locket — random blessing of Shield / Heroism / Heal /
+  // Draw (1-4 of them, weighted). Routes through the existing
+  // queens_gift effect path so balance changes only need to live in
+  // one place.
+  if (queensGift) {
+    resolveEffect(
+      { effectType: 'queens_gift', value: 1, target: TargetType.SELF },
+      player,
+      player,
+    );
+  }
+  // Obsidian Core — stamp the "Next attack: +N vs Armor/Shield"
+  // CombatBuff on the player. Routes through the existing
+  // grant_obsidian_buff handler so the buff icon, consume-on-attack
+  // logic, and the per-shot Eye/Obsidian snapshot path stay shared.
+  if (obsidianBuff > 0) {
+    resolveEffect(
+      { effectType: 'grant_obsidian_buff', value: obsidianBuff, target: TargetType.SELF },
+      player,
+      player,
+    );
   }
 }
 
@@ -27376,39 +28385,73 @@ const PLAYER_NEGATIVE_STATUSES = [
   { key: 'SHOCK',  label: 'Shock',  color: '#ffe650' },
 ];
 
-// Heal one stack of any negative effect on the player, in priority
+// Read / write status stacks on EITHER a Character (player / enemy)
+// OR a Creature (ally / enemy ally). Characters use the
+// statusEffects map; Creatures use the direct stack fields. These
+// helpers let the same Ailment-clear cascade run on both shapes
+// without branching at every call site.
+const CREATURE_STATUS_FIELD = {
+  BLEED:  'bleedStacks',
+  POISON: 'poisonStacks',
+  FIRE:   'fireStacks',
+  ICE:    'iceStacks',
+  SHOCK:  'shockStacks',
+};
+function getStatusStacks(target, key) {
+  if (!target) return 0;
+  if (typeof target.getStatus === 'function') return target.getStatus(key) || 0;
+  const field = CREATURE_STATUS_FIELD[key];
+  return field ? (target[field] || 0) : 0;
+}
+function removeStatusStacks(target, key, n) {
+  if (!target || n <= 0) return;
+  if (typeof target.removeStatus === 'function') {
+    target.removeStatus(key, n);
+    return;
+  }
+  const field = CREATURE_STATUS_FIELD[key];
+  if (field) target[field] = Math.max(0, (target[field] || 0) - n);
+}
+
+// Heal one stack of any negative effect on the target, in priority
 // order (Bleed → Poison → Fire → Ice → Shock). Returns true if a
-// stack was removed, false if there was nothing to heal.
-function healOneNegativeEffectOnPlayer() {
-  if (!player) return false;
+// stack was removed, false if there was nothing to heal. Works on
+// Characters (player / enemy) AND Creature allies.
+function healOneNegativeEffectOn(target) {
+  if (!target) return false;
   for (const s of PLAYER_NEGATIVE_STATUSES) {
-    if ((player.getStatus(s.key) || 0) > 0) {
-      player.removeStatus(s.key, 1);
-      addLog(`  -1 ${s.label} (healed)`, s.color);
+    if (getStatusStacks(target, s.key) > 0) {
+      removeStatusStacks(target, s.key, 1);
+      const who = target.name ? `${target.name}: ` : '';
+      addLog(`  ${who}-1 ${s.label} (healed)`, s.color);
       return true;
     }
   }
   addLog(`  No Ailment to heal`, Colors.GRAY);
   return false;
 }
+function healOneNegativeEffectOnPlayer() { return healOneNegativeEffectOn(player); }
 
-// Heal EVERY stack of EVERY negative effect on the player. Returns
-// the TOTAL stack count removed (3 Bleed + 2 Poison = 5) so callers
-// like Nature's Healing can convert it into Heroism etc.
-function healAllNegativeEffectsOnPlayer() {
-  if (!player) return 0;
+// Heal EVERY stack of EVERY negative effect on a target. Returns the
+// TOTAL stack count removed (3 Bleed + 2 Poison = 5) so callers like
+// Nature's Healing can convert it into Heroism etc. Works on
+// Characters AND Creature allies.
+function healAllNegativeEffectsOn(target) {
+  if (!target) return 0;
   let totalStacks = 0;
   for (const s of PLAYER_NEGATIVE_STATUSES) {
-    const stacks = player.getStatus(s.key) || 0;
+    const stacks = getStatusStacks(target, s.key);
     if (stacks > 0) {
-      player.removeStatus(s.key, stacks);
-      addLog(`  -${stacks} ${s.label} (healed)`, s.color);
+      removeStatusStacks(target, s.key, stacks);
+      const who = target.name ? `${target.name}: ` : '';
+      addLog(`  ${who}-${stacks} ${s.label} (healed)`, s.color);
       totalStacks += stacks;
     }
   }
-  if (totalStacks === 0) addLog(`  No negative effect to heal`, Colors.GRAY);
+  if (totalStacks === 0) addLog(`  No Ailment to heal`, Colors.GRAY);
   return totalStacks;
 }
+function healAllNegativeEffectsOnPlayer() { return healAllNegativeEffectsOn(player); }
 
 function onPowerChoicePicked(choice) {
   const power = selectedPower;
@@ -28279,10 +29322,16 @@ function resolveAllyAttack(ally, target) {
   // Apply rage (persistent) and heroism (consumed on attack), matching Python.
   const rageBonus = ally.rage || 0;
   const heroismBonus = ally.heroism || 0;
-  let dmg = ally.attack + rageBonus + heroismBonus;
+  // Shock on the attacker (Thorb / any companion ally) takes -1 dmg
+  // dealt per stack; getDamageModifier returns the negative penalty.
+  // Previously only ran on Characters, so ally Shock was silently a
+  // no-op and a Thorb at 2 atk + 1 Shock still swung for 2.
+  const shockPenalty = getDamageModifier(ally);
+  let dmg = Math.max(0, ally.attack + rageBonus + heroismBonus + shockPenalty);
   if (heroismBonus > 0) ally.heroism = 0;
   if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
   if (heroismBonus > 0) addLog(`  Heroism! +${heroismBonus} damage`, Colors.GOLD);
+  if (shockPenalty < 0) addLog(`  Shock! ${shockPenalty} damage`, Colors.SHOCK_YELLOW);
   // Ice on the attacker reduces this swing and burns 1 stack.
   dmg = consumeIceForAttack(ally, dmg);
 
@@ -28441,19 +29490,16 @@ function resolveAllyAttack(ally, target) {
 // Rule: If the attack was fully absorbed (0 damage), the poison doesn't land.
 // Exception: 0-attack poison creatures (Pet Spider) land poison unless the target has armor —
 // shields/block are pushed aside; only armor stops the fangs.
-function maybeApplyAttackPoison(attacker, target, damageDealt) {
+function maybeApplyAttackPoison(attacker, target, _damageDealt) {
+  // Status riders (poisonAttack / bleedAttack / iceAttack) always
+  // apply on swing — even when block/shield/armor fully absorbed
+  // the damage, and even when the attacker has 0 attack (Pet Spider
+  // etc.). The toxin / claw / chill is the whole point of the
+  // creature's threat; gating it on damage made a 1/4 Shark vs a
+  // 1-armor enemy a complete no-op, and the 0-atk Pet Spider only
+  // worked against unarmored targets.
   if (!attacker || !attacker.poisonAttack) return;
-  let landed;
-  if ((attacker.attack || 0) > 0) {
-    landed = damageDealt > 0;
-  } else {
-    const armorVal = (target && (target.armor || target.baseArmor)) || 0;
-    landed = armorVal <= 0;
-  }
-  if (!landed) {
-    addLog(`  (Poison absorbed — no effect)`, Colors.GRAY);
-    return;
-  }
+  if (!target) return;
   if (target instanceof Creature) {
     target.poisonStacks = (target.poisonStacks || 0) + 1;
   } else if (typeof target.applyStatus === 'function') {
@@ -28471,16 +29517,12 @@ function maybeApplyAttackIce(attacker, target) {
   applyIceToTarget(target, attacker.iceAttack);
 }
 
-// Bleed-rider hook for ally swings (Shark, Piranhas etc.). Lands N
-// stacks of Bleed on the same target the swing picked. Mirrors the
-// poison rule: a fully-absorbed swing (0 damage) doesn't bleed.
-function maybeApplyAttackBleed(attacker, target, damageDealt) {
+// Bleed-rider hook for ally swings (Shark, Piranhas etc.). Always
+// applies on swing regardless of mitigation — matches the poison
+// rider rule. A 1-atk Shark vs a 1-armor enemy still stacks Bleed.
+function maybeApplyAttackBleed(attacker, target, _damageDealt) {
   if (!attacker || !(attacker.bleedAttack > 0)) return;
   if (!target) return;
-  if ((attacker.attack || 0) > 0 && (damageDealt || 0) <= 0) {
-    addLog(`  (Bleed absorbed — no effect)`, Colors.GRAY);
-    return;
-  }
   const amt = attacker.bleedAttack;
   if (target instanceof Creature) {
     target.bleedStacks = (target.bleedStacks || 0) + amt;
@@ -29316,9 +30358,14 @@ function hasUnusedAllyAttacker() {
 // End Turn click wrapper. Pops a confirm modal if the player still
 // has allies that haven't swung yet AND the warning isn't disabled
 // in Options. Falls through to the real endPlayerTurn either way.
+// Also skipped when there's nothing valid to swing at — e.g.
+// General Zhost's invulnerable army shell with every kobold dead,
+// or a Piranhas Swarm boss with the swarm cleared — the allies
+// CAN'T attack anything, so nagging the player about idle swings
+// is just noise.
 function tryEndPlayerTurn() {
   if (_endTurnConfirmOpen) return;
-  if (_endTurnWarnAllies && hasUnusedAllyAttacker()) {
+  if (_endTurnWarnAllies && hasUnusedAllyAttacker() && hasAnyAttackTarget()) {
     _endTurnConfirmOpen = true;
     return;
   }
@@ -29329,18 +30376,24 @@ function tryEndPlayerTurn() {
 // the in-game quit dialog uses (the click handler pattern in
 // handleCombatClick mirrors handleIngameMenuClick's quit confirm).
 function getEndTurnConfirmRects() {
-  const panelW = 460, panelH = 200;
+  const panelW = 460, panelH = 240;
   const px = (SCREEN_WIDTH - panelW) / 2;
   const py = (SCREEN_HEIGHT - panelH) / 2;
   const btnW = 160, btnH = 50;
   const gap = 30;
   const btnsTotalW = btnW * 2 + gap;
   const btnsX = px + (panelW - btnsTotalW) / 2;
-  const btnsY = py + panelH - btnH - 24;
+  // Disable link sits at the very bottom; buttons stack above it with
+  // a 10px gap so the panel reads top-to-bottom: title → body →
+  // [End Turn] [Keep Playing] → "Don't show this again".
+  const linkH = 24;
+  const linkY = py + panelH - linkH - 14;
+  const btnsY = linkY - btnH - 10;
   return {
     panel: { x: px, y: py, w: panelW, h: panelH },
     yes: { x: btnsX, y: btnsY, w: btnW, h: btnH },
     no: { x: btnsX + btnW + gap, y: btnsY, w: btnW, h: btnH },
+    disable: { x: px + 30, y: linkY, w: panelW - 60, h: linkH },
   };
 }
 
@@ -29372,6 +30425,18 @@ function drawEndTurnConfirm() {
   menuButtons.pop();
   drawStyledButton(r.no.x, r.no.y, r.no.w, r.no.h, 'Keep Playing', null, 'large', 18);
   menuButtons.pop();
+  // Subtle "disable this warning" link directly under the buttons —
+  // toggles the same Options flag a one-stop opt-out for players
+  // who don't want the modal at all. Underlined so it reads as a
+  // link, not a button. Click handled in handleCombatClick.
+  ctx.fillStyle = '#9aa';
+  ctx.font = '13px Georgia, serif';
+  const linkLabel = "Don't show this again";
+  const linkX = r.panel.x + r.panel.w / 2;
+  const linkY = r.disable.y + 16;
+  ctx.fillText(linkLabel, linkX, linkY);
+  const w = ctx.measureText(linkLabel).width;
+  ctx.fillRect(linkX - w / 2, linkY + 3, w, 1);
   ctx.textAlign = 'left';
 }
 
@@ -29803,13 +30868,21 @@ function killEndOfTurnDeathCreatures(character) {
   character.removeDeadCreatures();
 }
 
-// Get damage modifier from ice/shock for a character
+// Get damage modifier from ice/shock for a Character OR Creature.
+// Shock applies as a flat per-attack penalty (-1 dmg dealt per
+// stack) and also decays at end of turn. Ice is intentionally NOT
+// included here — it's a per-attack stack consumed by
+// consumeIceForAttack at the damage site.
+// Creatures store stacks directly on `shockStacks`; Characters keep
+// them in `statusEffects.SHOCK` reached via `getStatus`.
 function getDamageModifier(character) {
-  // Shock applies as a flat per-attack penalty (also decays at end of turn).
-  // Ice is intentionally NOT included here — it's a per-attack stack consumed
-  // by consumeIceForAttack at the damage site (mirrors PY: min(ice, dmg)
-  // reduction, -1 stack per attack).
-  const shock = character.getStatus('SHOCK') || 0;
+  if (!character) return 0;
+  let shock = 0;
+  if (typeof character.getStatus === 'function') {
+    shock = character.getStatus('SHOCK') || 0;
+  } else {
+    shock = character.shockStacks || 0;
+  }
   return -shock;
 }
 
@@ -30288,12 +31361,23 @@ function getTargetCenter(target) {
     const r = getCharacterCardRect(true);
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   }
-  // Must be a player creature — find its rect
+  // Player creature
   const allyRects = getPlayerCreatureRects();
-  const idx = player.creatures.indexOf(target);
-  if (idx !== -1 && allyRects[idx]) {
-    const r = allyRects[idx];
+  const allyIdx = player.creatures.indexOf(target);
+  if (allyIdx !== -1 && allyRects[allyIdx]) {
+    const r = allyRects[allyIdx];
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  }
+  // Enemy creature — used by attackAllIncludingOwn (Roc Chick
+  // friendly-fire) so the arrow visibly lands on a sibling chick or
+  // egg instead of falling back to the player card.
+  if (enemy && Array.isArray(enemy.creatures)) {
+    const enemyRects = getEnemyCreatureRects();
+    const enemyIdx = enemy.creatures.indexOf(target);
+    if (enemyIdx !== -1 && enemyRects[enemyIdx]) {
+      const r = enemyRects[enemyIdx];
+      return { x: r.x + r.w / 2 + _dragonVisualShiftX(), y: r.y + r.h / 2 };
+    }
   }
   // Fallback to player card center
   const r = getCharacterCardRect(true);
@@ -30387,7 +31471,7 @@ function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
   // onto them. Single-target + multi-target picks (creature
   // swings, Claw) keep the overflow.
   const overflow = Math.max(0, actual - hpBefore);
-  if (overflow > 0 && !skipOverwhelm && enemyHasPower('overwhelm') && player) {
+  if (overflow > 0 && !skipOverwhelm && (enemyHasPower('overwhelm') || enemyHasPower('dire_fury')) && player) {
     enemyDamageAccumulator += overflow;
     addLog(`  Overwhelm! ${overflow} overflow → You (queued for defense)`, Colors.RED);
   }
@@ -30514,6 +31598,54 @@ function enemyHasPower(id) {
   return !!(enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p && p.id === id));
 }
 
+// Count of "enemies" relative to a caster — the boss character on the
+// other side plus every alive creature on that side. Player casting
+// gets enemy + enemy.creatures; enemy casting gets player + player
+// allies. Used by per-enemy scaling effects (block_per_enemy,
+// heroism_per_enemy, Bear Roar) so the swarm-vs-single tradeoff is
+// computed in one place.
+function countAliveEnemiesForCaster(caster) {
+  const other = (caster === player) ? enemy : player;
+  if (!other) return 0;
+  let n = 0;
+  if (other.isAlive && !other._invulnerable) n++;
+  for (const c of (other.creatures || [])) {
+    if (c && c.isAlive && !c._invulnerable) n++;
+  }
+  return n;
+}
+
+// Dire Bear Feral Wrath passive split. When the enemy carries
+// `feral_wrath`, every swing converts half (rounded UP) of the
+// damage that would ACTUALLY land into Bleed — i.e. mitigation
+// (block / shield / armor) is applied to the projected landed
+// damage first, and only the leftover is what feeds the bleed
+// calculation. Example: a 5-damage bite against 3 Block + 1 Shield
+// projects 1 landed damage, so Feral Wrath converts that 1 into
+// 1 Bleed (ceil(1/2)) and the caller's mitigation eats the rest.
+// Returns `dmg - bleed` so the existing block/shield/armor flow at
+// every call site naturally produces the right post-split damage
+// (block/shield/armor still need to absorb everything they would
+// have absorbed without the split). Used by both the standard
+// damage routing AND the damage_random_split multi-target path.
+function applyEnemyFeralWrathSplit(target, dmg) {
+  if (!enemyHasPower('feral_wrath') || dmg <= 1) return dmg;
+  const block = target.currentBlock || 0;
+  const shield = target.shield || 0;
+  const armor = target.armor || 0;
+  const landed = Math.max(0, dmg - block - shield - armor);
+  if (landed <= 0) return dmg;
+  const bleed = Math.ceil(landed / 2);
+  if (target === player) {
+    if (target.applyStatus) target.applyStatus('BLEED', bleed);
+  } else if (target instanceof Creature) {
+    target.bleedStacks = (target.bleedStacks || 0) + bleed;
+  }
+  spawnTokenOnTarget(target, bleed, 'Bleed', Colors.RED);
+  addLog(`  Feral Wrath: +${bleed} Bleed on ${target.name || 'you'}`, Colors.RED);
+  return dmg - bleed;
+}
+
 // Route incoming enemy damage to either the player (accumulated for the damage
 // flow) or to a randomly picked ally (applied immediately).
 // Also fires an attack arrow from the attacker to the target.
@@ -30562,6 +31694,8 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
     addLog(`  0 damage (frozen)`, Colors.ICE_BLUE);
     return 0;
   }
+
+  dmg = applyEnemyFeralWrathSplit(target, dmg);
 
   if (target === player) {
     // Play the attacker's flesh cue right here — the arrow is firing
@@ -31278,8 +32412,11 @@ function startEnemyTurn() {
   // show per attack). 0-attack creatures still swing — Piranhas earn
   // their damage via swarm bonus, Pet Spider applies poison riders,
   // future status-only creatures rely on the swing animation.
+  // Exception: _cantAttack creatures (Unhatched Roc Egg, White
+  // Dragon Egg) skip the planner entirely — they just hold the
+  // field until something kills them.
   for (const c of enemy.creatures) {
-    if (c.isAlive && !c.exhausted) {
+    if (c.isAlive && !c.exhausted && !c._cantAttack) {
       enemyActions.push({ type: 'creature_attack', creature: c });
     }
   }
@@ -31431,6 +32568,16 @@ function updateEnemyTurn(dt) {
           if (ally.isAlive) targets.push(ally);
         }
         targets.push(player);
+        // attackAllIncludingOwn (Roc Chick) extends the swing to the
+        // attacker's own teammates too — sibling chicks + unhatched
+        // eggs all eat the same screech. Self is excluded so the
+        // chick doesn't deal damage to itself.
+        if (c.attackAllIncludingOwn) {
+          for (const own of (enemy.creatures || [])) {
+            if (own === c) continue;
+            if (own && own.isAlive) targets.push(own);
+          }
+        }
         // Arrow batch — one segment per target from the swinger's rect.
         const srcRect = (() => {
           const cr = getEnemyCreatureRects();
@@ -31448,7 +32595,14 @@ function updateEnemyTurn(dt) {
         // → Armor → accumulator; creatures through takeDamage.
         const aaSfx = getWeaponSfxKeys();
         for (const t of targets) {
-          const tdmg = applyObsidianAllyBonus(c, t, swingDmg);
+          // Shock on the target adds +1 dmg taken per stack. Was
+          // previously skipped on the attackAll path so a player /
+          // ally Shock'd by the Roc still took the bare swing instead
+          // of the boosted swing. Mirrors what every single-target
+          // creature attack already does via getIncomingDamageModifier.
+          const shockBonus = Math.max(0, getIncomingDamageModifier(t));
+          let tdmg = applyObsidianAllyBonus(c, t, swingDmg) + shockBonus;
+          tdmg = Math.max(0, tdmg);
           if (t === player) {
             if (aaSfx && aaSfx.flesh) playSound(aaSfx.flesh, 0.7);
             if (tdmg > 0) {
@@ -31477,6 +32631,19 @@ function updateEnemyTurn(dt) {
               }
             } else {
               addLog(`  0 damage to you (frozen)`, Colors.ICE_BLUE);
+            }
+          } else if (enemy && enemy.creatures && enemy.creatures.includes(t)) {
+            // Own teammate (attackAllIncludingOwn): straight damage,
+            // no Overwhelm overflow (the swing is friendly fire on
+            // the enemy side, not damage the player should soak).
+            const shieldBefore = t.shield || 0;
+            const actual = t.takeDamage(tdmg);
+            if (actual > 0) spawnDamageOnTarget(t, actual);
+            const absSuffix = creatureAbsorbSuffix(tdmg, actual, shieldBefore, t.shield || 0);
+            addLog(`  ${t.name}: ${actual} damage${absSuffix}`, Colors.RED);
+            if (!t.isAlive) {
+              spawnDeathAnimation(t);
+              addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t);
             }
           } else {
             applyDamageToAlly(t, tdmg, c);
@@ -31528,8 +32695,17 @@ function updateEnemyTurn(dt) {
           c.currentHp = 0;
           spawnDeathAnimation(c);
           addLog(`  ${c.name} crumbles!`, Colors.GOLD);
-          countAndRemoveDeadCreatures();
         }
+        // Process any deaths that landed in this swing — both own
+        // teammates (attackAllIncludingOwn friendly-fire kills) AND
+        // the player allies the screech hit. Without this, a chick
+        // that just killed a sibling chick left the corpse on the
+        // board until the end-of-turn cleanup, and the next chick's
+        // queued swing still saw it pop the animation a beat late.
+        // countAndRemoveDeadCreatures also runs the egg-hatch chain
+        // so a chick killed by another chick's screech rolls into a
+        // fresh chick within the same swing window.
+        countAndRemoveDeadCreatures();
         _activeAttacker = null;
         return;
       }
@@ -32350,8 +33526,12 @@ function updateEnemyTurn(dt) {
               addLog(`  Claw -> ${t === player ? 'you' : t.name}: 0 damage (frozen)`, Colors.ICE_BLUE);
               continue;
             }
+            // Feral Wrath per-target split. Lands the Bleed on each
+            // pick before mitigation; remaining damage goes through
+            // the normal block/shield/armor flow below.
+            const tHit = applyEnemyFeralWrathSplit(t, perHit);
             if (t === player) {
-              let queued = perHit;
+              let queued = tHit;
               if (player.currentBlock > 0 && queued > 0) {
                 const absorbed = Math.min(player.currentBlock, queued);
                 player.currentBlock -= absorbed;
@@ -32374,7 +33554,7 @@ function updateEnemyTurn(dt) {
                 addLog(`  Claw! ${queued} damage to you`, Colors.RED);
               }
             } else {
-              applyDamageToAlly(t, perHit);
+              applyDamageToAlly(t, tHit);
             }
             // Double-strike SFX: the claw lands twice per pick with
             // a tight delay so each target reads as a paired slash
@@ -32622,14 +33802,20 @@ function updateEnemyTurn(dt) {
         // strengthens the bite, never the tentacle swings.
         // Empty hand → full damage; stuffed hand → softens or zeroes
         // out. Goes through the standard enemy damage routing so
-        // block/shield/armor still apply.
+        // block/shield/armor still apply. Ice on the caster zeroes
+        // the swing 1:1 (consumeIceForAttack), same as a normal
+        // damage swing — without this the Kraken's Ice tokens were
+        // a no-op against its biggest attack.
         const base = Math.max(0, eff.value || 0);
         const handCount = (player && player.deck && player.deck.hand) ? player.deck.hand.length : 0;
         const rageBonus = enemy.rage || 0;
-        const swingDmg = Math.max(0, base - handCount + rageBonus);
+        let swingDmg = Math.max(0, base - handCount + rageBonus);
         const rageStr = rageBonus > 0 ? ` + ${rageBonus} Rage` : '';
         addLog(`  Swallowing Bite: ${base} - ${handCount} hand${rageStr} = ${swingDmg}`, Colors.GRAY);
         const tgt = pickEnemyAttackTarget() || player;
+        swingDmg = consumeIceForAttack(enemy, swingDmg);
+        swingDmg += getIncomingDamageModifier(tgt);
+        swingDmg = Math.max(0, swingDmg);
         routeEnemyDamageToTarget(tgt, swingDmg, enemy.name, null);
       } else if (eff.effectType === 'summon_kraken_tentacle'
               || eff.effectType === 'summon_kraken_tentacle_passive') {
@@ -32982,6 +34168,65 @@ function updateEnemyTurn(dt) {
         // (visible as a "Whirlpool" buff on the priest's row), to be
         // resolved as a forced swim at the player's next turn start.
         applyWhirlpoolStacks(eff.value);
+      } else if (eff.effectType === 'bear_roar') {
+        // Dire Bear's Bear Roar. The bear builds Rage by roaring
+        // (eff.value is the per-roar gain, 1 by default) and every
+        // "enemy" target on the player's side loses all their
+        // shield. Replaces the passive Dire Fury rage tick so the
+        // bear's swing damage scales with HOW often it draws +
+        // plays the roar, not flat per turn.
+        const rageGain = Math.max(1, eff.value || 1);
+        enemy.rage = (enemy.rage || 0) + rageGain;
+        addLog(`  ${enemy.name} roars! +${rageGain} Rage (R:${enemy.rage})`, Colors.RED);
+        spawnTokenOnTarget(enemy, rageGain, 'Rage', Colors.RED);
+        const targets = [];
+        if (player) targets.push(player);
+        for (const a of (player && player.creatures) || []) {
+          if (a && a.isAlive) targets.push(a);
+        }
+        let strippedShield = 0;
+        for (const t of targets) {
+          if ((t.shield || 0) > 0) {
+            strippedShield += t.shield;
+            t.shield = 0;
+          }
+        }
+        if (strippedShield > 0) {
+          addLog(`  Roar strips ${strippedShield} Shield from the party!`, Colors.ALLY_BLUE);
+        }
+      } else if (eff.effectType === 'heal_all_negative_effects'
+              || eff.effectType === 'heal_n_negative_effects'
+              || eff.effectType === 'heal') {
+        // Nature's Healing on the Dire Bear (and any future enemy
+        // heal ability) — route through resolveEffect so the same
+        // Ailment-strip, heroism payout, and discard-pile heal the
+        // player gets fire for the enemy caster too. The defense
+        // branch already does this for `heal` / `heal_random` /
+        // `clear_fire`; abilities just need the same wire-up.
+        resolveEffect(eff, enemy, player);
+      } else if (eff.effectType === 'apply_shock_random_player_side') {
+        // Roc — "A Storm is Coming" stacks N Shock on a single
+        // random target on the player's side (player or any alive
+        // ally creature). _invulnerable allies are skipped. Used by
+        // the Roc shell's lone ability card; cleanly mirrors the
+        // boss-side apply_*_random pattern but pointed the other
+        // way (we're an invulnerable boss laying status on the
+        // party from above, not the player flicking status onto
+        // enemy creatures).
+        const candidates = [];
+        if (player && player.isAlive) candidates.push(player);
+        for (const a of (player && player.creatures || [])) {
+          if (a && a.isAlive && !a._invulnerable) candidates.push(a);
+        }
+        if (candidates.length === 0) break;
+        const t = candidates[Math.floor(Math.random() * candidates.length)];
+        if (t instanceof Creature) {
+          t.shockStacks = (t.shockStacks || 0) + eff.value;
+        } else if (typeof t.applyStatus === 'function') {
+          t.applyStatus('SHOCK', eff.value);
+        }
+        spawnTokenOnTarget(t, eff.value, 'Shock', Colors.SHOCK_YELLOW);
+        addLog(`  +${eff.value} Shock on ${t === player ? 'you' : t.name}`, Colors.SHOCK_YELLOW);
       } else if (eff.effectType === 'bone_storm') {
         // Bone Storm: strip shields from the player + every player ally,
         // then deal `eff.value` damage to all of them, then buff every
@@ -33032,6 +34277,28 @@ function updateEnemyTurn(dt) {
       if (eff.effectType === 'block') {
         enemy.addBlock(eff.value);
         addLog(`  +${eff.value} Block`, Colors.BLUE);
+      } else if (eff.effectType === 'gain_shield') {
+        enemy.shield = (enemy.shield || 0) + eff.value;
+        addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
+      } else if (eff.effectType === 'draw') {
+        const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
+        const drawn = enemy.deck.draw(eff.value, cap);
+        if (drawn.length > 0 && debugMode) {
+          for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
+        }
+      } else if (eff.effectType === 'heal'
+              || eff.effectType === 'heal_random'
+              || eff.effectType === 'clear_fire'
+              || eff.effectType === 'heal_n_negative_effects'
+              || eff.effectType === 'heal_all_negative_effects') {
+        // Dire Hide's Ailment strip + draw fire here when the bear
+        // proactively queues the card as a defend action (rather than
+        // reactively on a player swing — that path lives in
+        // enemyAutoPlayDefenses). Route through resolveEffect so the
+        // Bleed→Poison→Fire→Ice→Shock priority order and the heal
+        // discard-pile logic stay shared with the player's path.
+        resolveEffect(eff, enemy, player);
       }
     }
   } else if (action.action === 'summon') {
@@ -33733,6 +35000,33 @@ function checkCombatEnd() {
     combatVictory();
     return true;
   }
+  // Player-death gate runs BEFORE the enemy-death victory check so a
+  // mutual kill is scored as a defeat. Scenario: Mimic at low HP +
+  // high Bleed, lands a lethal Bite on the player. The bleed tick
+  // kills the mimic after the swing lands; both are dead by the
+  // time we get here. Without this gate, the victory check below
+  // fired first and the player "won" a fight they didn't survive,
+  // ending up on the map at 0 cards and getting instant-killed on
+  // the next combat start. The deferred-death flag also ensures we
+  // don't short-circuit past this check while damage is still
+  // mid-resolution.
+  if (player && !player.isAlive) {
+    addLog('DEFEATED!', Colors.RED);
+    playSound('defeat');
+    fadeOutMusic(1500);
+    stopAmbienceLayer(800);
+    trackEvent('run_died', {
+      cause: 'hp_zero',
+      encounter_id: currentEncounter && currentEncounter.id,
+      encounter_name: currentEncounter && currentEncounter.name,
+      enemy_name: enemy && enemy.name,
+      class: selectedClass,
+      level: player && player.level,
+      map_id: currentMap && currentMap.id,
+    });
+    state = GameState.GAME_OVER;
+    return true;
+  }
   // Normal victory: enemy character is dead. Surviving minions don't matter
   // (matches py game's check_enemy_defeated). Skipped if the boss is invulnerable.
   if (!enemy._invulnerable && !enemy.isAlive) {
@@ -33980,12 +35274,12 @@ function snapshotPoisonBuff(caster) {
   }
   return stacks;
 }
-function applyPoisonRider(target, stacks, damageDealt = null) {
+function applyPoisonRider(target, stacks, _damageDealt = null) {
+  // Vial of Poison and every "+Poison on attack" rider now lands
+  // regardless of mitigation, matching the new creature-side
+  // poison/bleed/ice rule. A blocked swing still drips toxin onto
+  // the blade — armor/shield doesn't stop the chemistry.
   if (!stacks || stacks <= 0 || !target) return;
-  if (damageDealt !== null && damageDealt <= 0) {
-    addLog(`  (Vial of Poison absorbed — no Poison applied)`, Colors.GRAY);
-    return;
-  }
   if (target instanceof Creature) {
     target.poisonStacks = (target.poisonStacks || 0) + stacks;
   } else if (typeof target.applyStatus === 'function') {
@@ -34507,6 +35801,17 @@ function getDeathSfxKey(c) {
   // Magma Mephit — fiery whoosh on death matches the spawn + swing
   // cues (all three share fireball_whoosh_01 via the fire_apply key).
   if (name === 'magma mephit' || name === 'magma mephits') return 'fire_apply';
+  // Dire Bear — same growl bookends the fight (matches the start
+  // cue). The growl sample is the player Bear Form attack hit; it
+  // also reads as a death snarl when the boss falls.
+  if (name === 'dire bear') return 'bear_growl';
+  // Roc Chick death — same screaming sample as the fight-start
+  // bookend, so every chick that drops echoes the opening cry.
+  if (name === 'roc chick') return 'monster_scream_01';
+  // Unhatched Roc Egg death — the moment the shell finally cracks
+  // open. egg_hatch_01 doubles as both the per-hit cue (via
+  // _hitSfxKey in spawnDamageOnTarget) and the death cue.
+  if (name === 'unhatched roc egg') return 'egg_hatch_01';
   return null;
 }
 
@@ -34560,6 +35865,14 @@ function getFightStartSfxKey(rawName) {
   // (sahuagin_scream_03 aliased as varimatras_scream) bookends the
   // fight and also fires on every Cold Breath play.
   if (name === 'varimatras') return 'varimatras_scream';
+  // Dire Bear — Mountain Cave ambush boss. Reuses the player-side
+  // Bear Form growl as the fight-start sting (same family the codex
+  // already plays for Misha / bear-form moves).
+  if (name === 'dire bear') return 'bear_growl';
+  // Roc — boss-start scream is the freshly-hatched Roc Chick. The
+  // boss panel itself never swings (invulnerable boss), so this is
+  // really the chick's signature cue carried into the splash beat.
+  if (name === 'roc') return 'monster_scream_01';
   // Codex display aliases — these names come from getCodexMonsterIds()
   // titled forms, while the live enemies use the names above.
   if (name === 'obsidian slime') return 'ooze_attack';
@@ -34601,6 +35914,53 @@ function countAndRemoveDeadCreatures() {
     }
     const key = getDeathSfxKey(c);
     if (key) playSound(key, 0.7);
+  }
+  // On-death hatch — Unhatched Roc Egg. When the egg dies, a fresh
+  // Roc Chick replaces it on the field (same slot, summoning
+  // sickness off so the chick can swing the same turn it hatches if
+  // the AI picks it). Done BEFORE the dead-creature sweep below so
+  // the spawn lands in the live creatures pool. Each egg only
+  // hatches once — the flag is consumed after firing.
+  for (const c of enemy.creatures) {
+    if (c.isAlive) continue;
+    if (!c.onDeathSpawnChick) continue;
+    c.onDeathSpawnChick = false;
+    const fresh = new Creature({
+      name: 'Roc Chick', attack: 4, maxHp: 40,
+      attackAll: true,
+      attackAllIncludingOwn: true,
+      bloodfrenzy: 1,
+      description: 'Attacks every other target (player, allies, eggs, siblings).\nGain 1 Rage per attack.',
+    });
+    fresh.exhausted = false;
+    fresh.justSummoned = false;
+    if (enemy.addCreature(fresh)) {
+      addLog(`  ${c.name} hatches into a Roc Chick!`, Colors.ORANGE);
+      playSound('egg_hatch_01', 0.85);
+      const lastEntry = combatLog[combatLog.length - 1];
+      if (lastEntry) lastEntry.creature = fresh;
+    }
+  }
+  // Player-side Unhatched Roc Egg (from the loot card) — same hatch
+  // shape, but the new chick joins the player's row and swings on
+  // the player's side. bloodfrenzy 1 stacks rage every swing.
+  for (const c of (player.creatures || [])) {
+    if (c.isAlive) continue;
+    if (!c.onDeathSpawnPlayerChick) continue;
+    c.onDeathSpawnPlayerChick = false;
+    const fresh = new Creature({
+      name: 'Roc Chick', attack: 3, maxHp: 10,
+      bloodfrenzy: 1,
+      description: 'Attacks a random enemy.\nGain 1 Rage per attack.',
+    });
+    fresh.exhausted = false;
+    fresh.justSummoned = false;
+    if (player.addCreature(fresh)) {
+      addLog(`  ${c.name} hatches into a Roc Chick!`, Colors.GREEN);
+      playSound('egg_hatch_01', 0.85);
+      const lastEntry = combatLog[combatLog.length - 1];
+      if (lastEntry) lastEntry.creature = fresh;
+    }
   }
   // On-death damage triggers — Goblin Sapper et al. explode for 1..N
   // when they die, regardless of who killed them. The hit is instant
@@ -34711,6 +36071,15 @@ function combatVictory() {
   // than the previous 800 ms tail, so the bubble loop was audibly
   // bleeding past the fight into the map.
   stopAmbienceLayer(200);
+  // Drop the encounter-specific battle music back to the area/node
+  // bed the moment the boss dies — the LOOT + post-combat dialog
+  // shouldn't keep playing the tension theme. Bosses that set
+  // _lastMusicArea = null at fight start (Dire Bear's Circular
+  // Ruins, Sahuagin Baron, etc.) crossfade back to their area
+  // ambience here; fights without a music override are a no-op
+  // (updateMusicForCurrentScene early-returns when the area track
+  // is already playing).
+  updateMusicForCurrentScene();
   const gritHeal = player.getPerkStacks('combat_end_heal');
   if (gritHeal > 0) {
     healPlayer(gritHeal);
@@ -35808,6 +37177,12 @@ function handleScrySelectClick(x, y) {
       playSound('card_play');
       player.deck.hand.push(picked);
       addLog(`  Draw: ${picked.name}`, Colors.BLUE, picked);
+      // Scry-pick bypasses Deck.draw() — that's the call site that
+      // fires player.deck.onCardDrawn → triggerOnDraw. Without this
+      // explicit trigger an on_draw_* card picked off a scry overlay
+      // (Queen's Locket, Specter Ectoplasm, Bear Teeth Necklace,
+      // Molten Scale, etc.) silently entered hand without firing.
+      triggerOnDraw(picked);
       // Recharge (or return to discard) the rest
       for (let j = 0; j < scryCards.length; j++) {
         if (j !== i) {
@@ -35830,6 +37205,14 @@ function handleScrySelectClick(x, y) {
       if (_deferredFinishAfterScry) {
         _deferredFinishAfterScry = false;
         finishIncomingDamage();
+      } else if (pendingIncomingDamage > 0) {
+        // Scry triggered DURING the defense flow (Traveler's Clothing
+        // played reactively) but some damage still pending — drop the
+        // player back into DEFENDING so they can keep blocking /
+        // press Pass. Falling through to COMBAT here left the enemy
+        // turn dangling with no way to resolve it.
+        state = GameState.DEFENDING;
+        showStyledToast(`Incoming ${pendingIncomingDamage} damage. Play defense cards or pass.`, 'damage');
       } else {
         state = GameState.COMBAT;
       }
@@ -35997,6 +37380,18 @@ const SHOP_INVENTORIES = {
     createDwarvenGreaves,
     createWhiteWolfCloak,
   ],
+  // Mithril Remedies — Olbrim Goldbalm's apothecary. Opens for
+  // business the moment the Stormwatcher brazier is lit (the
+  // shrineReactivated gate in the encounter dispatch). Stocks
+  // consumables only — heal/scry items, herbs, the rare T2 potion.
+  mithril_remedies: [
+    createGoodberry,
+    createCaveShroom,
+    createFrostbloom,
+    createBagOfHerbs,
+    createMinorHealingPotion,
+    createPotionOfGreaterHealing,
+  ],
 };
 
 // Display labels for shop ids — used by the Codex Tables tab, the codex
@@ -36010,6 +37405,7 @@ const SHOP_LABELS = {
   antiquity_shop: "Grimbold's Antiquities",
   dwarven_tavern: 'Dwarven Tavern',
   dwarven_smithy: 'Dwarven Smithy',
+  mithril_remedies: 'Mithril Remedies',
 };
 
 // Antiquity shop is the only "buyback" storefront. Inventory is built
@@ -36106,6 +37502,40 @@ function sampleShopCardIds(shopId, count) {
 function resolveShopEntry(entry) {
   if (typeof entry === 'function') return { creator: entry, priceOverride: null };
   return { creator: entry.creator, priceOverride: entry.priceOverride ?? null };
+}
+
+// Codex view of a shop's inventory — the FULL possible catalog,
+// including any post-dragon expansion stock. The live shop UI
+// branches on `dragonSlain` and only reveals the hero-tier dwarven
+// gear / Whitescale Brew after Varimatras dies; the codex is a
+// "what could appear" view and should never hide a slot. Each
+// entry carries an optional `postDragon: true` marker so the
+// renderer can stamp it visually (and source lines pick up the
+// post-dragon items too). resolveShopEntry ignores the extra
+// field, so the rest of the pipeline reads these entries the same
+// way it reads SHOP_INVENTORIES.
+function getCodexShopInventory(shopId) {
+  if (shopId === 'dwarven_smithy') {
+    return [
+      { creator: createDwarvenCrossbow },
+      { creator: createDwarvenTowerShield },
+      { creator: createDwarvenGreaves },
+      { creator: createWhiteWolfCloak },
+      { creator: createDwarvenThrowingAxe, postDragon: true },
+      { creator: createDwarvenWarhammer,   postDragon: true },
+      { creator: createIronforgeChainmail, postDragon: true },
+      { creator: createMinersPickaxe,      postDragon: true },
+      { creator: createRuneforgedBuckler,  postDragon: true },
+    ];
+  }
+  if (shopId === 'dwarven_tavern') {
+    return [
+      { creator: createDwarvenBrew },
+      { creator: createDwarvenScoutCard },
+      { creator: createWhitescaleBrew, postDragon: true },
+    ];
+  }
+  return SHOP_INVENTORIES[shopId] || [];
 }
 
 function openShop(shopId, name) {
@@ -36700,6 +38130,18 @@ function validateRestDeck() {
   if ((pendingChapter2Transition || _levelUpBonusPending) && !_restBonusCat) {
     return 'Assign your +1 deck limit bonus first.';
   }
+  // 1b. Stormwatcher Contemplate — both picks must be made before
+  // the rest can fire. Same category for -1 and +1 is allowed
+  // (effective no-op, but still costs the 200 gp and still triggers
+  // the full rest).
+  if (_shrineContemplatePending) {
+    if (!_shrineContemplateMinusCat) {
+      return 'Pick a category to -1 (must already be +1 or more).';
+    }
+    if (!_shrineContemplatePlusCat) {
+      return 'Now pick a category to +1.';
+    }
+  }
   // 2. No invalid card types equipped.
   for (const card of player.deck.masterDeck) {
     if (!canClassEquip(card)) {
@@ -36799,6 +38241,15 @@ function exitInventory() {
     _restBonusCat = null;
     _levelUpBonusPending = false;
     _restErrorMsg = '';
+    // Stormwatcher Contemplate — clear the reassign flags on a
+    // successful rest exit. The picks have been validated by
+    // validateRestDeck above; just clear state so a future visit
+    // re-enters cleanly.
+    if (_shrineContemplatePending) {
+      _shrineContemplatePending = false;
+      _shrineContemplateMinusCat = null;
+      _shrineContemplatePlusCat = null;
+    }
     // ccgQuest+ rebalance — startGamePlusFromSave parked the bed
     // encounter behind a rest. Player has just finished rebalancing
     // their carried-over deck; fire the start node now.
@@ -37006,6 +38457,32 @@ function handleInventoryClick(x, y) {
       } else if (b.kind === 'minus') {
         player.deckLimitBonuses[b.catId] = Math.max(0, (player.deckLimitBonuses[b.catId] || 0) - 1);
         _restBonusCat = null;
+      } else if (b.kind === 'contemplate_minus') {
+        // Step 1: subtract a +1 from this category.
+        player.deckLimitBonuses[b.catId] = Math.max(0, (player.deckLimitBonuses[b.catId] || 0) - 1);
+        _shrineContemplateMinusCat = b.catId;
+        addLog(`Shrine: -1 ${b.catId} limit`, Colors.RED);
+      } else if (b.kind === 'contemplate_undo_minus') {
+        // Undo step 1: give the point back, clear the pick.
+        player.deckLimitBonuses[b.catId] = (player.deckLimitBonuses[b.catId] || 0) + 1;
+        _shrineContemplateMinusCat = null;
+      } else if (b.kind === 'contemplate_plus') {
+        // Step 2: add the +1 to a different category.
+        player.deckLimitBonuses[b.catId] = (player.deckLimitBonuses[b.catId] || 0) + 1;
+        _shrineContemplatePlusCat = b.catId;
+        addLog(`Shrine: +1 ${b.catId} limit`, Colors.GREEN);
+      } else if (b.kind === 'contemplate_plus_same') {
+        // Step 2 net-zero — picked the minus category as the plus
+        // target. Restore the bonus we took at step 1 and lock the
+        // plus pick. The rest still fires; the rite just resolved
+        // as a no-op (player still pays 200 gp).
+        player.deckLimitBonuses[b.catId] = (player.deckLimitBonuses[b.catId] || 0) + 1;
+        _shrineContemplatePlusCat = b.catId;
+        addLog(`Shrine: net-zero (+0 to ${b.catId})`, Colors.GRAY);
+      } else if (b.kind === 'contemplate_undo_plus') {
+        // Undo step 2: take the point back, clear the pick.
+        player.deckLimitBonuses[b.catId] = Math.max(0, (player.deckLimitBonuses[b.catId] || 0) - 1);
+        _shrineContemplatePlusCat = null;
       } else if (b.kind === 'debug_rest') {
         restMode = true;
       }
@@ -37998,13 +39475,12 @@ function drawInventoryCharacter(rect) {
     // Right-aligned count/max. When the +/− button is visible we reserve
     // space at the far right so neither the text nor the button overlaps
     // the panel's right edge / divider line.
-    const showBtn = restMode && (pendingChapter2Transition || _levelUpBonusPending);
+    const showBtn = restMode && (pendingChapter2Transition || _levelUpBonusPending || _shrineContemplatePending);
     const btnReserve = showBtn ? 20 : 0;
     const rightEdge = limitsBaseX + limitsW - 4 - btnReserve;
     ctx.textAlign = 'right';
     ctx.fillText(`${count} / ${max}${bonusStr}`, rightEdge, nextY);
-    // In rest-level-up mode, show +/- buttons to assign the level-up
-    // bonus (one +1 pick per level-up, max +3 per category).
+    // Rest-level-up button shape — one +1 pick, max +3 per category.
     if (restMode && (pendingChapter2Transition || _levelUpBonusPending)) {
       const btnSize = 13;
       const btnX = rightEdge + 4;
@@ -38033,6 +39509,52 @@ function drawInventoryCharacter(rect) {
         ctx.textBaseline = 'middle';
         ctx.fillText('+', btnX + btnSize / 2, btnY + btnSize / 2);
         _deckLimitBtnRects.push({ x: btnX, y: btnY, w: btnSize, h: btnSize, kind: 'plus', catId: cat.id });
+      }
+    } else if (restMode && _shrineContemplatePending) {
+      // Stormwatcher Contemplate — reassign one +1.
+      //  Step 1 (no minus yet): red "−" on any category with bonus >= 1.
+      //  Step 2 (minus picked, no plus yet): green "+" on every
+      //    category — INCLUDING the minus category (net-zero pick
+      //    allowed). Clicking the minus category as plus locks in
+      //    a no-op move; the rest still fires + the 200 gp still
+      //    burned.
+      //  Step 3 (both picked): red "−" on the plus category to
+      //    undo the plus and return to step 2 if the player wants
+      //    to pick a different target.
+      const btnSize = 13;
+      const btnX = rightEdge + 4;
+      const btnY = nextY - 10;
+      const isMinusPick = _shrineContemplateMinusCat === cat.id;
+      const isPlusPick  = _shrineContemplatePlusCat === cat.id;
+      let showKind = null;
+      let showGlyph = null;
+      if (isPlusPick) {
+        showKind = 'contemplate_undo_plus';
+        showGlyph = '−';
+      } else if (_shrineContemplateMinusCat == null && bonus >= 1) {
+        showKind = 'contemplate_minus';
+        showGlyph = '−';
+      } else if (_shrineContemplateMinusCat != null && _shrineContemplatePlusCat == null
+                 && bonus < (3 + (player.deckLimitCapBonus || 0))) {
+        // At step 2, allow plus on EVERY valid category including
+        // the minus pick (net-zero). The click handler differentiates
+        // via the same-category branch.
+        showKind = isMinusPick ? 'contemplate_plus_same' : 'contemplate_plus';
+        showGlyph = '+';
+      }
+      if (showKind) {
+        const isPlus = showGlyph === '+';
+        ctx.fillStyle = isPlus ? 'rgba(80,130,80,0.85)' : 'rgba(200,80,80,0.85)';
+        ctx.fillRect(btnX, btnY, btnSize, btnSize);
+        ctx.strokeStyle = isPlus ? '#9c9' : '#f88';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(btnX, btnY, btnSize, btnSize);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(showGlyph, btnX + btnSize / 2, btnY + btnSize / 2);
+        _deckLimitBtnRects.push({ x: btnX, y: btnY, w: btnSize, h: btnSize, kind: showKind, catId: cat.id });
       }
     }
     ctx.textAlign = 'left';
@@ -38414,8 +39936,9 @@ function commitSaveEditing() {
     mapTableCopied, mapTableRested,
     caveEntranceDoubledBack,
     corridorEntranceDoubledBack,
-    cozySpotFishingCaught, outpostTentRested, supplyPileTaken,
-    krakenDefeated, krakenLevelUpClaimed, harpiesDefeated,
+    cozySpotFishingCaught, outpostTentRested, supplyPileTaken, lastWatchSupplyTaken,
+    krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, direBearDefeated,
+    rocRescued, lastWatchPostRocClaimed, shrineReactivated, stormwatchersShrineActiveSeen, mithrilRemediesOlbrimGreeted, babyRocDefeated,
     lakeFrogRocks: _lakeFrogRocks,
     backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
@@ -39101,7 +40624,15 @@ function restoreFromSave(data) {
   cozySpotFishingCaught = !!data.cozySpotFishingCaught;
   outpostTentRested = !!data.outpostTentRested;
   supplyPileTaken = !!data.supplyPileTaken;
+  lastWatchSupplyTaken = !!data.lastWatchSupplyTaken;
   harpiesDefeated = !!data.harpiesDefeated;
+  direBearDefeated = !!data.direBearDefeated;
+  rocRescued = !!data.rocRescued;
+  lastWatchPostRocClaimed = !!data.lastWatchPostRocClaimed;
+  shrineReactivated = !!data.shrineReactivated;
+  stormwatchersShrineActiveSeen = !!data.stormwatchersShrineActiveSeen;
+  babyRocDefeated = !!data.babyRocDefeated;
+  mithrilRemediesOlbrimGreeted = !!data.mithrilRemediesOlbrimGreeted;
   _lakeFrogRocks = Array.isArray(data.lakeFrogRocks) ? data.lakeFrogRocks.slice() : null;
   krakenDefeated = !!data.krakenDefeated;
   krakenLevelUpClaimed = !!data.krakenLevelUpClaimed;
@@ -40905,6 +42436,21 @@ const CARD_SFX_OVERRIDES = {
   // (sword_1h_flesh / sword_blocked) so the slash audibly matches
   // a real clawed weapon, not a generic monster cue.
   varimatras_claw:          { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  // Dire Claws — Dire Bear multi-target swipe. Same clawed-weapon
+  // family as Varimatras Claw (sword_1h_flesh / sword_blocked).
+  dire_claws:               { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  // Dire Bite — chunky chew-rip on the impact, no cast cue.
+  dire_bite:                { flesh: 'monster_chew_rip_04', blocked: 'monster_chew_rip_04' },
+  // Bear Roar — the cast IS the audio beat (no damage swing), so
+  // the play cue carries the whole moment. Reuses the same
+  // bear_growl alias the druid's Bear Form / Misha companion fires.
+  bear_roar:                { play: 'bear_growl' },
+  // A Storm is Coming — Roc shell's Shock-drop. Lightning crack on
+  // cast layers over the existing Shock token spawn so the moment
+  // reads as a discrete bolt rather than a generic spell cue.
+  a_storm_is_coming:        { play: 'lightning_impact_01' },
+  // Nature's Healing — angelic heal cue on cast (player or enemy).
+  natures_healing:          { play: 'heal_angelic_02' },
   // Varimatras Tail Swipe — whip crack for the wide arc. Reuses
   // the whip_flesh alias which already points at whip_crack_01.
   varimatras_tail:          { flesh: 'whip_flesh', blocked: 'whip_flesh' },
@@ -41099,6 +42645,12 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // getDeathSfxKey, so the same family stays consistent).
     if (name === 'misha') {
       return { flesh: 'bear_growl', blocked: 'bear_growl', play: 'bear_growl' };
+    }
+    // Roc Chick — every screech is a swing. Same monster_scream_01
+    // sample bookends fight start, every attack, and death so the
+    // chick's audio identity is a single recurring shriek.
+    if (name === 'roc chick') {
+      return { flesh: 'monster_scream_01', blocked: 'monster_scream_01', play: 'monster_scream_01' };
     }
     // Valdrisa Emberforge (companion ally) — standard 1H mace family.
     if (name === 'valdrisa') {
@@ -41561,6 +43113,14 @@ function playAttackHitSfx(originalDmg, taken, delay = 0) {
 // Spawn a damage number anchored to the bottom of a target's card rect
 function spawnDamageOnTarget(target, amount, color = Colors.RED) {
   playSound('damage', 0.6);
+  // Per-creature hit SFX — layered on top of the generic damage cue.
+  // Unhatched Roc Egg uses this to fire egg_hatch_01 every time it
+  // gets struck so each blow sounds like the chick inside trying to
+  // peck its way out. Any future creature that needs a signature
+  // on-hit sound just sets _hitSfxKey at construction.
+  if (target && target._hitSfxKey) {
+    playSound(target._hitSfxKey, 0.75);
+  }
   let rect;
   let shiftX = 0;
   if (target === player) {
@@ -42958,10 +44518,12 @@ function drawCodexLootGrid(L) {
         return fn && _codexSearchMatches(fn().name);
       });
     } else {
-      // shop
+      // shop — route through getCodexShopInventory so post-dragon
+      // stock (Dwarven Smithy hero-tier weapons, Whitescale Brew at
+      // the Tavern) is searchable from the codex too.
       const label = SHOP_LABELS[e.shopId] || _titleCase(e.shopId);
       if (_codexSearchMatches(label)) return true;
-      return SHOP_INVENTORIES[e.shopId].some(entry => {
+      return getCodexShopInventory(e.shopId).some(entry => {
         const { creator } = resolveShopEntry(entry);
         return _codexCardTextMatches(creator());
       });
@@ -43005,8 +44567,14 @@ function drawCodexLootGrid(L) {
 
     if (e.kind === 'shop') {
       // --- Shop inventory ---
-      const inv = SHOP_INVENTORIES[e.shopId] || [];
+      // getCodexShopInventory returns the FULL catalog including any
+      // post-dragon expansion stock (smithy hero-tier weapons,
+      // Whitescale Brew). Each entry may carry postDragon:true so the
+      // renderer can stamp a small "After Dragon" badge under its
+      // price tag.
+      const inv = getCodexShopInventory(e.shopId);
       const label = SHOP_LABELS[e.shopId] || _titleCase(e.shopId);
+      const postDragonCount = inv.filter(x => x && typeof x === 'object' && x.postDragon).length;
 
       ctx.fillStyle = Colors.GOLD;
       ctx.font = 'bold 16px Georgia, serif';
@@ -43015,7 +44583,10 @@ function drawCodexLootGrid(L) {
       ctx.fillText(`Shop — ${label}`, L.gridX + 12, sy + 8);
       ctx.fillStyle = '#bcd';
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Sells ${inv.length} item${inv.length === 1 ? '' : 's'}. Prices use the rarity formula (sell = buy ÷ 5).`, L.gridX + 12, sy + 28);
+      const postTail = postDragonCount > 0
+        ? ` (${postDragonCount} unlock after Varimatras is slain)`
+        : '';
+      ctx.fillText(`Sells ${inv.length} item${inv.length === 1 ? '' : 's'}${postTail}. Prices use the rarity formula (sell = buy ÷ 5).`, L.gridX + 12, sy + 28);
 
       const rowY = sy + headerH;
       const rowX = L.gridX + 12;
@@ -43062,6 +44633,14 @@ function drawCodexLootGrid(L) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillText(`${price}g`, cx + cardW / 2, rowY + cardH + 3);
+        // Post-dragon unlock marker — small italic tag under the
+        // price for the hero-tier dwarven gear and Whitescale Brew
+        // that only appear in the live shop after Varimatras dies.
+        if (entry && typeof entry === 'object' && entry.postDragon) {
+          ctx.fillStyle = '#a8c0e0';
+          ctx.font = 'italic 11px sans-serif';
+          ctx.fillText('After Dragon', cx + cardW / 2, rowY + cardH + 17);
+        }
 
         if (fullyOrPartiallyVisible) {
           codexClickAreas.push({
@@ -43986,6 +45565,9 @@ function getCodexMonsterIds() {
     // Post-ship_chest water boss — Kraken Spawn. Tentacle field with
     // Swallowing Bite.
     'kraken_spawn',
+    // Mountain Cave ambush — Dire Bear with Feral Wrath (half-damage
+    // converts to Bleed) and Dire Fury.
+    'dire_bear',
   ];
 }
 
@@ -44449,14 +46031,22 @@ function buildCodexSourceCache() {
     }
   }
 
-  // Shops
-  for (const [shopId, inv] of Object.entries(SHOP_INVENTORIES)) {
+  // Shops — route through getCodexShopInventory so post-dragon
+  // expansion stock (Dwarven Smithy hero-tier weapons, Whitescale
+  // Brew at the Tavern) gets a "Shop: X (Yg)" source line on the
+  // member card too. Post-dragon entries pick up an explicit
+  // "(after Varimatras)" suffix so the player knows when the slot
+  // unlocks.
+  for (const shopId of Object.keys(SHOP_INVENTORIES)) {
     const label = SHOP_LABELS[shopId] || _titleCase(shopId);
-    for (const entry of inv) {
+    for (const entry of getCodexShopInventory(shopId)) {
       const { creator, priceOverride } = resolveShopEntry(entry);
       const sample = creator();
       const price = priceOverride !== null ? priceOverride : getCardBuyPrice(sample);
-      addCard(sample.id, `Shop: ${label} (${price}g)`);
+      const postTag = (entry && typeof entry === 'object' && entry.postDragon)
+        ? ' (after Varimatras)'
+        : '';
+      addCard(sample.id, `Shop: ${label} (${price}g)${postTag}`);
     }
   }
 
@@ -44500,6 +46090,7 @@ function buildCodexSourceCache() {
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',
     'magma_mephit','overseer_gnikan','overseer_gnikan_phase_2','varimatras',
     'giant_frog','harpies','kraken_spawn',
+    'dire_bear',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the

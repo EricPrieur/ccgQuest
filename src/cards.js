@@ -103,7 +103,10 @@ export function createScraps() {
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
-    effects: [new CardEffect('heal', 3, TargetType.SELF)],
+    // SINGLE_ALLY routes through the heal-targeting picker so the
+    // player can patch up a companion (or themselves) instead of
+    // always auto-targeting the caster.
+    effects: [new CardEffect('heal', 3, TargetType.SINGLE_ALLY)],
     gamePlusOffset: { heal: 2 },
   });
 }
@@ -794,16 +797,16 @@ export function createShieldBash() {
   return new Card({
     id: 'shield_bash',
     name: 'Shield Bash',
-    description: 'Recharge -> Gain 1 Shield,\nDeal damage = Shield.',
-    shortDesc: 'R->+1 Shield\nDmg=Shield',
+    description: 'Recharge -> Gain 1 Shield,\nDeal damage = 1/2 Shields.',
+    shortDesc: 'R->+1 Shield\nDmg=1/2 Shield',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('shield_bash', 1, TargetType.SINGLE_ENEMY)],
+    effects: [new CardEffect('shield_bash_half', 1, TargetType.SINGLE_ENEMY)],
     characterClass: ['warrior', 'paladin'],
     tier: 1,
     rarity: 'uncommon',
-    gamePlusOffset: { shield_bash: 1 },
+    gamePlusOffset: { shield_bash_half: 1 },
   });
 }
 
@@ -1157,6 +1160,48 @@ export function createFreshFish() {
     // custom branch in applyGamePlusOffsetInPlace bumps
     // provision.value with a separate fresh_fish_meal rate).
     gamePlusOffset: { heal: 2, fresh_fish_meal: 0.5 },
+  });
+}
+
+// Frostbloom — rare blue flower from the High Valley above the Last
+// Watch. Awarded once on the Frostbloom Patch encounter. Consumes
+// to wipe two Ailments and patch up 1 HP — Olbrim's go-to remedy.
+// Bag of Herbs — Olbrim's dropped satchel. Recharge cost; the cast
+// rolls 2 random picks (with repeats) from a small pool of herbal
+// consumables and adds them to the hand. Awarded once at the Cold
+// Spring encounter alongside the find of his trail.
+export function createBagOfHerbs() {
+  return new Card({
+    id: 'bag_of_herbs',
+    name: 'Bag of Herbs',
+    description: 'Recharge -> Gain 2 Herbs:\nGoodberry, Cave Shroom, or Frostbloom.',
+    shortDesc: 'R->2 Herbs\n(GB/CS/FB)',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_random_herbs', 2, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+  });
+}
+
+export function createFrostbloom() {
+  return new Card({
+    id: 'frostbloom',
+    name: 'Frostbloom',
+    description: 'Consume -> Heal 2 Ailments, Heal 1.',
+    shortDesc: 'C->Heal 2 Ail\nHeal 1',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal_n_negative_effects', 2, TargetType.SELF),
+      new CardEffect('heal', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 2,
   });
 }
 
@@ -3749,7 +3794,9 @@ export function createBandages() {
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
-    effects: [new CardEffect('heal', 4, TargetType.SELF)],
+    // SINGLE_ALLY — player picks a target ally creature (or self)
+    // for the patch-up. Same change as Scraps.
+    effects: [new CardEffect('heal', 4, TargetType.SINGLE_ALLY)],
     rarity: 'uncommon',
     gamePlusOffset: { heal: 3 },
   });
@@ -3975,6 +4022,26 @@ export function createMinorHealingPotion() {
   });
 }
 
+// Potion of Greater Healing — Tier 2 rare consumable item. Same
+// Consume / heal pattern as Minor Healing Potion, just a bigger
+// pop. Stocked by Olbrim's Mithril Remedies shop once the
+// Stormwatcher's brazier is lit.
+export function createPotionOfGreaterHealing() {
+  return new Card({
+    id: 'potion_of_greater_healing',
+    name: 'Potion of Greater Healing',
+    description: 'Consume -> Heal 9.',
+    shortDesc: 'C->Heal 9',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [new CardEffect('heal', 9, TargetType.SELF)],
+    rarity: 'rare',
+    tier: 2,
+    gamePlusOffset: { heal: 4 },
+  });
+}
+
 export function createWandOfFire() {
   return new Card({
     id: 'wand_of_fire',
@@ -4007,18 +4074,17 @@ export function createMimicTongue() {
   return new Card({
     id: 'mimic_tongue',
     name: 'Mimic Tongue',
-    description: 'Recharge -> Apply 1 Poison, Draw.',
-    shortDesc: 'R->Poison 1,\nDraw',
+    description: 'On Draw: Deal 1 Poison Randomly.',
+    shortDesc: 'On Draw:\n+1 Poison Rand',
     subtype: 'relic',
-    cardType: CardType.ATTACK,
+    cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    effects: [new CardEffect('on_draw_poison_random', 1, TargetType.RANDOM_ENEMY)],
     rarity: 'rare',
+    tier: 1,
+    unplayable: true,
     // +0.5 poison per offset (floored).
-    gamePlusOffset: { apply_poison: 0.5 },
+    gamePlusOffset: { on_draw_poison_random: 0.5 },
   });
 }
 
@@ -4639,18 +4705,16 @@ export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'Heal 2. Discard. Draw.',
-    shortDesc: 'Heal 2, Discard\nDraw',
+    description: 'On Draw: Heal 1.',
+    shortDesc: 'On Draw:\nHeal 1',
     subtype: 'relic',
-    cardType: CardType.ITEM,
-    costType: CostType.DISCARD,
-    effects: [
-      new CardEffect('heal', 2, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_draw_heal', 1, TargetType.SELF)],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal: 1 },
+    unplayable: true,
+    gamePlusOffset: { on_draw_heal: 1 },
   });
 }
 
@@ -4838,18 +4902,16 @@ export function createFrostDrakeScale() {
   return new Card({
     id: 'frost_drake_scale',
     name: 'Frost Drake Scale',
-    description: 'Recharge -> Deal Ice to a random enemy. Draw.',
-    shortDesc: 'R->Ice random\nDraw',
+    description: 'On Draw: Deal 1 Ice Randomly.',
+    shortDesc: 'On Draw:\n+1 Ice Rand',
     subtype: 'relic',
-    cardType: CardType.ABILITY,
+    cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('apply_ice', 1, TargetType.RANDOM_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    effects: [new CardEffect('on_draw_ice_random', 1, TargetType.RANDOM_ENEMY)],
     rarity: 'uncommon',
     tier: 2,
-    gamePlusOffset: { apply_ice: 1 },
+    unplayable: true,
+    gamePlusOffset: { on_draw_ice_random: 1 },
   });
 }
 
@@ -4983,23 +5045,22 @@ export function createMoltenScaleArmorLoot() {
 }
 
 // Molten Scale — relic-tier drop from the Magma Drake loot pool.
-// Recharge → 1 Ignite + Draw. Mirrors PY cards_basic.py:create_molten_scale_relic.
+// On Draw: Gain 1 Ignite. Passive relic — never played from hand,
+// every draw stamps an Ignite stack on the player.
 export function createMoltenScaleRelic() {
   return new Card({
     id: 'molten_scale_relic',
     name: 'Molten Scale',
-    description: 'Recharge -> Gain 1 Ignite. Draw.',
-    shortDesc: 'R->+1 Ignite\nDraw',
+    description: 'On Draw: Gain 1 Ignite.',
+    shortDesc: 'On Draw:\n+1 Ignite',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('gain_ignite', 1, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    effects: [new CardEffect('on_draw_ignite', 1, TargetType.SELF)],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { gain_ignite: 1 },
+    unplayable: true,
+    gamePlusOffset: { on_draw_ignite: 1 },
   });
 }
 
@@ -5683,15 +5744,13 @@ export function createObsidianShard() {
 export function createObsidianCore() {
   return new Card({
     id: 'obsidian_core', name: 'Obsidian Core',
-    description: 'Recharge -> Your next attack gains: +2 vs Armor/Shield. Draw.',
-    shortDesc: 'R->+2 vs Armor\nDraw',
-    subtype: 'relic', cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('grant_obsidian_buff', 2, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    description: 'On Draw: Your next attack gains: +2 vs Armor/Shield.',
+    shortDesc: 'On Draw:\n+2 vs Armor',
+    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_draw_obsidian_buff', 2, TargetType.SELF)],
     rarity: 'rare', tier: 2,
-    gamePlusOffset: { grant_obsidian_buff: 2 },
+    unplayable: true,
+    gamePlusOffset: { on_draw_obsidian_buff: 2 },
   });
 }
 
@@ -5723,23 +5782,18 @@ export function createQueensLocket() {
   return new Card({
     id: 'queens_locket',
     name: "The Queen's Locket",
-    description: "Recharge -> Gain the Queen's Gift. Draw. A random blessing of Shield, Heroism, Heal, or Draw.",
-    shortDesc: 'R->Gift+Draw',
+    description: "On Draw: Gain the Queen's Gift. A random blessing of Shield, Heroism, Heal or Draw.",
+    shortDesc: 'On Draw:\nQueen\'s Gift',
     subtype: 'relic',
-    cardType: CardType.ABILITY,
+    cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('queens_gift', 1, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
-    ],
+    effects: [new CardEffect('on_draw_queens_gift', 1, TargetType.SELF)],
     rarity: 'rare',
     tier: 2,
     isUnique: true,
-    // No per-effect bump — the random gift roll already mixes
-    // Shield / Heroism / Heal / Draw so the card scales by
-    // breadth rather than digits. Empty `{}` is the opt-in
-    // marker so the codex still stamps the name/tier bump and
-    // drops the red "needs rules" badge.
+    unplayable: true,
+    // Empty {} opts in to the codex codex no-rules-needed badge —
+    // the gift roll is implicit and scales by breadth, not digits.
     gamePlusOffset: {},
   });
 }
@@ -6310,6 +6364,106 @@ export function createSahuaginPriestStaffLoot() {
   });
 }
 
+// Dire Bear — Mountain Cave boss attack cards.
+export function createDireClaws() {
+  return new Card({
+    id: 'dire_claws',
+    name: 'Dire Claws',
+    description: 'Recharge -> Deal 2 Damage to up to 2 Targets.',
+    shortDesc: 'R->2 Dmg\nx2 Targets',
+    subtype: 'weapon',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_random_split', 2, TargetType.ALL_ENEMIES),
+    ],
+    priority: 5,
+    gamePlusOffset: { damage_random_split: 1 },
+  });
+}
+
+export function createDireBite() {
+  return new Card({
+    id: 'dire_bite',
+    name: 'Dire Bite',
+    description: 'Recharge -> Deal 5 Damage.',
+    shortDesc: 'R->5 Dmg',
+    subtype: 'weapon',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+    ],
+    priority: 6,
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+export function createDireHide() {
+  return new Card({
+    id: 'dire_hide',
+    name: 'Dire Hide',
+    description: 'Recharge -> Block 4, Heal 1 Ailment, Draw.',
+    shortDesc: 'R->Block 4\nHeal 1 Ail, Draw',
+    subtype: 'armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 4, TargetType.SELF),
+      new CardEffect('heal_n_negative_effects', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    priority: 4,
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+// Bear Roar — Dire Bear ABILITY card. On play: bear gains 1 Rage
+// (so subsequent swings hit harder) and every "enemy" (player +
+// alive player allies) loses all their shield. Replaces the old
+// passive Dire Fury rage tick — rage now scales with HOW often the
+// bear draws + plays the roar, not flat per turn.
+export function createBearRoar() {
+  return new Card({
+    id: 'bear_roar',
+    name: 'Bear Roar',
+    description: 'Recharge -> Gain 1 Rage. Enemies lose all Shields.',
+    shortDesc: 'R->+1 Rage\nStrip Shields',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('bear_roar', 1, TargetType.SELF),
+    ],
+    priority: 9,
+    // The strip payoff doesn't scale numerically with
+    // monsterTierOffset — empty object opts into the codex
+    // no-rules-needed badge.
+    gamePlusOffset: {},
+  });
+}
+
+// A Storm is Coming — Roc ABILITY card. The invulnerable Roc
+// circling overhead drops 1 Shock onto a single random target on
+// the party (player or any alive ally). Cycles every turn via the
+// Roc's single-card deck + hand size 1. Uses RocCircling.jpg art.
+export function createAStormIsComing() {
+  return new Card({
+    id: 'a_storm_is_coming',
+    name: 'A Storm is Coming',
+    description: 'Recharge -> Deal Shock Randomly.',
+    shortDesc: 'R->+1 Shock Rand',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_shock_random_player_side', 1, TargetType.SELF),
+    ],
+    priority: 8,
+    gamePlusOffset: { apply_shock_random_player_side: 1 },
+  });
+}
+
 // Enraged Strike — auto-added to the enemy's hand on every turn
 // from turn 11 onward as a soft pity timer. Mirrors PY
 // create_enraged_strike: 1 damage + 1 rage on play, priority 10
@@ -6373,5 +6527,329 @@ export function createWolfFang() {
     rarity: 'rare',
     unplayable: true,
     gamePlusOffset: { on_recharge_heroism: 0.5 },
+  });
+}
+
+// ============================================================
+// Dire Bear loot — drops from the Circular Ruins boss fight.
+// Roll twice on the table, distinct picks. Theme: bear bone / fur
+// trophies that lean on Bleed, Ailment clears, and per-enemy
+// scaling (mirroring the bear's roar / pack mechanics).
+// ============================================================
+
+// Bear Teeth Necklace — On-draw relic. Every time it enters hand
+// it stacks 1 Bleed onto a random enemy. Unplayable; trigger lives
+// in triggerOnDraw alongside the other on_draw_* riders.
+export function createBearTeethNecklace() {
+  return new Card({
+    id: 'bear_teeth_necklace',
+    name: 'Bear Teeth Necklace',
+    description: 'On Draw: Deal Bleed Randomly.',
+    shortDesc: 'On Draw:\nBleed random',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_draw_bleed_random', 1, TargetType.SELF)],
+    rarity: 'rare',
+    tier: 2,
+    unplayable: true,
+    gamePlusOffset: { on_draw_bleed_random: 1 },
+  });
+}
+
+// Bear Claw — simple weapon. 3 damage single target. Draws a card if
+// the target is Bleeding (bleeding_draw rider checks at resolve time).
+export function createBearClaw() {
+  return new Card({
+    id: 'bear_claw',
+    name: 'Bear Claw',
+    description: 'Recharge -> Deal 3 Damage.\nBleeding: Draw.',
+    shortDesc: 'R->3 Dmg\nBleeding: Draw',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('bleeding_draw', 1, TargetType.SINGLE_ENEMY),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+// Bear Hide Armor — light armor defense card. Shields + Ailment
+// purge + cycle, the all-purpose mid-fight reset.
+export function createBearHideArmor() {
+  return new Card({
+    id: 'bear_hide_armor',
+    name: 'Bear Hide Armor',
+    description: 'Recharge -> Gain 4 Shields, Heal 1 Ailment, Draw.',
+    shortDesc: 'R->+4 Shield\nHeal 1 Ail, Draw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 4, TargetType.SELF),
+      new CardEffect('heal_n_negative_effects', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { gain_shield: 2 },
+  });
+}
+
+// Bear Fat Rations — consumable meal. Big on-play Ailment purge +
+// HP heal, then leaves a 3-turn meal buff that ticks 1 Ailment +
+// 1 HP heal each turn. Meal slot — replaces whatever's currently
+// active.
+export function createBearFatRations() {
+  return new Card({
+    id: 'bear_fat_rations',
+    name: 'Bear Fat Rations',
+    description: 'Consume + Recharge 1 -> Heal 4 Ailments, Heal 4.\nMeal: Heal 1 Ailment, Heal 1 for 3 turns.',
+    shortDesc: 'C+R1->Heal 4 Ail\n+Heal 4. Meal:\n1 Ail+1 HP 3T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal_n_negative_effects', 4, TargetType.SELF),
+      new CardEffect('heal', 4, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Bear Fat Rations',
+      turnsPerCombat: 3,
+      effects: [
+        { effectType: 'heal_n_negative_effects', value: 1 },
+        { effectType: 'heal', value: 1 },
+      ],
+      description: 'Heal 1 Ailment and Heal 1 for 3 turns each combat.',
+    },
+    rarity: 'common',
+    tier: 2,
+    gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Roaring Helm — heavy armor defense card. Block + Heroism that
+// both scale with enemy count, plus a draw. Strong vs swarms,
+// average vs single-target.
+export function createRoaringHelm() {
+  return new Card({
+    id: 'roaring_helm',
+    name: 'Roaring Helm',
+    description: 'Recharge -> Gain 1 Block for each enemy, Gain Heroism for each enemy, Draw.',
+    shortDesc: 'R->Block/enemy\n+H/enemy, Draw',
+    subtype: 'heavy_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block_per_enemy', 1, TargetType.SELF),
+      new CardEffect('heroism_per_enemy', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 2,
+    gamePlusOffset: { block_per_enemy: 1, heroism_per_enemy: 0 },
+  });
+}
+
+// Winterheart Pelt — clothing armor defense card. Solid Block 3,
+// strips up to 3 Ice off the player (uses the existing clear_ice
+// handler), and cycles.
+export function createWinterheartPelt() {
+  return new Card({
+    id: 'winterheart_pelt',
+    name: 'Winterheart Pelt',
+    description: 'Recharge -> Block 3, Clears 3 Ice, Draw.',
+    shortDesc: 'R->Block 3\nClear 3 Ice, Draw',
+    subtype: 'clothing',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('clear_ice', 3, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+// ============================================================
+// Baby Roc loot — drops from the Nest Interior boss fight. Pick 2
+// distinct items from a weighted pool of Roc-themed gear. The Egg
+// allies in this pool spawn player-side chicks on death, mirroring
+// the enemy egg/chick relationship from the fight itself.
+// ============================================================
+
+// Stormwing Feather — on-draw relic. Stacks 1 Shock on a random
+// enemy every time it lands in hand. Unplayable — sits in the deck
+// as a passive trigger, no active cast.
+export function createStormwingFeather() {
+  return new Card({
+    id: 'stormwing_feather',
+    name: 'Stormwing Feather',
+    description: 'On Draw: Shock randomly.',
+    shortDesc: 'On Draw:\n+1 Shock Rand',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_draw_shock_random', 1, TargetType.RANDOM_ENEMY)],
+    rarity: 'rare',
+    tier: 2,
+    unplayable: true,
+    gamePlusOffset: { on_draw_shock_random: 1 },
+  });
+}
+
+// Roc Chick Leg — heavy 2H simple weapon. Costs Recharge + 2 extra
+// recharges (pay 2 cards) for a 10-damage swing that grows by 4 vs
+// a Bleeding target.
+export function createRocChickLeg() {
+  return new Card({
+    id: 'roc_chick_leg',
+    name: 'Roc Chick Leg',
+    description: 'Recharge +2 -> Deal 10 Damage.\nBleeding: +4 Damage.',
+    shortDesc: 'R+2->10 Dmg\nBleeding +4',
+    subtype: 'simple_2h',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('bleeding_bonus_damage', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 2, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { damage: 3, bleeding_bonus_damage: 2 },
+  });
+}
+
+// Roc Talon Dagger — light simple weapon. Cheap stab + 1 Bleed,
+// stays in hand so the player can replay it every turn for steady
+// Bleed pressure. FREE cost so it's always available, but
+// stays_in_hand exhausts after each turn play.
+export function createRocTalonDagger() {
+  return new Card({
+    id: 'roc_talon_dagger',
+    name: 'Roc Talon Dagger',
+    description: 'Deal 2 Damage + Bleed.\nStays in hand.',
+    shortDesc: '2 Dmg\n+Bleed, Stays',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { damage: 2, apply_bleed: 1 },
+  });
+}
+
+// Roc Eggshell Shield — light shield defense card. Big +8 Shields
+// for a single discard, plus a draw rider that fires only if the
+// caster started the play with no Shield (the "First Shield"
+// payoff — same draw_if_no_shield gate Sturdy Boots uses).
+export function createRocEggshellShield() {
+  return new Card({
+    id: 'roc_eggshell_shield',
+    name: 'Roc Eggshell Shield',
+    description: 'Discard -> Gain 8 Shields.\nFirst Shield: Draw.',
+    shortDesc: 'D->+8 Shield\nFirst: Draw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('gain_shield', 8, TargetType.SELF),
+      new CardEffect('draw_if_no_shield', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    gamePlusOffset: { gain_shield: 3 },
+  });
+}
+
+// Lost Adventurer's Ring — relic-style item. Stays in hand and
+// every turn the player can play it for a free Heal 1 + Heroism
+// stack. The stays_in_hand exhaust gate means once per turn only.
+export function createLostAdventurersRing() {
+  return new Card({
+    id: 'lost_adventurers_ring',
+    name: "Lost Adventurer's Ring",
+    description: 'Heal 1, Gain 1 Heroism.\nStays in hand.',
+    shortDesc: 'Heal 1\n+1 Heroism, Stays',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    tier: 2,
+    gamePlusOffset: { heal: 1, gain_heroism: 1 },
+  });
+}
+
+// Player-side Unhatched Roc Egg creature — the ally that spawns
+// from the Unhatched Roc Egg card. Inert (0 atk, _cantAttack), but
+// 10 HP and 1 armor make it a meatshield, and onDeathSpawnPlayerChick
+// hatches a 3 atk Roc Chick when it dies (handled in
+// countAndRemoveDeadCreatures).
+export function createUnhatchedRocEggCreature() {
+  return new Creature({
+    name: 'Unhatched Roc Egg',
+    attack: 0,
+    maxHp: 10,
+    armor: 1,
+    description: 'On Death: Hatch into a Roc Chick.',
+  });
+}
+
+// Player-side hatched chick. Standalone helper so other code (the
+// egg-hatch handler, codex preview, etc.) can spawn a fresh one.
+// bloodfrenzy 1 stacks rage every swing — same family the boss-side
+// Roc Chick uses.
+export function createRocChickCreature() {
+  return new Creature({
+    name: 'Roc Chick',
+    attack: 3,
+    maxHp: 10,
+    bloodfrenzy: 1,
+    description: 'Attacks a random enemy.\nGain 1 Rage per attack.',
+  });
+}
+
+// Unhatched Roc Egg card — Recharge cost summon. Drops the egg ally
+// on the player's row. The previewCreature stamps the egg's stat
+// block onto the card's hover so the player can see HP/armor before
+// they cast.
+export function createUnhatchedRocEggCard() {
+  return new Card({
+    id: 'unhatched_roc_egg',
+    name: 'Unhatched Roc Egg',
+    description: 'Recharge -> Call an Unhatched Roc Egg to the battle!',
+    shortDesc: 'R->Call\nRoc Egg',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_unhatched_roc_egg', 1, TargetType.SUMMON)],
+    rarity: 'epic',
+    tier: 2,
+    previewCreature: createUnhatchedRocEggCreature(),
+    // No straight numeric bump — the egg's HP / armor / chick stats
+    // are fixed by the card. Empty object opts into the codex no-
+    // rules-needed badge so the offset preview is silent.
+    gamePlusOffset: {},
   });
 }

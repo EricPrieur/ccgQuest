@@ -434,6 +434,9 @@ export const SOUND_MAP = {
   big_bite:       'Monster/monster_chew_rip_01',
   // Mimic's chest-teeth swing — heavier rip than Big Bite.
   mimic_chomp:    'Monster/monster_chew_rip_04',
+  // Direct alias for the Dire Bear's Dire Bite swing (and any future
+  // card that wants the rip sample by its raw sample name).
+  monster_chew_rip_04: 'Monster/monster_chew_rip_04',
   // Siege Ogre — start-of-fight bellow + death pain growl.
   // Groan plays each time the ogre heaves the ram backward (Pulling
   // Back the Ram). Battering ram is the impact on the eventual
@@ -610,12 +613,19 @@ export const SOUND_MAP = {
   // playback duration to scale with damage (4-13 dmg → 4/13..13/13 of
   // the full ~8 sec sample).
   arcane_beam:      'Magic/electric_beam_01',
+  // Lightning crack — Roc's "A Storm is Coming" Shock-drop cue. The
+  // alias matches the source filename so callers can request it
+  // either by alias or bare name.
+  lightning_impact_01: 'Magic/lightning_impact_01',
   // Sparkle bell — Hammer of Wrath cast halo + Thunderclap shock pulses.
   sparkle_spell:    'Magic/sparkle_spell_01',
   // Wind-rush whoosh — Starfire's celestial cleave.
   wind_blast:       'Magic/wind_blast_01',
   // Healing Touch (druid) — softer angelic chime.
   heal_touch:       'Magic/heal_angelic_02',
+  // Direct alias for the same sample so Nature's Healing's
+  // CARD_SFX_OVERRIDES entry can reference it by raw name.
+  heal_angelic_02:  'Magic/heal_angelic_02',
   // Revivify (paladin) — third angelic chime, only fires when an ally
   // is actually reanimated.
   heal_revivify:    'Magic/heal_angelic_03',

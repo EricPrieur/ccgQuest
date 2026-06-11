@@ -694,6 +694,44 @@ export class Character {
         }
         break;
       }
+      case 'heal_n_negative_effects': {
+        // Bear Fat Rations Meal tick — strip up to N Ailment stacks
+        // off the eater in Bleed → Poison → Fire → Ice → Shock
+        // priority order. Mirrors the resolveEffect player path
+        // (healOneNegativeEffectOn) but logs through the buff line
+        // so the meal banner shows the heal source.
+        const order = [
+          { key: 'BLEED',  label: 'Bleed',  color: '#ff5050' },
+          { key: 'POISON', label: 'Poison', color: '#3cc83c' },
+          { key: 'FIRE',   label: 'Fire',   color: '#dc8c28' },
+          { key: 'ICE',    label: 'Ice',    color: '#78c8ff' },
+          { key: 'SHOCK',  label: 'Shock',  color: '#ffe650' },
+        ];
+        let remaining = Math.max(1, effectValue || 1);
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        while (remaining > 0) {
+          let cleared = false;
+          for (const s of order) {
+            if (!this.getStatus) break;
+            if ((this.getStatus(s.key) || 0) > 0) {
+              this.removeStatus(s.key, 1);
+              logs.push({
+                text: `  ${buff.name}: -1 ${s.label}`,
+                color: s.color,
+                buff,
+                sfxKey: tickSfx,
+                sfxCount: buff.tickSfxCount || 1,
+                sfxStagger: buff.tickSfxStagger || 150,
+              });
+              cleared = true;
+              break;
+            }
+          }
+          if (!cleared) break;
+          remaining--;
+        }
+        break;
+      }
       case 'discard_deck_random': {
         // Bad Rations Meal tick — roll 0..effectValue, discard that
         // many cards from the deck (player.takeDamageFromDeck). Value

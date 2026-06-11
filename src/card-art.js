@@ -303,10 +303,34 @@ export const CARD_ART_MAP = {
   steel_dagger: 'SteelDagger.jpg',
   scroll_of_potency: 'ScrollOfPotency.jpg',
   minor_healing_potion: 'MinorHealingPotion.jpg',
+  potion_of_greater_healing: 'PotionOfGreaterHealing.jpg',
   wand_of_fire: 'WandOfFire.jpg',
   chain_shirt: 'ChainShirt.jpg',
   lambas_bread: 'LambasBread.jpg',
   fresh_fish: 'FishFood.jpg',
+  frostbloom: 'Frostbloom.jpg',
+  bag_of_herbs: 'BagOfHerbs.jpg',
+  dire_claws: 'DireBearClaws.jpg',
+  dire_bite: 'DireBearBite.jpg',
+  dire_hide: 'TougHide.jpg',
+  bear_roar: 'DireBear.jpg',
+  a_storm_is_coming: 'RocCircling.jpg',
+  // Dire Bear loot drops. JPG names are the converted output of the
+  // raw PNG uploads — drop the source PNGs into public/assets/Cards/
+  // under these CamelCase names and run `npm run png-to-jpg`.
+  bear_teeth_necklace: 'BearTeethNecklace.jpg',
+  bear_claw:           'BearClaw.jpg',
+  bear_hide_armor:     'BearHideArmor.jpg',
+  bear_fat_rations:    'BearFatRations.jpg',
+  roaring_helm:        'RoaringHelm.jpg',
+  winterheart_pelt:    'WinterheartPelt.jpg',
+  // Baby Roc loot drops. JPGs already converted in public/assets/Cards/.
+  stormwing_feather:     'StormwingFeather.jpg',
+  roc_chick_leg:         'RocChickLeg.jpg',
+  roc_talon_dagger:      'RocTalonDagger.jpg',
+  roc_eggshell_shield:   'RocEggshellShield.jpg',
+  lost_adventurers_ring: 'LostAdventurersRing.jpg',
+  unhatched_roc_egg:     'UnhatchedRocEgg.jpg',
   // Giant Frog enemy deck (River Cave Mouth lake-rock ambush).
   baby_frog_swarm:    'BabyFrogSwarm.jpg',
   frog_bite:          'GiantFrog.jpg',
@@ -436,6 +460,7 @@ export const CARD_ART_MAP = {
   sahuagin_sentinel: 'SahuaginSentinel.jpg',
   sahuagin_priest: 'SahuaginPriest.jpg',
   sahuagin_baron: 'SahuaginBaron.jpg',
+  dire_bear: 'DireBear.jpg',
   // Piranhas Swarm boss splash needs `getCardArt('piranhas_swarm')`
   // to resolve — the entry below in POWER_ART_MAP only feeds power
   // lookups, so without this the character-splash overlay fell
@@ -527,6 +552,8 @@ export const POWER_ART_MAP = {
   armor: 'ArmorPower.jpg',
   split: 'SplitSlime.jpg',
   dire_fury: 'DireFury.jpg',
+  // Dire Bear's Feral Wrath passive — reuses the bear-claw art.
+  feral_wrath: 'DireBearClaws.jpg',
   overwhelm: 'MimicInAntiquity.jpg',
   wolf_pack: 'WolfPackPower.jpg',
   piranhas_swarm: 'PiranhasSwarm.jpg',

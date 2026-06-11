@@ -1366,7 +1366,7 @@ export function createTharnagInteriorMap() {
     // — because the downstream chain (Stairs of the Infinite → Last
     // Watch → Valley → Cave → Nest) is unfinished. Flip wip off when
     // the chain ships.
-    { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.', wip: true },
+    { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.' },
   ];
 
   for (const data of nodes) {
@@ -1714,7 +1714,20 @@ export function createLastWatchMap() {
     // Watch Keep — Guard Captain audience + Rest/Leave choice. First
     // visit runs the full dialog (createLastWatchAudienceEncounter);
     // subsequent visits route to the revisit factory (choice only).
-    { id: 'last_watch_keep', name: 'Watch Keep', description: 'The interior of the keep. The captain of the watch greets you here.', encounterId: 'last_watch_audience', connections: ['last_watch_courtyard'], position: [560, 340], mapArea: 'last_watch', canRevisit: true },
+    { id: 'last_watch_keep', name: 'Watch Keep', description: 'The interior of the keep. The captain of the watch greets you here.', encounterId: 'last_watch_audience', connections: ['last_watch_courtyard', 'last_watch_supplies', 'last_watch_shrine'], position: [560, 340], mapArea: 'last_watch', canRevisit: true },
+    // Supply Cache — one-time captain hand-off. Rolls 1 random item
+    // from dwarven_market_loot. Latches lastWatchSupplyTaken; the
+    // startNodeEncounter gate short-circuits any revisit so the
+    // dialog never replays. Hangs off the keep so the player has to
+    // meet the captain before the cache opens up visually.
+    { id: 'last_watch_supplies', name: 'Supply Cache', description: 'A long storeroom hung with cloaks and stacked with dwarven gear.', encounterId: 'last_watch_supply_cache', connections: ['last_watch_keep'], position: [860, 240], mapArea: 'last_watch', canRevisit: true },
+    // Stormwatcher's Shrine — open-air shrine to Marthammor Duin
+    // (Watcher Over Wanderers), tucked above the keep where dwarves
+    // bound for the surface used to come for a blessing before the
+    // descent. Dormant for now: short flavor beat on first arrival,
+    // no mechanical payoff yet — leaves a hook for future content
+    // (rekindle the brazier, etc).
+    { id: 'last_watch_shrine', name: "Stormwatcher's Shrine", description: 'A small stone shrine open to the wind, its brazier long cold.', encounterId: 'stormwatchers_shrine_dormant', connections: ['last_watch_keep'], position: [780, 440], mapArea: 'last_watch', canRevisit: true },
     // Down to the Valley — always visible. Walking onto it walks to
     // the Valley Path node on the same map; the well-rested gate is
     // enforced at click time on last_watch_to_valley (toasts "Go Rest
@@ -1747,7 +1760,7 @@ export function createHighValley1Map() {
     high_valley_1: 'Maps/HighValley1.jpg',
   };
   const nodes = [
-    { id: 'high_valley_1_entry', name: 'Valley Floor', description: 'The trail flattens into the valley proper.', encounterId: '', connections: ['high_valley_1_b'], position: [90, 720], mapArea: 'high_valley_1', canRevisit: true, passthroughTo: 'last_watch_valley_path' },
+    { id: 'high_valley_1_entry', name: 'Valley Floor', description: 'The trail flattens into the valley proper.', encounterId: 'valley_floor_arrival', connections: ['high_valley_1_b'], position: [90, 720], mapArea: 'high_valley_1', canRevisit: false, passthroughTo: 'last_watch_valley_path' },
     { id: 'high_valley_1_b',     name: 'Stone Cairn',  description: 'A stack of stones marks the trail.',           encounterId: '', connections: ['high_valley_1_entry', 'high_valley_1_c'], position: [740, 700], mapArea: 'high_valley_1', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something on the trail ahead.' },
     { id: 'high_valley_1_c',     name: 'Ridge Bend',   description: 'The path bends along a rocky ridge.',          encounterId: '', connections: ['high_valley_1_b', 'high_valley_1_exit'],    position: [820, 560], mapArea: 'high_valley_1', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The trail bends out of sight.' },
     { id: 'high_valley_1_exit',  name: 'Onward',       description: 'The valley narrows ahead.',                    encounterId: '', connections: ['high_valley_1_c'],                          position: [610, 510], mapArea: 'high_valley_1', canRevisit: true, passthroughTo: 'high_valley_2_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'The valley narrows ahead.' },
@@ -1769,14 +1782,15 @@ export function createHighValley2Map() {
     high_valley_2: 'Maps/HighValley2.jpg',
   };
   const nodes = [
-    { id: 'high_valley_2_entry',     name: 'Upper Valley', description: 'The trail opens into a quiet upper valley.', encounterId: '', connections: ['high_valley_2_frostbloom'], position: [750, 750], mapArea: 'high_valley_2', canRevisit: true, passthroughTo: 'high_valley_1_exit' },
-    // Frostbloom patch — the rare flower Olbrim was after. Encounter
-    // hook left blank for now; future content fills in the find.
-    { id: 'high_valley_2_frostbloom', name: 'Frostbloom Patch', description: 'A scattering of pale blue flowers blooms among the rocks.', encounterId: '', connections: ['high_valley_2_entry', 'high_valley_2_c'], position: [930, 570], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something pale catches the light ahead.' },
+    { id: 'high_valley_2_entry',     name: 'Upper Valley', description: 'The trail opens into a quiet upper valley.', encounterId: 'upper_valley_arrival', connections: ['high_valley_2_frostbloom'], position: [750, 750], mapArea: 'high_valley_2', canRevisit: false, passthroughTo: 'high_valley_1_exit' },
+    // Frostbloom patch — Olbrim's rare flower. One-shot encounter
+    // awards the party a Frostbloom card on the LOOT phase.
+    { id: 'high_valley_2_frostbloom', name: 'Frostbloom Patch', description: 'A scattering of pale blue flowers blooms among the rocks.', encounterId: 'frostbloom_patch', connections: ['high_valley_2_entry', 'high_valley_2_c'], position: [930, 570], mapArea: 'high_valley_2', canRevisit: false, discoverable: true, hiddenName: '???', hiddenDescription: 'Something pale catches the light ahead.' },
     { id: 'high_valley_2_c',         name: 'Cold Spring', description: 'A spring trickles out of the rock face — startlingly cold.', encounterId: '', connections: ['high_valley_2_frostbloom', 'high_valley_2_d'], position: [800, 520], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A glint of water on the rocks.' },
-    { id: 'high_valley_2_d',         name: 'Deeper Path', description: 'The valley narrows further, the air thinner still.', encounterId: '', connections: ['high_valley_2_c', 'high_valley_2_cave_entrance'], position: [660, 500], mapArea: 'high_valley_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The valley narrows further.' },
+    { id: 'high_valley_2_d',         name: 'Deeper Path', description: 'The valley narrows further, the air thinner still.', encounterId: 'deeper_path_find', connections: ['high_valley_2_c', 'high_valley_2_cave_entrance'], position: [660, 500], mapArea: 'high_valley_2', canRevisit: false, discoverable: true, hiddenName: '???', hiddenDescription: 'The valley narrows further.' },
     // Cave Entrance — cross-maps into the Mountain Cave map at the
-    // foot of the cliff face.
+    // foot of the cliff face. Click also fires a short arrival
+    // dialog on the new map before the player walks deeper.
     { id: 'high_valley_2_cave_entrance', name: 'Cave Entrance', description: 'A dark opening yawns at the base of the cliff face.', encounterId: '', connections: ['high_valley_2_d'], position: [750, 420], mapArea: 'high_valley_2', canRevisit: true, passthroughTo: 'mountain_cave_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'A dark opening in the cliff face.' },
   ];
   for (const data of nodes) {
@@ -1797,9 +1811,9 @@ export function createMountainCaveMap() {
     mountain_cave: 'Maps/HighValleyMountainCave.jpg',
   };
   const nodes = [
-    { id: 'mountain_cave_entry',         name: 'Cave Entrance',  description: 'You step in out of the wind. Dwarven runes are scratched into the stone above the doorway.', encounterId: '', connections: ['mountain_cave_ruins'], position: [900, 40], mapArea: 'mountain_cave', canRevisit: true, passthroughTo: 'high_valley_2_cave_entrance' },
-    { id: 'mountain_cave_ruins',         name: 'Circular Ruins', description: 'The cave opens around a ring of broken stone — a circular ruin half-swallowed by ice.',           encounterId: '', connections: ['mountain_cave_entry', 'mountain_cave_ice_waterfall'], position: [750, 400], mapArea: 'mountain_cave', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Stone shapes loom in the gloom ahead.' },
-    { id: 'mountain_cave_ice_waterfall', name: 'Ice Waterfall',  description: 'A frozen waterfall sheets the back wall. A narrow passage threads through the ice beyond.',  encounterId: '', connections: ['mountain_cave_ruins'], position: [340, 220], mapArea: 'mountain_cave', canRevisit: true, passthroughTo: 'roc_nest_far_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'Pale light glints further in.' },
+    { id: 'mountain_cave_entry',         name: 'Cave Entrance',  description: 'You step in out of the wind. Dwarven runes are scratched into the stone above the doorway.', encounterId: 'cave_entrance_arrival', connections: ['mountain_cave_ruins'], position: [900, 40], mapArea: 'mountain_cave', canRevisit: false, passthroughTo: 'high_valley_2_cave_entrance' },
+    { id: 'mountain_cave_ruins',         name: 'Circular Ruins', description: 'The cave opens around a ring of broken stone — a circular ruin half-swallowed by ice.',           encounterId: 'circular_ruins_combat', connections: ['mountain_cave_entry', 'mountain_cave_ice_waterfall'], position: [750, 400], mapArea: 'mountain_cave', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Stone shapes loom in the gloom ahead.' },
+    { id: 'mountain_cave_ice_waterfall', name: 'Ice Waterfall',  description: 'A frozen waterfall sheets the back wall. A narrow passage threads through the ice beyond.',  encounterId: 'ice_waterfall_climb', connections: ['mountain_cave_ruins'], position: [340, 220], mapArea: 'mountain_cave', canRevisit: false, passthroughTo: 'roc_nest_far_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'Pale light glints further in.' },
   ];
   for (const data of nodes) {
     map.addNode(new MapNode(data));
@@ -1822,7 +1836,7 @@ export function createRocNestFromFarMap() {
     { id: 'roc_nest_far_entry', name: 'Ridge Trail',     description: 'You step out of the cave onto a high mountain ridge. Far ahead, something massive crowns the peak.', encounterId: '', connections: ['roc_nest_far_b'], position: [450, 760], mapArea: 'roc_nest_far', canRevisit: true, passthroughTo: 'mountain_cave_ice_waterfall' },
     { id: 'roc_nest_far_b',     name: 'Windward Pass',   description: 'The wind picks up. Loose feathers — far too large for any hawk — drift across the trail.',           encounterId: '', connections: ['roc_nest_far_entry', 'roc_nest_far_c'], position: [600, 660], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something blows on the wind ahead.' },
     { id: 'roc_nest_far_c',     name: 'Bone Field',       description: 'The path crosses a slope littered with bleached bones — old kills, picked clean.',                   encounterId: '', connections: ['roc_nest_far_b', 'roc_nest_far_d'],     position: [630, 470], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'White shapes scattered on the slope.' },
-    { id: 'roc_nest_far_d',     name: 'Final Approach',  description: 'The nest looms close now — woven from whole tree trunks. Something stirs inside.',                     encounterId: '', connections: ['roc_nest_far_c', 'roc_nest_far_exit'],  position: [180, 280], mapArea: 'roc_nest_far', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A massive shape crowns the ridge.' },
+    { id: 'roc_nest_far_d',     name: 'Final Approach',  description: 'The nest looms close now — woven from whole tree trunks. Something stirs inside.',                     encounterId: 'final_approach_check', connections: ['roc_nest_far_c', 'roc_nest_far_exit'],  position: [180, 280], mapArea: 'roc_nest_far', canRevisit: false, discoverable: true, hiddenName: '???', hiddenDescription: 'A massive shape crowns the ridge.' },
     // Exit — cross-maps into the nest interior.
     { id: 'roc_nest_far_exit',  name: 'Into the Nest',   description: 'The lip of the nest. There is no walking up here unseen.',                                            encounterId: '', connections: ['roc_nest_far_d'],                          position: [350, 240], mapArea: 'roc_nest_far', canRevisit: true, passthroughTo: 'nest_interior_entry', discoverable: true, hiddenName: '???', hiddenDescription: 'The lip of the nest itself.' },
   ];
@@ -1843,7 +1857,7 @@ export function createNestInteriorMap() {
   };
   const nodes = [
     { id: 'nest_interior_entry',  name: 'Edge of the Nest', description: 'You crest the rim. The nest spreads out like a small clearing, woven from whole tree trunks.', encounterId: '', connections: ['nest_interior_middle'], position: [260, 520], mapArea: 'nest_interior', canRevisit: true, passthroughTo: 'roc_nest_far_exit' },
-    { id: 'nest_interior_middle', name: 'Middle of the Nest', description: 'Bones and broken armor crunch underfoot. Something dark stirs deeper in the nest.',         encounterId: '', connections: ['nest_interior_entry'],  position: [700, 440], mapArea: 'nest_interior', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something stirs deeper inside.' },
+    { id: 'nest_interior_middle', name: 'Middle of the Nest', description: 'Bones and broken armor crunch underfoot. Something dark stirs deeper in the nest.',         encounterId: 'nest_middle_olbrim', connections: ['nest_interior_entry'],  position: [700, 440], mapArea: 'nest_interior', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something stirs deeper inside.' },
   ];
   for (const data of nodes) {
     map.addNode(new MapNode(data));
