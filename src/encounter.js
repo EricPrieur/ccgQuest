@@ -145,7 +145,7 @@ export function createGiantRatEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [1, 6],
-      lootCards: ['sharp_rock'],
+      lootCards: ['sharp_rock', 'rat_on_a_stick'],
     }),
   ], true);
 }
@@ -646,7 +646,7 @@ export function createCornerCellEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [1, 6],
-      lootCards: ['thorb_card'],
+      lootCards: ['thorb_card', 'rat_on_a_stick'],
     }),
   ]);
 }
@@ -2252,6 +2252,12 @@ export function createStormwatchersShrineActiveQuickEncounter() {
   return new Encounter('stormwatchers_shrine_active_quick', "Stormwatcher's Shrine",
     'The brazier still burns. The bench is still empty.', [
       new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The brazier still burns clean. Marthammor\'s shrine is open.', '!'),
+        ],
+      }),
+      new EncounterPhaseData({
         phaseType: EncounterPhase.CHOICE,
         choicePrompt: "The shrine is open. What do you do?",
         choices: [
@@ -3777,9 +3783,9 @@ export function createVolcanoChoiceRevisitEncounter() {
 // Kobold Slyblade — random encounter on the dwarven city / upper path
 // movement nodes (entry_corridor's corridor_ruins for now). Mirrors PY
 // encounter.py:create_kobold_slyblade_encounter. Loot table
-// `kobold_slyblade_loot` references cards not yet ported to JS
-// (sly_blade, shadow_cloak, kobold_smoke_bomb, kobold_lockpick_set);
-// dropping it here gives gold-only loot until those creators exist.
+// `kobold_slyblade_loot` covers utility consumables + slyblade-themed
+// gear (sly_blade, shadow_cloak, kobold_smoke_bomb). Lockpick Set was
+// retired to the codex Legacy list.
 export function createKoboldSlybladeEncounter() {
   return new Encounter('kobold_slyblade', 'Kobold Slyblade', 'A kobold assassin ambushes you from the shadows.', [
     new EncounterPhaseData({
@@ -3796,7 +3802,7 @@ export function createKoboldSlybladeEncounter() {
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
       // Pick-one slyblade pool: sundries, sly_blade, shadow_cloak,
-      // kobold_smoke_bomb, kobold_lockpick_set.
+      // kobold_smoke_bomb. (Lockpick Set is now codex-Legacy.)
       lootCards: ['kobold_slyblade_loot'],
     }),
   ]);

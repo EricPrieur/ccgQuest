@@ -61,7 +61,8 @@ import {
   createWrath, createRegrowth, createFeralSwipe, createFeralSwipeLegacy,
   createSpearThrow, createIcyBreath, createShieldBashEnemy, createZhostsBuckler,
   createWhiteClaw, createGreatclub, createQuarterstaff, createAle,
-  createTravelRations, createBandages, createTravelersClothing, createSack,
+  createTravelRations, createBandages, createCuredBandage, createTravelersClothing, createSack,
+  createRatOnAStick,
   createSteelAxe, createSteelMace, createSteelSword, createSteelGreataxe,
   createBow, createSteelDagger,
   createStuddedLeatherArmor, createRingMail,
@@ -457,7 +458,7 @@ const EFFECT_DESC_PATTERNS = {
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
   damage_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
   damaged_bonus_damage: [/\+(\d+)\s+if/i, /(\d+)\s+if\s+damaged/i],
-  poison_bonus_damage:  [/\+(\d+)\s+if\s+target\s+is\s+Poisoned/i, /\+(\d+)\s+if\s+Poison/i, /\+(\d+)\s+Poison/i],
+  poison_bonus_damage:  [/Poisoned:\s*\+(\d+)/i, /\+(\d+)\s+if\s+target\s+is\s+Poisoned/i, /\+(\d+)\s+if\s+Poison/i, /\+(\d+)\s+Poison/i],
   heal_random: [/Heal\s+1-(\d+)/i, /Heal\s+(\d+)/i, /1-(\d+)/],
   // Summon-range patterns target the upper bound of a "1-N" range so
   // the swap doesn't accidentally hit unrelated numbers earlier in
@@ -1144,11 +1145,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
     if (c.id === 'sturdy_boots') {
       const atkDmg = (c.effects.find(e => e.effectType === 'damage')?.value) || 0;
       const defBlock = (c.modes?.[0]?.effects.find(e => e.effectType === 'block')?.value) || 0;
+      const defHero = (c.modes?.[0]?.effects.find(e => e.effectType === 'gain_heroism')?.value) || 0;
       const defDmg = (c.modes?.[0]?.effects.find(e => e.effectType === 'damage_random')?.value) || 0;
-      c.description = `Attack: ${atkDmg} Dmg\nDefense: Block ${defBlock},\n${defDmg} Dmg random, Draw`;
-      c.shortDesc = `R->${atkDmg} Dmg / Def:\nBlock ${defBlock} +${defDmg} rand\nDraw`;
+      const heroLabel = defHero === 1 ? 'Heroism' : `${defHero} Heroism`;
+      c.description = `Attack: ${atkDmg} Dmg\nDefense: Block ${defBlock}, ${heroLabel},\n${defDmg} Dmg random, Draw`;
+      c.shortDesc = `Atk: ${atkDmg} Dmg / Def:\nBlock ${defBlock}, ${heroLabel}\n${defDmg} rand, Draw`;
       if (c.modes?.[0]) {
-        c.modes[0].description = `Block ${defBlock}, ${defDmg} Dmg random, Draw`;
+        c.modes[0].description = `Block ${defBlock}, ${heroLabel}, ${defDmg} Dmg random, Draw`;
       }
     }
   }
@@ -3201,6 +3204,7 @@ const CARD_REGISTRY = {
   white_claw: createWhiteClaw, zhosts_buckler: createZhostsBuckler,
   // Shop cards
   travel_rations: createTravelRations, bandages: createBandages,
+  cured_bandage: createCuredBandage, rat_on_a_stick: createRatOnAStick,
   travelers_clothing: createTravelersClothing, sack: createSack,
   steel_axe: createSteelAxe, steel_mace: createSteelMace,
   steel_sword: createSteelSword, steel_greataxe: createSteelGreataxe,
@@ -3296,7 +3300,6 @@ const LOOT_TABLES = {
   // Abandoned Camp pool — drawn 2-distinct (without replacement). Codex shows
   // single-pick odds; resolveSearchCamp does the without-replacement sampling.
   abandoned_camp_loot: [
-    { creator: createSmallPouch,         weight: 1.0 },
     { creator: createBadRations,         weight: 1.0 },
     { creator: createTorch,              weight: 0.5 },
     { creator: createSturdyBoots,        weight: 0.5 },
@@ -3321,7 +3324,6 @@ const LOOT_TABLES = {
     { creator: createBadRations,    weight: 1.0 },
     { creator: createKoboldSpear,   weight: 1.0 },
     { creator: createKoboldShield,  weight: 1.0 },
-    { creator: createSmallPouch,    weight: 1.0 },
     { creator: createChainShirt,    weight: 0.5 },
   ],
   // Stone Giant loot — Sharp Rock with a 25 % chance of a Lucky Pebble.
@@ -3537,7 +3539,6 @@ const LOOT_TABLES = {
     { creator: createChainShirt,         weight: 0.5 },
     { creator: createKoboldSpear,        weight: 0.5 },
     { creator: createKoboldShield,       weight: 0.5 },
-    { creator: createSack,               weight: 0.5 },
     { creator: createBandages,           weight: 0.5 },
     { creator: createMinorHealingPotion, weight: 0.5 },
     { creator: createChickenLeg,         weight: 0.5 },
@@ -3547,14 +3548,12 @@ const LOOT_TABLES = {
   // Pick-one across utility consumables and the slyblade's themed
   // gear. Mirrors PY loot.py:get_kobold_slyblade_loot.
   kobold_slyblade_loot: [
-    { creator: createSack,                weight: 0.5 },
     { creator: createBandages,            weight: 0.5 },
     { creator: createMinorHealingPotion,  weight: 0.5 },
     { creator: createChickenLeg,          weight: 0.5 },
     { creator: createSlyBlade,            weight: 0.5 },
     { creator: createShadowCloak,         weight: 0.5 },
     { creator: createKoboldSmokeBomb,     weight: 1.0 },
-    { creator: createKoboldLockpickSet,   weight: 0.25 },
   ],
   // Dwarven Specter — chapter-7 upper-path random encounter drop.
   // Pick-one across ghost-themed gear + the rare ectoplasm relic.
@@ -3630,7 +3629,7 @@ const LOOT_TABLE_NOTES = {
   obsidian_slime_loot:    'Random labyrinth fight in the Obsidian Wastes. 50% chance to drop anything; if it drops, pick one — Rock common, Shard / Edge / Staff / Spear uncommon, Slime card rare (slime-only).',
   drake_rider_loot:       'Kobold Drake Rider drop. 50% chance to drop anything; if it drops, pick one — Chain Shirt / Kobold Spear / Shield / sundries uncommon, Frost Drake Scale rare.',
   magma_mephit_loot:      'Magma Mephit chapter-7 random encounter. 50% chance to drop a card (Magma Rock common); gold drops on every win.',
-  kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common, Lockpick Set rare.',
+  kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
   overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
   varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace.",
@@ -7244,6 +7243,13 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       encounterTextIndex = 0;
       encounterChoiceResult = null;
       _encounterHadCombat = false;
+      // Repeat path skips startNodeEncounter, so the tension music
+      // crossfade that the first fight gets (~line 11428) never fires.
+      // Lift the same call here so the bear's growl always lands with
+      // the boss theme, repeat or not.
+      crossfadeMusic('Music/music_tension_01', 1500, 2500);
+      _lastMusicArea = null;
+      _lastMusicNodeId = null;
       advanceEncounterPhase();
       return;
     }
@@ -7261,6 +7267,13 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       encounterTextIndex = 0;
       encounterChoiceResult = null;
       _encounterHadCombat = false;
+      // Same fix as the bear-repeat block above — this path bypasses
+      // startNodeEncounter so the boss-music + mountain-wind layer
+      // never crossfade in on repeat ambushes. Lift the pair here.
+      crossfadeMusic('Music/music_tension_01', 1500, 2500);
+      playAmbienceLayer('Music/ambience_mountain_wind_01', 0.3);
+      _lastMusicArea = null;
+      _lastMusicNodeId = null;
       advanceEncounterPhase();
       return;
     }
@@ -8339,12 +8352,21 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     arriveAtNode('last_watch_valley_path', 'high_valley_1_entry');
     return;
   }
-  // High Valley 1 ↔ High Valley 2 teleport pair.
+  // High Valley 1 ↔ High Valley 2 teleport pair. Onward (the source
+  // node) has no encounter so it never naturally flips isDone — without
+  // an explicit stamp here it stays as the "???" mystery dot forever
+  // even after the player has shuttled through it dozens of times.
+  // Mark both sides discovered (clear hiddenName/Description + mark
+  // isDone) on the first traversal in either direction.
   if (nodeId === 'high_valley_1_exit'
       && currentMap.id === 'high_valley_1'
       && fromNodeId !== 'high_valley_2_entry') {
+    const here = currentMap.getNode('high_valley_1_exit');
+    if (here) { here.isDone = true; here.hiddenName = ''; here.hiddenDescription = ''; }
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('high_valley_2', createHighValley2Map);
+    const dst = currentMap.getNode('high_valley_2_entry');
+    if (dst) { dst.hiddenName = ''; dst.hiddenDescription = ''; }
     visitedNodes = new Set(['high_valley_2_entry']);
     currentMap.currentNodeId = 'high_valley_2_entry';
     arriveAtNode('high_valley_2_entry', 'high_valley_1_exit');
@@ -8353,8 +8375,12 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   if (nodeId === 'high_valley_2_entry'
       && currentMap.id === 'high_valley_2'
       && fromNodeId !== 'high_valley_1_exit') {
+    const here = currentMap.getNode('high_valley_2_entry');
+    if (here) { here.isDone = true; here.hiddenName = ''; here.hiddenDescription = ''; }
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('high_valley_1', createHighValley1Map);
+    const dst = currentMap.getNode('high_valley_1_exit');
+    if (dst) { dst.isDone = true; dst.hiddenName = ''; dst.hiddenDescription = ''; }
     visitedNodes = new Set(['high_valley_1_exit']);
     currentMap.currentNodeId = 'high_valley_1_exit';
     arriveAtNode('high_valley_1_exit', 'high_valley_2_entry');
@@ -11326,13 +11352,13 @@ function startNodeEncounter(nodeId) {
     //  - Active (repeats):            brazier burns, Olbrim sits by it,
     //                                  200 gp "Contemplate" rite offered.
     let fac;
-    if (shrineReactivated && stormwatchersShrineActiveSeen) {
-      // Player has already seen the brazier-burning intro once. Drop
-      // straight into the Contemplate / Walk on choice on every
-      // revisit, even when the player walked away to grab more gold.
+    if (shrineReactivated) {
+      // Post-reactivation: always drop into the quick "shrine is open"
+      // 1-liner + Contemplate / Walk on choice. The full bench-empty
+      // intro (`stormwatchers_shrine_active`) is no longer dispatched
+      // — the reactivation beat already covered Olbrim heading down
+      // to his shop, so subsequent visits just need the favor menu.
       fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_active_quick;
-    } else if (shrineReactivated) {
-      fac = ENCOUNTER_REGISTRY.stormwatchers_shrine_active;
     } else if (lastWatchPostRocClaimed) {
       // After Olbrim's wake-up dialog the shrine is immediately
       // accessible — Olbrim hobbled straight up here with the
@@ -12835,14 +12861,19 @@ function setupEnemyForCombat(enemyId) {
     // just sit in the nest until something kills them. onDeathSpawnChick
     // is read in countAndRemoveDeadCreatures: when an egg dies, a
     // fresh Roc Chick takes its place on the field.
+    // _endTurnSelfDamage rolls 1-3 self damage each enemy turn end —
+    // the egg cracks under the chick's struggling, so even if the
+    // player ignores it the shell eventually fails. Routed through
+    // tickEndTurnSelfDamage in endEnemyTurn, which respects armor.
     for (let i = 0; i < 2; i++) {
       const egg = new Creature({
         name: 'Unhatched Roc Egg', attack: 0, maxHp: 10, armor: 1,
-        description: 'On Death: Hatch into a Roc Chick.',
+        description: 'On Death: Hatch into a Roc Chick.\nEnd of Turn: Deal 1-3 damage to self.',
       });
       egg._hitSfxKey = 'egg_hatch_01';
       egg.onDeathSpawnChick = true;
       egg._cantAttack = true;
+      egg._endTurnSelfDamage = { min: 1, max: 3 };
       egg.exhausted = false;
       egg.justSummoned = false;
       enemy.addCreature(egg);
@@ -14903,6 +14934,21 @@ function handleEncounterChoiceClick(x, y) {
       if (completedEncounterId === 'last_watch_supply_cache') {
         lastWatchSupplyTaken = true;
       }
+      // Stormwatcher Shrine — the reactivation + active + active_quick
+      // encounters all end on a Contemplate/Walk-on CHOICE with
+      // completesEncounter: true, so the latch block in
+      // advanceEncounterPhase never runs. Mirror it here so
+      // shrineReactivated flips the moment Olbrim's brazier-lighting
+      // beat is closed (otherwise Mithril Remedies stays stuck in the
+      // pre-shrine dialog and the shop never auto-opens).
+      if (completedEncounterId === 'stormwatchers_shrine_reactivation'
+          || completedEncounterId === 'stormwatchers_shrine_active'
+          || completedEncounterId === 'stormwatchers_shrine_active_quick') {
+        if (completedEncounterId === 'stormwatchers_shrine_reactivation') {
+          shrineReactivated = true;
+        }
+        stormwatchersShrineActiveSeen = true;
+      }
       encounterChoiceResult = null;
       currentEncounter = null;
       // Clear any encounter-bg override (e.g. the exploding-bridge swap
@@ -14910,7 +14956,11 @@ function handleEncounterChoiceClick(x, y) {
       // encounter doesn't inherit it.
       _encounterBgOverride = null;
       state = GameState.MAP;
-      if (_encounterHadCombat) autosaveNow();
+      // Autosave unconditionally on encounter completion — non-combat
+      // story flag latches (Stormwatcher shrineReactivated, etc.)
+      // otherwise sit in memory until the next combat-driven autosave
+      // and a browser reload before that replays the 15-line dialog.
+      autosaveNow();
       _encounterHadCombat = false;
       return;
     }
@@ -17717,7 +17767,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overwhelm|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overwhelm|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -17816,6 +17866,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // bonus and pairs visually with the Bleed status icon.
         badge = { type: 'badge', label: 'BLEEDING',
           bg: 'rgba(110,20,30,0.92)', border: '#e06070', fg: '#ffc0c8' };
+      } else if (phrase === 'Poisoned') {
+        // Conditional rider — fires when the target currently has any
+        // Poison stacks (Sly Blade's bonus damage). Toxic-green palette
+        // so the trigger reads as a venom-gated bonus and pairs with
+        // the Poison status icon.
+        badge = { type: 'badge', label: 'POISONED',
+          bg: 'rgba(30,90,30,0.92)', border: '#7fd070', fg: '#d8f5c8' };
       } else if (phrase === 'Iced') {
         // Conditional rider on Dragon Tooth Dagger / Dragon Eye Mace
         // / future ice-payoff cards — fires when the target carries
@@ -17985,6 +18042,17 @@ function drawPerkBadge(u, cx, lineTop, lineH, fontSize) {
 
 // Count how many lines text would wrap to (matches drawIconText layout)
 function countWrappedLines(text, maxWidth, fontSize, opts = {}) {
+  // Honor explicit \n as forced line breaks — descriptions like the
+  // Roc Egg's "On Death: ...\nEnd of Turn: ..." get the right count
+  // instead of merging both clauses into a single width-wrapped block
+  // (which made callers over-allocate vertical space).
+  if (text && text.indexOf('\n') >= 0) {
+    let total = 0;
+    for (const seg of text.split('\n')) {
+      total += seg ? countWrappedLines(seg, maxWidth, fontSize, opts) : 1;
+    }
+    return Math.max(1, total);
+  }
   const tokens = tokenizeKeywordText(text, opts);
   const iconSize = Math.floor(fontSize * 1.3);
   // Reset font before EVERY measureText call — measurePerkBadgeWidth
@@ -18030,6 +18098,21 @@ function countWrappedLines(text, maxWidth, fontSize, opts = {}) {
 // Returns total height used.
 // opts.asPerk — tokenize as perk (trigger badge prefix, no keyword icons).
 function drawIconText(text, centerX, startY, maxWidth, fontSize, color = '#eee', opts = {}) {
+  // Honor explicit \n in the description — each segment renders on
+  // its own line block. Mirrors the countWrappedLines split above so
+  // measurement and rendering stay in lockstep.
+  if (text && text.indexOf('\n') >= 0) {
+    const segLineH = Math.max(fontSize + 4, Math.floor(fontSize * 1.3) + 2);
+    let cursorY = startY;
+    for (const seg of text.split('\n')) {
+      if (!seg) {
+        cursorY += segLineH;
+        continue;
+      }
+      cursorY += drawIconText(seg, centerX, cursorY, maxWidth, fontSize, color, opts);
+    }
+    return cursorY - startY;
+  }
   const tokens = tokenizeKeywordText(text, opts);
   const iconSize = Math.floor(fontSize * 1.3);
   const lineH = Math.max(fontSize + 4, iconSize + 2);
@@ -19784,16 +19867,13 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   const hasInlineBadge = creature.description
     && /\b(On Recharge|When Recharged|On Swim|On Attack|On Death|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Iced|Called)\b/.test(creature.description);
   if (hasInlineBadge) {
-    // If the badge clause is preceded by a separate sentence, add an
-    // extra row so the badge can sit on its own line with the rider
-    // still visible beneath it. Even without a leading clause we add
-    // +2 (was +1) — countWrappedLines undercounts the badge pill's
-    // padded width, which clipped Dwarven Scout's "Turn End: 1
-    // Random Dmg" by pushing "Dmg" past the box edge on the modal
-    // 240x336 preview.
-    const hasLeadingClause = /\.\s+\S/.test(creature.description) ||
-      /\b(Cannot|Can't|Will not|Won't)\b/i.test(creature.description);
-    descLines += hasLeadingClause ? 3 : 2;
+    // Single-line safety cushion — countWrappedLines now honors
+    // explicit \n breaks, so descriptions with separate clauses
+    // (Roc Egg, White Dragon Egg, etc.) report an accurate count
+    // and the old +2/+3 over-allocation left half the card empty.
+    // Keep +1 to absorb tiny mismatches between the badge pill's
+    // measured vs rendered widths.
+    descLines += 1;
   }
   const descContentH = descLines * lineH;
   const baseBoxH = Math.floor(h / 5);
@@ -23332,6 +23412,11 @@ function cancelBarrage() {
     refundOnRechargeShield(barrageRechargedCard);
     const idx = player.deck.rechargePile.indexOf(barrageRechargedCard);
     if (idx !== -1) player.deck.rechargePile.splice(idx, 1);
+    // Same exhausted-restore as cancelBeamMode / cancelCardRecharge —
+    // otherwise a Stays-in-hand card used as the Magic Missiles charge
+    // (Wand of Fire / similar) refunds back to hand unexhausted.
+    barrageRechargedCard.exhausted = !!barrageRechargedCard._preRechargeExhausted;
+    delete barrageRechargedCard._preRechargeExhausted;
     addLog('  Barrage cancelled, card refunded.', Colors.GRAY);
   }
   // Restore the original hand order.
@@ -23476,6 +23561,11 @@ function cancelBeamMode() {
     refundOnRechargeShield(c);
     const idx = player.deck.rechargePile.indexOf(c);
     if (idx !== -1) player.deck.rechargePile.splice(idx, 1);
+    // Restore the pre-cost exhausted flag — without this, a Stays-in-hand
+    // card paid as a beam charge (Wand of Fire) came back unexhausted
+    // and could be played a second time the same turn.
+    c.exhausted = !!c._preRechargeExhausted;
+    delete c._preRechargeExhausted;
   }
   if (beamRechargedCards.length > 0) {
     addLog(`  Arcane Beam cancelled, ${beamRechargedCards.length} card${beamRechargedCards.length > 1 ? 's' : ''} refunded.`, Colors.GRAY);
@@ -26898,14 +26988,18 @@ function resolveEffect(eff, caster, target) {
       // _cantAttack so the planner / manual attack flow skip it;
       // _hitSfxKey chirps egg_hatch on every blow; onDeathSpawnPlayerChick
       // is read in countAndRemoveDeadCreatures to replace the egg with
-      // a freshly hatched Roc Chick when it dies.
+      // a freshly hatched Roc Chick when it dies. _endTurnSelfDamage
+      // matches the boss-side egg — 1-3 self damage per turn end so
+      // the player's egg also cracks on a clock and hatches even if
+      // the enemy ignores it.
       const egg = new Creature({
         name: 'Unhatched Roc Egg',
         attack: 0, maxHp: 10, armor: 1,
-        description: 'On Death: Hatch into a Roc Chick.',
+        description: 'On Death: Hatch into a Roc Chick.\nEnd of Turn: Deal 1-3 damage to self.',
       });
       egg._cantAttack = true;
       egg._hitSfxKey = 'egg_hatch_01';
+      egg._endTurnSelfDamage = { min: 1, max: 3 };
       egg.onDeathSpawnPlayerChick = true;
       if (caster.addCreature(egg)) {
         addLog(`  An Unhatched Roc Egg cradles into the row!`, Colors.GREEN);
@@ -30456,6 +30550,11 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   decayIceAtTurnEnd(player, 'You');
   decayShockAtTurnEnd(player, 'You');
   decayBleedAtTurnEnd(player, 'You');
+  // Player-side self-damage tick (Unhatched Roc Egg ally cracks) +
+  // explicit dead-creature sweep so a cracked egg hatches into a
+  // player-side chick this same turn instead of next swing.
+  tickEndTurnSelfDamage(player);
+  countAndRemoveDeadCreatures();
   killEndOfTurnDeathCreatures(player);
   if (checkCombatEnd()) return;
 
@@ -30841,6 +30940,37 @@ function decayBleedAtTurnEnd(character, label) {
     if (!c) continue;
     if ((c.bleedStacks || 0) > 0 && c.isAlive) {
       c.bleedStacks -= 1;
+    }
+  }
+}
+
+// End-of-turn self-damage tick. Any creature with `_endTurnSelfDamage`
+// (e.g. Unhatched Roc Egg cracking under the chick inside) rolls a
+// random amount in [min, max] and takes it via Creature.takeDamage —
+// so armor still soaks the usual 1. Runs BEFORE the dead-creature
+// sweep so onDeathSpawnChick (egg → chick hatch) and other on-death
+// hooks still fire at end of turn instead of waiting for the next
+// player swing. Skipped on creatures that just summoned (no surprise
+// crack the same turn they arrive) and on the dead.
+function tickEndTurnSelfDamage(character) {
+  if (!character || !Array.isArray(character.creatures)) return;
+  for (const c of character.creatures) {
+    if (!c || !c.isAlive || c.justSummoned) continue;
+    const spec = c._endTurnSelfDamage;
+    if (!spec) continue;
+    const min = Math.max(0, spec.min || 0);
+    const max = Math.max(min, spec.max || min);
+    const roll = min + Math.floor(Math.random() * (max - min + 1));
+    if (roll <= 0) continue;
+    const actual = c.takeDamage(roll);
+    if (actual > 0) spawnDamageOnTarget(c, actual, Colors.RED);
+    // Same audible cue as a normal hit on the egg — chick struggling
+    // from the inside reads as another hatch chirp under the shell.
+    if (c._hitSfxKey) playSound(c._hitSfxKey, 0.7);
+    addLog(`  ${c.name} cracks: ${actual} dmg to self`, Colors.RED, null, null, c);
+    if (!c.isAlive) {
+      spawnDeathAnimation(c);
+      addLog(`  ${c.name} breaks open!`, Colors.GOLD, null, null, c);
     }
   }
 }
@@ -32719,6 +32849,13 @@ function updateEnemyTurn(dt) {
       // Bleed-bonus rider — +N if the picked target is currently bleeding
       // (Shark / Piranhas). Mirrors the ally-side applyAllyBleedingBonus.
       swingDmg = applyAllyBleedingBonus(c, target || player, swingDmg);
+      // Shock on the target adds +1 dmg taken per stack. Every single-
+      // target attack flow (enemy cards, player cards) routes this in
+      // via getIncomingDamageModifier; the single-target enemy CREATURE
+      // path used to skip it, so a shocked player took the bare swing
+      // from spiders/wolves/etc. Mirror the attackAll branch's
+      // shockBonus addition above (line ~32607).
+      swingDmg += Math.max(0, getIncomingDamageModifier(target || player));
       // Track how much damage actually got past passive defenses on
       // this single swing — used below to gate the poison rider, same
       // rule as our own allies' maybeApplyAttackPoison (no damage = no
@@ -34531,6 +34668,12 @@ function completePlayerTurnTransition() {
     decayIceAtTurnEnd(enemy, enemy.name);
     decayShockAtTurnEnd(enemy, enemy.name);
     decayBleedAtTurnEnd(enemy, enemy.name);
+    // Self-damage tick (Unhatched Roc Egg cracks) — run an explicit
+    // dead-creature sweep right after so a dying egg's onDeathSpawnChick
+    // hatches the chick this same turn instead of waiting for the
+    // next player swing to clean up.
+    tickEndTurnSelfDamage(enemy);
+    countAndRemoveDeadCreatures();
     killEndOfTurnDeathCreatures(enemy);
   }
 
@@ -37335,8 +37478,6 @@ const SHOP_INVENTORIES = {
     createTravelersClothing,
     createTorch,
     createSturdyBoots,
-    createSmallPouch,
-    createSack,
   ],
   weaponsmith: [
     createSteelDagger,
@@ -37388,7 +37529,8 @@ const SHOP_INVENTORIES = {
     createGoodberry,
     createCaveShroom,
     createFrostbloom,
-    createBagOfHerbs,
+    createBandages,
+    createCuredBandage,
     createMinorHealingPotion,
     createPotionOfGreaterHealing,
   ],
@@ -43654,6 +43796,27 @@ const FORCE_ENEMY_CARD_IDS = new Set([
   // but only ever live in the boss's deck; force them under the
   // Enemy column so they stop showing up in the Player tab.
   'acid_spit', 'baby_frog_swarm', 'frog_bite', 'giant_frog_swallow',
+  // Dire Bear's combat kit — Circular Ruins boss. Cards ship from
+  // CARD_REGISTRY for codex sourcing but only ever live in the
+  // bear's deck; pin them to the Enemy column.
+  'dire_claws', 'dire_bite', 'dire_hide', 'bear_roar', 'a_storm_is_coming',
+]);
+// Cards whose creator stays in CARD_REGISTRY (so older saves still
+// deserialize cleanly) but which are no longer offered by any active
+// loot table / shop / ability-choice list. The codex flags them with
+// the "Legacy" filter pill + a source line so it's obvious they're
+// dormant content. To return one to active rotation, drop it from
+// this set and wire it back into the relevant pool.
+const LEGACY_CARD_IDS = new Set([
+  'feral_swipe_legacy',  // Druid ability — replaced by bleed-themed Feral Swipe
+  'holy_light',          // Paladin tier 1 — swapped out for Shield Bash
+  'piercing_shot',       // Ranger ability — replaced by Elemental Weapon
+  'healing_touch',       // Druid ability — replaced by Nature's Healing
+  'kobold_lockpick_set', // Pulled from kobold_slyblade_loot (Chapter 7)
+  'sack',                // Retired — was in general_store + drake/slyblade loot
+  'small_pouch',         // Retired — was in general_store + camp/kobold loot + Rogue/Druid starters
+  'greater_cleave',      // Retired — no active source
+  'multi_shot',          // Retired — no active source
 ]);
 function getCodexCardEntries() {
   // Build a rich list from CARD_REGISTRY (cards) + token cards + powers.
@@ -43679,6 +43842,9 @@ function getCodexCardEntries() {
   for (const e of entries) {
     if (e.kind === 'card' && !e.side) {
       e.side = FORCE_ENEMY_CARD_IDS.has(e.id) ? 'enemy' : 'player';
+    }
+    if (e.kind === 'card' && LEGACY_CARD_IDS.has(e.id) && e.card) {
+      e.card._isLegacy = true;
     }
   }
 
@@ -43724,10 +43890,20 @@ function getCodexCardFilters() {
     { id: 'powers',  label: 'Powers' },
     { id: 'tokens',  label: 'Tokens' },
     { id: 'buffs',   label: 'Buffs' },
+    { id: 'legacy',  label: 'Legacy' },
   ];
 }
 
 function passesCodexCardFilter(entry, filter) {
+  // Legacy filter is exclusive: it only surfaces the dormant cards,
+  // and every OTHER filter (including 'All') hides them so they don't
+  // clutter the active rotation.
+  if (filter === 'legacy') {
+    return entry.kind === 'card' && entry.card && entry.card._isLegacy === true;
+  }
+  if (entry.kind === 'card' && entry.card && entry.card._isLegacy === true) {
+    return false;
+  }
   if (filter === 'all') return true;
   if (filter === 'powers')  return entry.kind === 'power';
   if (filter === 'summons') return entry.kind === 'creature';
@@ -46091,6 +46267,7 @@ function buildCodexSourceCache() {
     'magma_mephit','overseer_gnikan','overseer_gnikan_phase_2','varimatras',
     'giant_frog','harpies','kraken_spawn',
     'dire_bear',
+    'baby_roc',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the
@@ -46301,6 +46478,26 @@ function buildCodexSourceCache() {
                           quick_strike: 'Rogue', battle_fury: 'Warrior', feral_form: 'Druid' };
   for (const [pid, cls] of Object.entries(classPowerIds)) {
     addPower(pid, `Class power: ${cls}`);
+  }
+
+  // Legacy cards — surface a one-line note in the Sources panel so the
+  // player understands why a card with no active loot / shop entry is
+  // still in the codex. Reads from LEGACY_CARD_IDS (single source of
+  // truth). Per-card reason text lives below; falls back to a generic
+  // note for ids without an explicit blurb.
+  const LEGACY_REASONS = {
+    feral_swipe_legacy: 'Legacy: replaced by the bleed-themed Feral Swipe; no active source.',
+    holy_light:         'Legacy: swapped out of the Paladin tier-1 pool for Shield Bash.',
+    piercing_shot:      'Legacy: pulled from the Ranger ability pool in favor of Elemental Weapon.',
+    healing_touch:      'Legacy: pulled from the Druid ability pool in favor of Nature’s Healing.',
+    kobold_lockpick_set:'Legacy: pulled from the Kobold Slyblade loot pool; no active source.',
+    sack:               'Legacy: pulled from the General Store + Drake Rider / Slyblade loot pools; no active source.',
+    small_pouch:        'Legacy: pulled from the General Store, Abandoned Camp / Kobold loot, and Rogue/Druid starter decks; no active source.',
+    greater_cleave:     'Legacy: no active source.',
+    multi_shot:         'Legacy: no active source.',
+  };
+  for (const id of LEGACY_CARD_IDS) {
+    addCard(id, LEGACY_REASONS[id] || 'Legacy: kept for save back-compat; no active source.');
   }
 
   _codexSourceCache = cache;

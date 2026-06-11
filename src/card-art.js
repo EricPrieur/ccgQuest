@@ -30,6 +30,7 @@ export const CARD_ART_MAP = {
   rock_barrage: 'SharpRock.jpg',
   small_boulder: 'SharpRock.jpg',
   chicken_leg: 'ChickenLeg.jpg',
+  rat_on_a_stick: 'RatOnAStick.jpg',
 
   // === Paladin ===
   heroic_strike: 'HeroicStrikePaladin.jpg',
@@ -289,6 +290,7 @@ export const CARD_ART_MAP = {
   bad_rations: 'BadRations.jpg',
   travel_rations: 'TravelRations.jpg',
   bandages: 'Bandages.jpg',
+  cured_bandage: 'CuredBandage.jpg',
   travelers_clothing: 'TravelersClothing.jpg',
   steel_axe: 'SteelAxe.jpg',
   steel_mace: 'SteelMace.jpg',
