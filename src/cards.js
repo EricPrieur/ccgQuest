@@ -173,8 +173,8 @@ export function createCrackedBuckler() {
   return new Card({
     id: 'cracked_buckler',
     name: 'Cracked Buckler',
-    description: 'Recharge -> Gain 1 Shield.\nFirst Shield: Draw.',
-    shortDesc: 'R->+1 Shield\n1st Shield: Draw',
+    description: 'Gain Shield.\nFirst Shield: Draw.',
+    shortDesc: 'Gain Shield\n1st Shield: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -190,8 +190,8 @@ export function createBuckler() {
   return new Card({
     id: 'buckler',
     name: 'Buckler',
-    description: 'Recharge -> Gain 2 Shield.\nFirst Shield: Draw.',
-    shortDesc: 'R->+2 Shield\n1st Shield: Draw',
+    description: 'Gain 2 Shield.\nFirst Shield: Draw.',
+    shortDesc: '+2 Shield\n1st Shield: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -226,7 +226,7 @@ export function createShortStaff() {
   return new Card({
     id: 'short_staff',
     name: 'Short Staff',
-    description: 'Recharge +1 Card -> Deal 4 Damage, Gain 1 Shield.',
+    description: 'Recharge +1 Card -> Deal 4 Damage, Gain Shield.',
     shortDesc: 'R+1->4 Dmg, Shield',
     subtype: 'staff',
     cardType: CardType.ATTACK,
@@ -276,8 +276,8 @@ export function createKoboldShield() {
   return new Card({
     id: 'kobold_shield',
     name: 'Kobold Shield',
-    description: 'Apply 1 Bleed, Gain Shield.\nStays in hand.',
-    shortDesc: '1 Bleed, +Shield\nStays',
+    description: 'Deal Bleed, Gain Shield + Stays in hand.',
+    shortDesc: 'Bleed, Gain Shield\nStays in hand',
     subtype: 'light_armor',
     cardType: CardType.ATTACK,
     // FREE cost — the card never leaves the hand, so a recharge cost
@@ -348,8 +348,8 @@ export function createWhiteDragonscaleShield() {
 export function createWhiteDragonscaleArmor() {
   return new Card({
     id: 'white_dragonscale_armor', name: 'White Dragonscale Armor',
-    description: 'Recharge -> Block 7.\nDouse Fire. Attacker gains your Ice.\nDraw.',
-    shortDesc: 'R->Block 7, Draw\nDouse Fire\nAttacker gets Ice',
+    description: 'Block 7, Douse Fire, Draw.\nAttacker gains your Ice.',
+    shortDesc: 'Block 7, Draw\nDouse Fire\nAttacker gets Ice',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
@@ -840,8 +840,8 @@ export function createShieldOfFaith() {
   return new Card({
     id: 'shield_of_faith',
     name: 'Shield of Faith',
-    description: 'Recharge -> Gain 1 Shield, Draw.',
-    shortDesc: 'R->+1 Shield\nDraw',
+    description: 'Recharge -> Gain Shield, Draw.',
+    shortDesc: 'R->Gain Shield\nDraw',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -2419,8 +2419,8 @@ export function createHideInCorner() {
   return new Card({
     id: 'hide_in_corner',
     name: 'Hide in the Corner',
-    description: 'Recharge -> Block 2,\nGain 1 Shield. Draw.',
-    shortDesc: 'R->Block 2\n+1 Shield, Draw',
+    description: 'Recharge -> Block 2,\nGain Shield. Draw.',
+    shortDesc: 'R->Block 2\nGain Shield, Draw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -2601,8 +2601,8 @@ export function createSturdyBoots() {
     // Dual-mode: top-level (attack) fires on player turn; modes[0] (defense)
     // fires during the defending phase. Defense mode is the meatier line —
     // block + counter + draw — so the card rewards a save for incoming hits.
-    description: 'Attack: 2 Dmg\nDefense: Block 1, Heroism,\n2 Dmg random, Draw',
-    shortDesc: 'Atk: 2 Dmg / Def:\nBlock 1, Heroism\n2 rand, Draw',
+    description: 'Attack: 2 Dmg\nDefense: Block 2,\nDeal 2 Randomly, Draw',
+    shortDesc: 'Atk: 2 Dmg / Def:\nBlock 2, 2 Rand\nDraw',
     subtype: 'light_armor',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -2610,9 +2610,8 @@ export function createSturdyBoots() {
       new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
     ],
     modes: [
-      new CardMode('Block 1, Heroism, 2 Dmg random, Draw', [
-        new CardEffect('block', 1, TargetType.SELF),
-        new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardMode('Block 2, Deal 2 Randomly, Draw', [
+        new CardEffect('block', 2, TargetType.SELF),
         new CardEffect('damage_random', 2, TargetType.RANDOM_ENEMY),
         new CardEffect('draw', 1, TargetType.SELF),
       ]),
@@ -2621,7 +2620,7 @@ export function createSturdyBoots() {
     // Attack mode: +1.5 dmg per offset (floor). Defense mode:
     // +1 block + +1.5 random-dmg per offset. Custom sturdy_boots
     // handler rebuilds description from scaled values.
-    gamePlusOffset: { damage: 1.5, modes: [{ block: 1, gain_heroism: 1, damage_random: 1.5 }] },
+    gamePlusOffset: { damage: 1.5, modes: [{ block: 1, damage_random: 1.5 }] },
   });
 }
 
@@ -3281,8 +3280,8 @@ export function createBloodyEyePatch() {
   return new Card({
     id: 'bloody_eye_patch',
     name: 'Bloody Eye Patch',
-    description: 'Recharge ->\nBlock 1, Gain 2 Heroism for each Damaged Enemy, Draw.',
-    shortDesc: 'R->Block 1\n+2H/Damaged\n+Draw',
+    description: 'Block 1, Gain 2 Heroism\nfor each Damaged Enemy, Draw.',
+    shortDesc: 'Block 1\n+2H/Damaged\nDraw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -3389,8 +3388,8 @@ export function createBarnacleCoveredBuckler() {
   return new Card({
     id: 'barnacle_covered_buckler',
     name: 'Barnacle-Covered Buckler',
-    description: 'Recharge ->\nGain 3 Shield. Create 1 Barnacle.\nFirst Shield, On Swim: Draw.',
-    shortDesc: 'R->3 Shield\n+1 Barnacle\n1st/Swim: Draw',
+    description: 'Gain 3 Shield. Create 1 Barnacle.\nFirst Shield, On Swim: Draw.',
+    shortDesc: '+3 Shield\n+1 Barnacle\n1st/Swim: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -3402,6 +3401,9 @@ export function createBarnacleCoveredBuckler() {
     ],
     rarity: 'epic',
     tier: 1,
+    // Side preview of the Barnacle token the create_barnacle effect
+    // drops into hand — same pattern as Barnacle-Encrusted Plate.
+    previewCard: createBarnacle(),
     // +3 shield, +0.5 barnacle (floor) per offset.
     gamePlusOffset: { gain_shield: 3, create_barnacle: 0.5 },
   });
@@ -3447,19 +3449,24 @@ export function createZhostsBuckler() {
   return new Card({
     id: 'zhosts_buckler',
     name: "Zhost's Buckler",
-    description: 'Recharge -> Deal 2 Damage + 1 Ice.\nGain 2 Shields.\nFirst Shield: Draw.',
-    shortDesc: 'R->2 Dmg, 1 Ice\n+2 Shield\n1st Shield: Draw',
+    description: 'Deal 1 Damage + Ice.\nGain 2 Shields.\nFirst Shield: Draw.',
+    shortDesc: '1 Dmg + Ice\n+2 Shield\n1st Shield: Draw',
     subtype: 'light_armor',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('gain_shield', 2, TargetType.SELF),
       new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
     ],
     rarity: 'rare',
-    gamePlusOffset: { damage: 2, apply_ice: 1, gain_shield: 1 },
+    // apply_ice intentionally omitted from offset — the description
+    // reads "+ Ice" (no number), so a swapInDescription bump would
+    // either no-match (fine) OR clobber the unrelated "1" in "Deal 1
+    // Damage" via the fallback word-boundary swap. Keeping the Ice at
+    // 1 forever sidesteps that trap; damage and shield still scale.
+    gamePlusOffset: { damage: 1, gain_shield: 1 },
   });
 }
 
@@ -4028,8 +4035,8 @@ export function createRingMail() {
   return new Card({
     id: 'ring_mail',
     name: 'Ring Mail',
-    description: 'Recharge -> Block 3,\nGain Shield. Draw.',
-    shortDesc: 'R->Block 3\n+Shield, Draw',
+    description: 'Block 3, Gain Shield, Draw.',
+    shortDesc: 'Block 3, Gain Shield\nDraw',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -4349,21 +4356,20 @@ export function createScaleArmor() {
   return new Card({
     id: 'scale_armor',
     name: 'Scale Armor',
-    description: 'Block 3, Heroism, 2 Ice random, Draw.\nOn Swim: Draw 2.',
-    shortDesc: 'Block 3, Heroism\n2 Ice random, Draw\nOn Swim: Draw 2',
+    description: 'Block 3, 2 Ice Randomly, Draw.\nOn Swim: Draw 2.',
+    shortDesc: 'Block 3, 2 Ice Rand\nDraw\nOn Swim: Draw 2',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 3, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
       new CardEffect('apply_ice_random', 2, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],
     rarity: 'rare',
-    // +2 block, +1 Heroism, +1 ice per offset.
-    gamePlusOffset: { block: 2, gain_heroism: 1, apply_ice_random: 1 },
+    // +2 block, +1 ice per offset.
+    gamePlusOffset: { block: 2, apply_ice_random: 1 },
   });
 }
 
@@ -4399,8 +4405,8 @@ export function createBarnacleEncrustedPlate() {
   return new Card({
     id: 'barnacle_encrusted_plate',
     name: 'Barnacle Encrusted Plate',
-    description: 'Recharge -> Block 5,\ncreate 1-2 Barnacle. Draw.\nOn Swim: Draw 2.',
-    shortDesc: 'R->Block 5, Draw\n+1-2 Barnacle\nOn Swim: Draw 2',
+    description: 'Block 5, create 1-2 Barnacle.\nDraw.\nOn Swim: Draw 2.',
+    shortDesc: 'Block 5, Draw\n+1-2 Barnacle\nOn Swim: Draw 2',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -4791,21 +4797,20 @@ export function createGoblinRocketBoots() {
   return new Card({
     id: 'goblin_rocket_boots',
     name: 'Goblin Rocket Boots',
-    description: 'Block 1, Heroism, Fire ALL, Draw.',
-    shortDesc: 'Block 1, Heroism,\nFire ALL, Draw',
+    description: 'Block 2, Fire ALL, Draw.',
+    shortDesc: 'Block 2, Fire ALL\nDraw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 1, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'common',
     tier: 2,
-    // +1 block, +1 Heroism, +1/3 Fire to all enemies per offset (floor — +1 at +3).
-    gamePlusOffset: { block: 1, gain_heroism: 1, apply_fire_all: 1/3 },
+    // +1 block, +1/3 Fire to all enemies per offset (floor — +1 at +3).
+    gamePlusOffset: { block: 1, apply_fire_all: 1/3 },
   });
 }
 
@@ -5094,21 +5099,20 @@ export function createMoltenScaleArmorLoot() {
   return new Card({
     id: 'molten_scale_armor_loot',
     name: 'Molten Scale Armor',
-    description: 'Block 5, Heroism, Fire ALL, Draw.',
-    shortDesc: 'Block 5, Heroism,\nFire ALL, Draw',
+    description: 'Block 6, Fire ALL, Draw.',
+    shortDesc: 'Block 6, Fire ALL\nDraw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 5, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('block', 6, TargetType.SELF),
       new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    // +2 block, +1 Heroism, +1 Fire to all enemies per offset.
-    gamePlusOffset: { block: 2, gain_heroism: 1, apply_fire_all: 1 },
+    // +2 block, +1 Fire to all enemies per offset.
+    gamePlusOffset: { block: 2, apply_fire_all: 1 },
   });
 }
 
@@ -5222,8 +5226,8 @@ export function createIronforgeChainmail() {
   return new Card({
     id: 'ironforge_chainmail',
     name: 'Ironforge Chainmail',
-    description: 'Recharge -> Block 5,\nGain 1 Shield. Draw.\nOn Recharge: Gain Shield.',
-    shortDesc: 'R->Block 5\n+1 Shield, Draw\nOn R: +Shield',
+    description: 'Block 5, Gain Shield, Draw.\nOn Recharge: Gain Shield.',
+    shortDesc: 'Block 5, Gain Shield\nDraw / On R: +Shield',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -5315,8 +5319,8 @@ export function createRuneforgedBuckler() {
   return new Card({
     id: 'runeforged_buckler',
     name: 'Runeforged Buckler',
-    description: 'Recharge -> Gain 2 Shields,\nGain 2 Heroism.\nFirst Shield: Draw.',
-    shortDesc: 'R->+2 Shield\n+2 Heroism\n1st Shield: Draw',
+    description: 'Gain 2 Shields, Gain 2 Heroism.\nFirst Shield: Draw.',
+    shortDesc: '+2 Shield\n+2 Heroism\n1st Shield: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -5335,15 +5339,15 @@ export function createDwarvenTowerShield() {
   return new Card({
     id: 'dwarven_tower_shield',
     name: 'Dwarven Tower Shield',
-    description: 'Recharge a card ->\nGain 5 Shields.\nStays in hand.',
-    shortDesc: 'R+1->+5 Shield\nStays in hand',
+    description: 'Recharge a card -> Gain 4 Shields.\nStays in hand.',
+    shortDesc: 'R+1->+4 Shield\nStays in hand',
     subtype: 'heavy_armor',
     // ABILITY (not DEFENSE) so it can only be played proactively on the
     // player's turn, not reactively during the defending phase.
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('gain_shield', 5, TargetType.SELF),
+      new CardEffect('gain_shield', 4, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -5408,20 +5412,19 @@ export function createMoltenScaleArmor() {
   return new Card({
     id: 'molten_scale_armor',
     name: 'Molten Scale',
-    description: 'Block 5, Heroism, Fire ALL, Draw.',
-    shortDesc: 'Block 5, Heroism,\nFire ALL, Draw',
+    description: 'Block 6, Fire ALL, Draw.',
+    shortDesc: 'Block 6, Fire ALL\nDraw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 5, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('block', 6, TargetType.SELF),
       new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
-    // Same offset as the player loot variant: +2 block, +1 Heroism, +1 Fire ALL.
-    gamePlusOffset: { block: 2, gain_heroism: 1, apply_fire_all: 1 },
+    // Same offset as the player loot variant: +2 block, +1 Fire ALL.
+    gamePlusOffset: { block: 2, apply_fire_all: 1 },
   });
 }
 
@@ -5471,8 +5474,8 @@ export function createMephitSkinSandals() {
   return new Card({
     id: 'mephit_skin_sandals',
     name: 'Mephit Skin Sandals',
-    description: 'Block 2, 2 Fire random, Scry 2.\nBurning: Douse Fire.',
-    shortDesc: 'Block 2, 2 Fire rand\nScry 2 / Burning:\nDouse Fire',
+    description: 'Block 2, 2 Fire Randomly, Scry 2.\nBurning: Douse Fire.',
+    shortDesc: 'Block 2, 2 Fire Rand\nScry 2 / Burning:\nDouse Fire',
     subtype: 'clothing',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -5499,8 +5502,8 @@ export function createMephitSkinGloves() {
   return new Card({
     id: 'mephit_skin_gloves',
     name: 'Mephit Skin Gloves',
-    description: 'Block 2, +2 Ignite, Scry 2.\nBurning: Douse 1 Fire, +Ignite.',
-    shortDesc: 'Block 2, +2 Ignite\nScry 2 / Burning:\nDouse 1, +Ignite',
+    description: 'Block 2, +2 Ignite, Scry 2.\nBurning: +2 Ignite.',
+    shortDesc: 'Block 2, +2 Ignite\nScry 2 / Burning:\n+2 Ignite',
     subtype: 'clothing',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -5508,17 +5511,14 @@ export function createMephitSkinGloves() {
       new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('gain_ignite', 2, TargetType.SELF),
       new CardEffect('scry_pick', 2, TargetType.SELF),
-      new CardEffect('if_burning_heal_fire', 1, TargetType.SELF),
-      new CardEffect('if_burning_gain_ignite', 1, TargetType.SELF),
+      new CardEffect('if_burning_gain_ignite', 2, TargetType.SELF),
     ],
     rarity: 'uncommon',
     tier: 2,
-    // +1 block, +1 Ignite, +1 Douse (if_burning_heal_fire),
-    // +1 Ignite while burning per offset.
+    // +1 block, +1 Ignite, +1 Ignite while burning per offset.
     gamePlusOffset: {
       block: 1,
       gain_ignite: 1,
-      if_burning_heal_fire: 1,
       if_burning_gain_ignite: 1,
       scry_pick: 1,
     },
@@ -6047,8 +6047,8 @@ export function createDwarvenGreaves() {
   return new Card({
     id: 'dwarven_greaves',
     name: 'Dwarven Greaves',
-    description: 'Recharge -> Block 3.\nStrip 2 Shields randomly. Draw.\nOn Recharge: Gain Shield.',
-    shortDesc: 'R->Block 3\nStrip 2 Shield\nDraw / On R: +Shield',
+    description: 'Block 3, Strip 2 Shields randomly, Draw.\nOn Recharge: Gain Shield.',
+    shortDesc: 'Block 3\nStrip 2 Shield\nDraw / On R: +Shield',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -6107,8 +6107,8 @@ export function createDwarvenBrew() {
   return new Card({
     id: 'dwarven_brew',
     name: 'Dwarven Brew',
-    description: 'Consume -> Heal 2, Gain 1 Shield.\nBeverage: +Shield for 4 turns.',
-    shortDesc: 'C->Heal 2, +1 Sh\nBeverage: +Shld/4T',
+    description: 'Consume -> Heal 2, Gain Shield.\nBeverage: +Shield for 4 turns.',
+    shortDesc: 'C->Heal 2, +Shield\nBeverage: +Shld/4T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -6223,20 +6223,19 @@ export function createFishScaleBoots() {
     id: 'fish_scale_boots',
     name: 'Fish Scale Boots',
     // "On Swim" prefix renders as a pill thanks to inlineBadgeRe.
-    description: 'Block 1, Heroism, Ice ALL, Draw.\nOn Swim: Draw 2.',
-    shortDesc: 'Block 1, Heroism,\nIce ALL, Draw\nOn Swim: Draw 2',
+    description: 'Block 2, Ice ALL, Draw.\nOn Swim: Draw 2.',
+    shortDesc: 'Block 2, Ice ALL\nDraw\nOn Swim: Draw 2',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 1, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('on_swim_recharge_draw', 2, TargetType.SELF),
     ],
     rarity: 'rare',
-    gamePlusOffset: { block: 1, gain_heroism: 1, apply_ice_all: 1 },
+    gamePlusOffset: { block: 1, apply_ice_all: 1 },
   });
 }
 

@@ -566,6 +566,20 @@ const EFFECT_DESC_PATTERNS = {
   // prefix via the custom branch in applyGamePlusOffsetInPlace.
   // No pattern needed here — the swap won't fire for an empty base.
 };
+// "No-number → number" insertion patterns for cards whose base value is
+// 1 and whose description omits the leading digit (Cracked Buckler:
+// "Gain Shield" instead of "Gain 1 Shield"). When a normal swap can't
+// find a number to bump, these insert the scaled value before the
+// keyword so the offset still shows in text. Each entry is a regex
+// that matches the no-number form; the value gets inserted between the
+// captured prefix and the keyword.
+const EFFECT_DESC_INSERT_PATTERNS = {
+  gain_shield: [/\bGain\s+(Shield)\b/i],
+  // "Deal Bleed" (no number) on Kobold Shield — scales the apply_bleed
+  // value into the displayed text without clobbering the literal "1"
+  // tokens elsewhere in the description.
+  apply_bleed: [/\bDeal\s+(Bleed)\b/i],
+};
 function swapInDescription(s, oldVal, newVal, etype) {
   if (typeof s !== 'string') return s;
   const patterns = EFFECT_DESC_PATTERNS[etype];
@@ -577,6 +591,21 @@ function swapInDescription(s, oldVal, newVal, etype) {
         const idx = s.indexOf(m[0]);
         const inside = m[0].replace(m[1], String(newVal));
         return s.slice(0, idx) + inside + s.slice(idx + m[0].length);
+      }
+    }
+  }
+  // No-number → number insertion. Only fires when base was 1 — that's
+  // the only base value cards omit (the "Gain Shield" / "Gain Heroism"
+  // shorthand). Inserts the bumped value before the keyword.
+  if (oldVal === 1) {
+    const inserts = EFFECT_DESC_INSERT_PATTERNS[etype];
+    if (inserts) {
+      for (const re of inserts) {
+        const m = s.match(re);
+        if (m && m[1]) {
+          const idx = s.indexOf(m[1], m.index);
+          return s.slice(0, idx) + `${newVal} ` + s.slice(idx);
+        }
       }
     }
   }
@@ -1150,13 +1179,11 @@ function applyGamePlusOffsetInPlace(c, offset) {
     if (c.id === 'sturdy_boots') {
       const atkDmg = (c.effects.find(e => e.effectType === 'damage')?.value) || 0;
       const defBlock = (c.modes?.[0]?.effects.find(e => e.effectType === 'block')?.value) || 0;
-      const defHero = (c.modes?.[0]?.effects.find(e => e.effectType === 'gain_heroism')?.value) || 0;
       const defDmg = (c.modes?.[0]?.effects.find(e => e.effectType === 'damage_random')?.value) || 0;
-      const heroLabel = defHero === 1 ? 'Heroism' : `${defHero} Heroism`;
-      c.description = `Attack: ${atkDmg} Dmg\nDefense: Block ${defBlock}, ${heroLabel},\n${defDmg} Dmg random, Draw`;
-      c.shortDesc = `Atk: ${atkDmg} Dmg / Def:\nBlock ${defBlock}, ${heroLabel}\n${defDmg} rand, Draw`;
+      c.description = `Attack: ${atkDmg} Dmg\nDefense: Block ${defBlock},\nDeal ${defDmg} Randomly, Draw`;
+      c.shortDesc = `Atk: ${atkDmg} Dmg / Def:\nBlock ${defBlock}, ${defDmg} Rand\nDraw`;
       if (c.modes?.[0]) {
-        c.modes[0].description = `Block ${defBlock}, ${heroLabel}, ${defDmg} Dmg random, Draw`;
+        c.modes[0].description = `Block ${defBlock}, Deal ${defDmg} Randomly, Draw`;
       }
     }
   }
@@ -9164,15 +9191,32 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   }
   if (!skipEncounter && nodeId === 'grand_hall_side_entry'
       && node.isDone && currentMap.id === 'tharnag_interior') {
-    // After the throne audience the party can't leave Tharnag until
-    // they've slept in the Personal Quarters. Mirrors PY
-    // game.py:2497-2501.
-    if (throneAudienceComplete && !quartersRested) {
-      showStyledToast('You should rest in the Personal Quarters before leaving.', 'recharge', 2500);
-      state = GameState.MAP;
-      return;
-    }
+    // Side Entry → cross-map exit. The "you should rest" gate that
+    // used to live here has moved to the Mid Stairs → Lower Stairs
+    // descent (see arriveAtNode below). Reaching Side Entry after
+    // the audience now requires either resting first OR sneaking
+    // back via Lower Stairs from the artisan lane, both of which
+    // already satisfy the rest requirement upstream.
     transitionToTharnagSideDoor(nodeId);
+    return;
+  }
+  // Gate on the descent from Middle Stairs to Lower Stairs — after the
+  // throne audience the party can't head back down (and thus can't
+  // reach the Artisan Hall lane or the Side Entry exit) until they've
+  // slept in the Personal Quarters. arriveAtNode already stamped
+  // currentNodeId = lower_stairs at the top, so we have to MANUALLY
+  // revert the position back to mid_stairs before returning, otherwise
+  // the player ends up parked on Lower Stairs even though the toast
+  // says they can't go.
+  if (!skipEncounter && nodeId === 'grand_hall_lower_stairs'
+      && fromNodeId === 'grand_hall_mid_stairs'
+      && currentMap.id === 'tharnag_interior'
+      && throneAudienceComplete && !quartersRested) {
+    currentMap.currentNodeId = 'grand_hall_mid_stairs';
+    visitedNodes.delete('grand_hall_lower_stairs');
+    _lastArrivalFrom = null;
+    showStyledToast('You should rest in the Personal Quarters before leaving.', 'recharge', 2500);
+    state = GameState.MAP;
     return;
   }
   // Grand Hall Main Entrance — cross-map exit to the Tharnag
@@ -10428,11 +10472,12 @@ function hydrateMapFromGlobalState(map) {
         n.hiddenDescription = '';
       }
     }
-    // Mithril Remedies — the Olbrim side quest seed. Opens at the
-    // same beat as the rest of the artisan hall lane. _stateRevealed
-    // forces visibility regardless of the player's current node
-    // (otherwise the indoor-area render gate hides it until the
-    // player stands on a direct neighbor).
+  }
+  // Mithril Remedies — separate gate. The shop's dialog references
+  // Valdrisa by name + assumes she's in the party, so the unlock waits
+  // for valdrisaJoined (Personal Quarters rest → valdrisa_encounter)
+  // rather than firing the moment the throne audience finishes.
+  if (map.id === 'tharnag_interior' && valdrisaJoined) {
     const mr = map.getNode('mithril_remedies');
     if (mr) {
       mr.isLocked = false;
@@ -12010,6 +12055,11 @@ function advanceEncounterPhase() {
           n.hiddenDescription = '';
         }
       }
+      // Mithril Remedies is NOT unlocked here on purpose — the shop's
+      // dialog assumes Valdrisa is in the party, so we keep the node
+      // locked until valdrisaJoined latches (Personal Quarters rest →
+      // valdrisa_encounter). Unlock lives in the valdrisa_encounter
+      // completion handler below + the hydrate path mirrors it.
     }
     if (completedEncounterId === 'upper_stairs_return') {
       upperStairsReturnSeen = true;
@@ -12059,6 +12109,21 @@ function advanceEncounterPhase() {
     }
     if (completedEncounterId === 'valdrisa_encounter') {
       valdrisaJoined = true;
+      // Mithril Remedies opens the moment Valdrisa joins — the shop
+      // dialog references her by name + assumes she's in the party.
+      // Gating the unlock on valdrisaJoined (instead of the earlier
+      // throneAudienceComplete beat) keeps the side quest beats lined
+      // up. _stateRevealed forces the node visible even when the
+      // player isn't on a direct neighbor.
+      if (currentMap && currentMap.id === 'tharnag_interior') {
+        const mr = currentMap.getNode('mithril_remedies');
+        if (mr) {
+          mr.isLocked = false;
+          mr.hiddenName = '';
+          mr.hiddenDescription = '';
+          mr._stateRevealed = true;
+        }
+      }
     }
     if (completedEncounterId === 'tharnag_side_door') {
       // Welcome to Tharnag — after the dialog + level-up + companion
@@ -24012,21 +24077,21 @@ function resolveEffect(eff, caster, target) {
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
       // Feral Wrath conversion — consume 1 charge of the Feral Wrath
-      // buff (if any) and convert ALL of the finalized damage to Bleed
-      // on the target. No damage lands; the whole swing becomes bleed
-      // stacks. Stamped AFTER the damage dispatch below (no-op for the
-      // damage call since dmg is zeroed here).
+      // buff (if any) and split the finalized damage: half (rounded UP)
+      // converts to Bleed, the rest still lands as damage. Mirrors the
+      // multi-target feralWrathSplit helper. Bleed stamps AFTER damage
+      // dispatch (below) so a fatal swing isn't robbed of its hit.
       let wrathBleed = 0;
       const wrathBuff = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
       if (wrathBuff && (wrathBuff.stacks || 0) > 0 && dmg > 0) {
-        wrathBleed = dmg;
-        dmg = 0;
+        wrathBleed = Math.ceil(dmg / 2);
+        dmg -= wrathBleed;
         wrathBuff.stacks -= 1;
         wrathBuff.effectValue = wrathBuff.stacks;
         if (wrathBuff.stacks <= 0) {
           caster.combatBuffs = caster.combatBuffs.filter(b => b !== wrathBuff);
         }
-        addLog(`  Feral Wrath: damage → ${wrathBleed} Bleed`, Colors.RED);
+        addLog(`  Feral Wrath: ${wrathBleed} Bleed (${dmg} damage lands)`, Colors.RED);
       }
       const unpreventable = consumeUnpreventableBuff(caster);
       // Enemy reactively plays defense cards before damage lands on enemy character —
@@ -25454,20 +25519,14 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'damage_random': {
-      // Sturdy Boots defense mode counter — pick a random alive enemy
-      // creature, or the enemy character if none are alive, and deal N
-      // damage there. Invulnerable / vanished creatures are skipped so
-      // the hit doesn't waste on a no-soak target. Heroism is added to
-      // the hit and consumed (matches the standard damage handler), and
-      // rage adds its flat bonus too — so stockpiled buffs still pay
-      // off on the counter swing. Shock-on-target (+1/stack incoming)
-      // and Hunter's Mark (consume 1 stack → double damage) also
-      // apply, so a primed enemy still eats the bonus on the random
-      // counter.
-      const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
-      const t = candidates.length > 0
-        ? candidates[Math.floor(Math.random() * candidates.length)]
-        : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
+      // Sturdy Boots defense mode counter — pick a random target from
+      // the flat pool of alive enemy creatures AND the boss (when not
+      // invulnerable/vanished), each with equal weight. Heroism is
+      // added to the hit and consumed (matches the standard damage
+      // handler), and rage adds its flat bonus too. Shock-on-target
+      // (+1/stack incoming) and Hunter's Mark (consume 1 stack →
+      // double damage) also apply.
+      const t = pickRandomEnemyTargetForEffect();
       if (!t) break;
       const heroism = caster.heroism || 0;
       if (heroism > 0) {
@@ -25503,15 +25562,11 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'apply_ice_random': {
-      // Scale Armor (defense) — pick a random alive enemy creature,
-      // or the enemy character if none are alive, and apply N Ice
-      // there. Invulnerable / vanished creatures are filtered out.
-      // Mirrors apply_fire_random with the Fire/Ice swap (and uses
-      // the Fire-cancel branch in reverse: Ice cancels Fire 1:1).
-      const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
-      const t = candidates.length > 0
-        ? candidates[Math.floor(Math.random() * candidates.length)]
-        : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
+      // Scale Armor (defense) — pick a random target from the flat
+      // pool of alive enemy creatures AND the boss (when not
+      // invulnerable/vanished), each with equal weight. Mirrors
+      // apply_fire_random with the Fire/Ice swap (Ice cancels Fire 1:1).
+      const t = pickRandomEnemyTargetForEffect();
       if (!t) break;
       if (t instanceof Creature) {
         const cancel = Math.min(t.fireStacks || 0, eff.value);
@@ -25596,14 +25651,12 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'apply_fire_random': {
-      // Goblin Rocket Boots — pick a random alive enemy creature, or
-      // the enemy character if none are alive, and apply N Fire there.
-      // Invulnerable / vanished creatures (boss shells, Vanish power)
-      // are filtered out so the fire doesn't waste on a no-soak target.
-      const candidates = (enemy.creatures || []).filter(c => c.isAlive && !c._invulnerable);
-      const t = candidates.length > 0
-        ? candidates[Math.floor(Math.random() * candidates.length)]
-        : (enemy.isAlive && !enemy._invulnerable ? enemy : null);
+      // Goblin Rocket Boots — pick a random target from the flat pool
+      // of alive enemy creatures AND the boss (when not invulnerable
+      // / vanished), each with equal weight. Invulnerable / vanished
+      // targets are filtered out so the fire doesn't waste on a
+      // no-soak target.
+      const t = pickRandomEnemyTargetForEffect();
       if (!t) break;
       let appliedFire = 0;
       if (t instanceof Creature) {
@@ -30956,6 +31009,15 @@ function tickBleedOnAttack(attacker, label) {
     if (player && Array.isArray(player.creatures) && player.creatures.includes(attacker)) {
       player.removeDeadCreatures();
     } else if (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(attacker)) {
+      // Kill-count fights (Harpies killTarget=3, Wolf Pack, etc.) —
+      // credit the bleed-out kill before the inline removal, otherwise
+      // a harpy that dies from bleed silently drops off the field and
+      // the encounter never ticks down to victory. The normal
+      // countAndRemoveDeadCreatures path is bypassed here.
+      if (killTarget > 0) {
+        killCount += 1;
+        addLog(`  Kill count: ${killCount}/${killTarget}`, Colors.GOLD);
+      }
       enemy.removeDeadCreatures();
     }
   }
@@ -32846,6 +32908,14 @@ function updateEnemyTurn(dt) {
             }
           }
         }
+        // Bleed tick on the attacker — mirrors the single-target path
+        // (~line 33092). Without this, attackAll creatures (Roc Chick)
+        // swing forever even when Bleed is stacked on them; the bleed
+        // would only tick on a single-target swing. Runs BEFORE the
+        // bloodfrenzy bump and the countAndRemoveDeadCreatures sweep
+        // below so a bled-out chick gets caught in the sweep right
+        // away (and its on-death hooks fire this same window).
+        tickBleedOnAttack(c, c.name);
         // Bloodfrenzy persists across the attack-all swing too.
         if (c.bloodfrenzy > 0) {
           c.rage = (c.rage || 0) + c.bloodfrenzy;
@@ -42708,6 +42778,7 @@ const CARD_SFX_OVERRIDES = {
   goodberries:              { play: 'goodberries_cast' },
   chicken_leg:              { play: 'eat' },
   bad_rations:              { play: 'eat' },
+  bear_fat_rations:         { play: 'eat' },
   lambas_bread:             { play: 'eat' },
   travel_rations:           { play: 'eat' },
   fresh_fish:               { play: 'eat' },
@@ -44186,7 +44257,7 @@ function drawCodexFilters(L) {
     codexTab === 'characters' ? 'Search heroes / monsters…' :
     codexTab === 'perks'      ? 'Search perks…'          :
     codexTab === 'sounds'     ? 'Search sounds…'         :
-    'Search cards…';
+    'Search cards (try "common meal", "rare tier2")…';
   ctx.font = '13px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
@@ -44270,11 +44341,28 @@ function drawCodexCardGrid(L) {
   // then the search-box query (matches card name or id).
   const sideWanted = codexTab; // 'player' or 'enemy'
   const all = getCodexCardEntries();
+  // Default ordering: tier ascending, then rarity (common → epic), then
+  // alphabetical by name. So row by row the grid reads tier-1 commons
+  // first, then tier-1 uncommons, then tier-1 rares / epics, then the
+  // same sweep for tier 2, etc. Within a single tier+rarity bucket
+  // cards land alphabetically so duplicates and pairs sit together.
+  const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+  const rarityKey = (c) => {
+    const r = (c?.rarity || 'common').toLowerCase();
+    return RARITY_ORDER[r] != null ? RARITY_ORDER[r] : 99;
+  };
+  const tierKey = (c) => (typeof c?.tier === 'number' ? c.tier : 1);
   const visible = all
     .filter(e => e.side === sideWanted)
     .filter(e => passesCodexCardFilter(e, codexFilter))
     .filter(e => !codexSearchText || _codexCardTextMatches(e.card))
-    .sort((a, b) => a.card.name.localeCompare(b.card.name));
+    .sort((a, b) => {
+      const dt = tierKey(a.card) - tierKey(b.card);
+      if (dt !== 0) return dt;
+      const dr = rarityKey(a.card) - rarityKey(b.card);
+      if (dr !== 0) return dr;
+      return (a.card.name || '').localeCompare(b.card.name || '');
+    });
 
   // Card sizes — exact match to in-game so this is a faithful debug view.
   const cardW = codexShowFull ? 240 : 90;
@@ -44400,7 +44488,9 @@ function drawCodexCharacterGrid(L) {
   if (codexSearchText) {
     entries = entries.filter(e => {
       const name = e.kind === 'hero' ? e.name : e.id.replace(/_/g, ' ');
-      return _codexSearchMatches(name) || _codexSearchMatches(e.id || '');
+      // Combine name + id into a single haystack so the multi-token
+      // matcher can AND across both fields ("rat boss" finds Dire Rat).
+      return _codexSearchMatches(`${name} ${e.id || ''}`);
     });
   }
 
@@ -44630,41 +44720,72 @@ function tryCodexHScrollbarMouseMove(x) {
   return true;
 }
 
-// Search match helper — case-insensitive substring on a normalized haystack.
+// Search match helper — splits codexSearchText on whitespace and requires
+// EVERY token to appear (case-insensitive substring) in the haystack.
+// This turns the search box into an additive filter: "common meal" finds
+// cards whose combined text contains both "common" AND "meal", in any
+// order, across any of the haystack fields the caller stitched together.
 function _codexSearchMatches(haystack) {
   if (!codexSearchText) return true;
-  const q = codexSearchText.toLowerCase();
-  return (haystack || '').toLowerCase().includes(q);
+  const lower = (haystack || '').toLowerCase();
+  const tokens = codexSearchText.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+  for (const t of tokens) {
+    if (!lower.includes(t)) return false;
+  }
+  return true;
 }
 
-// Card/power text search: name, id, and the full rules text. Lets players
-// find cards by keyword (e.g. "Scry", "Bleed") instead of only by name.
-// Also matches the card's subtype both raw ("light_armor", "martial_2h")
-// and label form ("Light Armor", "2H Martial"), plus a few class-tag
-// aliases ("ranged", "two-handed") so players can search the codex with
-// the same words the inventory shows under "Can equip".
+// Card/power text search: name, id, full rules text, subtype (raw + label
+// + space form), rarity, and tier. Builds ONE combined haystack so the
+// multi-token AND-search in _codexSearchMatches lets queries like
+// "common meal" or "uncommon tier2 bleed" land on cards that match all
+// of those facets at once.
 function _codexCardTextMatches(c) {
   if (!c) return false;
-  if (_codexSearchMatches(c.name) || _codexSearchMatches(c.id) ||
-      _codexSearchMatches(c.description) || _codexSearchMatches(c.shortDesc) ||
-      _codexSearchMatches(c.effectDescription)) {
-    return true;
-  }
+  if (!codexSearchText) return true;
   const sub = (c.subtype || '').toLowerCase();
-  if (!sub) return false;
-  if (_codexSearchMatches(sub)) return true;
-  // Space-form: "light_armor" → "light armor", "martial_2h" → "martial 2h".
-  if (_codexSearchMatches(sub.replace(/_/g, ' '))) return true;
-  // Friendly label ("Light Armor", "2H Martial", "2H Simple", etc.).
-  const label = SUBTYPE_LABELS[sub];
-  if (label && _codexSearchMatches(label)) return true;
-  // Generic aliases — let "2h" / "two-handed" / "two handed" match any
-  // *_2h subtype regardless of weapon family.
-  if (sub.endsWith('_2h')) {
-    const q = (codexSearchText || '').toLowerCase().trim();
-    if (q === '2h' || q === 'two-handed' || q === 'two handed' || q === '2-handed') return true;
+  const subSpaces = sub.replace(/_/g, ' ');
+  const subLabel = SUBTYPE_LABELS[sub] || '';
+  // Tier tokens — "tier1", "tier 1", and bare "t1" all match the same
+  // card (handles whatever shorthand the player types).
+  const tierBits = c.tier
+    ? `tier${c.tier} tier ${c.tier} t${c.tier}`
+    : '';
+  // 2H alias — any *_2h subtype answers to "2h" / "two-handed" / etc.
+  const handednessAliases = sub.endsWith('_2h')
+    ? '2h two-handed two handed 2-handed'
+    : '';
+  // Buff cards (Magma Tablet buff, Scroll of Potency buff, etc.) inherit
+  // their source card's subtype/label so a search for "scrolls" lands
+  // on every buff granted by a scroll. The id convention is buff_<src>;
+  // strip the prefix to find the source in CARD_REGISTRY.
+  let sourceBits = '';
+  if (sub === 'buff' && typeof c.id === 'string' && c.id.startsWith('buff_')) {
+    const srcId = c.id.slice('buff_'.length);
+    const srcCreator = CARD_REGISTRY[srcId];
+    if (srcCreator) {
+      try {
+        const src = srcCreator();
+        if (src) {
+          const srcSub = (src.subtype || '').toLowerCase();
+          const srcSubSpaces = srcSub.replace(/_/g, ' ');
+          const srcSubLabel = SUBTYPE_LABELS[srcSub] || '';
+          sourceBits = `${srcSub} ${srcSubSpaces} ${srcSubLabel}`;
+        }
+      } catch (e) { /* skip */ }
+    }
   }
-  return false;
+  const combined = [
+    c.name, c.id,
+    c.description, c.shortDesc, c.effectDescription,
+    sub, subSpaces, subLabel,
+    c.rarity || '',
+    tierBits,
+    handednessAliases,
+    sourceBits,
+  ].filter(Boolean).join(' ');
+  return _codexSearchMatches(combined);
 }
 
 // Renders one section per loot table: title bar, optional note, then a row of
