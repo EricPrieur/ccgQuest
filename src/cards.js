@@ -3348,16 +3348,18 @@ export function createSailorsLuckyCompass() {
   return new Card({
     id: 'sailors_lucky_compass',
     name: "Sailor's Lucky Compass",
-    description: 'On Draw: Gain 1 Heroism.',
-    shortDesc: 'On Draw:\n+1 Heroism',
+    description: 'On Draw: Gain 1-3 Heroism.',
+    shortDesc: 'On Draw:\n+1-3 Heroism',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_heroism', 1, TargetType.SELF)],
+    // value here = upper bound of the random roll. Handler rolls 1..value.
+    effects: [new CardEffect('on_draw_heroism_random', 3, TargetType.SELF)],
     rarity: 'epic',
     tier: 1,
     unplayable: true,
-    gamePlusOffset: { on_draw_heroism: 0.5 },
+    // +1 to the upper bound per offset (1-3 → 1-4 → 1-5).
+    gamePlusOffset: { on_draw_heroism_random: 1 },
   });
 }
 
@@ -4130,17 +4132,19 @@ export function createMimicTongue() {
   return new Card({
     id: 'mimic_tongue',
     name: 'Mimic Tongue',
-    description: 'On Draw: Deal 1 Poison Randomly.',
-    shortDesc: 'On Draw:\n+1 Poison Rand',
+    description: '1 Poison randomly, Draw.',
+    shortDesc: '1 Poison rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_poison_random', 1, TargetType.RANDOM_ENEMY)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('apply_poison', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 1,
-    unplayable: true,
     // +0.5 poison per offset (floored).
-    gamePlusOffset: { on_draw_poison_random: 0.5 },
+    gamePlusOffset: { apply_poison: 0.5 },
   });
 }
 
@@ -4762,16 +4766,18 @@ export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'On Draw: Heal 1.',
-    shortDesc: 'On Draw:\nHeal 1',
+    description: 'Heal 1, Draw.',
+    shortDesc: 'Heal 1, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_heal', 1, TargetType.SELF)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_heal: 1 },
+    gamePlusOffset: { heal: 1 },
   });
 }
 
@@ -4961,16 +4967,18 @@ export function createFrostDrakeScale() {
   return new Card({
     id: 'frost_drake_scale',
     name: 'Frost Drake Scale',
-    description: 'On Draw: Deal 1 Ice Randomly.',
-    shortDesc: 'On Draw:\n+1 Ice Rand',
+    description: '1 Ice randomly, Draw.',
+    shortDesc: '1 Ice rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_ice_random', 1, TargetType.RANDOM_ENEMY)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('apply_ice_random', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'uncommon',
     tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_ice_random: 1 },
+    gamePlusOffset: { apply_ice_random: 1 },
   });
 }
 
@@ -5105,22 +5113,23 @@ export function createMoltenScaleArmorLoot() {
 }
 
 // Molten Scale — relic-tier drop from the Magma Drake loot pool.
-// On Draw: Gain 1 Ignite. Passive relic — never played from hand,
-// every draw stamps an Ignite stack on the player.
+// Playable relic. FREE cost: gain 1 Ignite then draw to replace itself.
 export function createMoltenScaleRelic() {
   return new Card({
     id: 'molten_scale_relic',
     name: 'Molten Scale',
-    description: 'On Draw: Gain 1 Ignite.',
-    shortDesc: 'On Draw:\n+1 Ignite',
+    description: '+1 Ignite, Draw.',
+    shortDesc: '+1 Ignite, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_ignite', 1, TargetType.SELF)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('gain_ignite', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_ignite: 1 },
+    gamePlusOffset: { gain_ignite: 1 },
   });
 }
 
@@ -5805,13 +5814,15 @@ export function createObsidianShard() {
 export function createObsidianCore() {
   return new Card({
     id: 'obsidian_core', name: 'Obsidian Core',
-    description: 'On Draw: Your next attack gains: +2 vs Armor/Shield.',
-    shortDesc: 'On Draw:\n+2 vs Armor',
-    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_obsidian_buff', 2, TargetType.SELF)],
+    description: 'Next attack: +2 vs Armor/Shield, Draw.',
+    shortDesc: '+2 vs Armor\nDraw',
+    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.FREE,
+    effects: [
+      new CardEffect('grant_obsidian_buff', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare', tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_obsidian_buff: 2 },
+    gamePlusOffset: { grant_obsidian_buff: 2 },
   });
 }
 
@@ -5843,16 +5854,18 @@ export function createQueensLocket() {
   return new Card({
     id: 'queens_locket',
     name: "The Queen's Locket",
-    description: "On Draw: Gain the Queen's Gift. A random blessing of Shield, Heroism, Heal or Draw.",
-    shortDesc: 'On Draw:\nQueen\'s Gift',
+    description: "Queen's Gift, Draw.\nA random blessing of Shield, Heroism, Heal or Draw.",
+    shortDesc: "Queen's Gift\nDraw",
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_queens_gift', 1, TargetType.SELF)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('queens_gift', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 2,
     isUnique: true,
-    unplayable: true,
     // Empty {} opts in to the codex codex no-rules-needed badge —
     // the gift roll is implicit and scales by breadth, not digits.
     gamePlusOffset: {},
@@ -6598,23 +6611,24 @@ export function createWolfFang() {
 // scaling (mirroring the bear's roar / pack mechanics).
 // ============================================================
 
-// Bear Teeth Necklace — On-draw relic. Every time it enters hand
-// it stacks 1 Bleed onto a random enemy. Unplayable; trigger lives
-// in triggerOnDraw alongside the other on_draw_* riders.
+// Bear Teeth Necklace — playable relic. FREE cost: fires 1 Bleed at a
+// random enemy then draws to replace itself in hand.
 export function createBearTeethNecklace() {
   return new Card({
     id: 'bear_teeth_necklace',
     name: 'Bear Teeth Necklace',
-    description: 'On Draw: Deal Bleed Randomly.',
-    shortDesc: 'On Draw:\nBleed random',
+    description: '1 Bleed randomly, Draw.',
+    shortDesc: '1 Bleed rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_bleed_random', 1, TargetType.SELF)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('apply_bleed', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_bleed_random: 1 },
+    gamePlusOffset: { apply_bleed: 1 },
   });
 }
 
@@ -6750,23 +6764,23 @@ export function createWinterheartPelt() {
 // the enemy egg/chick relationship from the fight itself.
 // ============================================================
 
-// Stormwing Feather — on-draw relic. Stacks 1 Shock on a random
-// enemy every time it lands in hand. Unplayable — sits in the deck
-// as a passive trigger, no active cast.
+// Playable relic. FREE cost: 1 Shock on a random enemy, then draws.
 export function createStormwingFeather() {
   return new Card({
     id: 'stormwing_feather',
     name: 'Stormwing Feather',
-    description: 'On Draw: Shock randomly.',
-    shortDesc: 'On Draw:\n+1 Shock Rand',
+    description: '1 Shock randomly, Draw.',
+    shortDesc: '1 Shock rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('on_draw_shock_random', 1, TargetType.RANDOM_ENEMY)],
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('apply_shock', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     rarity: 'rare',
     tier: 2,
-    unplayable: true,
-    gamePlusOffset: { on_draw_shock_random: 1 },
+    gamePlusOffset: { apply_shock: 1 },
   });
 }
 

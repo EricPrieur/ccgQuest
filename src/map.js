@@ -1362,10 +1362,9 @@ export function createTharnagInteriorMap() {
     // Mithril Remedies — Olbrim Goldbalm's apothecary in Tharnag's
     // Artisan Hall. Unlock gate: throne audience complete (the side
     // quest fires while the party is still in Tharnag, regardless of
-    // dragonSlain). Still wip:true for now — invisible in non-debug
-    // — because the downstream chain (Stairs of the Infinite → Last
-    // Watch → Valley → Cave → Nest) is unfinished. Flip wip off when
-    // the chain ships.
+    // dragonSlain). The full downstream chain (Stairs of the Infinite
+    // → Last Watch → Valley → Cave → Nest) is shipping with the
+    // mini-expansion, so the node is no longer wip-gated.
     { id: 'mithril_remedies', name: 'Mithril Remedies', description: "Olbrim Goldbalm's apothecary, tucked between the tavern and the smithy.", encounterId: 'mithril_remedies', connections: ['artisan_hall', 'dwarven_tavern', 'dwarven_smithy'], position: [550, 710], mapArea: 'artisan_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A small workshop tucked between the others.' },
   ];
 

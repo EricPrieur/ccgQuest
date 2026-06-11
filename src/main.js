@@ -471,6 +471,11 @@ const EFFECT_DESC_PATTERNS = {
   summon_random: [/1-(\d+)/, /Summon\s+(\d+)/i],
   summon_small_spider: [/1-(\d+)\s+Pet\s+Spiders/i, /1-(\d+)/],
   apply_poison: [/(\d+)\s+Poison/i],
+  // Used by the converted relics (Bear Teeth Necklace, Stormwing Feather,
+  // Frost Drake Scale) so game+ tier bumps update the displayed N too.
+  apply_bleed:      [/(\d+)\s+Bleed\b/i],
+  apply_shock:      [/(\d+)\s+Shock\b/i],
+  apply_ice_random: [/(\d+)\s+Ice\b/i],
   apply_poison_self: [/Gain\s+(\d+)\s+Poison/i],
   apply_poison_vs_armor: [/\+(\d+)\s+Poison/i, /(\d+)\s+Poison/i],
   scry_pick: [/Scry\s+(\d+)/i],
@@ -2221,6 +2226,19 @@ const DECK_LIMIT_CATEGORIES = [
   { id: 'allies',  label: 'Allies',    subtypes: new Set(['ally', 'allies', 'companion']) },
   { id: 'relic',   label: 'Relics',    subtypes: new Set(['relic']) },
 ];
+
+// Maximum +N a player can add to a category's base deck limit. Most
+// categories cap at +3 in the main game and +5 in Game+ (deckLimitCapBonus
+// adds 2). Relics are intentionally tighter — only +1 in the main game
+// (2 total) and +2 in Game+ (3 total) — so the run can't be padded with
+// stacked relic effects. Game+'s +2 cap bonus contributes only +1 to relics.
+function getDeckLimitCap(catId) {
+  const capBonus = (player && player.deckLimitCapBonus) || 0;
+  if (catId === 'relic') {
+    return 1 + Math.min(1, capBonus);
+  }
+  return 3 + capBonus;
+}
 
 // Friendly names for weapon/armor subtypes (displayed in the "can equip"
 // section of the inventory character panel).
@@ -24734,6 +24752,19 @@ function resolveEffect(eff, caster, target) {
       spawnTokenOnTarget(target, eff.value, 'Bleed', Colors.RED);
       break;
     }
+    case 'apply_shock': {
+      // Single-target Shock — pairs with TargetType.RANDOM_ENEMY for
+      // Stormwing Feather and any future "shock one enemy" card. The
+      // existing apply_shock_all handler covers AoE (Thunderclap).
+      if (target instanceof Creature) {
+        target.shockStacks = (target.shockStacks || 0) + eff.value;
+      } else {
+        target.applyStatus('SHOCK', eff.value);
+      }
+      addLog(`  +${eff.value} Shock on ${target.name}`, Colors.GOLD);
+      spawnTokenOnTarget(target, eff.value, 'Shock', Colors.GOLD);
+      break;
+    }
     case 'apply_bleed_all': {
       // AoE Bleed — apply to the enemy character and every alive enemy
       // creature. Mirrors apply_fire_all / apply_poison_all etc.
@@ -28121,6 +28152,11 @@ function triggerOnDraw(card) {
   for (const eff of card.currentEffects) {
     if (!eff) continue;
     if (eff.effectType === 'on_draw_heroism')         heroismGain    += eff.value || 0;
+    if (eff.effectType === 'on_draw_heroism_random') {
+      // Sailor's Lucky Compass — roll 1..eff.value Heroism on every draw.
+      const upper = Math.max(1, eff.value || 1);
+      heroismGain += 1 + Math.floor(Math.random() * upper);
+    }
     if (eff.effectType === 'on_draw_ignite')          igniteGain     += eff.value || 0;
     if (eff.effectType === 'on_draw_poison_random')   poisonRandom   += eff.value || 0;
     if (eff.effectType === 'on_draw_ice_random')      iceRandom      += eff.value || 0;
@@ -39639,7 +39675,7 @@ function drawInventoryCharacter(rect) {
         ctx.textBaseline = 'middle';
         ctx.fillText('−', btnX + btnSize / 2, btnY + btnSize / 2);
         _deckLimitBtnRects.push({ x: btnX, y: btnY, w: btnSize, h: btnSize, kind: 'minus', catId: cat.id });
-      } else if (!_restBonusCat && bonus < (3 + (player.deckLimitCapBonus || 0))) {
+      } else if (!_restBonusCat && bonus < getDeckLimitCap(cat.id)) {
         ctx.fillStyle = 'rgba(80,130,80,0.85)';
         ctx.fillRect(btnX, btnY, btnSize, btnSize);
         ctx.strokeStyle = '#9c9';
@@ -39677,7 +39713,7 @@ function drawInventoryCharacter(rect) {
         showKind = 'contemplate_minus';
         showGlyph = '−';
       } else if (_shrineContemplateMinusCat != null && _shrineContemplatePlusCat == null
-                 && bonus < (3 + (player.deckLimitCapBonus || 0))) {
+                 && bonus < getDeckLimitCap(cat.id)) {
         // At step 2, allow plus on EVERY valid category including
         // the minus pick (net-zero). The click handler differentiates
         // via the same-category branch.
