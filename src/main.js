@@ -23812,7 +23812,8 @@ function needsTarget(card) {
     (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
      e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
      e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
-     e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
+     e.effectType === 'shield_bash' || e.effectType === 'shield_bash_half' ||
+     e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
@@ -23849,7 +23850,8 @@ function canSkipOptionalTargeting(card) {
     (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
      e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
      e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
-     e.effectType === 'shield_bash' || e.effectType === 'charge_attack' ||
+     e.effectType === 'shield_bash' || e.effectType === 'shield_bash_half' ||
+     e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
@@ -31716,6 +31718,14 @@ function getTargetCenter(target) {
   if (target === player) {
     const r = getCharacterCardRect(true);
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+  }
+  // Enemy character (the boss). Missing case used to silently fall
+  // through to the player-card fallback, which broke shatter arrows
+  // when the boss was the shatterer (the arrow originated on the
+  // player's card instead of the boss). Mirrors getEnemyTargetCenter.
+  if (target === enemy) {
+    const r = getCharacterCardRect(false);
+    return { x: r.x + r.w / 2 + _dragonVisualShiftX(), y: r.y + r.h / 2 };
   }
   // Player creature
   const allyRects = getPlayerCreatureRects();
