@@ -2982,9 +2982,15 @@ export function createFeatherCloak() {
   });
 }
 
-// Harpy Feather — Tier 1 Relic. Sole effect is the on_discard
-// trigger (draw 2 whenever the feather moves to discard). Costs
-// nothing on its own — players cycle it deliberately to mill draws.
+// Harpy Feather — Tier 1 Relic. Passive trigger: whenever the feather
+// lands in the discard pile (deck damage random discard, a card's
+// Discard cost picking the feather, an effect that discards from
+// hand, etc.) it draws 2. Unplayable on its own — players can't fire
+// the cycle by spending it as an action. Still pickable as a
+// recharge-cost target for any card that wants Recharge +1, since
+// the recharge-cost UI looks past the unplayable flag (the feather
+// goes to the recharge pile rather than the discard pile in that
+// case, so the on_discard trigger naturally doesn't fire).
 export function createHarpyFeather() {
   return new Card({
     id: 'harpy_feather',
@@ -2993,12 +2999,13 @@ export function createHarpyFeather() {
     shortDesc: 'On Discard: Draw 2',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('on_discard', 2, TargetType.SELF),
     ],
     rarity: 'epic',
     tier: 1,
+    unplayable: true,
     // +0.5 draw per offset (floored): +2 base, +0 at off 1, +1 at off 2, etc.
     gamePlusOffset: { on_discard: 0.5 },
   });
@@ -4143,7 +4150,7 @@ export function createMimicTongue() {
     shortDesc: '1 Poison rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_poison', 1, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -4776,7 +4783,7 @@ export function createSpecterEctoplasm() {
     shortDesc: 'Heal 1, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heal', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -4976,7 +4983,7 @@ export function createFrostDrakeScale() {
     shortDesc: '1 Ice rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_ice_random', 1, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -5126,7 +5133,7 @@ export function createMoltenScaleRelic() {
     shortDesc: '+1 Ignite, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_ignite', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -5816,7 +5823,7 @@ export function createObsidianCore() {
     id: 'obsidian_core', name: 'Obsidian Core',
     description: 'Next attack: +2 vs Armor/Shield, Draw.',
     shortDesc: '+2 vs Armor\nDraw',
-    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.FREE,
+    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('grant_obsidian_buff', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -5858,7 +5865,7 @@ export function createQueensLocket() {
     shortDesc: "Queen's Gift\nDraw",
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('queens_gift', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -6620,7 +6627,7 @@ export function createBearTeethNecklace() {
     shortDesc: '1 Bleed rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_bleed', 1, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),

@@ -35876,6 +35876,12 @@ function maybeIceShatter(target) {
   target._iceShatterFiring = true;
   addLog(`  ❄ Ice shatters on ${target.name}! (${stacks} stacks → roll hit)`, Colors.ICE_BLUE);
   playSound('ice_apply', 0.7);
+  // Big ice-blue bloom over the shatterer's card so the moment reads
+  // visually before anything else lands. ~1.5 s of saturated blue
+  // with a white pop at the start — see drawDamageNumbers for the
+  // exact gradient. Tracked in shatterFlashes; updateDamageNumbers
+  // ticks the timer.
+  spawnShatterFlash(target);
   // 1) Self damage = stacks. Skips the one-shot Block window but
   // Shield / Armor still soak it — Creatures use takeDamage (no Block
   // exists on creatures), Characters use takeDamageNoBlock.
@@ -35893,8 +35899,11 @@ function maybeIceShatter(target) {
   // 2) AoE — random ally hit per stack for 1-2 damage. Allies are
   // same-side combatants (player + their creatures, or enemy + theirs)
   // excluding the iced target itself. Same no-block / shield-armor
-  // treatment as the self hit.
+  // treatment as the self hit. Each pick gets a dedicated ice-blue
+  // arrow originating from the shatterer so the friendly-fire spread
+  // reads as N projectiles spraying outward (one per ice stack).
   const allies = getShatterAllies(target);
+  const shatterPicks = [];
   for (let i = 0; i < stacks; i++) {
     const livePool = allies.filter(a => a.isAlive);
     if (livePool.length === 0) break;
@@ -35911,6 +35920,41 @@ function maybeIceShatter(target) {
     const aAbs = dmg - aTaken;
     const aAbsSuffix = aAbs > 0 ? ` (${aAbs} absorbed)` : '';
     addLog(`    Shard hits ${a.name}: ${aTaken}${aAbsSuffix}`, Colors.ICE_BLUE);
+    shatterPicks.push(a);
+  }
+  // One blue arrow per friendly-fire projectile, originating from the
+  // shatterer. Built as raw segments and dropped into playerArrowsBatch
+  // so the arrows draw correctly regardless of which side the
+  // shatterer and ally sit on (spawnPlayerArrowBatch resolves target
+  // positions through getEnemyTargetCenter, which only knows about
+  // enemy-side rects). 700 ms duration so the volley reads cleanly
+  // alongside the 1.5 s shatter flash.
+  if (shatterPicks.length > 0) {
+    const srcCenter = getTargetCenter(target);
+    if (srcCenter) {
+      const newSegs = [];
+      for (const pick of shatterPicks) {
+        const dst = getTargetCenter(pick);
+        if (!dst) continue;
+        // Small random offset per arrow so multiple shards into the
+        // same ally don't perfectly overlap into a single line.
+        const jx = Math.round((Math.random() - 0.5) * 18);
+        const jy = Math.round((Math.random() - 0.5) * 18);
+        newSegs.push({
+          x1: srcCenter.x, y1: srcCenter.y,
+          x2: dst.x + jx, y2: dst.y + jy,
+          color: Colors.ICE_BLUE,
+        });
+      }
+      if (newSegs.length > 0) {
+        if (playerArrowsBatch && Array.isArray(playerArrowsBatch.segments)) {
+          playerArrowsBatch.segments.push(...newSegs);
+          playerArrowsBatch.timer = Math.max(playerArrowsBatch.timer, 700);
+        } else {
+          playerArrowsBatch = { segments: newSegs, timer: 700 };
+        }
+      }
+    }
   }
   // 3) Reduce stacks: lose max(1, floor(stacks/2)).
   const lose = Math.max(1, Math.floor(stacks / 2));
@@ -42907,6 +42951,7 @@ const CARD_SFX_OVERRIDES = {
   chicken_leg:              { play: 'eat' },
   bad_rations:              { play: 'eat' },
   bear_fat_rations:         { play: 'eat' },
+  rat_on_a_stick:           { play: 'eat' },
   lambas_bread:             { play: 'eat' },
   travel_rations:           { play: 'eat' },
   fresh_fish:               { play: 'eat' },
@@ -43573,6 +43618,12 @@ function spawnHealOnTarget(target, amount) {
 // Death animation for creatures
 let dyingCreatures = []; // { rect, timer, name }
 const DEATH_ANIM_DURATION = 900;
+// Big-and-loud blue flash painted over the rect of a creature whose
+// Ice just shattered (maybeIceShatter proc). 1.5 s so the bloom reads
+// from the rest of the board — the flash is the headline moment of
+// the shatter, the arrows + damage numbers fill in around it.
+let shatterFlashes = []; // { x, y, w, h, timer }
+const SHATTER_FLASH_DURATION = 1500;
 
 function spawnDeathAnimation(creature) {
   // Find the creature's rect before it's removed
@@ -43597,6 +43648,30 @@ function spawnDeathAnimation(creature) {
   }
 }
 
+// Big ice-blue flash on a creature or character whose Ice just
+// shattered. Renders ABOVE the card so the bloom is the headline of
+// the proc; the floating damage numbers + arrows fill in beneath it.
+function spawnShatterFlash(target) {
+  let rect = null;
+  if (target === player) {
+    rect = getCharacterCardRect(true);
+  } else if (target === enemy) {
+    rect = getCharacterCardRect(false);
+  } else if (player && Array.isArray(player.creatures)) {
+    const i = player.creatures.indexOf(target);
+    if (i !== -1) rect = getPlayerCreatureRects()[i];
+  }
+  if (!rect && enemy && Array.isArray(enemy.creatures)) {
+    const i = enemy.creatures.indexOf(target);
+    if (i !== -1) rect = getEnemyCreatureRects()[i];
+  }
+  if (!rect) return;
+  shatterFlashes.push({
+    x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+    timer: SHATTER_FLASH_DURATION,
+  });
+}
+
 function updateDamageNumbers(dt) {
   for (const dn of damageNumbers) {
     if (dn.delay && dn.delay > 0) {
@@ -43607,12 +43682,53 @@ function updateDamageNumbers(dt) {
     dn.y += dn.vy * (dt / 16);
   }
   damageNumbers = damageNumbers.filter(dn => dn.timer > 0);
+  // Tick shatter flashes (1.5 s blue bloom on the iced target).
+  for (const sf of shatterFlashes) sf.timer -= dt;
+  shatterFlashes = shatterFlashes.filter(sf => sf.timer > 0);
   // Update death animations
   for (const da of dyingCreatures) da.timer -= dt;
   dyingCreatures = dyingCreatures.filter(da => da.timer > 0);
 }
 
 function drawDamageNumbers() {
+  // Ice-shatter flashes — big saturated ice-blue overlay that fades
+  // out over 1.5 s with a soft white core early on, so the moment the
+  // shatter fires it really pops above the rest of the board. Drawn
+  // BEFORE death animations + damage numbers so the floats land on
+  // top of the bloom for the few hundred ms they overlap.
+  for (const sf of shatterFlashes) {
+    const progress = 1 - sf.timer / SHATTER_FLASH_DURATION; // 0 → 1
+    // Alpha curve: full punch for the first ~25 %, then ease out
+    // toward 0. Reads as a hard flash + tail of frost.
+    const earlyAlpha = progress < 0.25 ? 1 : Math.max(0, 1 - (progress - 0.25) / 0.75);
+    const cx = sf.x + sf.w / 2;
+    const cy = sf.y + sf.h / 2;
+    // Outer halo — feathered ice-blue circle radiating ~50 % past the
+    // card edges so the bloom reads even on cards near the screen
+    // border. Two stacked passes for depth.
+    const haloR = Math.max(sf.w, sf.h) * 0.95;
+    const grad = ctx.createRadialGradient(cx, cy, haloR * 0.15, cx, cy, haloR);
+    grad.addColorStop(0,    `rgba(220, 240, 255, ${0.92 * earlyAlpha})`);
+    grad.addColorStop(0.35, `rgba(120, 200, 255, ${0.65 * earlyAlpha})`);
+    grad.addColorStop(0.75, `rgba(60, 140, 220, ${0.35 * earlyAlpha})`);
+    grad.addColorStop(1,    `rgba(20, 60, 130, 0)`);
+    ctx.save();
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - haloR, cy - haloR, haloR * 2, haloR * 2);
+    // Card-rect overlay — sharper saturated ice-blue square so the
+    // shatterer's silhouette is clearly outlined inside the bloom.
+    ctx.fillStyle = `rgba(140, 210, 255, ${0.55 * earlyAlpha})`;
+    ctx.fillRect(sf.x, sf.y, sf.w, sf.h);
+    // Bright white core for the first ~30 %: hard "POP" so the eye
+    // jumps to the shatterer right when it fires.
+    if (progress < 0.3) {
+      const coreAlpha = 1 - progress / 0.3;
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.75 * coreAlpha})`;
+      ctx.fillRect(sf.x, sf.y, sf.w, sf.h);
+    }
+    ctx.restore();
+  }
+
   // Draw death animations first (behind damage numbers)
   for (const da of dyingCreatures) {
     const progress = 1 - da.timer / DEATH_ANIM_DURATION; // 0→1
