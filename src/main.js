@@ -18540,6 +18540,8 @@ const PILL_DESCRIPTIONS = {
   'VS SAHUAGIN': 'Active only against enemies in the Sahuagin family.',
   'WHEN ATTACKED': 'Fires whenever the holder is the target of an attack — even if the hit is fully absorbed.',
   'WHEN HIT': 'Fires whenever the creature is targeted by an attack.',
+  'Attack Phase': 'Played proactively on your own turn (attack phase). Includes weapons, abilities, items, allies, and playable relics.',
+  'Defense Phase': "Played reactively in the enemy's attack phase to absorb incoming damage. Cannot be played on your turn.",
 };
 
 function drawBadgeTooltip() {
@@ -19120,14 +19122,53 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
       });
     }
 
-    // Subtype label (bottom-left), colored with the frame-echo color so it
-    // matches the description box outline.
+    // Action-phase letter (bottom-left corner) — one-letter badge that
+    // tells the player at a glance whether the card is a reactive
+    // DEFENSE auto-play (D) or a proactive on-your-turn play (A).
+    // Hover tooltip explains the phase via PILL_DESCRIPTIONS. Skipped
+    // for cards that aren't actively played at all (buffs / perks /
+    // unplayable relics) — there's no useful phase to advertise.
+    const skipActionBadge = isBuffCard || card._isPerk || card.unplayable === true;
+    let actionBadgeEndX = x + 6;
+    if (!skipActionBadge) {
+      const isDefense = card.cardType === CardType.DEFENSE;
+      const actionLetter = isDefense ? 'D' : 'A';
+      const actionLabel = isDefense ? 'Defense Phase' : 'Attack Phase';
+      // Match the rarity-code box palette so the badge family reads
+      // consistently across the card. Steel-blue for defense (reactive),
+      // warm copper for attack (proactive).
+      const actionColor = isDefense ? '#7fa8d4' : '#d49060';
+      ctx.font = `bold ${badgeFontSize}px sans-serif`;
+      const alW = ctx.measureText(actionLetter).width + padX * 2;
+      const alX = x + 6;
+      const alY = badgeY;
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(alX, alY, alW, badgeH);
+      ctx.strokeStyle = actionColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(alX, alY, alW, badgeH);
+      ctx.fillStyle = actionColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(actionLetter, alX + alW / 2, alY + badgeH / 2 + 1);
+      ctx.textBaseline = 'alphabetic';
+      cardBadgeHitAreas.push({
+        x: alX, y: alY, w: alW, h: badgeH,
+        label: actionLabel,
+      });
+      actionBadgeEndX = alX + alW + 3; // 3 px gap before the subtype label
+    }
+
+    // Subtype label (bottom-left, immediately right of the action badge)
+    // colored with the frame-echo color so it matches the description
+    // box outline. Hit area lets the player hover for the readable
+    // subtype name (mirrors the rarity / tier tooltips on the right).
     const subLabel = getSubtypeLabel(card);
     if (subLabel) {
       const accentColor = getFrameAccentColor(card);
       ctx.font = `${badgeFontSize}px sans-serif`;
       const slW = ctx.measureText(subLabel).width + padX * 2;
-      const slX = x + 6;
+      const slX = actionBadgeEndX;
       const slY = badgeY;
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
       ctx.fillRect(slX, slY, slW, badgeH);
@@ -19139,6 +19180,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
       ctx.textBaseline = 'middle';
       ctx.fillText(subLabel, slX + slW / 2, slY + badgeH / 2 + 1);
       ctx.textBaseline = 'alphabetic';
+      cardBadgeHitAreas.push({
+        x: slX, y: slY, w: slW, h: badgeH,
+        label: subLabel,
+      });
     }
   }
 
@@ -20229,6 +20274,36 @@ function drawPowerPreviewCard(power, x, y, w, h) {
     ctx.strokeStyle = '#8c3c8c';
     ctx.lineWidth = 3;
     ctx.strokeRect(x, y, w, h);
+  }
+
+  // 5. Action-phase letter — class powers are active abilities the
+  // player uses on their own turn (Cleave, Take Aim, etc.), so they
+  // pick up the same "A" badge as Attack/Ability cards. Enemy powers
+  // are passive and skip the badge. Same palette + hit-area shape
+  // as drawCard so the family reads consistently across the codex.
+  if (PLAYER_POWER_IDS.has(power.id)) {
+    const padX = 4, padY = 2;
+    const badgeFontSize = Math.max(8, Math.floor(w * 0.045));
+    const badgeH = badgeFontSize + padY * 2;
+    const badgeY = y + h - badgeH - 4;
+    const actionColor = '#d49060';
+    ctx.font = `bold ${badgeFontSize}px sans-serif`;
+    const alW = ctx.measureText('A').width + padX * 2;
+    const alX = x + 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(alX, badgeY, alW, badgeH);
+    ctx.strokeStyle = actionColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(alX, badgeY, alW, badgeH);
+    ctx.fillStyle = actionColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('A', alX + alW / 2, badgeY + badgeH / 2 + 1);
+    ctx.textBaseline = 'alphabetic';
+    cardBadgeHitAreas.push({
+      x: alX, y: badgeY, w: alW, h: badgeH,
+      label: 'Attack Phase',
+    });
   }
 
   ctx.textAlign = 'left';
@@ -24474,6 +24549,23 @@ function resolveEffect(eff, caster, target) {
       dmg += getIncomingDamageModifier(target);
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
+      // Feral Wrath conversion — same rule as the regular damage case
+      // (line ~24046). Half the swing (rounded UP) converts to Bleed
+      // on the target, the rest still lands. Consumes one charge of
+      // the bleed_weapon buff. Without this the White Dragonscale
+      // Shield's shield-bash damage bypassed Feral Wrath entirely.
+      let wrathBleed = 0;
+      const wrathBuff = (caster.combatBuffs || []).find(b => b.effectType === 'bleed_weapon');
+      if (wrathBuff && (wrathBuff.stacks || 0) > 0 && dmg > 0) {
+        wrathBleed = Math.ceil(dmg / 2);
+        dmg -= wrathBleed;
+        wrathBuff.stacks -= 1;
+        wrathBuff.effectValue = wrathBuff.stacks;
+        if (wrathBuff.stacks <= 0) {
+          caster.combatBuffs = caster.combatBuffs.filter(b => b !== wrathBuff);
+        }
+        addLog(`  Feral Wrath: ${wrathBleed} Bleed (${dmg} damage lands)`, Colors.RED);
+      }
       const unpreventable = consumeUnpreventableBuff(caster);
       if (!unpreventable && !(target instanceof Creature) && target === enemy) {
         enemyAutoPlayDefenses(dmg);
@@ -24509,6 +24601,17 @@ function resolveEffect(eff, caster, target) {
           consumePoisonBuff(caster, target, taken);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
+      }
+      // Stamp the Feral Wrath Bleed AFTER damage lands so a fatal
+      // bleed never robs the swing of its hit. Mirrors the regular
+      // damage case's post-dispatch placement.
+      if (wrathBleed > 0) {
+        if (target instanceof Creature) {
+          target.bleedStacks = (target.bleedStacks || 0) + wrathBleed;
+        } else if (typeof target.applyStatus === 'function') {
+          target.applyStatus('BLEED', wrathBleed);
+        }
+        spawnTokenOnTarget(target, wrathBleed, 'Bleed', Colors.RED);
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
@@ -29560,6 +29663,12 @@ function resolveAllyAttack(ally, target) {
     // never got its +2 against the slime / golem / armored targets.
     let tdmg = applyObsidianAllyBonus(ally, t, dmg);
     tdmg = applyAllyBleedingBonus(ally, t, tdmg);
+    // Shock on the target adds +1 dmg taken per stack — same modifier
+    // the player's own swings already apply via getIncomingDamageModifier.
+    // Without this, Thorb / summons / companions silently ignored Shock
+    // on enemies, so the same boss took less damage from an ally swing
+    // than from the player's own swing of equal raw damage.
+    tdmg += Math.max(0, getIncomingDamageModifier(t));
     if (t === enemy) {
       if (ally.unpreventable) {
         const taken = enemy.takeDamageFromDeck(tdmg);

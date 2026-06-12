@@ -6772,7 +6772,7 @@ export function createStormwingFeather() {
     shortDesc: '1 Shock rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_shock', 1, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
