@@ -30973,8 +30973,13 @@ function tickBleedOnAttack(attacker, label) {
     stacks = attacker.bleedStacks || 0;
   }
   if (stacks <= 0) return;
+  // Capture the ACTUAL damage taken — Ethereal (Specter) clamps the
+  // hit down to 1, so logging the raw stacks count overstates what
+  // the bleeder lost. takeDamageFromDeck / takeUnpreventableDamage
+  // both return the post-clamp value.
+  let actual = 0;
   if (typeof attacker.takeDamageFromDeck === 'function') {
-    attacker.takeDamageFromDeck(stacks);
+    actual = attacker.takeDamageFromDeck(stacks) || 0;
     // Main monster (enemy character): if the bleed tick just killed
     // the enemy AND there's queued damage to the player, mark the
     // death deferred. checkCombatEnd reads this flag and skips
@@ -30992,10 +30997,13 @@ function tickBleedOnAttack(attacker, label) {
       }
     }
   } else if (typeof attacker.takeUnpreventableDamage === 'function') {
-    attacker.takeUnpreventableDamage(stacks);
+    actual = attacker.takeUnpreventableDamage(stacks) || 0;
   }
-  spawnDamageOnTarget(attacker, stacks);
-  addLog(`  ${label || attacker.name} takes ${stacks} Bleed damage!`, Colors.RED);
+  // Damage number float + log both use the post-clamp value so an
+  // Ethereal target reads as "takes 1 Bleed damage" even when 5
+  // stacks were sitting on them.
+  if (actual > 0) spawnDamageOnTarget(attacker, actual);
+  addLog(`  ${label || attacker.name} takes ${actual} Bleed damage!`, Colors.RED);
   if (!attacker.isAlive && attacker instanceof Creature) {
     spawnDeathAnimation(attacker);
     addLog(`  ${attacker.name} bleeds out!`, Colors.GOLD, null, null, attacker);
@@ -31007,18 +31015,29 @@ function tickBleedOnAttack(attacker, label) {
     // pass — which for a click-driven series of ally attacks doesn't
     // happen until the LAST swing in the chain.
     if (player && Array.isArray(player.creatures) && player.creatures.includes(attacker)) {
-      player.removeDeadCreatures();
+      // Targeted removal so a different ally that died this swing
+      // still goes through the normal sweep (which runs death hooks).
+      const idx = player.creatures.indexOf(attacker);
+      if (idx !== -1) player.creatures.splice(idx, 1);
     } else if (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(attacker)) {
-      // Kill-count fights (Harpies killTarget=3, Wolf Pack, etc.) —
-      // credit the bleed-out kill before the inline removal, otherwise
-      // a harpy that dies from bleed silently drops off the field and
-      // the encounter never ticks down to victory. The normal
-      // countAndRemoveDeadCreatures path is bypassed here.
+      // Kill-count fights (Harpies killTarget=3, Roc Chick killTarget=5,
+      // Wolf Pack, etc.) — credit the bleed-out kill before the inline
+      // removal, otherwise a harpy/chick that dies from bleed silently
+      // drops off the field and the encounter never ticks down to
+      // victory. The normal countAndRemoveDeadCreatures path is
+      // bypassed here.
       if (killTarget > 0) {
         killCount += 1;
         addLog(`  Kill count: ${killCount}/${killTarget}`, Colors.GOLD);
       }
-      enemy.removeDeadCreatures();
+      // ONLY remove the attacker, not every dead enemy creature on the
+      // field. enemy.removeDeadCreatures() is a broad sweep that would
+      // also strip eggs the chick's screech killed THIS swing — those
+      // need to stay around until the next countAndRemoveDeadCreatures
+      // sweep so their onDeathSpawnChick hatch chain fires and the
+      // kill-count picks them up.
+      const idx = enemy.creatures.indexOf(attacker);
+      if (idx !== -1) enemy.creatures.splice(idx, 1);
     }
   }
 }

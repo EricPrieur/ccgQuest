@@ -6841,7 +6841,12 @@ export function createRocEggshellShield() {
     description: 'Discard -> Gain 8 Shields.\nFirst Shield: Draw.',
     shortDesc: 'D->+8 Shield\nFirst: Draw',
     subtype: 'light_armor',
-    cardType: CardType.DEFENSE,
+    // ABILITY (not DEFENSE) so the player plays it proactively on
+    // their own turn — same shape as the other player-side shields
+    // (Cracked Buckler, Buckler, Barnacle-Covered Buckler, Runeforged
+    // Buckler). DEFENSE-typed shields are reactive auto-plays during
+    // the defending phase, which isn't the intent here.
+    cardType: CardType.ABILITY,
     costType: CostType.DISCARD,
     effects: [
       new CardEffect('gain_shield', 8, TargetType.SELF),
