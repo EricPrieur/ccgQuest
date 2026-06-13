@@ -284,13 +284,17 @@ export class Character {
       amount = 1;
     }
     let remaining = amount;
+    // Armor FIRST (permanent flat reduction off the top), shield
+    // afterward — same rule as Creature.takeDamage. Without this the
+    // standing Shield stack would burn off chip damage that armor
+    // should soak for free.
+    const armorAbsorb = Math.min(this.armor, remaining);
+    remaining -= armorAbsorb;
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, remaining);
       this.shield -= shieldAbsorb;
       remaining -= shieldAbsorb;
     }
-    const armorAbsorb = Math.min(this.armor, remaining);
-    remaining -= armorAbsorb;
     const taken = this.takeDamageFromDeck(remaining);
     return [amount - remaining, taken];
   }
@@ -324,15 +328,19 @@ export class Character {
       this.currentBlock -= blockAbsorb;
       remaining -= blockAbsorb;
     }
-    // Shield absorbs next (persistent across turns).
+    // Armor next (permanent, doesn't deplete) — applied BEFORE Shield
+    // so the persistent buffer isn't burned on damage that armor
+    // soaks for free. Order is block (temp) → armor (flat) → shield
+    // (persistent), so chip damage against a shielded + armored
+    // creature first scrubs off block, then bounces off armor, then
+    // chips shields only if anything is left over.
+    const armorAbsorb = Math.min(this.armor, remaining);
+    remaining -= armorAbsorb;
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, remaining);
       this.shield -= shieldAbsorb;
       remaining -= shieldAbsorb;
     }
-    // Armor absorbs last (permanent, doesn't deplete).
-    const armorAbsorb = Math.min(this.armor, remaining);
-    remaining -= armorAbsorb;
     const taken = this.takeDamageFromDeck(remaining);
     return [amount - remaining, taken];
   }

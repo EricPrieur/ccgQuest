@@ -642,6 +642,16 @@ export const SOUND_MAP = {
   // Meta / progression cues — fired by UI transitions, not card play.
   level_up_screen: 'Magic/buff_powerup_02',
   perk_pick:       'Magic/buff_powerup_01',
+  // Power-grant fanfare — fired by the LOOT phase when a lootPower
+  // showcase grants a new character power (Skeleton Mastery after
+  // the study fight). Same buff swell as the level-up screen so the
+  // "you got a new ability" beat reads consistently across UI cues.
+  power_grant:     'Magic/buff_powerup_02',
+  // Heavy seal-breaking impact — fired at the climax of the bedroom
+  // trap-door dialog when the apprentice reads the symbols and the
+  // ward gives way. Same alias is reusable for any future "weight
+  // hits the floor" / "seal cracks" beat.
+  dark_impact_deep_01: 'Magic/dark_impact_deep_01',
   splash_dive:     'Misc/water_bodyfall_01',
   // Direct alias used by Fish Scale Boots' defense cue — same sample as
   // splash_dive, kept under the file's own name so the CARD_SFX_OVERRIDES

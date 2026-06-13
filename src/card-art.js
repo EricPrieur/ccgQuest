@@ -432,7 +432,25 @@ export const CARD_ART_MAP = {
   plague_cockroach: 'PlagueCockRoach.png',
   skitter_bite: 'PlagueCockRoach.png',
   // Chitin Shield — cockroach husk loot drop from the same fight.
-  chitin_shield: 'ChitinShield.png',
+  chitin_shield: 'ChitinShield.jpg',
+  // Mortain's Staff — desk pickup before the first skeleton fight.
+  mortains_staff: 'MortainsStaff.png',
+  // Drain Life — Forgotten Shrine reward, Tier 1 Necromancer spell.
+  drain_life: 'DrainLife.png',
+  // Old Spectral Hand — Forgotten Specter's signature dual-mode card.
+  // Distinct id from the chapter-7 `spectral_hand` so both can coexist.
+  old_spectral_hand: 'SpectralHand.jpg',
+  // Apprentice's first raised skeleton — combat portrait (and the
+  // creature card art for the post-fight summon) share the
+  // necromancer-power piece. The `skeleton` alias matches
+  // enemy.name.toLowerCase() lookup in the combat portrait resolver
+  // (the Character is named 'Skeleton', not 'apprentice_skeleton').
+  apprentice_skeleton: 'NecromancerPower.png',
+  skeleton: 'NecromancerPower.png',
+  // Cockroach minion summoned by Plague Spawn — same bug portrait
+  // as the boss so the small skitterer has art at all (was rendering
+  // as a broken-image placeholder).
+  cockroach: 'PlagueCockRoach.png',
   giant_rat: 'GiantRatMonster.jpg',
   bone_pile: 'BonePile.jpg',
   bone_pile_monster: 'BonePile.jpg',
@@ -445,6 +463,13 @@ export const CARD_ART_MAP = {
   kobold_slyblade: 'KoboldSlyblade.jpg',
   // Dwarven Specter enemy portrait — chapter-7 upper-path random.
   dwarven_specter: 'DwarvenSpecter.jpg',
+  // Forgotten Specter — Path of the Necromancer East Corridor fight.
+  // Reuses the Dwarven Specter portrait piece; enemy.name lookup
+  // resolves to 'forgotten_specter' (via toLowerCase + space-to-_).
+  forgotten_specter: 'DwarvenSpecter.jpg',
+  // Army of the Dead — Worn Floor invulnerable boss. The lookup
+  // resolves to 'army_of_the_dead' via enemy.name.toLowerCase().
+  army_of_the_dead: 'ArmyOfTheDead.png',
   // Ruga the Slave Master — Hall of Ancestors boss. The enemy
   // character is named "Ruga the Slave Master" (lowercased +
   // underscored → ruga_the_slave_master), and the encounter id is
@@ -595,6 +620,16 @@ export const POWER_ART_MAP = {
   // PY game.py:809 uses DwarvenSpecter.jpg.
   ethereal: 'DwarvenSpecter.jpg',
   kobold_backup: 'KoboldGuard.jpg',
+  // Path of the Necromancer — Plague Cockroach's turn-start summon
+  // power. Reuses the boss portrait for the power card art.
+  plague_spawn: 'PlagueCockRoach.png',
+  // Necromancer Power — apprentice's signature active, granted after
+  // the first skeleton fight. Uses the same skeleton portrait the
+  // raised skeleton creature does (NecromancerPower.png).
+  necromancer_power: 'NecromancerPower.png',
+  // Army of the Dead — Worn Floor boss power. Same portrait piece
+  // as the boss it powers.
+  army_of_the_dead: 'ArmyOfTheDead.png',
   kobold_army: 'KoboldArmy.jpg',
   // Kobold Drake Rider's escalating-swarm variant uses the same art
   // as General Zhost's kobold_army power.

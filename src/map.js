@@ -1888,11 +1888,34 @@ export function createNecromancerHouseMap() {
       // Opening monologue fires when the player arrives here on
       // run start. Encounter id intentionally kept as 'apprentice_room'
       // (the encounter's identity is the dialog, not the room).
+      // canRevisit stays false so the standard pipeline never re-runs
+      // apprentice_room after the intro; the bedroom_trap_door beat
+      // is fired by an early dispatch in startNodeEncounter that
+      // bypasses canRunEncounter entirely (gated on studyVisited +
+      // !completedEncounters.has('bedroom_trap_door')).
       encounterId: 'apprentice_room',
-      connections: ['corridor'],
+      connections: ['corridor', 'trap_door'],
       position: [340, 320],
       mapArea: 'necromancer_house',
       canRevisit: false,
+    },
+    {
+      id: 'trap_door',
+      name: 'Trap Door',
+      description: "A heavy wooden hatch set into the floorboards beside the bed, its lock-symbols newly faded.",
+      // Locked + hidden ("???") on map load. The bedroom_trap_door
+      // revisit dialog flips isLocked off via the
+      // 'bedroom_trap_door' completion hook in advanceEncounterPhase,
+      // and the trap_door encounter is the simple peer-down beat
+      // the player triggers by walking onto the node afterwards.
+      encounterId: 'trap_door',
+      connections: ['bedroom'],
+      position: [180, 380],
+      mapArea: 'necromancer_house',
+      isLocked: true,
+      canRevisit: false,
+      hiddenName: '???',
+      hiddenDescription: "Something under the floorboards — you cannot quite see what.",
     },
     {
       id: 'corridor',
@@ -1945,7 +1968,11 @@ export function createNecromancerHouseMap() {
       id: 'upstairs',
       name: 'Upstairs',
       description: "The narrow stair climbs up into the dark. Master Mortain's room is somewhere above.",
-      encounterId: '',
+      // Repeatable gate dialog — the apprentice can put her shoulder
+      // to the study door any time. The "go to study" choice swaps
+      // the active map to the necromancer_study map via the
+      // go_to_study handler in main.js.
+      encounterId: 'upstairs',
       connections: ['corridor'],
       position: [910, 760],
       mapArea: 'necromancer_house',
@@ -1956,6 +1983,237 @@ export function createNecromancerHouseMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'bedroom';
+  return map;
+}
+
+// === Necromancer's Study (Path of the Necromancer side quest) ===
+// Reached from the Upstairs node of the undertaker's house once the
+// apprentice tries the door and finds it unsealed. Single arrival
+// node for now — more upstairs content (Master Mortain's library,
+// the cabinet of curiosities, the back door to the abbey) gets
+// appended as the side quest grows.
+export function createNecromancerStudyMap() {
+  const map = new GameMap('necromancer_study', "Master Mortain's Study");
+  map.mapImages = {
+    necromancer_study: 'Maps/NecromancerStudyMap.png',
+  };
+  const nodes = [
+    {
+      id: 'study_room',
+      name: "Master Mortain's Study",
+      description: "Master Mortain's private study. Lectern, candle stubs, a closed book lying open on the desk.",
+      // Click-on-self warps the apprentice back to the stair landing
+      // in the house. Wired via isCrossMapGate + the arriveAtNode
+      // study_room handler in main.js — passthroughTo is informative
+      // only; the handler does the actual map swap.
+      encounterId: '',
+      connections: ['study_desk'],
+      position: [850, 910],
+      mapArea: 'necromancer_study',
+      canRevisit: true,
+      passthroughTo: 'upstairs',
+    },
+    {
+      id: 'study_desk',
+      name: 'Desk',
+      description: "Master Mortain's writing desk. An inkpot, a half-burnt candle, and a closed book waiting for the right hand to open it.",
+      // One-shot — apprentice reads Master Mortain's farewell note
+      // and takes the spellbook off the desk. After this fires the
+      // node is "done" but stays walkable so she can pass by it.
+      encounterId: 'study_desk',
+      connections: ['study_room'],
+      position: [610, 440],
+      mapArea: 'necromancer_study',
+      canRevisit: false,
+    },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'study_room';
+  return map;
+}
+
+// Path of the Necromancer — first underground tunnel under Master
+// Mortain's house. Reached by descending through the bedroom trap
+// door. Octagonal stone chamber with an altar/shrine at the top;
+// 3 corridor nodes ring the room and one shrine node sits up top.
+// The east corridor cross-maps into Underground Tunnel 2.
+export function createUndergroundTunnel1Map() {
+  const map = new GameMap('underground_tunnel_1', 'Underground Tunnels');
+  map.mapImages = {
+    underground_tunnel_1: 'Maps/UndergroundTunnel1.png',
+  };
+  const nodes = [
+    {
+      id: 'tunnel1_entry',
+      name: 'Foot of the Ladder',
+      description: "The wooden ladder ends at a cracked flagstone floor. Old air, old dust. The hatch you came through hangs open above your head.",
+      // Click-on-self warps the apprentice back up to the bedroom
+      // trap_door node — wired via the isCrossMapGate ladder + the
+      // arriveAtNode tunnel1_entry handler in main.js.
+      encounterId: '',
+      connections: ['tunnel1_mid'],
+      position: [512, 870],
+      mapArea: 'underground_tunnel_1',
+      canRevisit: true,
+      passthroughTo: 'trap_door',
+    },
+    {
+      id: 'tunnel1_mid',
+      name: 'Stone Floor',
+      description: "An octagonal stone room. Burnt-out torches in iron rings, a faint scent of incense, and an arched alcove at the far end.",
+      encounterId: 'tunnel1_mid',
+      connections: ['tunnel1_entry', 'tunnel1_east', 'tunnel1_shrine'],
+      position: [512, 560],
+      mapArea: 'underground_tunnel_1',
+      // Stone-floor dialog should fire once and never again on revisit.
+      canRevisit: false,
+    },
+    {
+      id: 'tunnel1_east',
+      name: 'East Corridor',
+      description: "A side passage that runs east, deeper into the rock. The torchlight does not quite reach the end.",
+      // First visit fires the East Corridor encounter (Forgotten
+      // Specter fight). After the encounter completes, the teleport
+      // branch in arriveAtNode gates on completedEncounters and warps
+      // the apprentice straight through to Underground Tunnel 2 on
+      // every subsequent walk-on or click.
+      encounterId: 'east_corridor',
+      connections: ['tunnel1_mid'],
+      position: [510, 200],
+      mapArea: 'underground_tunnel_1',
+      canRevisit: false,
+      passthroughTo: 'tunnel2_entry',
+    },
+    {
+      id: 'tunnel1_shrine',
+      name: 'Forgotten Shrine',
+      description: "A small stone altar in an arched alcove. Whoever it was raised to has been forgotten for a long time.",
+      // Re-firing prayer beat. canRevisit stays TRUE so the dialog
+      // keeps offering Yes / No on every visit — the apprentice can
+      // back off (No) and come back later to pray. Once she actually
+      // gains Drain Life (Yes branch grants it via the LOOT phase),
+      // the startNodeEncounter dispatch in main.js silences the node
+      // by scanning player.deck.masterDeck for the 'drain_life' card.
+      // So the altar pesters her until she takes the gift, then goes
+      // quiet.
+      encounterId: 'tunnel1_shrine',
+      connections: ['tunnel1_mid'],
+      position: [312, 410],
+      mapArea: 'underground_tunnel_1',
+      canRevisit: true,
+    },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tunnel1_entry';
+  return map;
+}
+
+// Path of the Necromancer — second underground tunnel. Linear three-
+// node passage: entry from Tunnel 1 at the top, a stretch of stone
+// floor in the middle, and an exit at the bottom that drops into
+// Tunnel 3. Plain corridor, no shrine.
+export function createUndergroundTunnel2Map() {
+  const map = new GameMap('underground_tunnel_2', 'Underground Tunnels');
+  map.mapImages = {
+    underground_tunnel_2: 'Maps/UndergroundTunnel2.png',
+  };
+  const nodes = [
+    {
+      id: 'tunnel2_entry',
+      name: 'Tunnel Mouth',
+      description: "The east passage opens into a wider chamber. A stair climbs back toward Master Mortain's house behind you.",
+      encounterId: '',
+      connections: ['tunnel2_mid'],
+      position: [500, 950],
+      mapArea: 'underground_tunnel_2',
+      canRevisit: true,
+      passthroughTo: 'tunnel1_east',
+    },
+    {
+      id: 'tunnel2_mid',
+      name: 'Worn Floor',
+      description: "The flagstones underfoot have been walked smooth in a single track — someone used this corridor often, once.",
+      encounterId: 'tunnel2_mid',
+      connections: ['tunnel2_entry', 'tunnel2_exit'],
+      position: [670, 620],
+      mapArea: 'underground_tunnel_2',
+      // Worn-floor dialog should fire once and never again on revisit.
+      canRevisit: false,
+    },
+    {
+      id: 'tunnel2_exit',
+      name: 'Ascending Stair',
+      description: "A worn stairway climbs up toward a narrow landing, lit by a single guttering torch above.",
+      encounterId: '',
+      connections: ['tunnel2_mid'],
+      position: [500, 200],
+      mapArea: 'underground_tunnel_2',
+      canRevisit: true,
+      passthroughTo: 'tunnel3_entry',
+    },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tunnel2_entry';
+  return map;
+}
+
+// Path of the Necromancer — third underground tunnel. Two corridor
+// nodes climbing toward a closed door at the top. The door is a
+// placeholder for now — the encounter just says it is sealed and
+// the apprentice cannot get through yet (next chapter hook).
+export function createUndergroundTunnel3Map() {
+  const map = new GameMap('underground_tunnel_3', 'Underground Tunnels');
+  map.mapImages = {
+    underground_tunnel_3: 'Maps/UndergroundTunnel3.png',
+  };
+  const nodes = [
+    {
+      id: 'tunnel3_entry',
+      name: 'Lower Landing',
+      description: "The stair from the second tunnel ends here. Ahead, the corridor climbs again — toward a heavy stone door at the top.",
+      encounterId: '',
+      connections: ['tunnel3_mid'],
+      position: [512, 870],
+      mapArea: 'underground_tunnel_3',
+      canRevisit: true,
+      passthroughTo: 'tunnel2_exit',
+    },
+    {
+      id: 'tunnel3_mid',
+      name: 'Stone Stair',
+      description: "Worn steps climb between rough-hewn columns. Two torches still hold a faint flame — someone has kept this passage lit.",
+      // No encounter — Stone Stair is a silent walkway between the
+      // Lower Landing and the Closed Door now.
+      encounterId: '',
+      connections: ['tunnel3_entry', 'tunnel3_door'],
+      position: [512, 520],
+      mapArea: 'underground_tunnel_3',
+      canRevisit: true,
+    },
+    {
+      id: 'tunnel3_door',
+      name: 'Closed Door',
+      description: "A heavy stone door at the top of the stair, banded in old iron. It will not open for you — not yet.",
+      // Placeholder one-shot beat. The encounter says the door is
+      // sealed and the apprentice's path stops here for now; future
+      // chapters of the side story will wire it through.
+      encounterId: 'tunnel3_door',
+      connections: ['tunnel3_mid'],
+      position: [512, 80],
+      mapArea: 'underground_tunnel_3',
+      canRevisit: true,
+    },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tunnel3_entry';
   return map;
 }
 

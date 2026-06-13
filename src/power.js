@@ -336,6 +336,44 @@ export function createKoboldBackup() {
   });
 }
 
+// Plague Spawn — Plague Cockroach's turn-start summon power. Mirrors
+// kobold_backup's shape: passive, no recharge cost, fires at start of
+// the cockroach's turn and pushes a fresh 1/1 Cockroach onto the
+// field. The spawned creature carries poisonAttack so its hit
+// stamps Poison on the apprentice when damage lands.
+export function createPlagueSpawn() {
+  return new Power({
+    id: 'plague_spawn',
+    name: 'Plague Spawn',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Summon a 1/1 Cockroach. Hit: +Poison.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Spawn 1/1\nCockroach',
+  });
+}
+
+// Army of the Dead — Worn Floor boss power. At the start of every
+// enemy turn: if fewer than 4 Skeleton-trait allies are alive on the
+// boss's side, summon a fresh 1/1 Skeleton with 1 armor. Otherwise
+// pick one of the existing Skeletons at random and give it +1/+1
+// (attack and max HP, healing the bonus HP). The boss itself is
+// invulnerable, so the fight is won by accumulating 4 Skeleton kills
+// while keeping pace with the respawns.
+export function createArmyOfTheDead() {
+  return new Power({
+    id: 'army_of_the_dead',
+    name: 'Army of the Dead',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Create a Skeleton or add +1/+1 to one.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Spawn or\n+1/+1\nSkeleton',
+    // No tier scaling for now — the side-quest fight stays at base.
+    noTierOffset: true,
+  });
+}
+
 // Bone Amalgam — start of each enemy turn either summons a fresh 3/3
 // Bone Amalgam ally, or buffs every existing Bone Amalgam ally by
 // +1 attack and +1 max HP (also healing the +1).
@@ -641,6 +679,30 @@ export function createVanish() {
   });
 }
 
+// Skeleton Mastery — granted to the apprentice after the first
+// skeleton scuffle in Master Mortain's study. Active, untargeted:
+// Recharge a card to either raise a fresh 1/1 Skeleton (with 1
+// Armor) when no Skeleton-trait ally is on the field, or pick a
+// random existing Skeleton ally and grant it +1 attack / +1 max HP.
+// "Armor" stays as a bare keyword so the small-card tokenizer
+// swaps it for the Armor icon at draw time. Plays bones_clatter_01
+// on use (wired in CARD_SFX_OVERRIDES so the power id routes the
+// cue). Power id stays as 'necromancer_power' for save
+// compatibility — display name is "Skeleton Mastery".
+export function createNecromancerPower() {
+  return new Power({
+    id: 'necromancer_power',
+    name: 'Skeleton Mastery',
+    costDescription: 'Recharge 1 Card',
+    effectDescription: 'Summon a 1/1 Armor Skeleton or give +1/1 to one.',
+    rechargeCost: 1,
+    shortDesc: 'R1->1/1 Armor\nSkeleton, or\n+1/1 to one',
+    // No tier-offset scaling for now — the apprentice's first power
+    // stays flat across ccgQuest+ tiers.
+    noTierOffset: true,
+  });
+}
+
 export function getClassPower(className) {
   const powers = {
     Paladin: createCleave,
@@ -649,10 +711,13 @@ export function getClassPower(className) {
     Rogue: createQuickStrike,
     Warrior: createBattleFury,
     Druid: createFeralForm,
-    // Necromancer (Path of the Necromancer side quest) — clones the
-    // Wizard kit for now. Future passes will swap in necromancer-
-    // specific abilities (raise dead, drain life, etc.).
-    Necromancer: createElementalInfusion,
+    // Necromancer (Path of the Necromancer side quest) has no default
+    // class power. The apprentice gains createNecromancerPower()
+    // (Skeleton Mastery) from the study_desk encounter, and that
+    // grant is rehydrated on save-load from completedEncounters in
+    // restoreFromSave. Returning null here signals callers to skip
+    // the auto-grant entirely — no Elemental Infusion stand-in.
+    Necromancer: () => null,
   };
   return (powers[className] || createCleave)();
 }

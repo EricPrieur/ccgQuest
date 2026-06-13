@@ -58,6 +58,13 @@ export class EncounterPhaseData {
     // lootCards / lootGold.
     lootPickCount = 0,
     lootPickCards = [],
+    // Power-showcase loot: when set to a power id (e.g.
+    // 'necromancer_power'), the LOOT phase renders that power card
+    // centered like a loot reveal AND auto-grants it to the player
+    // via player.addPower on advancement. Used for one-shot story
+    // power gains (Skeleton Mastery after the study fight) so the
+    // grant lands with the same fanfare as a card pickup.
+    lootPower = '',
     // Per-phase title override. When set, drawEncounterText shows
     // this string instead of currentEncounter.name at the top of
     // the TEXT screen. Lets a single encounter walk through
@@ -80,6 +87,7 @@ export class EncounterPhaseData {
     this.choicePrompt = choicePrompt;
     this.lootPickCount = lootPickCount;
     this.lootPickCards = lootPickCards;
+    this.lootPower = lootPower;
     this.phaseTitle = phaseTitle;
   }
 }
@@ -5587,9 +5595,9 @@ export function createApprenticeRoomEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText("Three days since Master Mortain crossed the yard to the Abbey. He told me to bar the door and wait. Brother Aelric and Brother Cael are already dead — buried them myself last week."),
-        new EncounterText("They sent me to the Abbey as an orphan, young enough to forget another life. They meant for me to take the vows. I never did. The graveyard always held me better than the chapel."),
-        new EncounterText("The food is nearly gone — one loaf left on the dining table. The rats are not. They scratch in the walls. I'm afraid I'll catch the plague and die here without a soul to mark the grave."),
+        new EncounterText("Three days have passed since Master Mortain crossed the yard to the Abbey. He told you to bar the door and wait. Brother Aelric and Brother Cael are already dead — you buried them yourself last week."),
+        new EncounterText("The Abbey took you in as an orphan, young enough to forget another life. They meant for you to take the vows. You never did. The graveyard always held you better than the chapel did."),
+        new EncounterText("The food is nearly gone — one loaf left on the dining table. The rats are not. They scratch in the walls. You are afraid you will catch the plague and die in this empty house, with no one to mark your grave."),
         new EncounterText("Before he left, Master Mortain said: 'If I do not return, go into my room. Only then. There will be instructions.'"),
         new EncounterText("Three days. He has not returned.", '!'),
       ],
@@ -5607,9 +5615,339 @@ export function createFrontDoorEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText("I press my eye to the crack between the planks. The yard is empty — and not empty. Forms shuffle through the grass. Slow. Wrong-jointed. They don't notice me."),
-        new EncounterText("Going from the house to the Abbey is not safe. I will have to find another way.", '!'),
+        new EncounterText("You press your eye to the crack between the planks. The yard is empty — and not empty. Forms shuffle through the grass. Slow. Wrong-jointed. They have not noticed you yet."),
+        new EncounterText("Going from the house to the Abbey is not safe. You will have to find another way.", '!'),
       ],
+    }),
+  ]);
+}
+
+// Master Mortain's Desk — one-shot at the heart of the Study. The
+// apprentice opens the closed book on the desk, reads Master
+// Mortain's farewell note, and takes the Apprentice's Spellbook off
+// the lectern. Names locked in: Master Edric Mortain (undertaker
+// mentor), Master Elarion (the silver-haired elf shopkeeper at
+// Qualibaf's Arcane Emporium — established lore from chapter 4).
+export function createStudyDeskEncounter() {
+  return new Encounter('study_desk', "Master Mortain's Desk", '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("Your eyes are drawn to the book on the desk. It is closed. A folded note rests on top of it, your name written across the fold in Master Mortain's careful hand. You open it."),
+        new EncounterText("'If you are reading this, you are on your own — most likely for good. Take the book. Try to master what is inside it. It is older than I am, and I never fully tamed it. Be careful, apprentice: it has a will, and it can control you as readily as you control it.'", 'Master Mortain'),
+        new EncounterText("'Find the Frontier Road north of the abbey and follow it east until you reach Qualibaf. Ask after the Arcane Emporium and Master Elarion — silver-haired elf, you cannot miss him. He is an old friend, and he will help you with your training. Good luck. — Edric Mortain.'", 'Master Mortain'),
+        new EncounterText("'P.S. There is a trap door under the bed in your room. The book will open it when you are ready.'", 'Master Mortain'),
+        new EncounterText("You close the note. You close your hand around the book. It is warm.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['apprentices_spellbook'],
+    }),
+    // The book takes hold. The apprentice doesn't notice it at first
+    // — the cold creeping in, the candle flames leaning toward her.
+    // Behind her, something is rising. The dialog stages the reveal:
+    // a sound, a sight, the lunge, the staff snatched off the desk.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The book in your hands is heavier than it should be. Heavier than it was a moment ago. You do not notice the air going cold, or the candle flames leaning toward you instead of away."),
+        new EncounterText("Something behind you shifts. A scrape. A click of bone on bone."),
+        new EncounterText("You turn. The tall cabinet against the far wall is open. Inside, a folded shape is unfolding itself — vertebra by vertebra, joint by joint."),
+        new EncounterText("A skeleton stands up out of the cabinet. Full-grown. Yellow-grey. Empty sockets find your face and tilt, as if to consider you. Then it lunges for your throat.", '!'),
+        new EncounterText("Master Mortain's staff leans against the desk. You grab it on instinct and bring it up between you and the thing in the room. You have no idea how the book is supposed to help. You have the staff. You fight."),
+      ],
+    }),
+    // Pre-fight loot — the staff she just snatched off the desk. The
+    // LOOT screen makes the addition visible before the COMBAT phase
+    // starts so it lands in her opening hand.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['mortains_staff'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'apprentice_skeleton',
+    }),
+    // Post-fight reveal. The bones crumble — and then they don't stop
+    // crumbling. They keep moving. The book in your bag does the
+    // calling; you do the answering. By the time the dust settles you
+    // are not the same apprentice who walked into the study. The
+    // LOOT phase below then showcases the new power card so the grant
+    // lands with the same fanfare as a card pickup.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The skeleton's last swing falls short. The yellow-grey frame folds in on itself and crashes to the floorboards — bone by bone, knuckle by knuckle, until what is left is a pale heap at your feet."),
+        new EncounterText("Then the heap shifts. A finger twitches. A rib rolls. The pieces are not done. They are already gathering themselves back up."),
+        new EncounterText("The book in your bag pulses, hot against your hip. It is asking you for something. Not in words — in pressure. In hunger. You set your jaw and concentrate."),
+        new EncounterText("The bones answer. You feel them the way you feel your own fingers — there, and yours. You can hold them where they are. You can lift them. You can lay them back down."),
+        new EncounterText("You can control them, it seems. The realisation steadies you and frightens you at once.", '!'),
+        new EncounterText("Was this the potential Master Mortain saw in you?", '?'),
+      ],
+    }),
+    // Power-grant showcase — renders the Skeleton Mastery card
+    // centered (drawEncounterLoot's lootPower branch) and stamps it
+    // onto the apprentice via player.addPower as the LOOT phase
+    // resolves. lootTitle drives the banner above the card.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootPower: 'necromancer_power',
+      lootTitle: 'You gain a new power over skeletons!',
+    }),
+  ]);
+}
+
+// Upstairs — one-shot gate to Master Mortain's study. The apprentice
+// has tried the door over the last few days and found it sealed; the
+// dialog gives the player the choice to try again (and travel to
+// the study map via the `go_to_study` choice handler in main.js)
+// or stay downstairs.
+export function createUpstairsEncounter() {
+  return new Encounter('upstairs', 'Upstairs', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The narrow stair climbs into the dark. Master Mortain's study door waits at the top — the door you have put your shoulder to four times in three days, and never moved a thumb's-width."),
+        new EncounterText("'If I do not return,' he said, 'go into my room. Only then.' Maybe today the wood will give. Maybe today is the day."),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      texts: [
+        new EncounterText('What do you do?'),
+      ],
+      choices: [
+        // 'go_to_study' is intercepted in handleEncounterChoiceClick
+        // to flip the studyVisited flag and warp the party onto the
+        // necromancer_study map. completesEncounter so the upstairs
+        // dialog closes cleanly before the map swap.
+        new EncounterChoice("Try the door — go up to the Study", '', 'go_to_study', 0, { completesEncounter: true }),
+        new EncounterChoice("Stay downstairs — leave it for now", '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// Bedroom revisit — fires when the apprentice returns to her bedroom
+// after the skeleton fight in the study. The hidden trap door under
+// the bed turns out to be sealed, and the book (now in her bag)
+// lets her read the ward off. The seal-breaking beat plays
+// `dark_impact_deep_01` via the per-beat sfx branch in
+// handleEncounterTextClick. The completion hook in main.js then
+// unlocks the trap_door node on the necromancer_house map.
+export function createBedroomTrapDoorEncounter() {
+  return new Encounter('bedroom_trap_door', 'Bedroom', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You step back into your bedroom. The book in your bag is still warm. Master Mortain's note is folded in your sleeve — and the postscript will not leave you alone. *There is a trap door under the bed.*"),
+        new EncounterText("You set your shoulder to the frame and walk the bed across the floorboards an inch at a time. Plates clatter. Years of dust rise in slow ribbons. Underneath: a moth-eaten carpet you have never bothered to lift."),
+        new EncounterText("You drag the carpet aside. Set into the boards, flush and patient, is a heavy wooden hatch. A trap door. He never mentioned it. He never had to."),
+        new EncounterText("You crouch and try the iron ring. The hatch does not creak. Does not move. Pale chalk lines have been drawn across the seam — a seal, intact and old, drawn by a steadier hand than yours."),
+        new EncounterText("His note again: *The book will open it when you are ready.* You take it out of your bag. It is heavier than it was downstairs.", 'Master Mortain'),
+        new EncounterText("You leaf through pages without knowing what you are looking for. Spirals. Diagrams. Names you do not say aloud. And then a page tilts under your eyes — and the symbols on it climb off the parchment and arrange themselves in the air above the hatch."),
+        new EncounterText("You read them. Or they read themselves through you. You cannot tell which. Your throat aches. The candle leans toward the book."),
+        // The seal-breaking beat. dark_impact_deep_01 is fired by the
+        // per-encounter branch in handleEncounterTextClick when this
+        // text index lands. Index 7 (zero-based) — the eighth beat.
+        new EncounterText("The chalk lines on the seal go dark, one stroke at a time, and the trap door settles a finger's-width into its frame as the ward gives way.", '!'),
+        new EncounterText("The book closes itself in your lap. The hatch waits."),
+      ],
+    }),
+  ]);
+}
+
+// Trap Door — descent beat. The apprentice opens the hatch she just
+// unsealed and climbs down into the tunnels under the house. The
+// post-encounter hook in main.js (advanceEncounterPhase, keyed on
+// completedEncounterId === 'trap_door') swaps the active map to
+// Underground Tunnel 1 once the dialog closes. Step into the tunnel
+// is one-way for now (the apprentice can climb back up via the
+// tunnel1_entry click-on-self teleport).
+export function createTrapDoorEncounter() {
+  return new Encounter('trap_door', 'Trap Door', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You lift the hatch by its iron ring. It swings up easier than you expect, as if something on the other side has been waiting for it. Below: a wooden ladder bolted to the rock, descending into a darkness the candlelight refuses to enter."),
+        new EncounterText("Cool air rises around your ankles. It smells of old stone and faint incense — not at all like the cellar of a country house."),
+        new EncounterText("You hook your candle into your belt, take the topmost rung, and start down. The ladder creaks but holds. The square of bedroom light above you shrinks to a single coin."),
+        new EncounterText("Your boots find flagstone. You are standing in a passage carved into the rock under your own house — and you are not alone in knowing it.", '!'),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel 1 middle — first time the apprentice steps into the
+// octagonal chamber. One-shot scene-setter, no loot. Marks the
+// underground as carved on purpose, not natural cave, so the
+// player understands this was built.
+export function createTunnel1MidEncounter() {
+  return new Encounter('tunnel1_mid', 'Stone Floor', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The passage widens into an eight-sided room. The flagstones underfoot were laid in a deliberate pattern you cannot quite read. Burnt-out torches sit in iron rings on every wall."),
+        new EncounterText("Two ways lead out: a corridor running east into deeper dark, and a small arched alcove on the north wall holding what looks like a forgotten altar.", '!'),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel 1 shrine — Forgotten Shrine altar. The apprentice can lay
+// the book on the stone and pray; praying flashes the book and grants
+// the Drain Life ability card as a standard loot card. Skipping (No)
+// closes the encounter and leaves the altar quiet for now — but the
+// node is canRevisit:true and the startNodeEncounter silencer checks
+// for drain_life in masterDeck, so the dialog re-offers itself on
+// every revisit until the apprentice actually prays. The Yes branch
+// threads TEXT → LOOT (lootCards: ['drain_life']); the No branch
+// uses completesEncounter to return straight to the map without
+// falling through to the reward.
+export function createTunnel1ShrineEncounter() {
+  return new Encounter('tunnel1_shrine', 'Forgotten Shrine', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You find this shrine to some old god of the dead. The altar is a single block of dark stone, knee-high, its edges smoothed by hands that no longer exist."),
+        new EncounterText("You take the book from your bag and lay it open on the altar. The dust on the stone draws back from the spine, as if making room.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      texts: [
+        new EncounterText("Do you want to pray?"),
+      ],
+      choices: [
+        // Yes — does NOT complete the encounter; falls through into
+        // the next TEXT + LOOT phases that grant Drain Life.
+        new EncounterChoice("Yes — pray at the altar.", '', '', 0, {}),
+        // No — backs off the altar and closes the encounter.
+        new EncounterChoice("No — leave the altar alone.", '', '', 0, { completesEncounter: true }),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You set your palms on the stone and lower your head. The candles around the altar lean toward the book."),
+        new EncounterText("The book flashes. A weight falls into your chest — old, patient, hungry — and settles there as if it had always been waiting for you."),
+        new EncounterText("Whoever was raised here is forgotten by the living, but not by what is below. They have given you something of theirs.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['drain_life'],
+      lootTitle: 'You gain the Drain Life ability!',
+    }),
+  ]);
+}
+
+// East Corridor — first-visit Forgotten Specter combat. The wraith
+// manifests as the apprentice steps into the passage, swings its
+// Spectral Hand for a wild 1-4 damage roll on its turn, and plays
+// the same card reactively as a Block 5 / Heal 5 / Draw defense.
+// Hand size 1 + 5-card deck = 5 HP — beatable but slippery. Once
+// defeated, the East Corridor becomes a clean cross-map teleport
+// to Underground Tunnel 2 (gated in arriveAtNode by
+// completedEncounters.has('east_corridor')).
+export function createEastCorridorEncounter() {
+  return new Encounter('east_corridor', 'East Corridor', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You step into the east corridor. The torchlight thins to nothing a dozen paces ahead, and the cold here is not the cold of stone."),
+        new EncounterText("Something pulls itself out of the dark — a long, pale hand, then another, then a shape behind them you cannot quite focus on. The air around it rings."),
+        new EncounterText("It does not speak. It does not need to. Master Mortain set this thing here to guard the way, and it is going to make you earn the passage.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'forgotten_specter',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The wraith folds in on itself one limb at a time, like smoke poured back into a bottle. The cold lifts from the corridor in a slow exhale."),
+        new EncounterText("Where the specter stood, a slick of pale matter clings to the flagstones. You scrape it carefully into a jar — Master Mortain's notes mentioned ectoplasm. He never said what it tasted like."),
+        new EncounterText("The passage east is open.", '!'),
+      ],
+    }),
+    // Specter Ectoplasm — Heal 1, Draw. Souvenir loot from the
+    // Forgotten Specter so the apprentice walks out of the East
+    // Corridor with one self-heal in pocket for the deeper tunnels.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['specter_ectoplasm'],
+    }),
+  ]);
+}
+
+// Tunnel 2 middle — quick walking beat on the worn floor stretch.
+// The smooth track in the flagstones tells the apprentice someone
+// used to walk this corridor often.
+export function createTunnel2MidEncounter() {
+  return new Encounter('tunnel2_mid', 'Worn Floor', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("Halfway through the corridor you stop. The flagstones in the center of the floor are worn down a finger's-depth — a track only a single pair of feet could have cut, walking the same line for years."),
+        new EncounterText("Master Mortain came down here. Not once. Often.", '!'),
+        new EncounterText("You take another step and the air goes thick. From each of the four corners of the room, bone slides on stone — and four skeletons unfold up out of the dark and close in around you."),
+        new EncounterText("Another test? Is there something here I am not fully grasping?", '?'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'army_of_the_dead',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The fourth skeleton falls and does not get up. The thick feeling lifts off the room like a held breath let go. Whatever was directing them is done watching for today."),
+        new EncounterText("You straighten up over the bones. The corridor stretches ahead of you, quiet again.", '!'),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel 3 door — placeholder. The next chapter of the side story
+// picks up beyond this door; for now the dialog just acknowledges
+// the apprentice cannot get through yet so the player understands
+// they have reached the end of the current content.
+export function createTunnel3DoorEncounter() {
+  return new Encounter('tunnel3_door', 'Closed Door', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The door is stone, banded in iron, and set deep into the rock. There is no handle, no keyhole, no chalked seal — only a single circular sigil cut into the center, the size of your palm."),
+        new EncounterText("You set your palm against it. It is warm. It does not open.", '!'),
+        new EncounterText("Whatever opens this door, you do not have it yet. Not tonight."),
+      ],
+    }),
+  ]);
+}
+
+// Dining Room aftermath — fires instead of the cockroach fight when
+// the apprentice has already visited Master Mortain's study (the
+// studyVisited flag latched). Same broom + bone knife are scavenged
+// out of the wreckage, but the bread is long gone and the cockroach
+// husks have already been crushed under boots: no Bad Rations, no
+// Chitin Shield.
+export function createDiningRoomAftermathEncounter() {
+  return new Encounter('dining_room_aftermath', 'Dining Room', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You push the dining-room door open. The hall is silent — but it has not been silent for long. Crumbs everywhere. Chairs knocked over. The loaf you were saving is gone, and the cockroaches that took it are gone with it."),
+        new EncounterText("They moved fast. You missed your chance at them. All you have to show for the room is the broom in the corner and Master Mortain's bone knife from the carving block.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      // Just the utility weapons — no rations, no chitin (the bugs
+      // already carried off the loaf and trampled their own husks).
+      lootCards: ['bone_dagger', 'short_staff'],
     }),
   ]);
 }
@@ -5625,9 +5963,16 @@ export function createDiningRoomEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText("I push the dining-room door open and freeze. The hall is alive — black shells skittering over every surface. While I slept, they came up through the floorboards. They have found my last loaf."),
-        new EncounterText("They will not give it up easily. I grab the broom from the corner and Master Mortain's bone knife from the carving block, and I get ready to fight for my supper.", '!'),
+        new EncounterText("You push the dining-room door open and freeze. The hall is alive — black shells skittering over every surface. While you slept, they came up through the floorboards. They have found your last loaf."),
+        new EncounterText("They will not give it up easily. You grab the broom from the corner and Master Mortain's bone knife from the carving block, and ready yourself to fight for your supper.", '!'),
       ],
+    }),
+    // Pre-combat loot screen — the broom (Short Staff) and bone knife
+    // (Bone Dagger) the dialog says she grabs land in the deck (and
+    // her opening hand) before the bugs start crawling at her.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['short_staff', 'bone_dagger'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.COMBAT,
@@ -5637,7 +5982,7 @@ export function createDiningRoomEncounter() {
       phaseType: EncounterPhase.TEXT,
       texts: [
         new EncounterText("The last of them stops twitching under the broom. The loaf is gone — chewed to crumbs — but the bug-ridden husk on the table looks like it could still feed a desperate stomach."),
-        new EncounterText("I scrape together what's left of the rations and pry a wide shell off the largest cockroach. Chitin makes a good buckler, if you don't mind the smell.", '!'),
+        new EncounterText("You scrape together what is left of the rations and pry a wide shell off the largest cockroach. Chitin makes a good buckler, if you do not mind the smell.", '!'),
       ],
     }),
     new EncounterPhaseData({
@@ -5658,8 +6003,8 @@ export function createStorageAreaEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText("I pry the lid off the nearest crate. Old linens. Candle stubs. A few wax-stained ledgers I don't dare open."),
-        new EncounterText("Underneath everything — a bundle of cloth scraps Master Mortain saved for binding the dead. I take them. He'd want me to use what I can.", '!'),
+        new EncounterText("You pry the lid off the nearest crate. Old linens. Candle stubs. A few wax-stained ledgers you do not dare open."),
+        new EncounterText("Underneath everything — a bundle of cloth scraps Master Mortain saved for binding the dead. You take them. He would want you to use what you can.", '!'),
       ],
     }),
     new EncounterPhaseData({
@@ -5677,6 +6022,16 @@ export const ENCOUNTER_REGISTRY = {
   front_door: createFrontDoorEncounter,
   storage_area: createStorageAreaEncounter,
   dining_room: createDiningRoomEncounter,
+  dining_room_aftermath: createDiningRoomAftermathEncounter,
+  upstairs: createUpstairsEncounter,
+  study_desk: createStudyDeskEncounter,
+  bedroom_trap_door: createBedroomTrapDoorEncounter,
+  trap_door: createTrapDoorEncounter,
+  tunnel1_mid: createTunnel1MidEncounter,
+  tunnel1_shrine: createTunnel1ShrineEncounter,
+  east_corridor: createEastCorridorEncounter,
+  tunnel2_mid: createTunnel2MidEncounter,
+  tunnel3_door: createTunnel3DoorEncounter,
   giant_rat: createGiantRatEncounter,
   locked_door: createLockedDoorEncounter,
   bone_pile: createBonePileEncounter,

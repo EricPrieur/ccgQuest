@@ -11,6 +11,12 @@ export class Creature {
     armor = 0,
     shield = 0,
     poisonAttack = false,
+    // Optional taxonomy tags for cross-creature effects (e.g.
+    // Mortain's Staff: "you and your skeletons gain Shield"). Keep
+    // them as plain strings like 'Skeleton' / 'Undead' so the rider
+    // handler can do `creature.traits.includes('Skeleton')`. Default
+    // is an empty array — existing creatures don't carry any tag.
+    traits = [],
     fireAttack = 0,
     iceAttack = 0,
     iceAttackAll = 0,
@@ -80,6 +86,7 @@ export class Creature {
     this.markStacks = 0;
 
     this.poisonAttack = poisonAttack;
+    this.traits = Array.isArray(traits) ? [...traits] : [];
     this.fireAttack = fireAttack;
     this.iceAttack = iceAttack;
     this.iceAttackAll = iceAttackAll;
@@ -127,17 +134,23 @@ export class Creature {
   }
 
   takeDamage(amount) {
-    // Shield absorbs first
+    // Armor absorbs FIRST — a permanent flat reduction off the top
+    // of every hit. Without this, a swing equal to the armor value
+    // (e.g. 1 dmg vs 1 armor) would burn a Shield stack instead of
+    // bouncing off the armor, and a small shielded creature would
+    // hemorrhage shields to chip damage that armor should have
+    // soaked for free. Shield is the persistent buffer behind it.
+    if (this.armor > 0) {
+      const armorAbsorb = Math.min(this.armor, amount);
+      amount -= armorAbsorb;
+    }
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, amount);
       this.shield -= shieldAbsorb;
       amount -= shieldAbsorb;
     }
-    // Armor absorbs next
-    const absorbed = Math.min(this.armor, amount);
-    const actual = amount - absorbed;
-    this.currentHp = Math.max(0, this.currentHp - actual);
-    return actual;
+    this.currentHp = Math.max(0, this.currentHp - amount);
+    return amount;
   }
 
   takeUnpreventableDamage(amount) {

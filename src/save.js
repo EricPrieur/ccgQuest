@@ -220,6 +220,7 @@ export function saveGame(state, saveName = '') {
     volcanoChoiceCompleted: !!state.volcanoChoiceCompleted,
     chapter8SlybladeSeen: !!state.chapter8SlybladeSeen,
     valdrisaJoined: !!state.valdrisaJoined,
+    studyVisited: !!state.studyVisited,
     upperStairsReturnSeen: !!state.upperStairsReturnSeen,
     tharnagExitSeen: !!state.tharnagExitSeen,
     // Globally completed encounter ids — persisted as a flat list so
