@@ -5573,8 +5573,110 @@ export function createArtisanWorkshopRevisitEncounter() {
   ]);
 }
 
+// ============================================================
+// Path of the Necromancer (side quest)
+// ============================================================
+//
+// Opening monologue for the apprentice trapped in Master Mortain's
+// quarantined undertaker house. The map drops the player at this node
+// after the title card; the encounter is dialog-only (no combat) and
+// just paints the situation so the player understands the stakes
+// before they start exploring the house.
+export function createApprenticeRoomEncounter() {
+  return new Encounter('apprentice_room', "Master Mortain's House", '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("Three days since Master Mortain crossed the yard to the Abbey. He told me to bar the door and wait. Brother Aelric and Brother Cael are already dead — buried them myself last week."),
+        new EncounterText("They sent me to the Abbey as an orphan, young enough to forget another life. They meant for me to take the vows. I never did. The graveyard always held me better than the chapel."),
+        new EncounterText("The food is nearly gone — one loaf left on the dining table. The rats are not. They scratch in the walls. I'm afraid I'll catch the plague and die here without a soul to mark the grave."),
+        new EncounterText("Before he left, Master Mortain said: 'If I do not return, go into my room. Only then. There will be instructions.'"),
+        new EncounterText("Three days. He has not returned.", '!'),
+      ],
+    }),
+  ]);
+}
+
+// Front Door — one-shot. The apprentice peeks through the chained
+// door for the first time and sees that the route to the Abbey isn't
+// passable. After this fires the node is "done" (canRevisit: false on
+// the map node) so the warning doesn't replay every time the player
+// walks past it.
+export function createFrontDoorEncounter() {
+  return new Encounter('front_door', 'Front Door', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("I press my eye to the crack between the planks. The yard is empty — and not empty. Forms shuffle through the grass. Slow. Wrong-jointed. They don't notice me."),
+        new EncounterText("Going from the house to the Abbey is not safe. I will have to find another way.", '!'),
+      ],
+    }),
+  ]);
+}
+
+// Dining Room — one-shot opening fight on the necromancer house map.
+// The apprentice wakes to find cockroaches swarming the last loaf of
+// bread. The TEXT phase paints the scene and gets the apprentice to
+// grab the broom + bone knife (those cards are injected into the
+// player's deck by the COMBAT phase setup hook in main.js), then the
+// fight against the Plague Cockroach starts.
+export function createDiningRoomEncounter() {
+  return new Encounter('dining_room', 'Dining Room', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("I push the dining-room door open and freeze. The hall is alive — black shells skittering over every surface. While I slept, they came up through the floorboards. They have found my last loaf."),
+        new EncounterText("They will not give it up easily. I grab the broom from the corner and Master Mortain's bone knife from the carving block, and I get ready to fight for my supper.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'plague_cockroach',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The last of them stops twitching under the broom. The loaf is gone — chewed to crumbs — but the bug-ridden husk on the table looks like it could still feed a desperate stomach."),
+        new EncounterText("I scrape together what's left of the rations and pry a wide shell off the largest cockroach. Chitin makes a good buckler, if you don't mind the smell.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      // No gold roll — this isn't a payday, it's salvage. The two
+      // cards land in the deck via the standard loot pipeline.
+      lootCards: ['bad_rations', 'chitin_shield'],
+    }),
+  ]);
+}
+
+// Storage Area — one-shot rummage in the back of the undertaker's
+// house. The apprentice digs through crates and old linens. The LOOT
+// phase grants Scraps so the player has at least one heal option
+// they can lean on while the rest of the kit is still empty.
+export function createStorageAreaEncounter() {
+  return new Encounter('storage_area', 'Storage Area', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("I pry the lid off the nearest crate. Old linens. Candle stubs. A few wax-stained ledgers I don't dare open."),
+        new EncounterText("Underneath everything — a bundle of cloth scraps Master Mortain saved for binding the dead. I take them. He'd want me to use what I can.", '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      // No gold roll — this is found-stuff, not pay. Scraps land
+      // directly in the deck via the standard LOOT phase pipeline.
+      lootCards: ['scraps'],
+    }),
+  ]);
+}
+
 // Registry: encounter_id -> creator function
 export const ENCOUNTER_REGISTRY = {
+  apprentice_room: createApprenticeRoomEncounter,
+  front_door: createFrontDoorEncounter,
+  storage_area: createStorageAreaEncounter,
+  dining_room: createDiningRoomEncounter,
   giant_rat: createGiantRatEncounter,
   locked_door: createLockedDoorEncounter,
   bone_pile: createBonePileEncounter,

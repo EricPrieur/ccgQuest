@@ -15,12 +15,13 @@ import { Deck } from './deck.js';
 import { Creature } from './creature.js';
 import { Card, CardEffect } from './card.js';
 import {
-  getPaladinStarterDeck, getRangerStarterDeck, getWizardStarterDeck,
+  getPaladinStarterDeck, getRangerStarterDeck, getWizardStarterDeck, getNecromancerStarterDeck,
   getRogueStarterDeck, getWarriorStarterDeck, getDruidStarterDeck,
   getAbilityChoices,
   getPaladinAbilityChoices, getRangerAbilityChoices, getWizardAbilityChoices,
   getRogueAbilityChoices, getWarriorAbilityChoices, getDruidAbilityChoices,
   createBite, createToughHide, createSkreeeeeeeek,
+  createSkitterBite,
   createBigBone, createLooseBone,
   createSlimeAppendage, createPartiallyDigestedBone, createCorrodedArmor, createPetSlimeCard, createSlimeJar,
   createGuards, createHideInCorner,
@@ -46,7 +47,7 @@ import {
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
   createWoodenAxe, createWoodenGreatsword, createRockMace,
-  createCrackedBuckler, createBuckler, createShortBow, createShortStaff,
+  createCrackedBuckler, createBuckler, createChitinShield, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
   createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
@@ -66,7 +67,7 @@ import {
   createSteelAxe, createSteelMace, createSteelSword, createSteelGreataxe,
   createBow, createSteelDagger,
   createStuddedLeatherArmor, createRingMail,
-  createScrollOfPotency, createMinorHealingPotion, createPotionOfGreaterHealing, createWandOfFire,
+  createScrollOfPotency, createApprenticesSpellbook, createMinorHealingPotion, createPotionOfGreaterHealing, createWandOfFire,
   createTridentThrow, createTridentThrust, createScaleArmor,
   createBloodInTheWater, createBarnacleEncrustedPlateEnemy,
   createBarnacleEncrustedPlate, createBarnacle,
@@ -120,7 +121,7 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createNecromancerHouseMap, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -185,6 +186,12 @@ let _gamePlusBtnRect = null;
 // game start (so a future Back from a normal new game still
 // returns to the menu).
 let _fromGamePlusSetup = false;
+// Set when CHARACTER_SELECT is reached from the debug-only Quest
+// Select screen (Main Quest tile). The character-select Back button
+// reads this so it returns the player to QUEST_SELECT instead of
+// dropping straight to MENU. Consumed at game start the same way
+// _fromGamePlusSetup is.
+let _fromQuestSelect = false;
 // Set by startGamePlusFromSave to defer the first node encounter
 // until the player exits the rebalance rest (exitInventory consumes
 // the hook).
@@ -457,6 +464,14 @@ const EFFECT_DESC_PATTERNS = {
   apply_shock_all: [/Apply\s+(\d+)\s+Shock/i, /(\d+)\s+Shock/i],
   damage_random: [/(\d+)\s+Dmg\s+random/i, /(\d+)\s+Damage/i, /(\d+)\s+Dmg/i],
   damage_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  // Fan of Blades: same shape as damage_all but two passes per cast.
+  damage_all_twice: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  // Consecration: total pool that's split across all enemies.
+  damage_split_all: [/Deal\s+(\d+)\s+Damage/i, /(\d+)\s+Dmg\b/i],
+  // Dragon Bone Bow: pattern matches the FIRST number in "4, 3 and 2"
+  // — the rewriter only patches one numeric token per effect anyway,
+  // and the resolve log still shows each scaled shot value.
+  dragon_bow_barrage: [/barrage\s+of\s+(\d+)/i, /Deal\s+(\d+)/i, /(\d+)\s+Dmg\b/i],
   damaged_bonus_damage: [/\+(\d+)\s+if/i, /(\d+)\s+if\s+damaged/i],
   poison_bonus_damage:  [/Poisoned:\s*\+(\d+)/i, /\+(\d+)\s+if\s+target\s+is\s+Poisoned/i, /\+(\d+)\s+if\s+Poison/i, /\+(\d+)\s+Poison/i],
   heal_random: [/Heal\s+1-(\d+)/i, /Heal\s+(\d+)/i, /1-(\d+)/],
@@ -870,21 +885,19 @@ function applyGamePlusOffsetInPlace(c, offset) {
         c.shortDesc = (c.shortDesc || '').replace(/Meal:\s+Heal\s+\d+/i, `Meal: Heal ${v}`);
       }
     }
-    // Travel Rations — bump the heal arm of the random_pick meal
-    // tick by the same per-offset rate as the Consume heal (the
-    // gamePlusOffset.heal value drives both ends). Draw arm stays
-    // flat. The Consume heal swap fires via the generic loop above.
+    // Travel Rations — bump the Meal heal value by the same per-offset
+    // rate as the Consume heal. The Consume heal swap fires via the
+    // generic loop above; this rebuilds the simple Meal provision
+    // text. (Was a random_pick of Heal-or-Draw earlier; now a plain
+    // Heal 1 every turn for 3 turns.)
     if (c.id === 'travel_rations' && c.gamePlusOffset?.heal) {
       const dHeal = Math.floor(c.gamePlusOffset.heal * offset + 1e-9);
-      const provEff = c.provision?.effects?.[0];
-      if (provEff && Array.isArray(provEff.options) && dHeal > 0) {
-        for (const opt of provEff.options) {
-          if (opt.effectType === 'heal') opt.value = (opt.value || 0) + dHeal;
-        }
-        const healVal = provEff.options.find(o => o.effectType === 'heal')?.value || 1;
-        c.provision.description = `Heal ${healVal} or Draw each turn for 3 turns (each combat, until rest)`;
-        c.description = (c.description || '').replace(/Heal\s+\d+\s+or\s+Draw/i, `Heal ${healVal} or Draw`);
-        c.shortDesc = (c.shortDesc || '').replace(/Heal\/Draw\s+\d+T/i, `Heal/Draw 3T`);
+      if (c.provision && dHeal > 0) {
+        c.provision.value = (c.provision.value || 0) + dHeal;
+        const v = c.provision.value;
+        c.provision.description = `Heal ${v} each turn for 3 turns (each combat, until rest)`;
+        c.description = (c.description || '').replace(/Meal:\s+Heal\s+\d+/i, `Meal: Heal ${v}`);
+        c.shortDesc = (c.shortDesc || '').replace(/Heal\s+\d+\/3T/i, `Heal ${v}/3T`);
       }
     }
     // Harpy Egg Omelette — Consume heal scales via the generic
@@ -899,18 +912,16 @@ function applyGamePlusOffsetInPlace(c, offset) {
         c.shortDesc = (c.shortDesc || '').replace(/Draw\s+(\d+)T/i, `Draw ${t}T`);
       }
     }
-    // Magma Tablet — +0.5 turns per offset (floor) AND +1 Ignite per
-    // offset on the per-turn tick. The grant_magma_tablet_buff
-    // handler reads the bumped effect value directly for the turn
-    // count; the Ignite-per-turn lives on a separate field
-    // (_magmaTabletIgnite) read at buff-projection time.
+    // Magma Tablet — +1 on-play Ignite per offset (handled by the
+    // generic gain_ignite swap) + +0.5 turns per offset (floor) on
+    // the buff. Per-turn Ignite stays at 1; rebuild the description
+    // with the scaled on-play gain + new turn count so both numbers
+    // line up with the actual effect values.
     if (c.id === 'magma_tablet') {
-      const igniteBump = offset;
-      c._magmaTabletIgnite = 1 + igniteBump;
+      const igniteNow = c.effects.find(e => e.effectType === 'gain_ignite')?.value || 3;
       const turns = c.effects.find(e => e.effectType === 'grant_magma_tablet_buff')?.value || 4;
-      const igniteNow = c._magmaTabletIgnite;
-      c.description = `Recharge -> Gain ${igniteNow} Ignite now and for the next ${turns} turns.\nBurning: Gain ${igniteNow} Ignite and Draw.`;
-      c.shortDesc = `R->+${igniteNow} Ignite\n${turns} turns (+Burning)`;
+      c.description = `Discard -> Gain ${igniteNow} Ignite and Ignite for ${turns} turns.\nBurning: Draw.`;
+      c.shortDesc = `D->+${igniteNow} Ignite\n+1/turn ${turns}T\nBurning: Draw`;
     }
     // Goblin Sapper Charges — both ends of the 1-3 random roll
     // shift by +1 per offset. Stamp the bump on the card so the
@@ -2221,6 +2232,9 @@ const CLASS_WEAPONS = {
   Rogue:   new Set(['martial', 'simple', 'ranged']),
   Warrior: new Set(['martial', 'martial_2h', 'simple', 'simple_2h', 'ranged']),
   Druid:   new Set(['simple', 'simple_2h', 'staff', 'wand']),
+  // Necromancer (Path of the Necromancer side quest) — mirrors the
+  // Wizard's weapon/item access until the class gets its own kit.
+  Necromancer: new Set(['simple', 'staff', 'wand']),
 };
 const CLASS_ITEMS = {
   Paladin: new Set(['item', 'potion', 'relic']),
@@ -2229,6 +2243,7 @@ const CLASS_ITEMS = {
   Rogue:   new Set(['item', 'potion', 'relic', 'scroll']),
   Warrior: new Set(['item', 'potion', 'relic']),
   Druid:   new Set(['item', 'potion', 'relic']),
+  Necromancer: new Set(['item', 'potion', 'relic', 'scroll']),
 };
 // Per-class base limits for each card category. Mirrors PY's
 // CLASS_DECK_LIMITS. During rest, current counts are color-coded
@@ -2241,6 +2256,11 @@ const CLASS_DECK_LIMITS = {
   Rogue:   { weapon: 6, armor: 3, ability: 3, item: 3, allies: 2, relic: 1 },
   Warrior: { weapon: 7, armor: 4, ability: 3, item: 1, allies: 2, relic: 1 },
   Druid:   { weapon: 4, armor: 4, ability: 4, item: 3, allies: 2, relic: 1 },
+  // Necromancer — Wizard baseline shifted by -1 ability, +1 armor,
+  // -1 item, +1 weapon. The class trades a chunk of spellcasting
+  // headroom for more gravegear: a bigger weapon and armor pool
+  // reflects the apprentice's undertaker training.
+  Necromancer: { weapon: 4, armor: 3, ability: 6, item: 2, allies: 2, relic: 1 },
 };
 
 // Maps category labels to the subtypes they count (used by the inventory
@@ -2341,6 +2361,12 @@ let encounterTextOverflow = 0; // how much the text overflows the box (set durin
 
 // Debug mode (toggle with backtick `)
 let debugMode = false;
+// Picked-quest flag — 'main' is the default Part 1 storyline (Escape
+// the Prison → Varimatras finale). Side stories ('necromancer', …) are
+// set on the debug-only Quest Select screen and consumed by
+// downstream story setup once side-quest content lands. The flag
+// also persists in saves later; for now it's session-only.
+let selectedQuest = 'main';
 // Latches true the first frame the pause cluster engages so we only
 // call stopAmbienceLayer once per pause (not every frame). Reset when
 // the player leaves the menu. Without this, the ramp restarts every
@@ -2900,6 +2926,262 @@ let previousState = null; // state before help/ingame menu
 // the in-game menu, and stomping previousState would lose the menu's
 // own back-target. Restored when the codex closes.
 let codexReturnState = null;
+// Journal — story log. Tracks every encounter whose TEXT phase the
+// player has read at least once + the return state for J-toggle.
+// seenDialogs is persisted in save.js so the journal carries across
+// save/load. journalSelectedEncounter is the encounter id currently
+// rendered in the right pane; null = no selection (show a prompt).
+let journalReturnState = null;
+let seenDialogs = new Set();
+// Player's choice + result-text per encounter. Recorded the moment the
+// player picks a choice in encounterChoiceResult so the Journal can
+// show "Your choice: <text>" + the consequence below the dialog body.
+// Keyed by encounter id; the latest pick wins for repeat-choice
+// encounters (Stormwatcher Contemplate, etc.) — the player sees what
+// the most recent visit resolved to.
+let journalChoices = {};
+let journalSelectedEncounter = null;
+let journalScrollY = 0;
+let journalListScrollY = 0;
+let journalClickAreas = []; // refilled each frame for hit-testing
+// Most recently seen dialog id. Stamped every time advanceEncounterPhase
+// enters a TEXT phase; used as the default selection when the J key
+// opens the journal so the player lands on the beat they just read.
+let lastSeenDialog = null;
+// Collapsed parts / chapters. Holds part ids ('part_1') and chapter
+// ids ('chapter_1') that the player has clicked to minimize. Click
+// the header again to expand. Persisted only in-memory (collapse
+// state is a UX preference, not save-worthy).
+let journalCollapsed = new Set();
+
+// Story manifest — describes how encounter dialogs are grouped under
+// Parts and Chapters in the Journal. Each entry's encounters are
+// listed in story order so the journal reads top-to-bottom the way
+// the player experienced them. Add new chapters here as content
+// ships. encounterId values match the Encounter constructor's id
+// (the `id` first-arg passed to `new Encounter(...)` in encounter.js).
+const JOURNAL_MANIFEST = [
+  {
+    id: 'part_1',
+    title: 'Part 1: The White Claw',
+    chapters: [
+      {
+        id: 'chapter_1',
+        title: 'Chapter 1: The Prison',
+        encounters: [
+          'giant_rat', 'locked_door', 'bone_pile', 'crack',
+          'splash_point', 'dead_end', 'tight_opening', 'lost_shrine',
+          'sewer_junction', 'abandoned_camp', 'upward_passage',
+          'kitchen', 'prison_entrance', 'prison_wing', 'corner_cell',
+          'leave_prison',
+        ],
+      },
+      {
+        id: 'chapter_2',
+        title: 'Chapter 2: The Mountain Path',
+        // to_the_plains is the chapter-2 closer — its completion fires
+        // the Chapter 3 title card.
+        encounters: [
+          'mountain_camp', 'mountain_pass', 'calm_stream',
+          'calm_grove', 'general_zhost', 'to_the_plains',
+        ],
+      },
+      {
+        id: 'chapter_3',
+        title: 'Chapter 3: The Plains of No Hope',
+        // Main-line spine: Plains → Cave → Ruins Basin → Cave Exit
+        // → river crossing → south_gate (fires the Chapter 4 title
+        // card). The South Outpost / wreckage detour is Gontran's
+        // Request — see the Side Quests section. The Roc Nest /
+        // Mithril Remedies branch is also a side quest.
+        encounters: [
+          'bone_valley', 'wolf_blizzard',
+          'cave_entrance', 'cave_ledge', 'cave_river_landing',
+          'underground_river',
+          'piranha_pool', 'pool_south', 'pool_exit',
+          'conservatory_wing', 'flooded_passage',
+          'sentinel_patrol_sighting',
+          'boss_wing_sentinel_combat', 'boss_wing_priest_combat',
+          'flooded_altar', 'old_god_statue',
+          'dark_corridor', 'passage_ambush',
+          'cave_exit', 'river_crossing',
+          'south_gate',
+        ],
+      },
+      {
+        id: 'chapter_4',
+        title: 'Chapter 4: Qualibaf',
+        // Qualibaf city + the road north + Filibaf forest + the
+        // Tharnag siege approach. Closes on tharnag_side_door (fires
+        // the Chapter 5 title card on completion).
+        encounters: [
+          'sahuagin_sentinel', 'city_square',
+          'weaponsmith', 'armorsmith', 'general_store',
+          'inn', 'church',
+          'arcane_emporium',
+          'antiquity_shop', 'antiquity_shop_cleared',
+          'guild_hall', 'guild_hall_victory',
+          'city_north_gate',
+          'north_crossroad', 'filibaf_entrance',
+          'forest_shadows', 'forest_shadows_revisit',
+          'forest_ambush_left', 'forest_ambush_right',
+          'forest_clearing',
+          'tharnag_arrival',
+          'siege_gauntlet_1', 'siege_gauntlet_2', 'siege_gauntlet_3',
+          'siege_gauntlet_dialog',
+          'tharnag_side_door',
+        ],
+      },
+      {
+        id: 'chapter_5',
+        title: 'Chapter 5: Tharnag',
+        // Inside the dwarven hold — Grand Hall, throne audience,
+        // Valdrisa, quarters rest. Closes on tharnag_exit (fires the
+        // Chapter 6 title card).
+        encounters: [
+          'grand_hall_arrival', 'grand_staircase_arrival',
+          'throne_room_arrival', 'throne_audience',
+          'quarters_rest', 'quarters_chest',
+          'valdrisa_encounter', 'upper_stairs_return',
+          'dwarven_tavern', 'dwarven_smithy',
+          'tharnag_exit',
+        ],
+      },
+      {
+        id: 'chapter_6',
+        title: 'Chapter 6: Into the Volcano',
+        // Obsidian Wastes crossing + Volcano base approach. Closes on
+        // volcano_choice (fires the Chapter 7 title card after the
+        // player picks upper or lower).
+        encounters: [
+          'obsidian_wastes_arrival', 'wastes_north',
+          'kobold_drake_rider', 'obsidian_golem', 'obsidian_slime',
+          'volcano_arrival',
+          'volcano_choice', 'volcano_choice_revisit',
+          'ridge_post_dragon_offer',
+        ],
+      },
+      {
+        id: 'chapter_7',
+        title: 'Chapter 7: Enter the Volcano',
+        // Both branches converge on bridge_crossing (fires the
+        // Chapter 8 title card). Lower path = obsidian caverns +
+        // plaza + cathedral. Upper path = entry corridor + dwarven
+        // throne hall + map room + artisan + tunnel-to-bridge.
+        encounters: [
+          // Lower path
+          'lower_caverns_arrival', 'lower_caverns_double_back',
+          'lava_chamber_arrival',
+          'obsidian_tunnels_arrival', 'obsidian_tunnels_arrival_back',
+          'obsidian_forge_arrival', 'obsidian_forge',
+          'obsidian_forge_revisit',
+          'temple_district_arrival', 'temple_district_arrival_side',
+          'cathedral_arrival',
+          'cathedral_shrine', 'cathedral_shrine_revisit',
+          'obsidian_oracle',
+          'volcano_heart', 'volcano_heart_revisit',
+          'obsidian_plaza_arrival',
+          'obsidian_plaza_arrival_west', 'obsidian_plaza_arrival_nw',
+          'magma_drake', 'magma_mephit',
+          'obsidian_streets_arrival', 'obsidian_streets_arrival_upper',
+          'obsidian_market_arrival', 'market_stalls', 'deep_market_rest',
+          'upper_bridge_arrival', 'zhost_revenge',
+          // Upper path
+          'entry_corridor_arrival', 'entry_corridor_double_back',
+          'corridor_gate_approach', 'gate_guardroom',
+          'gate_passage', 'gate_passage_back',
+          'ruga_slave_master', 'monument_alley_entry',
+          'tomb_of_ancestor_entry', 'tomb_sarcophagus',
+          'tomb_sarcophagus_rest',
+          'grand_stairs_entry', 'dwarven_throne_room_entry',
+          'throne_specter',
+          'map_room_entry', 'map_table', 'map_table_revisit',
+          'deeper_tunnels_entry', 'deeper_tunnels_entry_back',
+          'artisan_district_entry', 'artisan_district_entry_back',
+          'artisan_workshop', 'artisan_workshop_revisit',
+          'tunnel_to_bridge_entry', 'tunnel_to_bridge_entry_back',
+          'tunnel_to_bridge_exit',
+          'kobold_slyblade', 'dwarven_specter',
+          // Bridge — fires the Chapter 8 title card on completion
+          'bridge_crossing',
+        ],
+      },
+      {
+        id: 'chapter_8',
+        title: 'Chapter 8: The White Claw',
+        // Summit ridge: Overseer Gnikan + Varimatras finale + Part 1
+        // ending dialog. Temple of Moradin sits at the tail of the
+        // chapter — it unlocks once the dragon is slain (post-
+        // Varimatras), so it reads as a denouement beat alongside
+        // the Part 1 wrap-up.
+        encounters: [
+          'stair_top_arrival',
+          'overseer_gnikan',
+          'tharnag_part1_ending',
+          'temple_moradin_altar', 'temple_moradin_altar_revisit',
+        ],
+      },
+    ],
+  },
+  {
+    // Optional content arcs that branch off the main quest. Listed
+    // separately so their dialogs don't bloat the main chapters and
+    // the player can find them by quest name.
+    id: 'side_quests',
+    title: 'Side Quests',
+    chapters: [
+      {
+        id: 'sq_gontran',
+        title: "Gontran's Request",
+        // Starts when the East Side message is read just before the
+        // approach to Qualibaf — the party can choose to deliver the
+        // message south to Gontran instead of heading straight to
+        // the city gate. The detour covers the South Trail, the
+        // South of Qualibaf trail, the South Outpost, the Cozy Spot
+        // / River Cave Mouth, and the merchant wreckage / Kraken
+        // fight. Completing it loops back into the main path.
+        encounters: [
+          'east_side', 'south_trail',
+          'outpost_meeting', 'outpost_kraken_report',
+          'watchtower_check', 'supply_pile', 'outpost_tent',
+          'cozy_spot', 'cozy_spot_ambush',
+          'river_cave_mouth_entry', 'lake_path_2', 'south_hill',
+          'wreckage_arrival', 'wreckage_harpy_revisit', 'ship_chest',
+          'giant_frog_ambush',
+        ],
+      },
+      {
+        id: 'sq_olbrim',
+        title: "Olbrim's Rescue (Mithril Remedies)",
+        // Unlocks once Valdrisa joins the party (Personal Quarters
+        // rest in Tharnag). The party hears Olbrim went missing
+        // climbing the Stairs of the Infinite to harvest frostbloom
+        // for the Mithril Remedies stock — they go after him,
+        // ending in a Roc rescue and the post-dragon shop reopen.
+        encounters: [
+          'mithril_remedies_olbrim_greet', 'mithril_remedies_open',
+          'mithril_remedies_revisit', 'mithril_remedies',
+          'top_stairs_arrival',
+          'valley_floor_arrival', 'upper_valley_arrival',
+          'frostbloom_patch', 'deeper_path_find',
+          'cave_entrance_arrival',
+          'circular_ruins_combat', 'circular_ruins_combat_repeat',
+          'ice_waterfall_climb', 'final_approach_check',
+          'nest_middle_olbrim', 'nest_middle_olbrim_repeat',
+          'last_watch_audience', 'last_watch_audience_revisit',
+          'last_watch_supply_cache', 'last_watch_post_roc',
+          'stormwatchers_shrine_dormant',
+          'stormwatchers_shrine_revisit',
+          'stormwatchers_shrine_post_roc',
+          'stormwatchers_shrine_reactivation',
+          'stormwatchers_shrine_active',
+          'stormwatchers_shrine_active_quick',
+          'post_dragon_staircase',
+        ],
+      },
+    ],
+  },
+];
 let saveLoadReturnState = null; // state to return to from save/load screens
 let helpScrollY = 0;
 let loadTab = 'manual'; // 'manual' or 'auto'
@@ -3098,12 +3380,24 @@ let barrageShotsTotal = 0;        // total shots this barrage (barrage value + 1
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
 let barrageShotDamage = 1;        // per-shot base damage from the MM card
+// Dragon Bone Bow variant: when true, each shot's base damage tapers
+// down by (shotsFired - 1) from barrageShotDamage. Top damage = 4 →
+// shot 1 = 4, shot 2 = 3, shot 3 = 2. Reset in finishBarrage /
+// cancelBarrage alongside the rest of the barrage state.
+let barrageDescending = false;
 // Consumable on-attack buff snapshots — taken on the FIRST shot of a
 // barrage so every subsequent shot in the same card play benefits.
 // Mirrors the multi_damage / picker-flow pattern.
 let barragePoisonStacks = 0;
 let barrageEyeBonus = 0;
 let barrageObsBonus = 0;
+// Heroism / ice snapshots — consumed ONCE on shot 1 (logged + zeroed
+// on the caster) and reused as a flat bonus / penalty on every
+// subsequent shot in the same barrage. Matches the rest of the
+// "one attack action, one consumption" snapshot family above so a
+// single Heroism stack pumps every shot of the volley.
+let barrageHeroism = 0;
+let barrageIceReduction = 0;
 let barrageIgnite = 0;
 
 // Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
@@ -3142,6 +3436,8 @@ const CARD_REGISTRY = {
   scraps: createScraps, wooden_axe: createWoodenAxe,
   wooden_greatsword: createWoodenGreatsword, rock_mace: createRockMace,
   cracked_buckler: createCrackedBuckler, buckler: createBuckler, short_bow: createShortBow,
+  // Path of the Necromancer — dining-room cockroach loot.
+  chitin_shield: createChitinShield,
   short_staff: createShortStaff, small_pouch: createSmallPouch,
   kobold_spear: createKoboldSpear, kobold_shield: createKoboldShield,
   bone_dagger: createBoneDagger, cloth_armor: createClothArmor,
@@ -3256,7 +3552,8 @@ const CARD_REGISTRY = {
   bow: createBow, steel_dagger: createSteelDagger,
   studded_leather_armor: createStuddedLeatherArmor, ring_mail: createRingMail,
   scale_armor: createScaleArmor,
-  scroll_of_potency: createScrollOfPotency, minor_healing_potion: createMinorHealingPotion,
+  scroll_of_potency: createScrollOfPotency, apprentices_spellbook: createApprenticesSpellbook,
+  minor_healing_potion: createMinorHealingPotion,
   potion_of_greater_healing: createPotionOfGreaterHealing,
   wand_of_fire: createWandOfFire,
   frost_drake_scale: createFrostDrakeScale,
@@ -3345,20 +3642,24 @@ const LOOT_TABLES = {
   // Abandoned Camp pool — drawn 2-distinct (without replacement). Codex shows
   // single-pick odds; resolveSearchCamp does the without-replacement sampling.
   abandoned_camp_loot: [
-    { creator: createBadRations,         weight: 1.0 },
-    { creator: createTorch,              weight: 0.5 },
-    { creator: createSturdyBoots,        weight: 0.5 },
-    { creator: createScrollOfPotency,    weight: 0.5 },
-    { creator: createWandOfFire,         weight: 0.5 },
-    { creator: createMinorHealingPotion, weight: 0.25 },
+    { creator: createBadRations,            weight: 1.0 },
+    { creator: createTorch,                 weight: 0.5 },
+    { creator: createApprenticesSpellbook,  weight: 0.5 },
+    { creator: createSturdyBoots,           weight: 0.5 },
+    { creator: createScrollOfPotency,       weight: 0.5 },
+    { creator: createWandOfFire,            weight: 0.5 },
+    { creator: createMinorHealingPotion,    weight: 0.25 },
   ],
   // Prison warden gear barrel — matches the Python game's
   // `get_gear_barrel_loot()`: equal-weight random.choice across the three
-  // starter weapons/shield they were confiscating from prisoners.
+  // starter weapons/shield they were confiscating from prisoners + the
+  // Apprentice's Spellbook so a wizard salvaging the barrel has a small
+  // chance to recover one of their starter-flavored scrolls.
   gear_barrel_loot: [
-    { creator: createShortBow,        weight: 1.0 },
-    { creator: createShortStaff,      weight: 1.0 },
-    { creator: createCrackedBuckler,  weight: 1.0 },
+    { creator: createShortBow,             weight: 1.0 },
+    { creator: createShortStaff,           weight: 1.0 },
+    { creator: createCrackedBuckler,       weight: 1.0 },
+    { creator: createApprenticesSpellbook, weight: 1.0 },
   ],
   // Kobold base loot — shared by the Prison Warden body, the
   // mountain Kobold Patrols, and every other kobold encounter that
@@ -3777,6 +4078,15 @@ function loadImage(id, src) {
 async function loadAssets() {
   await Promise.all([
     loadImage('menu_bg', `${BASE}assets/Backgrounds/MainScreen.jpg`),
+    // Debug-only Quest Select screen (between MENU → CHARACTER_SELECT).
+    // quest_main reuses MainScreen.jpg for the main-quest tile art per
+    // spec; quest_select_bg + quest_necromancer are placeholders that
+    // will resolve once the matching files land in assets/Backgrounds/.
+    // loadImage tolerates 404s (Image.onerror just leaves the cache
+    // entry undefined) so missing art falls back to a styled tile.
+    loadImage('quest_main', `${BASE}assets/Backgrounds/MainScreen.jpg`),
+    loadImage('quest_select_bg', `${BASE}assets/Backgrounds/StorySelectorBG.png`),
+    loadImage('quest_necromancer', `${BASE}assets/Backgrounds/PathoftheNecromancerBG.png`),
     loadImage('char_select_bg', `${BASE}assets/Backgrounds/CharacterSelection.jpg`),
     loadImage('combat_bg', `${BASE}assets/Backgrounds/PrisonBackground.jpg`),
     loadImage('game_end_bg', `${BASE}assets/Backgrounds/GameEnd.jpg`),
@@ -3832,6 +4142,10 @@ async function loadAssets() {
     loadImage('map_deeper_tunnels', `${BASE}assets/Maps/DwarvenCityDeeperTunnels.jpg`),
     loadImage('map_artisan_district', `${BASE}assets/Maps/DwarvenCityArtisanDistrict.jpg`),
     loadImage('map_temple_of_moradin', `${BASE}assets/Maps/TempleofMoradin.jpg`),
+    // Path of the Necromancer (side quest) — opening map. PNG until
+    // it's converted; the loader is fine with either extension.
+    loadImage('map_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.png`),
+    loadImage('bg_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.png`),
     loadImage('map_top_of_infinite_stairs', `${BASE}assets/Maps/TopOfStairsOfInfinite.jpg`),
     loadImage('map_last_watch', `${BASE}assets/Maps/TheLastWatch.jpg`),
     loadImage('map_high_valley_1', `${BASE}assets/Maps/HighValley1.jpg`),
@@ -3849,6 +4163,7 @@ async function loadAssets() {
     // UI icons
     loadImage('icon_backpack', `${BASE}assets/Icons/Backpack.png`),
     loadImage('icon_help', `${BASE}assets/Icons/HelpIcon.png`),
+    loadImage('icon_journal', `${BASE}assets/Icons/JournalIcon.png`),
     loadImage('icon_discord', `${BASE}assets/Icons/Discord.svg`),
     // Keyword icons
     loadImage('icon_heroism', `${BASE}assets/Icons/HeroismIcon.png`),
@@ -3975,6 +4290,9 @@ async function loadAssets() {
   await preloadCardArt([
     'paladin_class', 'ranger_class', 'wizard_class',
     'rogue_class', 'warrior_class', 'druid_class',
+    // Path of the Necromancer side quest portrait — same blocking
+    // preload so the run-start splash doesn't flash a placeholder.
+    'necromancer_class',
   ]);
   // Eagerly preload ALL card + power art so getCardArt never returns null
   // for a known id. Without this, the first draw of each card shows a
@@ -4253,6 +4571,17 @@ canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   const scrollAmount = e.deltaY > 0 ? 40 : -40;
   if (state === GameState.SHOP) shopScrollY = Math.max(0, shopScrollY + scrollAmount);
+  if (state === GameState.JOURNAL) {
+    // Right pane (dialog text) scrolls when the mouse is over the
+    // right half of the screen; left pane (chapter list) scrolls
+    // when the mouse is over the left third. Soft heuristic — most
+    // players hover the side they want to scroll anyway.
+    if (mouseX < 440) {
+      journalListScrollY = Math.max(0, journalListScrollY + scrollAmount);
+    } else {
+      journalScrollY = Math.max(0, journalScrollY + scrollAmount);
+    }
+  }
   if (state === GameState.FORGE_WEAPON) {
     const totalRows = Math.ceil(forgePickerCards.length / FORGE_PICKER_COLS);
     const maxScroll = Math.max(0, totalRows - FORGE_PICKER_ROWS_VISIBLE);
@@ -4444,6 +4773,9 @@ function handleClick(x, y) {
     case GameState.MENU:
       handleMenuClick(x, y);
       break;
+    case GameState.QUEST_SELECT:
+      handleQuestSelectClick(x, y);
+      break;
     case GameState.GAME_PLUS_SETUP:
       handleGamePlusSetupClick(x, y);
       break;
@@ -4546,6 +4878,9 @@ function handleClick(x, y) {
       break;
     case GameState.CODEX:
       handleCodexClick(x, y);
+      break;
+    case GameState.JOURNAL:
+      handleJournalClick(x, y);
       break;
     case GameState.INGAME_MENU:
       handleIngameMenuClick(x, y);
@@ -4767,6 +5102,10 @@ function handleKeyDown(key, event) {
       state = codexReturnState || GameState.MAP;
       codexReturnState = null;
       resumeMusic();
+    } else if (state === GameState.JOURNAL) {
+      playSound('book_close');
+      state = journalReturnState || GameState.MAP;
+      journalReturnState = null;
     } else if (state === GameState.HELP_SCREEN) {
       state = previousState || GameState.MAP;
     } else if (state === GameState.INGAME_MENU) {
@@ -4869,6 +5208,35 @@ function handleKeyDown(key, event) {
       state = GameState.HELP_SCREEN;
     }
   }
+  // J: open / close the Journal (story log). Same shape as the help
+  // screen toggle — keeps the player's current state stashed so they
+  // bounce back cleanly. Available outside combat; in combat we let
+  // it pass to avoid hijacking gameplay focus.
+  if (key === 'j' || key === 'J') {
+    if (state === GameState.JOURNAL) {
+      playSound('book_close');
+      state = journalReturnState || GameState.MAP;
+      journalReturnState = null;
+    } else if (state === GameState.MAP ||
+               state === GameState.ENCOUNTER_TEXT ||
+               state === GameState.ENCOUNTER_CHOICE) {
+      // Deliberately not opening from MENU — the title screen has no
+      // in-game context to return to, and the journal is meant as an
+      // in-run companion (only relevant once the player is on the map).
+      playSound('book_open');
+      journalReturnState = state;
+      journalScrollY = 0;
+      journalListScrollY = 0;
+      // Preselect the most recently read dialog so the right pane
+      // opens on the beat the player just experienced. Falls back to
+      // whichever entry the player last clicked in a prior session,
+      // and to no-selection if neither exists.
+      if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
+        journalSelectedEncounter = lastSeenDialog;
+      }
+      state = GameState.JOURNAL;
+    }
+  }
   // M: open the in-game menu (save / load / options / quit). Mirrors
   // the menu icon button in combat. Skipped when already in the
   // menu cluster so it doesn't toggle weirdly.
@@ -4935,6 +5303,173 @@ function handleMenuClick(x, y) {
 // gamePlus run is signaled by the gamePlusToggle being true when
 // startNewGame is eventually called, so downstream systems can read
 // that flag to branch behavior.
+// === Quest Select (debug-only) ===
+// Reached from MENU → Play when debugMode is on. Big tile = Main Quest
+// (MainScreen.jpg art). Smaller tiles below = side stories; for now
+// just "Path of the Necromancer", but the row is laid out so more side
+// quests slot in left-to-right without changing the layout math.
+// Clicking a tile stamps `selectedQuest`, then routes through the
+// existing post-Play flow (ccgQuest+ check or class select).
+const SIDE_QUESTS = [
+  {
+    id: 'necromancer',
+    title: 'Path of the Necromancer',
+    artId: 'quest_necromancer',
+  },
+];
+
+function drawQuestSelect() {
+  // Page background — prefer a dedicated QuestSelect.jpg if present,
+  // otherwise fall back to the main menu art so the screen still has
+  // some atmosphere instead of a flat fill.
+  const bgImg = images.quest_select_bg || images.menu_bg;
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  } else {
+    ctx.fillStyle = '#0e0e14';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+  // Dim so the tiles read crisply over whatever art is showing.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  menuButtons.length = 0;
+
+  // Title
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 48px serif';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 3;
+  ctx.fillText('Choose Your Quest', SCREEN_WIDTH / 2, 100);
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.fillStyle = '#cfb87a';
+  ctx.font = 'italic 18px serif';
+  ctx.fillText('Debug build · pick the storyline for this run', SCREEN_WIDTH / 2, 132);
+
+  // Main Quest tile — large, centered in the upper half. Uses
+  // MainScreen.jpg as the art per spec. Pulled tighter to the
+  // "Debug build" subtitle (160 vs 170) so the page reads as one
+  // grouped block instead of having an awkward gap up top.
+  const mainW = 720;
+  const mainH = 400;
+  const mainX = Math.round((SCREEN_WIDTH - mainW) / 2);
+  const mainY = 155;
+  drawQuestTile({
+    x: mainX, y: mainY, w: mainW, h: mainH,
+    art: images.quest_main,
+    title: 'Main Quest',
+    subtitle: 'Escape the Prison · Save Qualibaf',
+    titlePx: 38, subtitlePx: 18,
+    onClick: () => {
+      selectedQuest = 'main';
+      // Flag the origin so the upcoming Character Select's Back
+      // button knows to return here rather than dropping to MENU.
+      _fromQuestSelect = true;
+      startMainQuestFlow();
+    },
+  });
+
+  // Side quest row — centered on screen so a single tile sits in the
+  // middle instead of being left-anchored next to a left-justified
+  // section header. Layout is sized for up to 4 tiles in a row before
+  // it'd need wrapping (which we don't handle yet — punt to when
+  // there's actually a 5th side quest).
+  const tileW = 260;
+  const tileH = 200;
+  const tileGap = 28;
+  const rowY = mainY + mainH + 60;
+  const rowCount = SIDE_QUESTS.length;
+  const rowTotalW = rowCount * tileW + (rowCount - 1) * tileGap;
+  const rowStartX = Math.round((SCREEN_WIDTH - rowTotalW) / 2);
+  ctx.fillStyle = '#cfb87a';
+  ctx.font = 'bold 22px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Side Stories', SCREEN_WIDTH / 2, rowY - 16);
+  for (let i = 0; i < SIDE_QUESTS.length; i++) {
+    const sq = SIDE_QUESTS[i];
+    const tx = rowStartX + i * (tileW + tileGap);
+    drawQuestTile({
+      x: tx, y: rowY, w: tileW, h: tileH,
+      art: images[sq.artId],
+      title: sq.title,
+      titlePx: 18,
+      onClick: () => {
+        selectedQuest = sq.id;
+        if (sq.id === 'necromancer') {
+          // Path of the Necromancer skips character/ability picks
+          // entirely — the protagonist is fixed (Necromancer class)
+          // and the run drops straight into the apprentice's dialog
+          // after the title card.
+          startNecromancerQuest();
+        } else {
+          _fromQuestSelect = true;
+          startMainQuestFlow();
+        }
+      },
+    });
+  }
+
+  // Back button (returns to MENU)
+  drawStyledButton(40, SCREEN_HEIGHT - 90, 200, 70, '< Back', () => {
+    state = GameState.MENU;
+  }, 'large', 22);
+}
+
+// Shared tile renderer for the Quest Select screen. Paints the art (or
+// a dark fallback), a gold border, a darkened bottom strip for the
+// label, and registers a click rect on `menuButtons`.
+function drawQuestTile({ x, y, w, h, art, title, subtitle, titlePx, subtitlePx, onClick }) {
+  if (art && art.complete && art.naturalWidth > 0) {
+    ctx.drawImage(art, x, y, w, h);
+  } else {
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#6f5a3a';
+    ctx.font = 'italic 14px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('(art pending)', x + w / 2, y + h / 2);
+  }
+  // Darkened label band so the title reads over any art. Band is
+  // taller when a subtitle is present so the two labels each get
+  // their own row without the title's descender clipping into the
+  // subtitle's ascender (which was happening at 72 + 38px title).
+  const bandH = subtitle ? 96 : 48;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.66)';
+  ctx.fillRect(x, y + h - bandH, w, bandH);
+  // Gold border
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  // Label text — title sits near the top of the band, subtitle near
+  // the bottom. ~12px breathing room between them.
+  const tPx = titlePx || 24;
+  const sPx = subtitlePx || 16;
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = `bold ${tPx}px serif`;
+  ctx.textAlign = 'center';
+  const titleBaseline = subtitle
+    ? y + h - bandH + tPx + 8
+    : y + h - bandH + tPx + 6;
+  ctx.fillText(title, x + w / 2, titleBaseline);
+  if (subtitle) {
+    ctx.fillStyle = '#e8d59a';
+    ctx.font = `italic ${sPx}px serif`;
+    ctx.fillText(subtitle, x + w / 2, y + h - 14);
+  }
+  menuButtons.push({ x, y, w, h, action: onClick });
+}
+
+function handleQuestSelectClick(x, y) {
+  // Same dispatch shape as handleMenuClick — every tile + the Back
+  // button registers on the shared menuButtons array.
+  for (const btn of menuButtons) {
+    if (hitTest(x, y, btn)) { playSound('click'); btn.action(); return; }
+  }
+}
+
 function drawGamePlusSetup() {
   if (images.menu_bg) {
     ctx.drawImage(images.menu_bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -5477,6 +6012,22 @@ function updateMusicForCurrentScene() {
 // ccgQuest+ toggle is active and the unlock check passes; otherwise
 // drops straight into the standard new-game / character-select flow.
 function onPlayClicked() {
+  // Debug-only: divert to the Quest Select screen so the tester can
+  // pick the Main Quest or a side story (Path of the Necromancer, …)
+  // before the normal new-game flow kicks in. Production play (no
+  // debug) skips this and falls straight through to the existing
+  // ccgQuest+ / class-pick routing.
+  if (debugMode) {
+    state = GameState.QUEST_SELECT;
+    return;
+  }
+  startMainQuestFlow();
+}
+
+// Existing post-Play flow extracted so both onPlayClicked (non-debug)
+// and the Quest Select tiles can reuse it. ccgQuest+ entry stays gated
+// on the unlock + toggle as before.
+function startMainQuestFlow() {
   const gamePlusUnlocked = debugMode || hasPart1CompleteSave();
   if (gamePlusUnlocked && gamePlusToggle) {
     // Default the toggle picks to 1 each if the player has unlocked
@@ -5491,6 +6042,54 @@ function onPlayClicked() {
     return;
   }
   startNewGame();
+}
+
+// === Path of the Necromancer (side quest) ===
+// Skips CHARACTER_SELECT and ABILITY_SELECT — the player is fixed as
+// the Necromancer apprentice. Reuses startNewGame's full state reset
+// (otherwise stale flags from a previous run leak into the side
+// quest), then overrides the post-reset routing: build the player
+// directly, drop them onto the Necromancer's House map, show the
+// title card, and fade into the apprentice's opening monologue.
+function startNecromancerQuest() {
+  trackEvent('necromancer_quest_start', { version: GAME_VERSION });
+  // Run the shared reset. It sets state = CHARACTER_SELECT at the
+  // end; we overwrite that below before the next frame renders.
+  startNewGame();
+  selectedClass = 'Necromancer';
+  selectedQuest = 'necromancer';
+  // Build the Necromancer's starter loadout — three Cloth Armor and
+  // nothing else. The first Scraps comes from the Storage Area
+  // rummage encounter on the necromancer house map. Power still
+  // aliases to Wizard's Elemental Infusion until the necromancer's
+  // own power is authored.
+  player = new Character('Necromancer');
+  player.deck = new Deck();
+  const cards = getNecromancerStarterDeck();
+  for (const c of cards) {
+    if (playerTierOffset > 0 && c.gamePlusOffset) {
+      applyGamePlusOffsetInPlace(c, playerTierOffset);
+    }
+    player.deck.addCard(c);
+  }
+  const power = getClassPower('Necromancer');
+  if (playerTierOffset > 0 && power && power.gamePlusOffset) {
+    applyGamePlusOffsetInPlace(power, playerTierOffset);
+  }
+  player.addPower(power);
+  // Set up the opening map. Music TBD — leave the menu theme running
+  // until the side quest's bed is wired in.
+  currentMap = createNecromancerHouseMap();
+  visitedNodes = new Set([currentMap.currentNodeId]);
+  gold = 0;
+  backpack = [];
+  // Title card → first dialog. startNodeEncounter on apprentice_room
+  // routes through the standard encounter flow, so the dialog text
+  // renders against the map bg behind the panel just like every other
+  // map-anchored TEXT encounter.
+  showTitleCard('Path of the Necromancer', '', () => {
+    startNodeEncounter('bedroom');
+  });
 }
 
 // Build a list of `part1_complete_<class>` saves available to use as
@@ -5699,6 +6298,8 @@ function resetStoryFlags() {
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
+  seenDialogs = new Set();
+  journalChoices = {};
   labyrinthGenerated = false;
   labyrinthSeed = 0;
   labyrinthEncounterChance = 0.15;
@@ -5804,6 +6405,8 @@ function startNewGame() {
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
+  seenDialogs = new Set();
+  journalChoices = {};
   labyrinthGenerated = false;
   labyrinthSeed = 0;
   labyrinthEncounterChance = 0.15;
@@ -6241,6 +6844,12 @@ function handleCharSelectClick(x, y) {
     if (_fromGamePlusSetup) {
       _fromGamePlusSetup = false;
       state = GameState.GAME_PLUS_SETUP;
+    } else if (_fromQuestSelect) {
+      // Debug-only Quest Select origin — bounce back to the picker
+      // so the player can swap to a different storyline without
+      // having to round-trip through the title screen.
+      _fromQuestSelect = false;
+      state = GameState.QUEST_SELECT;
     } else {
       state = GameState.MENU;
     }
@@ -6278,9 +6887,11 @@ function selectClass(className) {
 }
 
 function startGameWithAbility(ability) {
-  // The character-select Back flag is consumed at game start so a
-  // future Back from a non-+ run still falls back to the main menu.
+  // The character-select Back flags are consumed at game start so a
+  // future Back from a non-+ / non-quest-pick run still falls back
+  // to the main menu.
   _fromGamePlusSetup = false;
+  _fromQuestSelect = false;
   // Create player with starter deck + chosen ability
   player = new Character(selectedClass);
   player.deck = new Deck();
@@ -6291,6 +6902,10 @@ function startGameWithAbility(ability) {
     Rogue: getRogueStarterDeck,
     Warrior: getWarriorStarterDeck,
     Druid: getDruidStarterDeck,
+    // Necromancer (Path of the Necromancer side quest) — bare starter
+    // (3 Cloth Armor + 2 Scraps). The rest of the kit is unlocked by
+    // exploring Master Mortain's house and the abbey beyond.
+    Necromancer: getNecromancerStarterDeck,
   };
   const cards = deckFns[selectedClass]();
   // ccgQuest+ player scaling — bump every starter card's
@@ -9723,6 +10338,17 @@ function handleMapClick(x, y) {
   // combat top-row icon behavior. Each click plays its own SFX and
   // routes to the matching screen.
   const ar = getMapActionButtonRects();
+  if (hitTest(x, y, ar.journal)) {
+    playSound('book_open');
+    journalReturnState = state;
+    journalScrollY = 0;
+    journalListScrollY = 0;
+    if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
+      journalSelectedEncounter = lastSeenDialog;
+    }
+    state = GameState.JOURNAL;
+    return;
+  }
   if (hitTest(x, y, ar.backpack)) {
     playSound('book_open');
     previousState = state;
@@ -10095,6 +10721,13 @@ const ENCOUNTER_BG_MAP = {
   tharnag_exit: 'bg_tharnag_exterior',
   dwarven_tavern: 'bg_dwarven_tavern',
   dwarven_smithy: 'bg_dwarven_smithy',
+  // Path of the Necromancer (side quest) — apprentice's opening
+  // monologue uses the map art (interior). The front-door peek
+  // looks OUT, so it cuts to the side-story exterior splash.
+  apprentice_room: 'bg_necromancer_house',
+  front_door: 'bg_path_of_necromancer',
+  dining_room: 'bg_necromancer_house',
+  storage_area: 'bg_necromancer_house',
   // Volcano / Wastes. Mirrors PY game.py:15021-15023 — volcano_arrival /
   // volcano_choice / kobold_drake_rider all share the same volcano
   // backdrop (was: volcano_choice incorrectly used the heart-of-the-
@@ -10169,6 +10802,9 @@ const ENCOUNTER_BG_MAP = {
 // Lazy-load encounter background images
 const encounterBgImages = {};
 const ENCOUNTER_BG_FILES = {
+  // Path of the Necromancer side quest — the front-door peek shows
+  // the courtyard / abbey scene from the side-story splash.
+  bg_path_of_necromancer: 'PathoftheNecromancerBG.png',
   bg_prison: 'PrisonBackground.jpg', bg_prison_entrance: 'PrisonEntranceBackground.jpg',
   bg_prison_wing: 'PrisonWingBackground.jpg', bg_kitchen: 'PrisonKitchenBackground.jpg',
   bg_leaving_prison: 'LeavingPrisonBackground.jpg',
@@ -12305,6 +12941,14 @@ function advanceEncounterPhase() {
       encounterTextIndex = 0;
       encounterTextScrollY = 0;
       state = GameState.ENCOUNTER_TEXT;
+      // Mark the encounter as seen for the Journal. Once entered into
+      // a TEXT phase even briefly, the player has reached this dialog
+      // and it should be available in the J → story log. lastSeenDialog
+      // is also stamped so the next J-open preselects this entry.
+      if (currentEncounter && currentEncounter.id) {
+        seenDialogs.add(currentEncounter.id);
+        lastSeenDialog = currentEncounter.id;
+      }
       break;
     case EncounterPhase.CHOICE:
       encounterChoiceResult = null;
@@ -12373,6 +13017,20 @@ function advanceEncounterPhase() {
     case EncounterPhase.COMBAT:
       // Mark that this encounter contains combat — autosave on map-return.
       _encounterHadCombat = true;
+      // Path of the Necromancer dining-room opener — the dialog has
+      // the apprentice grabbing the broom (Short Staff) and Master
+      // Mortain's bone knife (Bone Dagger). Inject them into the
+      // master deck before setupEnemyForCombat so startCombat picks
+      // them up when it rebuilds the draw pile. Skipped on revisits
+      // (canRevisit is false on the node, but a save-load could
+      // theoretically re-fire this — the duplicate-check guard keeps
+      // the deck from doubling up).
+      if (currentEncounter && currentEncounter.id === 'dining_room' && player && player.deck) {
+        const hasDagger = (player.deck.masterDeck || []).some(c => c && c.id === 'bone_dagger');
+        const hasStaff  = (player.deck.masterDeck || []).some(c => c && c.id === 'short_staff');
+        if (!hasDagger) player.deck.addCard(createBoneDagger());
+        if (!hasStaff)  player.deck.addCard(createShortStaff());
+      }
       setupEnemyForCombat(phase.enemyId);
       // Mid-encounter boss-music swap for fights that need it (the Mimic
       // ambush kicks in here, not at the encounter intro). The
@@ -12534,6 +13192,10 @@ const ENEMY_HAND_SIZE = {
   slime: 1,
   prison_guards: 2,
   dire_rat: 2,
+  // Path of the Necromancer — dining-room cockroach holds 1 card at
+  // a time. The bug only ever has Skitter Bite in hand and uses it
+  // as attack on its turn / defense reactively.
+  plague_cockroach: 1,
 };
 
 function setupEnemyForCombat(enemyId) {
@@ -12547,6 +13209,15 @@ function setupEnemyForCombat(enemyId) {
       // from the old setup that had Giant Rat on the stronger 1-3 variant.
       for (let i = 0; i < 4; i++) enemy.deck.addCard(createDireRatScreech());
       enemy.addPower(createChunkyBite());
+    },
+    // Path of the Necromancer — dining-room fight. 10 HP cockroach
+    // whose entire deck is its own signature dual-mode Skitter Bite
+    // card (attack on its turn, block + counter + draw reactively;
+    // both modes apply +1 Poison on damage).
+    plague_cockroach: () => {
+      enemy = new Character('Plague Cockroach');
+      enemy.deck = new Deck();
+      for (let i = 0; i < 10; i++) enemy.deck.addCard(createSkitterBite());
     },
     bone_pile: () => {
       enemy = new Character('Bone Pile');
@@ -14027,17 +14698,29 @@ function getMapActionButtonRects() {
   const padRight = 16;
   const padBottom = 16;
   const y = SCREEN_HEIGHT - padBottom - iconSize;
-  const totalW = iconSize * 3 + gap * 2;
+  const totalW = iconSize * 4 + gap * 3;
   const baseX = SCREEN_WIDTH - padRight - totalW;
   return {
-    backpack: { x: baseX, y, w: iconSize, h: iconSize },
-    help: { x: baseX + iconSize + gap, y, w: iconSize, h: iconSize },
-    menu: { x: baseX + (iconSize + gap) * 2, y, w: iconSize, h: iconSize },
+    journal: { x: baseX, y, w: iconSize, h: iconSize },
+    backpack: { x: baseX + (iconSize + gap), y, w: iconSize, h: iconSize },
+    help: { x: baseX + (iconSize + gap) * 2, y, w: iconSize, h: iconSize },
+    menu: { x: baseX + (iconSize + gap) * 3, y, w: iconSize, h: iconSize },
   };
 }
 
 function drawMapActionButtons() {
   const rects = getMapActionButtonRects();
+  // Journal (book/diary icon) — same flow as pressing J.
+  drawIconButton(rects.journal, 'icon_journal', () => {
+    playSound('book_open');
+    journalReturnState = state;
+    journalScrollY = 0;
+    journalListScrollY = 0;
+    if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
+      journalSelectedEncounter = lastSeenDialog;
+    }
+    state = GameState.JOURNAL;
+  }, 'J');
   // Inventory (backpack icon).
   drawIconButton(rects.backpack, 'icon_backpack', () => {
     playSound('book_open');
@@ -14572,7 +15255,7 @@ function handleEncounterChoiceClick(x, y) {
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
               dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
-              completedEncounters, labyrinthGenerated, labyrinthSeed,
+              completedEncounters, seenDialogs, journalChoices, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
               volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested,
               volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns,
@@ -15221,6 +15904,26 @@ function handleEncounterChoiceClick(x, y) {
         return;
       }
       encounterChoiceResult = r.choice;
+      // Journal: append the choice + its consequence text to the
+      // encounter's list so the J → story log can replay every
+      // choice the player ever committed to at this beat (e.g. door
+      // encounter: first tried picking the lock and took damage,
+      // then picked Step Back and Wait). Dedupe by choice text so
+      // re-visiting a repeat-choice encounter (Stormwatcher Contemplate)
+      // doesn't fill the entry with the same row over and over.
+      if (currentEncounter && currentEncounter.id) {
+        if (r.choice.text || r.choice.resultText) {
+          const eid = currentEncounter.id;
+          if (!Array.isArray(journalChoices[eid])) journalChoices[eid] = [];
+          const entry = {
+            choice: r.choice.text || '',
+            result: r.choice.resultText || '',
+          };
+          if (!journalChoices[eid].some(e => e.choice === entry.choice)) {
+            journalChoices[eid].push(entry);
+          }
+        }
+      }
       if (r.choice.effectType === 'damage' && r.choice.effectValue > 0) {
         showDamageToast(`-${r.choice.effectValue} HP!`, 3000);
         // Pain cue lands at the same beat as the damage toast — Pick
@@ -17556,6 +18259,25 @@ function applyPerksCombatStart() {
     addLog(`  Prepared: +${heroismStacks} Heroism!`, Colors.GOLD, perkToCardLike(createPreparedPerk()));
     spawnTokenOnTarget(player, heroismStacks, 'Heroism', Colors.GOLD);
   }
+  // Harvest — Druid-flavored perk that conjures a Goodberry token in
+  // hand each combat start. unique perk so it tops out at 1 stack,
+  // but the per-stack add still mirrors the other perks here for
+  // consistency / future-proofing. Goodberry creator already scales
+  // its heal via applyGamePlusOffsetInPlace.
+  const harvestStacks = player.getPerkStacks('combat_start_goodberry');
+  if (harvestStacks > 0) {
+    let added = 0;
+    for (let i = 0; i < harvestStacks; i++) {
+      if (player.deck.hand.length >= MAX_HAND_SIZE) break;
+      const berry = createGoodberry();
+      applyGamePlusOffsetInPlace(berry, playerTierOffset || 0);
+      player.deck.hand.push(berry);
+      added++;
+    }
+    if (added > 0) {
+      addLog(`  Harvest: +${added} Goodberry in hand!`, Colors.GREEN, perkToCardLike(createHarvestPerk()));
+    }
+  }
   // Ambush — "Combat Start: Your first attack this combat is
   // unpreventable." Reuses the unpreventableBuff slot (same field
   // Slime Jar charges); _ambushUnpreventable hints at the log
@@ -18055,7 +18777,10 @@ function tokenizeKeywordText(text, opts = {}) {
   // yourself" / "Heal a random ally" still get the keyword tooltip.
   // Order matters: the numbered form is listed first so "Heal 3"
   // matches the X-binding entry, not the bare "Heal".
-  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'Heroism', 'Shields', 'Shield',
+  // 'True' picks up "True Damage" / "True Dmg" — flagged as the
+  // True keyword (KEYWORD_ICONS.true) so hover shows the
+  // "unpreventable damage, bypasses Shield/Armor/Block" explainer.
+  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Ignite', 'Sentinel', 'Haste',
     'Ailments?',
@@ -18921,7 +19646,9 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     const descFontSize = Math.max(11, Math.floor(w * 0.058));
     let descText = card.description || card.shortDesc || '';
     if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
-      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
+      // X = attacks this turn (does NOT count this swing) — match the
+      // resolve-time reading in case 'sneak_attack'.
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : attacksThisTurn;
       descText = descText.replace(/X/g, String(sneakX));
     }
     const tokenizeOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
@@ -18950,7 +19677,7 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     // bottom edge — no visible gap between the box and the frame border.
     let descText = card.shortDesc || card.description;
     if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
-      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : attacksThisTurn;
       descText = descText.replace(/X/g, String(sneakX));
     }
     const smallOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
@@ -19131,32 +19858,43 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     const skipActionBadge = isBuffCard || card._isPerk || card.unplayable === true;
     let actionBadgeEndX = x + 6;
     if (!skipActionBadge) {
+      // Detect which phases the card reaches. Single-mode cards land
+      // in exactly one bucket; dual-mode cards (Sturdy Boots: top-
+      // level damage swing on the player's turn + modes[0] block on
+      // the enemy's swing) render BOTH the A and D badges side by
+      // side, each with its own hover tooltip explaining the phase.
       const isDefense = card.cardType === CardType.DEFENSE;
-      const actionLetter = isDefense ? 'D' : 'A';
-      const actionLabel = isDefense ? 'Defense Phase' : 'Attack Phase';
-      // Match the rarity-code box palette so the badge family reads
-      // consistently across the card. Steel-blue for defense (reactive),
-      // warm copper for attack (proactive).
-      const actionColor = isDefense ? '#7fa8d4' : '#d49060';
+      const hasDefenseMode = !isDefense
+        && Array.isArray(card.modes)
+        && card.modes.some(m => m && Array.isArray(m.effects)
+          && m.effects.some(e => e && (e.effectType === 'block' || e.effectType === 'gain_shield')));
+      const phases = [];
+      if (!isDefense) phases.push({ letter: 'A', color: '#d49060', label: 'Attack Phase' });
+      if (isDefense || hasDefenseMode) phases.push({ letter: 'D', color: '#7fa8d4', label: 'Defense Phase' });
       ctx.font = `bold ${badgeFontSize}px sans-serif`;
-      const alW = ctx.measureText(actionLetter).width + padX * 2;
-      const alX = x + 6;
-      const alY = badgeY;
-      ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fillRect(alX, alY, alW, badgeH);
-      ctx.strokeStyle = actionColor;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(alX, alY, alW, badgeH);
-      ctx.fillStyle = actionColor;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(actionLetter, alX + alW / 2, alY + badgeH / 2 + 1);
-      ctx.textBaseline = 'alphabetic';
-      cardBadgeHitAreas.push({
-        x: alX, y: alY, w: alW, h: badgeH,
-        label: actionLabel,
-      });
-      actionBadgeEndX = alX + alW + 3; // 3 px gap before the subtype label
+      let cursorX = x + 6;
+      for (let pi = 0; pi < phases.length; pi++) {
+        const ph = phases[pi];
+        const alW = ctx.measureText(ph.letter).width + padX * 2;
+        const alX = cursorX;
+        const alY = badgeY;
+        ctx.fillStyle = 'rgba(0,0,0,0.85)';
+        ctx.fillRect(alX, alY, alW, badgeH);
+        ctx.strokeStyle = ph.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(alX, alY, alW, badgeH);
+        ctx.fillStyle = ph.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ph.letter, alX + alW / 2, alY + badgeH / 2 + 1);
+        ctx.textBaseline = 'alphabetic';
+        cardBadgeHitAreas.push({
+          x: alX, y: alY, w: alW, h: badgeH,
+          label: ph.label,
+        });
+        cursorX = alX + alW + 2; // tight 2-px gap between A and D
+      }
+      actionBadgeEndX = cursorX + 1; // 3-px gap before the subtype label
     }
 
     // Subtype label (bottom-left, immediately right of the action badge)
@@ -20678,8 +21416,8 @@ function getSummonPreview(card) {
     tamed_rat: { name: 'Tamed Rat', atk: 1, hp: 1 },
     pet_spider: { name: 'Spider', atk: 0, hp: 1, abilities: 'Poison Attack' },
     guards: { name: 'Kobold Guard', atk: 2, hp: 1 },
-    thorb_card: { name: 'Thorb', atk: 2, hp: 5, abilities: 'Companion' },
-    thorb_card_2: { name: 'Thorb', atk: 2, hp: 6, abilities: 'Sentinel, Companion' },
+    thorb_card: { name: 'Thorb', atk: 2, hp: 6, abilities: 'Companion' },
+    thorb_card_2: { name: 'Thorb', atk: 2, hp: 7, abilities: 'Sentinel, Companion' },
     summon_treants: { name: 'Treant', atk: 2, hp: 1, abilities: 'Haste' },
     magma_mephit_summon: { name: 'Magma Mephit', atk: 2, hp: 5, abilities: 'Fire Immune' },
     large_boulder: { name: 'Large Boulder', atk: 6, hp: 4, abilities: '1 Armor, Self-Destruct' },
@@ -22376,6 +23114,14 @@ function handleCombatClick(x, y) {
       if (selectedCardIndex !== i) {
         selectedCardIndex = i;
         playSound('click');
+        // Animal Companion smart cast — filters the modal based on
+        // who's already on the field. Both alive → no-op + recharge.
+        // Only one missing → skip the picker and call that one. Only
+        // both missing falls through to the normal modal open.
+        if (card.id === 'animal_companion') {
+          const acDone = tryAnimalCompanionSmartCast(card, i);
+          if (acDone) return;
+        }
         // Pure modal cards (e.g. Feral Swipe) have no top-level effects — open the
         // mode picker. Dual-type cards (e.g. Sturdy Boots) have both top-level
         // effects AND modes; the top-level effects fire on player turn and the
@@ -22616,6 +23362,29 @@ function handleCardRechargeClick(x, y) {
         // Done paying cost — proceed to targeting (or self-play)
         cardRechargeMode = false;
         const selectedCard = player.deck.hand[selectedCardIndex];
+        // Dragon Bone Bow — after the +1 recharge cost is paid, enter
+        // the descending-damage barrage. The player picks 3 targets
+        // (same or different) one by one; each shot does N, N-1, N-2
+        // damage starting from the dragon_bow_barrage effect's value.
+        const descBarrageEff = selectedCard
+          ? (selectedCard.effects || []).find(e => e.effectType === 'dragon_bow_barrage')
+          : null;
+        if (descBarrageEff) {
+          for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+          pendingRechargeNames = [];
+          cardRechargedCards = [];
+          _handOrderSnapshot = null;
+          barrageMode = true;
+          barrageDescending = true;
+          barrageCardIndex = selectedCardIndex;
+          barrageShotsTotal = 3;
+          barrageShotsLeft = 3;
+          barrageShotsFired = 0;
+          barrageShotDamage = descBarrageEff.value || 4;
+          state = GameState.TARGETING;
+          showStyledToast(`${selectedCard.name}: 3 shots left — click a target (or Done)`, 'multi');
+          return;
+        }
         // Modal cards with a recharge cost (Animal Companion: recharge_extra
         // + Misha/Huffer modes) open the mode picker AFTER the cost is
         // paid. Without this branch, the post-cost flow falls through to
@@ -23475,6 +24244,24 @@ function resolveBarrageShot(target) {
     barrageEyeBonus = snapshotEyeBuff(player);
     barrageObsBonus = snapshotObsidianBuff(player);
     barrageIgnite = consumePlayerIgnite();
+    // Heroism + ice — snapshot once and reuse so every shot in the
+    // barrage benefits from the stack instead of evaporating on shot 1.
+    barrageHeroism = player.heroism || 0;
+    if (barrageHeroism > 0) {
+      addLog(`  (Heroism +${barrageHeroism} per shot)`, Colors.GOLD);
+      player.heroism = 0;
+    }
+    // consumeIceForAttack applies the reduction AND burns 1 stack.
+    // We just need the reduction amount to reapply per shot; the
+    // dummy 100 forces consumeIceForAttack to return (100 - stacks)
+    // so we can derive `stacks` once and burn the stack with it.
+    const iceBefore = (player.getStatus && player.getStatus('ICE')) || 0;
+    if (iceBefore > 0) {
+      consumeIceForAttack(player, 100);
+      barrageIceReduction = iceBefore;
+    } else {
+      barrageIceReduction = 0;
+    }
   }
   barrageShotsLeft--;
   barrageShotsFired++;
@@ -23485,13 +24272,18 @@ function resolveBarrageShot(target) {
   if (barrageCardIndex >= 0 && barrageCardIndex < player.deck.hand.length) {
     _activePlayCard = player.deck.hand[barrageCardIndex];
   }
-  let dmg = (barrageShotDamage || 1) + player.heroism + (player.rage || 0) + getDamageModifier(player);
-  if (player.heroism > 0) {
-    addLog(`  (Heroism +${player.heroism})`, Colors.GOLD);
-    player.heroism = 0;
+  // Descending variant (Dragon Bone Bow) tapers per-shot base damage
+  // down by (shotsFired - 1) from the top. shotsFired was just bumped
+  // to N for shot N, so the taper is (N - 1).
+  let shotBase = barrageShotDamage || 1;
+  if (barrageDescending) {
+    shotBase = Math.max(1, (barrageShotDamage || 1) - Math.max(0, barrageShotsFired - 1));
   }
-  dmg = Math.max(0, dmg);
-  dmg = consumeIceForAttack(player, dmg);
+  // Heroism + ice snapshot applies to EVERY shot, not just the first.
+  // Rage and shock-on-caster modifiers are passive (no consumption)
+  // so they're read live each shot.
+  let dmg = shotBase + barrageHeroism + (player.rage || 0) + getDamageModifier(player);
+  dmg = Math.max(0, dmg - barrageIceReduction);
   dmg += getIncomingDamageModifier(target);
   dmg += applyEyeBonus(target, barrageEyeBonus);
   dmg += applyObsidianBonus(target, barrageObsBonus);
@@ -23527,7 +24319,12 @@ function resolveBarrageShot(target) {
   if (barrageShotsLeft <= 0 || checkCombatEnd()) {
     finishBarrage();
   } else {
-    showStyledToast(`Magic Missiles: ${barrageShotsLeft} shot${barrageShotsLeft > 1 ? 's' : ''} left — click target or Done`, 'multi');
+    // Toast uses the active card name so Dragon Bone Bow shows
+    // "Dragon Bone Bow: 2 shots left…" instead of MM's flavor.
+    const liveCard = (barrageCardIndex >= 0 && barrageCardIndex < player.deck.hand.length)
+      ? player.deck.hand[barrageCardIndex] : null;
+    const label = liveCard ? liveCard.name : 'Barrage';
+    showStyledToast(`${label}: ${barrageShotsLeft} shot${barrageShotsLeft > 1 ? 's' : ''} left — click target or Done`, 'multi');
   }
 }
 
@@ -23544,6 +24341,7 @@ function finishBarrage() {
   }
   barrageRechargedCard = null;
   barrageMode = false;
+  barrageDescending = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
@@ -23552,6 +24350,8 @@ function finishBarrage() {
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
+  barrageHeroism = 0;
+  barrageIceReduction = 0;
   barrageCardIndex = -1;
   selectedCardIndex = -1;
   state = GameState.COMBAT;
@@ -23584,6 +24384,7 @@ function cancelBarrage() {
   }
   barrageRechargedCard = null;
   barrageMode = false;
+  barrageDescending = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
@@ -23592,6 +24393,8 @@ function cancelBarrage() {
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
+  barrageHeroism = 0;
+  barrageIceReduction = 0;
   barrageCardIndex = -1;
 }
 
@@ -23818,7 +24621,8 @@ function needsTarget(card) {
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
      e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
-     e.effectType === 'apply_bleed')
+     e.effectType === 'apply_bleed' ||
+     e.effectType === 'dragon_bow_barrage')
   );
 }
 
@@ -23880,11 +24684,23 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
     if (landingDmg <= 0) return; // fully absorbed, no need to defend
   }
 
-  const defenseCards = enemy.deck.hand.filter(c => c.cardType === CardType.DEFENSE);
+  // Pure DEFENSE cards always count. Dual-mode ATTACK cards (Sturdy
+  // Boots, Skitter Bite, …) also qualify if their first mode carries
+  // a `block` effect — we run the mode's effects in that case so the
+  // card plays its defense line reactively while still working as an
+  // attack on the enemy's own turn.
+  const defenseCards = enemy.deck.hand.filter(c =>
+    c.cardType === CardType.DEFENSE ||
+    (Array.isArray(c.modes) && c.modes[0]
+      && (c.modes[0].effects || []).some(e => e && e.effectType === 'block'))
+  );
   for (const card of defenseCards) {
+    const usingMode = card.cardType !== CardType.DEFENSE
+      && Array.isArray(card.modes) && card.modes[0];
+    const defEffects = usingMode ? (card.modes[0].effects || []) : card.currentEffects;
     enemy.deck.playCard(card);
     addLog(`${enemy.name} plays ${card.name}`, Colors.RED, card);
-    for (const eff of card.currentEffects) {
+    for (const eff of defEffects) {
       if (eff.effectType === 'block') {
         enemy.addBlock(eff.value);
         addLog(`  +${eff.value} Block`, Colors.BLUE);
@@ -23919,6 +24735,17 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         // would. resolveEffect treats `caster` as the holder — passing
         // `enemy` here heals the enemy's deck and clears Fire / other
         // Ailment stacks off the enemy character.
+        resolveEffect(eff, enemy, player);
+      } else if (eff.effectType === 'damage'
+                 || eff.effectType === 'apply_poison'
+                 || eff.effectType === 'apply_fire'
+                 || eff.effectType === 'apply_ice'
+                 || eff.effectType === 'apply_bleed') {
+        // Counter-attack / on-damage status riders from dual-mode
+        // defense cards (Skitter Bite's "Deal 1 Damage + Poison"
+        // counter). Route through resolveEffect so heroism, ice,
+        // shock, mark, etc. all apply normally — the apprentice is
+        // the natural target since they triggered the defense.
         resolveEffect(eff, enemy, player);
       } else if (eff.effectType === 'summon_kraken_tentacle_block') {
         // Tentacle Block — Kraken DEFENSE card. Spawn a fresh Tentacle
@@ -24467,14 +25294,19 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'sneak_attack': {
-      attacksThisTurn++; // count itself first
+      // Sneak Attack / Ruga's Spiked Gauntlets — X = attacks this
+      // turn, NOT counting this swing. attacksThisTurn is incremented
+      // after the swing resolves (see the bump at the bottom of this
+      // case) so the first cast in a turn reads X = 0, the second
+      // reads X = 1, etc.
+      const xCount = attacksThisTurn;
       // eff.value carries the flat damage bonus baked in by
       // gamePlusOffset (sneak_attack: 2 per offset point). Base
       // value is 0, so non-Game+ runs add nothing on top.
       const flatBonus = eff.value || 0;
-      let dmg = attacksThisTurn + flatBonus + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      let dmg = xCount + flatBonus + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
-      addLog(`  Sneak Attack x${attacksThisTurn}${flatBonus ? ` +${flatBonus}` : ''}!`, Colors.GOLD);
+      addLog(`  Sneak Attack x${xCount}${flatBonus ? ` +${flatBonus}` : ''}!`, Colors.GOLD);
       // Sahuagin Eye buff consumes on any attack; +1 if target damaged.
       const sneakTargetDamaged = target instanceof Creature
         ? (target.currentHp || 0) < (target.maxHp || 0)
@@ -24521,6 +25353,10 @@ function resolveEffect(eff, caster, target) {
         }
       }
       consumeIgniteOnAttack(caster, target, dmg);
+      // Bump the attack count AFTER the swing so the NEXT card's X
+      // counts this one. The "does not count itself" rule means we
+      // read attacksThisTurn at the top and bump at the bottom.
+      attacksThisTurn++;
       break;
     }
     case 'shield_bash_half':
@@ -24623,6 +25459,12 @@ function resolveEffect(eff, caster, target) {
       // Dragonscale Shield.)
       break;
     }
+    case 'dragon_bow_barrage':
+      // Marker effect — the actual shots are queued from the post-
+      // recharge-cost barrage flow (handleCardRechargeClick). The
+      // resolveEffect loop reaching here means the card was played
+      // outside the normal path (no-op).
+      break;
     case 'multi_damage': {
       // Deal damage to up to maxTargets enemies (simplified: hit enemy + creatures).
       // Caster-side stack mirrors the standard 'damage' handler:
@@ -25588,24 +26430,81 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
-    case 'grant_magma_tablet_buff': {
-      // Magma Tablet — gain N Ignite now (+N more + draw if Burning),
-      // then add a CombatBuff that grants +N Ignite each start-of-turn
-      // for `eff.value` turns. Mirrors PY game.py:11609-11633.
-      // ccgQuest+ bumps both the per-Ignite count via
-      // `_magmaTabletIgnite` (stamped by applyGamePlusOffsetInPlace)
-      // AND the turn count (eff.value carries the +0.5/offset bump
-      // from the generic scaledInc).
-      const igniteAmt = (_activePlayCard && _activePlayCard._magmaTabletIgnite) || 1;
-      caster.ignite = (caster.ignite || 0) + igniteAmt;
-      addLog(`  +${igniteAmt} Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
-      spawnTokenOnTarget(caster, igniteAmt, 'Ignite', Colors.ORANGE);
-      if (_wasBurningAtCardStart) {
-        caster.ignite += igniteAmt;
-        addLog(`  Burning! +${igniteAmt} Ignite (Ignite:${caster.ignite})`, Colors.ORANGE);
-        const drawn = caster.deck.draw(1, MAX_HAND_SIZE);
-        for (const d of drawn) addLog(`  Burning! Draw ${d.name}`, Colors.BLUE, d);
+    case 'gain_shield_if_poisoned': {
+      // Chitin Shield — pays off Poison on the caster with extra
+      // Shield. Reads live status (Chitin Shield's siblings don't
+      // clear Poison before this fires, so no snapshot needed).
+      const stacks = (typeof caster.getStatus === 'function')
+        ? (caster.getStatus('POISON') || 0)
+        : 0;
+      if (stacks > 0) {
+        caster.shield = (caster.shield || 0) + eff.value;
+        addLog(`  Poisoned! +${eff.value} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(caster, eff.value, 'Shield', Colors.ALLY_BLUE);
       }
+      break;
+    }
+    case 'grant_shield_wall_buff': {
+      // Shield Wall — stacking guard buff. Each cast adds eff.value
+      // stacks (1 in vanilla, 2 in ccgQuest+) onto an existing
+      // shield_wall buff or creates a new one. The buff ticks at
+      // start of turn via shield_wall_tick (character.js), granting
+      // its effectValue Shield to the caster AND every alive ally.
+      caster.combatBuffs = caster.combatBuffs || [];
+      let existing = caster.combatBuffs.find(b => b.id === 'shield_wall');
+      if (existing) {
+        existing.effectValue = (existing.effectValue || 0) + eff.value;
+        existing.description = `+${existing.effectValue} Shield to you and allies at start of turn`;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'shield_wall',
+          name: 'Shield Wall',
+          description: `+${eff.value} Shield to you and allies at start of turn`,
+          imageId: 'shield_wall',
+          effectType: 'shield_wall_tick',
+          effectValue: eff.value,
+          trigger: 'start_of_turn',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+      }
+      break;
+    }
+    case 'grant_battle_shout_buff': {
+      // Battle Shout — stacking rally buff. Each cast adds eff.value
+      // stacks (1 in vanilla, 2 in ccgQuest+) onto an existing
+      // battle_shout buff or creates a new one. The buff ticks at
+      // start of turn via battle_shout_tick (character.js), granting
+      // its effectValue Heroism to the caster AND every alive ally.
+      caster.combatBuffs = caster.combatBuffs || [];
+      let existing = caster.combatBuffs.find(b => b.id === 'battle_shout');
+      if (existing) {
+        existing.effectValue = (existing.effectValue || 0) + eff.value;
+        existing.description = `+${existing.effectValue} Heroism to you and allies at start of turn`;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'battle_shout',
+          name: 'Battle Shout',
+          description: `+${eff.value} Heroism to you and allies at start of turn`,
+          imageId: 'battle_shout',
+          effectType: 'battle_shout_tick',
+          effectValue: eff.value,
+          trigger: 'start_of_turn',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+      }
+      break;
+    }
+    case 'grant_magma_tablet_buff': {
+      // Magma Tablet — adds a CombatBuff that grants +1 Ignite each
+      // start-of-turn for `eff.value` turns. The on-play "Gain 3
+      // Ignite" + "Burning: Draw" beats now live on the card as
+      // separate gain_ignite / if_burning_draw effects, so this case
+      // is just the recurring tick. ccgQuest+ scales the turn count
+      // via the eff.value bump (generic scaledInc) and the per-turn
+      // Ignite stays at 1.
+      const igniteAmt = 1;
       // Replace any existing tablet buff so casting twice in a fight
       // refreshes the duration cleanly.
       caster.combatBuffs = (caster.combatBuffs || []).filter(b => b.id !== 'magma_tablet');
@@ -26640,7 +27539,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_thorb': {
       const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 5, isCompanion: true,
+        name: 'Thorb', attack: 2, maxHp: 6, isCompanion: true,
         description: 'Turn End: +Shield',
       });
       // Link to the source card so when Thorb dies, the card moves from
@@ -26664,7 +27563,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_raena': {
       const raena = new Creature({
-        name: 'Raena', attack: 2, maxHp: 3, multiAttack: 2, isCompanion: true,
+        name: 'Raena', attack: 2, maxHp: 4, multiAttack: 2, isCompanion: true,
         description: 'Attacks 2 targets.',
       });
       raena.sourceCard = _activePlayCard || null;
@@ -26677,7 +27576,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_raena_upgraded': {
       const raena = new Creature({
-        name: 'Raena', attack: 3, maxHp: 4, multiAttack: 2, isCompanion: true,
+        name: 'Raena', attack: 3, maxHp: 5, multiAttack: 2, isCompanion: true,
         description: 'Attacks 2 targets.',
       });
       raena.sourceCard = _activePlayCard || null;
@@ -26700,7 +27599,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_thorb_upgraded': {
       const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 6, sentinel: true, isCompanion: true,
+        name: 'Thorb', attack: 2, maxHp: 7, sentinel: true, isCompanion: true,
         description: 'Sentinel. Turn End: +Shield',
       });
       thorb.sourceCard = _activePlayCard || null;
@@ -26757,16 +27656,20 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_misha': {
-      // Animal Companion mode 1 — Misha (4/4 Sentinel). Summon, not
-      // companion: the card discards normally and Misha is a loose
-      // creature with no card-back link.
+      // Animal Companion mode 1 — Misha (4/4 Sentinel). Companion-
+      // routed: the card moves to the play pile while Misha is alive
+      // and returns to discard when she dies. Mirrors Thorb/Raena.
       const misha = new Creature({
-        name: 'Misha', attack: 4, maxHp: 4, sentinel: true,
+        name: 'Misha', attack: 4, maxHp: 4, sentinel: true, isCompanion: true,
         description: 'Sentinel.',
       });
       scaleCreatureWithOffset(misha, playerTierOffset || 0, 'player');
-      misha._sourceRarity = 'rare';
+      misha.sourceCard = _activePlayCard || null;
+      // Animal Companion is uncommon — Misha inherits its rarity so
+      // the in-combat creature card frame matches the parent card.
+      misha._sourceRarity = 'uncommon';
       misha._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(misha);
       addLog(`  Misha joins the fight!`, Colors.GREEN);
       playSound('bear_growl', 0.7);
@@ -26774,13 +27677,18 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_huffer': {
       // Animal Companion mode 2 — Huffer (4/2 Haste, ready to attack).
+      // Same companion routing as Misha.
       const huffer = new Creature({
-        name: 'Huffer', attack: 4, maxHp: 2, haste: true,
+        name: 'Huffer', attack: 4, maxHp: 2, haste: true, isCompanion: true,
         description: 'Haste',
       });
       scaleCreatureWithOffset(huffer, playerTierOffset || 0, 'player');
-      huffer._sourceRarity = 'rare';
+      huffer.sourceCard = _activePlayCard || null;
+      // Matches Misha — Animal Companion is uncommon, so Huffer's
+      // creature card uses the uncommon frame.
+      huffer._sourceRarity = 'uncommon';
       huffer._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(huffer);
       addLog(`  Huffer joins the fight!`, Colors.GREEN);
       playSound('pig_grunt', 0.7);
@@ -27181,15 +28089,28 @@ function resolveEffect(eff, caster, target) {
       // matches the boss-side egg — 1-3 self damage per turn end so
       // the player's egg also cracks on a clock and hatches even if
       // the enemy ignores it.
+      // isCompanion + sourceCard + _routeToPlayPile pin the played
+      // card to the play pile while the egg (or its hatched chick)
+      // is alive — same wiring as Thorb / Raena / Valdrisa / White
+      // Dragon Egg. Without this the played card hit the recharge
+      // pile and the player could re-summon a fresh egg every turn.
+      // countAndRemoveDeadCreatures transfers the sourceCard from
+      // the dying egg to the freshly hatched chick so the card stays
+      // pinned through the full lifecycle.
       const egg = new Creature({
         name: 'Unhatched Roc Egg',
         attack: 0, maxHp: 10, armor: 1,
+        isCompanion: true,
         description: 'On Death: Hatch into a Roc Chick.\nEnd of Turn: Deal 1-3 damage to self.',
       });
       egg._cantAttack = true;
       egg._hitSfxKey = 'egg_hatch_01';
       egg._endTurnSelfDamage = { min: 1, max: 3 };
       egg.onDeathSpawnPlayerChick = true;
+      egg.sourceCard = _activePlayCard || null;
+      egg._sourceRarity = 'epic';
+      egg._sourceSubtype = 'allies';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       if (caster.addCreature(egg)) {
         addLog(`  An Unhatched Roc Egg cradles into the row!`, Colors.GREEN);
         const lastEntry = combatLog[combatLog.length - 1];
@@ -27280,10 +28201,15 @@ function resolveEffect(eff, caster, target) {
         addLog(`  No dead allies to revive.`, Colors.GRAY);
         break;
       }
+      // Snapshot the alive-ally count BEFORE any revive so the modal /
+      // auto-revive close path can heal player = max(1, alliesAfter)
+      // — but only if a revive actually landed (after > before).
+      _revivifyAlliesBefore = (player.creatures || []).filter(c => c.isAlive).length;
       if (candidates.length <= picks) {
         // Pool small enough that there's nothing to pick — just revive
         // everyone offered.
         for (const cand of candidates) reviveAllyFromCard(cand);
+        finalizeRevivifyHeal();
         break;
       }
       reviveChoiceCards = candidates;
@@ -27410,6 +28336,37 @@ function resolveEffect(eff, caster, target) {
     case 'recharge_extra':
       // Cost is paid via the card recharge phase before targeting; nothing to do here.
       break;
+    case 'recharge_hand_then_draw': {
+      // Sprint — recharge every card still in the player's hand, then
+      // draw (that count + eff.value) cards. The active play card itself
+      // is already in the recharge pile (RECHARGE cost paid up front), so
+      // the hand at this point is "everything else." Bonus value is the
+      // +1 in "Recharge your Hand -> Draw that many cards + 1".
+      if (!caster.deck) break;
+      let recharged = 0;
+      // Snapshot hand first — we mutate hand inside the loop via
+      // splice/addToRechargePile and don't want re-entrancy surprises.
+      const handSnapshot = [...caster.deck.hand];
+      for (const card of handSnapshot) {
+        if (card === _activePlayCard) continue;
+        const idx = caster.deck.hand.indexOf(card);
+        if (idx === -1) continue;
+        caster.deck.hand.splice(idx, 1);
+        caster.deck.addToRechargePile(card);
+        recharged++;
+      }
+      if (recharged > 0) {
+        addLog(`  Recharged ${recharged} card${recharged === 1 ? '' : 's'} from hand`, Colors.GOLD);
+        playSound('card_recharge', 0.7);
+      }
+      const toDraw = recharged + (eff.value || 0);
+      if (toDraw > 0) {
+        const drawn = caster.deck.draw(toDraw, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+      }
+      break;
+    }
     case 'discard_extra': {
       // Talon Blade — when the PLAYER plays it, the discard pick is
       // resolved upfront via cardDiscardPickMode (see
@@ -27612,14 +28569,28 @@ function resolveEffect(eff, caster, target) {
       for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) aoeTargets.push(c);
       spawnPlayerArrowBatch(aoeSrc, aoeTargets, 550);
       screenFlashTimer = 200;
+      // Slime Jar / Ambush perk — one stack of unpreventable applies
+      // to the WHOLE swing (single Fan of Blades / Burning Hands play
+      // = one charge consumed), and every target in the AoE eats
+      // unpreventable damage so the boss + every creature in the row
+      // bypass block / shield / armor on this swing. Was previously
+      // skipped here, so Slime Jar silently no-op'd against Fan of
+      // Blades / Burning Hands / Ice Nova / Consecration.
+      const aoeUnpreventable = consumeUnpreventableBuff(caster);
       let anyLanded = false;
       let taken = 0; // last-target taken, used by the SFX fallback below
       if (!enemy._invulnerable) {
         const tDmg = aoePerTarget(enemy);
-        const [, tk] = enemy.takeDamageWithDefense(tDmg);
-        taken = tk;
-        if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
-        addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+        if (aoeUnpreventable) {
+          taken = enemy.takeDamageFromDeck(tDmg);
+          if (taken > 0) { spawnDamageOnTarget(enemy, taken, Colors.ORANGE); anyLanded = true; }
+          addLog(`  ${taken} unpreventable dmg to ${enemy.name}`, Colors.ORANGE);
+        } else {
+          const [, tk] = enemy.takeDamageWithDefense(tDmg);
+          taken = tk;
+          if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
+          addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
+        }
         applyPoisonRider(enemy, aoePoisonStacks, taken);
         // Split / on-attacked triggers fire per target — same as
         // single-target swings — so AoEs like Ice Nova spawn slimes
@@ -27633,10 +28604,17 @@ function resolveEffect(eff, caster, target) {
         if (c._invulnerable) continue;
         const tDmg = aoePerTarget(c);
         const shieldBefore = c.shield || 0;
-        const actual = c.takeDamage(tDmg);
-        if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
-        const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
-        addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+        let actual;
+        if (aoeUnpreventable) {
+          actual = c.takeUnpreventableDamage(tDmg);
+          if (actual > 0) { spawnDamageOnTarget(c, actual, Colors.ORANGE); anyLanded = true; }
+          addLog(`  ${actual} unpreventable dmg to ${c.name}`, Colors.ORANGE);
+        } else {
+          actual = c.takeDamage(tDmg);
+          if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
+          const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
+          addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+        }
         applyPoisonRider(c, aoePoisonStacks, actual);
         triggerSplitPower(c, actual > 0);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -27682,6 +28660,218 @@ function resolveEffect(eff, caster, target) {
       }
       countAndRemoveDeadCreatures();
       attacksThisTurn++;
+      break;
+    }
+    case 'damage_split_all': {
+      // Consecration — eff.value is the TOTAL damage pool. Split
+      // across every alive non-invulnerable enemy (boss + creatures),
+      // rounded UP per target. 1 enemy = full pool, 2 = pool/2 each,
+      // 3 = ceil(pool/3), and so on.
+      //
+      // Heroism / rage / ice-on-caster fold into the pool BEFORE the
+      // split so the buffs scale with the swing, not the per-target
+      // share. Per-target riders (Vial of Poison, Sahuagin Eye,
+      // Obsidian Core, Slime Jar, Ignite, Elemental / Feral) snapshot
+      // once and apply on every target like damage_all.
+      const splitTargets = [];
+      if (enemy && enemy.isAlive && !enemy._invulnerable) splitTargets.push(enemy);
+      for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) splitTargets.push(c);
+      if (splitTargets.length === 0) break;
+      let pool = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      if (caster.heroism > 0) { caster.heroism = 0; }
+      pool = Math.max(0, pool);
+      pool = consumeIceForAttack(caster, pool);
+      const perShare = Math.ceil(pool / splitTargets.length);
+      const splitEye = snapshotEyeBuff(caster);
+      const splitObs = snapshotObsidianBuff(caster);
+      const splitPoison = snapshotPoisonBuff(caster);
+      const splitUnpreventable = consumeUnpreventableBuff(caster);
+      const splitSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      spawnPlayerArrowBatch(splitSrc, splitTargets, 550);
+      screenFlashTimer = 200;
+      addLog(`  Consecration: ${pool} dmg split across ${splitTargets.length} → ${perShare} each`, Colors.GOLD);
+      let anyLanded = false;
+      let lastTaken = 0;
+      if (enemy && enemy.isAlive && !enemy._invulnerable) {
+        let d = perShare + getIncomingDamageModifier(enemy);
+        d += applyEyeBonus(enemy, splitEye);
+        d += applyObsidianBonus(enemy, splitObs);
+        d = applyMarkBonus(enemy, Math.max(0, d));
+        if (splitUnpreventable) {
+          const tk = enemy.takeDamageFromDeck(d);
+          lastTaken = tk;
+          if (tk > 0) { spawnDamageOnTarget(enemy, tk, Colors.ORANGE); anyLanded = true; }
+          addLog(`  ${tk} unpreventable dmg to ${enemy.name}`, Colors.ORANGE);
+        } else {
+          const [, tk] = enemy.takeDamageWithDefense(d);
+          lastTaken = tk;
+          if (tk > 0) { spawnDamageOnTarget(enemy, tk); anyLanded = true; }
+          addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
+        }
+        applyPoisonRider(enemy, splitPoison, lastTaken);
+        triggerSplitPower(enemy, lastTaken > 0);
+        if (caster === player) onPlayerHitEnemy(lastTaken);
+      }
+      for (const c of [...enemy.creatures]) {
+        if (!c.isAlive || c._invulnerable) continue;
+        let d = perShare + getIncomingDamageModifier(c);
+        d += applyEyeBonus(c, splitEye);
+        d += applyObsidianBonus(c, splitObs);
+        d = applyMarkBonus(c, Math.max(0, d));
+        const shieldBefore = c.shield || 0;
+        let actual;
+        if (splitUnpreventable) {
+          actual = c.takeUnpreventableDamage(d);
+          if (actual > 0) { spawnDamageOnTarget(c, actual, Colors.ORANGE); anyLanded = true; }
+          addLog(`  ${actual} unpreventable dmg to ${c.name}`, Colors.ORANGE);
+        } else {
+          actual = c.takeDamage(d);
+          if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
+          const absSuffix = creatureAbsorbSuffix(d, actual, shieldBefore, c.shield || 0);
+          addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+        }
+        applyPoisonRider(c, splitPoison, actual);
+        triggerSplitPower(c, actual > 0);
+        if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
+      }
+      const sfxMap = getWeaponSfxKeys(_activePlayCard);
+      if (sfxMap) {
+        const key = anyLanded ? sfxMap.flesh : (sfxMap.blocked || 'hit_blocked');
+        if (key) playStaggeredSfx(key, 3, 140);
+      } else {
+        playAttackHitSfx(perShare, anyLanded ? Math.max(lastTaken, 1) : 0);
+      }
+      const splitIgnite = (caster === player) ? consumePlayerIgnite() : 0;
+      if (splitIgnite > 0) {
+        if (enemy && enemy.isAlive && !enemy._invulnerable) applyIgniteRider(enemy, splitIgnite);
+        for (const c of (enemy.creatures || [])) {
+          if (c.isAlive && !c._invulnerable) applyIgniteRider(c, splitIgnite);
+        }
+      }
+      if (caster === player) {
+        if (enemy && enemy.isAlive && !enemy._invulnerable) {
+          applyElementalWeaponRider(enemy, perShare);
+          applyBleedWeaponRider(enemy, perShare);
+        }
+        for (const c of (enemy.creatures || [])) {
+          if (c.isAlive && !c._invulnerable) {
+            applyElementalWeaponRider(c, perShare);
+            applyBleedWeaponRider(c, perShare);
+          }
+        }
+      }
+      countAndRemoveDeadCreatures();
+      attacksThisTurn++;
+      break;
+    }
+    case 'damage_all_twice': {
+      // Fan of Blades — two AoE swings in one cast. Riders are
+      // snapshotted ONCE before the loop so a single consumption
+      // (Vial of Poison, Slime Jar, Sahuagin Eye, Obsidian Core,
+      // Ignite) lands on BOTH passes against every target. Sneak
+      // Attack count bumps twice — the card swings twice for real.
+      //
+      // Heroism / rage / ice are folded into the base damage once
+      // (same as damage_all) so both swings share the boost without
+      // double-consumption.
+      let dmgT = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      if (caster.heroism > 0) { caster.heroism = 0; }
+      dmgT = Math.max(0, dmgT);
+      dmgT = consumeIceForAttack(caster, dmgT);
+      const twiceBase = dmgT;
+      const twiceEye = snapshotEyeBuff(caster);
+      const twiceObs = snapshotObsidianBuff(caster);
+      const twicePoison = snapshotPoisonBuff(caster);
+      const twiceUnpreventable = consumeUnpreventableBuff(caster);
+      const twiceIgnite = (caster === player) ? consumePlayerIgnite() : 0;
+      const twicePerTarget = (t) => {
+        let d = twiceBase + getIncomingDamageModifier(t);
+        d += applyEyeBonus(t, twiceEye);
+        d += applyObsidianBonus(t, twiceObs);
+        return applyMarkBonus(t, Math.max(0, d));
+      };
+      const twiceSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      // Run TWO full AoE passes back-to-back. Each pass refreshes the
+      // target list (a creature killed by swing 1 is skipped on swing
+      // 2), paints its own arrow batch (staggered so the player sees
+      // two volleys), and reapplies every snapshotted rider.
+      for (let pass = 0; pass < 2; pass++) {
+        const passTargets = [];
+        if (enemy && enemy.isAlive && !enemy._invulnerable) passTargets.push(enemy);
+        for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) passTargets.push(c);
+        if (passTargets.length === 0) break;
+        spawnPlayerArrowBatch(twiceSrc, passTargets, 550);
+        screenFlashTimer = 200;
+        let anyLanded = false;
+        let lastTaken = 0;
+        if (enemy && enemy.isAlive && !enemy._invulnerable) {
+          const tDmg = twicePerTarget(enemy);
+          if (twiceUnpreventable) {
+            const tk = enemy.takeDamageFromDeck(tDmg);
+            lastTaken = tk;
+            if (tk > 0) { spawnDamageOnTarget(enemy, tk, Colors.ORANGE); anyLanded = true; }
+            addLog(`  ${tk} unpreventable dmg to ${enemy.name}`, Colors.ORANGE);
+          } else {
+            const [, tk] = enemy.takeDamageWithDefense(tDmg);
+            lastTaken = tk;
+            if (tk > 0) { spawnDamageOnTarget(enemy, tk); anyLanded = true; }
+            addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
+          }
+          applyPoisonRider(enemy, twicePoison, lastTaken);
+          triggerSplitPower(enemy, lastTaken > 0);
+          if (caster === player) onPlayerHitEnemy(lastTaken);
+        }
+        for (const c of [...enemy.creatures]) {
+          if (!c.isAlive || c._invulnerable) continue;
+          const tDmg = twicePerTarget(c);
+          const shieldBefore = c.shield || 0;
+          let actual;
+          if (twiceUnpreventable) {
+            actual = c.takeUnpreventableDamage(tDmg);
+            if (actual > 0) { spawnDamageOnTarget(c, actual, Colors.ORANGE); anyLanded = true; }
+            addLog(`  ${actual} unpreventable dmg to ${c.name}`, Colors.ORANGE);
+          } else {
+            actual = c.takeDamage(tDmg);
+            if (actual > 0) { spawnDamageOnTarget(c, actual); anyLanded = true; }
+            const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
+            addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
+          }
+          applyPoisonRider(c, twicePoison, actual);
+          triggerSplitPower(c, actual > 0);
+          if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
+        }
+        const sfxMap = getWeaponSfxKeys(_activePlayCard);
+        if (sfxMap) {
+          const key = anyLanded ? sfxMap.flesh : (sfxMap.blocked || 'hit_blocked');
+          if (key) playStaggeredSfx(key, 3, 140);
+        } else {
+          playAttackHitSfx(dmgT, anyLanded ? Math.max(lastTaken, 1) : 0);
+        }
+        // Ignite + elemental + bleed riders fire EACH pass — the
+        // user's spec is "applied both times". A single Ignite
+        // consumption sets twiceIgnite, then both passes pour that
+        // many Fire stacks onto every legal target.
+        if (twiceIgnite > 0) {
+          if (enemy && enemy.isAlive && !enemy._invulnerable) applyIgniteRider(enemy, twiceIgnite);
+          for (const c of (enemy.creatures || [])) {
+            if (c.isAlive && !c._invulnerable) applyIgniteRider(c, twiceIgnite);
+          }
+        }
+        if (caster === player) {
+          if (enemy && enemy.isAlive && !enemy._invulnerable) {
+            applyElementalWeaponRider(enemy, twiceBase);
+            applyBleedWeaponRider(enemy, twiceBase);
+          }
+          for (const c of (enemy.creatures || [])) {
+            if (c.isAlive && !c._invulnerable) {
+              applyElementalWeaponRider(c, twiceBase);
+              applyBleedWeaponRider(c, twiceBase);
+            }
+          }
+        }
+        countAndRemoveDeadCreatures();
+        attacksThisTurn++;
+      }
       break;
     }
     case 'grant_potency_buff': {
@@ -31625,7 +32815,10 @@ function showcasePlayerCard(card, durationMs) {
 function stampShowcaseDynamicValues(card, sourceCount) {
   if (!card) return;
   if (card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') {
-    card._showcaseSneakX = (sourceCount || 0) + 1;
+    // X = attacks this turn (does NOT count itself). Match the
+    // resolve-time reading so the showcased number doesn't drift
+    // off the actual damage by 1.
+    card._showcaseSneakX = sourceCount || 0;
   }
 }
 
@@ -31844,7 +33037,13 @@ function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
   if (!ally.isAlive) {
     spawnDeathAnimation(ally);
     addLog(`  ${ally.name} destroyed!`, Colors.GOLD, null, null, ally);
-    player.removeDeadCreatures();
+    // Route through countAndRemoveDeadCreatures (not the bare
+    // player.removeDeadCreatures sweep) so on-death hooks like the
+    // Unhatched Roc Egg's onDeathSpawnPlayerChick fire BEFORE the
+    // body is cleared. The bare sweep silently dropped the dead egg
+    // from player.creatures, which meant the hatch loop in
+    // countAndRemoveDeadCreatures had nothing left to trigger on.
+    countAndRemoveDeadCreatures();
   } else if (actual > 0) {
     // Ice Shatter — fires on damage that broke through the ally's
     // shield / armor. applyDamageToAlly is the enemy-hit-ally path
@@ -36377,17 +37576,31 @@ function countAndRemoveDeadCreatures() {
   // Player-side Unhatched Roc Egg (from the loot card) — same hatch
   // shape, but the new chick joins the player's row and swings on
   // the player's side. bloodfrenzy 1 stacks rage every swing.
+  // The dying egg's sourceCard transfers to the new chick + the
+  // chick is stamped isCompanion so removeDeadCreatures keeps the
+  // card pinned to playPile until the chick itself dies. Without
+  // this transfer the card hit the discard pile the moment the egg
+  // fell and the player could just recharge + replay it for a fresh
+  // egg every turn.
   for (const c of (player.creatures || [])) {
     if (c.isAlive) continue;
     if (!c.onDeathSpawnPlayerChick) continue;
     c.onDeathSpawnPlayerChick = false;
     const fresh = new Creature({
       name: 'Roc Chick', attack: 3, maxHp: 10,
-      bloodfrenzy: 1,
+      bloodfrenzy: 1, isCompanion: true,
       description: 'Attacks a random enemy.\nGain 1 Rage per attack.',
     });
     fresh.exhausted = false;
     fresh.justSummoned = false;
+    fresh.sourceCard = c.sourceCard || null;
+    fresh._sourceRarity = c._sourceRarity || 'epic';
+    fresh._sourceSubtype = c._sourceSubtype || 'allies';
+    // Clear the egg's sourceCard so removeDeadCreatures' companion
+    // sweep doesn't ALSO push the same card to discard — the chick
+    // now owns the card-pin while it's alive.
+    c.sourceCard = null;
+    c.isCompanion = false;
     if (player.addCreature(fresh)) {
       addLog(`  ${c.name} hatches into a Roc Chick!`, Colors.GREEN);
       playSound('egg_hatch_01', 0.85);
@@ -36766,6 +37979,77 @@ function layoutModalChoiceRects() {
   }));
 }
 
+// Animal Companion smart cast — invoked from the card-click flow before
+// the generic modal-open branch. Inspects the player's alive creatures
+// for Misha / Huffer:
+//   - Both alive  → drop the card from hand into the recharge pile
+//                   without firing the summon (no-op cast).
+//   - Only one    → auto-resolve the missing one's summon mode without
+//                   opening the picker. Companion routing (sourceCard
+//                   + _routeToPlayPile) lands the card in the play
+//                   pile so it follows the called creature.
+//   - Neither     → return false so the generic modal opens.
+// Returns true when this helper fully handled the cast and the caller
+// should bail out of the click flow.
+function tryAnimalCompanionSmartCast(card, handIndex) {
+  const allies = player.creatures || [];
+  const mishaAlive = allies.some(c => c.isAlive && c.name === 'Misha');
+  const hufferAlive = allies.some(c => c.isAlive && c.name === 'Huffer');
+  if (!mishaAlive && !hufferAlive) return false;
+  const idx = player.deck.hand.indexOf(card);
+  if (idx === -1) {
+    selectedCardIndex = -1;
+    return true;
+  }
+  player.deck.hand.splice(idx, 1);
+  addLog(`You play ${card.name}`, Colors.GREEN, card);
+  if (mishaAlive && hufferAlive) {
+    // No-op cast — both companions are already on the field.
+    addLog(`  Misha and Huffer are already here — no effect.`, Colors.GRAY);
+    player.deck.placeByCost(card);
+    selectedCardIndex = -1;
+    return true;
+  }
+  // Exactly one is missing — auto-pick the matching mode.
+  const targetEffect = mishaAlive ? 'summon_huffer' : 'summon_misha';
+  const autoMode = Array.isArray(card.modes)
+    ? card.modes.find(m => (m.effects || []).some(e => e.effectType === targetEffect))
+    : null;
+  if (!autoMode) {
+    // Defensive fallback — shouldn't happen, but recharge the card
+    // rather than soft-lock if the mode list is malformed.
+    addLog(`  No callable companion available.`, Colors.GRAY);
+    player.deck.placeByCost(card);
+    selectedCardIndex = -1;
+    return true;
+  }
+  if ((player.creatures || []).length >= (player.maxCreatures || 12)) {
+    showStyledToast(`You can only have ${player.maxCreatures || 12} allies.`, 'recharge', 1800);
+    // Restore the card to hand — the cast didn't pay off.
+    player.deck.hand.splice(idx, 0, card);
+    selectedCardIndex = -1;
+    return true;
+  }
+  addLog(`  Mode: ${autoMode.description}`);
+  const prevActiveCard = _activePlayCard;
+  _activePlayCard = card;
+  for (const eff of autoMode.effects) {
+    resolveEffect(eff, player, enemy);
+  }
+  _activePlayCard = prevActiveCard;
+  // Companion routing — when summon_misha / summon_huffer ran, the
+  // creature stamped sourceCard back at us and set _routeToPlayPile.
+  if (card._routeToPlayPile) {
+    player.deck.playPile.push(card);
+    delete card._routeToPlayPile;
+  } else {
+    player.deck.placeByCost(card);
+  }
+  selectedCardIndex = -1;
+  checkCombatEnd();
+  return true;
+}
+
 function handleModalSelectClick(x, y) {
   // Card choices
   for (const r of modalChoiceRects) {
@@ -36872,6 +38156,26 @@ let reviveCancelRect = null;
 // Scales with playerTierOffset (1 base + floor(0.5*offset)). Each
 // click decrements; when it hits 0 the modal closes.
 let revivePicksRemaining = 1;
+// Snapshot of alive-ally count taken at the start of a Revivify cast.
+// Read at modal close to decide whether to fire the "+1 Heal per ally"
+// rider — heal fires only if at least one revive actually landed
+// (after > before). Set to -1 when there's no pending Revivify cast so
+// stale clicks can't trigger a phantom heal.
+let _revivifyAlliesBefore = -1;
+
+function finalizeRevivifyHeal() {
+  if (_revivifyAlliesBefore < 0 || !player) return;
+  const after = (player.creatures || []).filter(c => c.isAlive).length;
+  const before = _revivifyAlliesBefore;
+  _revivifyAlliesBefore = -1;
+  if (after <= before) return;
+  // X = number of allies, minimum 1 (the just-summoned one). `after`
+  // already includes the new ally, so a successful revive guarantees
+  // after >= 1.
+  const heal = Math.max(1, after);
+  addLog(`  Revivify: Heal ${heal} (${after} all${after === 1 ? 'y' : 'ies'} on field)`, Colors.GREEN);
+  healPlayer(heal);
+}
 
 function cardCanRevive(card) {
   const isSummon = e => typeof e?.effectType === 'string' && e.effectType.startsWith('summon_');
@@ -36968,6 +38272,7 @@ function handleReviveSelectClick(x, y) {
       reviveChoiceCards = [];
       reviveCancelRect = null;
       revivePicksRemaining = 0;
+      finalizeRevivifyHeal();
       state = GameState.COMBAT;
       checkCombatEnd();
       return;
@@ -36983,6 +38288,10 @@ function cancelReviveSelect() {
   reviveChoiceRects = [];
   reviveCancelRect = null;
   revivePicksRemaining = 0;
+  // In multi-pick mode the player may have already revived an ally
+  // before cancelling. finalizeRevivifyHeal compares before/after and
+  // fires the heal only if a revive landed, so this is safe.
+  finalizeRevivifyHeal();
   state = GameState.COMBAT;
 }
 
@@ -37785,6 +39094,7 @@ const SHOP_INVENTORIES = {
     createRingMail,
   ],
   arcane_emporium: [
+    createApprenticesSpellbook,
     createScrollOfPotency,
     createMinorHealingPotion,
     createWandOfFire,
@@ -40359,6 +41669,8 @@ function commitSaveEditing() {
     throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     completedEncounters,
+    seenDialogs,
+    journalChoices,
     labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
     forgeUsed, forgeRested, volcanoHeartSacrificed,
     volcanoBuffType, volcanoBuffTurns,
@@ -41032,6 +42344,12 @@ function restoreFromSave(data) {
   upperStairsReturnSeen = !!data.upperStairsReturnSeen;
   tharnagExitSeen = !!data.tharnagExitSeen;
   completedEncounters = new Set(Array.isArray(data.completedEncounters) ? data.completedEncounters : []);
+  // Rehydrate the journal's seen-dialog set. Older saves predate this
+  // field — default to an empty Set so the journal just shows the
+  // hardcoded chapter skeleton until the player reads dialogs again.
+  seenDialogs = new Set(Array.isArray(data.seenDialogs) ? data.seenDialogs : []);
+  journalChoices = (data.journalChoices && typeof data.journalChoices === 'object')
+    ? { ...data.journalChoices } : {};
   // Older saves may have logged the looping forest encounters as
   // permanently completed. Strip them so the maze loop works after
   // load (matches the REPEATABLE_ENCOUNTERS exclusion in
@@ -41136,6 +42454,10 @@ function restoreFromSave(data) {
 
   // Recreate map
   const MAP_CREATORS = {
+    // Path of the Necromancer (side quest) — needs to be in the
+    // creator map so a save-load mid-side-quest can rebuild the
+    // house.
+    necromancer_house: createNecromancerHouseMap,
     prison_cell: createPrisonCellMap,
     mountain_path: createMountainPathMap,
     plains: createPlainsMap,
@@ -41301,6 +42623,9 @@ function draw() {
     case GameState.MENU:
       drawMenu();
       break;
+    case GameState.QUEST_SELECT:
+      drawQuestSelect();
+      break;
     case GameState.GAME_PLUS_SETUP:
       drawGamePlusSetup();
       break;
@@ -41385,6 +42710,20 @@ function draw() {
     case GameState.CODEX:
       drawCodex();
       break;
+    case GameState.JOURNAL: {
+      // Render the underlying scene first so the journal reads as a
+      // semi-transparent overlay rather than a full-screen takeover.
+      // Mirrors how the in-game menu sits on top of the map. Falls
+      // back to a flat color when no return state was captured (J
+      // pressed from the title menu, etc.).
+      const rs = journalReturnState;
+      if (rs === GameState.MAP) drawMap();
+      else if (rs === GameState.ENCOUNTER_TEXT) drawEncounterText();
+      else if (rs === GameState.ENCOUNTER_CHOICE) drawEncounterChoice();
+      else if (rs === GameState.COMBAT) drawCombat();
+      drawJournal();
+      break;
+    }
     case GameState.INGAME_MENU:
       drawIngameMenu();
       break;
@@ -46504,7 +47843,7 @@ function buildCodexSourceCache() {
   restlessBone._sourceRarity = 'common';
   restlessBone._sourceSubtype = 'armor'; // Loose Bone is a defense (armor) card
   addCreature(restlessBone, 'Summoned by: Loose Bone');
-  const thorbCreature = new Creature({ name: 'Thorb', attack: 2, maxHp: 5, isCompanion: true });
+  const thorbCreature = new Creature({ name: 'Thorb', attack: 2, maxHp: 6, isCompanion: true });
   thorbCreature._codexSide = 'player';
   thorbCreature._sourceRarity = 'rare'; // thorb_card is rare
   thorbCreature._sourceSubtype = 'allies';
@@ -47730,6 +49069,319 @@ function handleCodexClick(x, y) {
         ? e.name
         : e.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       codexSelectedCard = { name, id: e.kind === 'hero' ? e.name : e.id, _isCharacter: true, _charEntry: e };
+      return;
+    }
+  }
+}
+
+// ============================================================
+// JOURNAL — story dialog log. Press J to open. Renders a two-pane
+// browser: chapter / encounter list on the left, full dialog text
+// on the right. Mirrors drawEncounterText's visual language so a
+// player viewing the journal sees the same speaker / paragraph
+// layout they read in-game. Only encounters whose TEXT phase was
+// actually reached (seenDialogs Set, populated in
+// advanceEncounterPhase) appear under each chapter; the chapter
+// title is dimmed when nothing in it has been read yet.
+// ============================================================
+
+// Look up an encounter factory + read its TEXT phase entries on
+// demand. Builds a fresh Encounter object each call (cheap) and
+// returns the FIRST TEXT phase's texts array; that's the canonical
+// story beat for the journal. Returns null when the registry lookup
+// fails or there's no TEXT phase (e.g. a pure-CHOICE encounter).
+function _journalGetEncounterTexts(encounterId) {
+  if (!encounterId) return null;
+  const fac = ENCOUNTER_REGISTRY[encounterId];
+  if (!fac) return null;
+  let enc;
+  try { enc = fac(); } catch (e) { return null; }
+  if (!enc || !Array.isArray(enc.phases)) return null;
+  for (const ph of enc.phases) {
+    if (ph && ph.phaseType === EncounterPhase.TEXT && Array.isArray(ph.texts) && ph.texts.length > 0) {
+      return { name: enc.name || encounterId, texts: ph.texts };
+    }
+  }
+  return null;
+}
+
+function drawJournal() {
+  journalClickAreas = [];
+  // Semi-transparent overlay — the live map / combat / encounter
+  // scene was painted underneath in the render dispatch, so the
+  // journal reads as a panel ON TOP of the world rather than a
+  // screen swap. Slightly darker than the menu overlay so the
+  // journal panes still pop.
+  ctx.fillStyle = 'rgba(8, 10, 22, 0.78)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 36px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Journal', SCREEN_WIDTH / 2, 56);
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#aaa';
+  ctx.fillText('J or Esc to close', SCREEN_WIDTH / 2, 80);
+
+  // Layout — two panes side-by-side with a gold divider.
+  const padX = 40;
+  const topY = 110;
+  const bottomY = SCREEN_HEIGHT - 30;
+  const paneH = bottomY - topY;
+  const listW = 380;
+  const listX = padX;
+  const dlgX = listX + listW + 24;
+  const dlgW = SCREEN_WIDTH - dlgX - padX;
+
+  // ===== Left pane: chapter / encounter list =====
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(listX, topY, listW, paneH);
+  ctx.strokeStyle = '#665535';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(listX, topY, listW, paneH);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(listX, topY, listW, paneH);
+  ctx.clip();
+
+  const rowH = 26;
+  const chapterH = 30;
+  const partH = 36;
+  ctx.textAlign = 'left';
+  let ly = topY + 10 - journalListScrollY;
+  for (const part of JOURNAL_MANIFEST) {
+    const partCollapsed = journalCollapsed.has(part.id);
+    // Part header — bold gold + chevron, clickable to collapse the
+    // entire part section (every chapter under it hides).
+    const partChevron = partCollapsed ? '▶' : '▼';
+    ctx.fillStyle = Colors.GOLD;
+    ctx.font = 'bold 18px Georgia, serif';
+    ctx.fillText(`${partChevron}  ${part.title}`, listX + 12, ly + 22);
+    journalClickAreas.push({
+      x: listX + 6, y: ly, w: listW - 12, h: partH - 4,
+      kind: 'toggle-section', sectionId: part.id,
+    });
+    ly += partH;
+    if (partCollapsed) { ly += 4; continue; }
+    for (const chapter of part.chapters) {
+      // Hide the entire chapter (title + rows) until the player has
+      // reached at least one of its dialogs. Keeps later chapters from
+      // spoiling structure/length before the player gets there.
+      const seenInChapter = chapter.encounters.filter(id => seenDialogs.has(id));
+      const chapterHasSeen = seenInChapter.length > 0;
+      if (!chapterHasSeen) continue;
+      const chapterCollapsed = journalCollapsed.has(chapter.id);
+      const chapterChevron = chapterCollapsed ? '▶' : '▼';
+      ctx.fillStyle = '#d4b070';
+      ctx.font = 'bold 15px Georgia, serif';
+      ctx.fillText(`${chapterChevron}  ${chapter.title}`, listX + 18, ly + 20);
+      journalClickAreas.push({
+        x: listX + 12, y: ly, w: listW - 24, h: chapterH - 4,
+        kind: 'toggle-section', sectionId: chapter.id,
+      });
+      ly += chapterH;
+      if (chapterCollapsed) { ly += 4; continue; }
+      for (const encounterId of chapter.encounters) {
+        const isSeen = seenDialogs.has(encounterId);
+        const isSel  = (journalSelectedEncounter === encounterId);
+        const meta   = _journalGetEncounterTexts(encounterId);
+        // Hide unseen rows entirely to keep the list compact and
+        // suspenseful — the player only sees beats they've actually
+        // reached. Chapter title already tells them more is coming.
+        if (!isSeen) continue;
+        // Row background — highlight when this row is the active one.
+        if (isSel) {
+          ctx.fillStyle = 'rgba(120, 95, 50, 0.55)';
+          ctx.fillRect(listX + 18, ly, listW - 28, rowH - 2);
+        }
+        ctx.fillStyle = isSel ? '#fff' : '#d8d2bd';
+        ctx.font = '14px sans-serif';
+        // Use the encounter's display name (its `name` arg from the
+        // Encounter constructor) if available — that's the player-
+        // facing title. Fall back to the id when the registry has
+        // been wiped out (cached saves, etc.).
+        const label = (meta && meta.name) ? meta.name : encounterId.replace(/_/g, ' ');
+        ctx.fillText('• ' + label, listX + 28, ly + 18);
+        journalClickAreas.push({
+          x: listX + 18, y: ly, w: listW - 28, h: rowH - 2,
+          kind: 'select-encounter', encounterId,
+        });
+        ly += rowH;
+      }
+      ly += 8;
+    }
+    ly += 12;
+  }
+  ctx.restore();
+
+  // ===== Right pane: dialog text =====
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(dlgX, topY, dlgW, paneH);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dlgX, topY, dlgW, paneH);
+
+  // Back button — sits in the bottom-right of the journal panel so
+  // mouse-only / touch users have an obvious way out without
+  // hunting for the J / Esc shortcut.
+  const backBtnW = 120;
+  const backBtnH = 36;
+  const backBtnX = dlgX + dlgW - backBtnW - 12;
+  const backBtnY = topY + paneH - backBtnH - 12;
+  ctx.fillStyle = 'rgba(40, 26, 14, 0.92)';
+  ctx.fillRect(backBtnX, backBtnY, backBtnW, backBtnH);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(backBtnX, backBtnY, backBtnW, backBtnH);
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 16px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Back', backBtnX + backBtnW / 2, backBtnY + backBtnH / 2 + 1);
+  ctx.textBaseline = 'alphabetic';
+  journalClickAreas.push({
+    x: backBtnX, y: backBtnY, w: backBtnW, h: backBtnH,
+    kind: 'close-journal',
+  });
+
+  if (!journalSelectedEncounter) {
+    ctx.fillStyle = '#bba068';
+    ctx.font = '20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Select a dialog from the list', dlgX + dlgW / 2, topY + paneH / 2 - 14);
+    ctx.fillStyle = '#7a7252';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('to revisit the moment.', dlgX + dlgW / 2, topY + paneH / 2 + 12);
+    return;
+  }
+
+  const meta = _journalGetEncounterTexts(journalSelectedEncounter);
+  if (!meta) {
+    ctx.fillStyle = '#bba068';
+    ctx.font = '18px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Dialog not available.', dlgX + dlgW / 2, topY + 80);
+    return;
+  }
+
+  // Title above the text body
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 26px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(meta.name, dlgX + dlgW / 2, topY + 36);
+
+  // Paragraphs — speaker (if any) + body. Mirrors drawEncounterText's
+  // layout so the journal reads like the live dialog screen.
+  const padding = 22;
+  const innerX = dlgX + padding;
+  const innerY = topY + 64;
+  const innerW = dlgW - padding * 2;
+  const innerH = paneH - 70 - padding;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(dlgX, innerY, dlgW, innerH);
+  ctx.clip();
+  ctx.textAlign = 'left';
+  const lineH = 26;
+  const paraGap = 16;
+  let py = innerY - journalScrollY;
+  for (const entry of meta.texts) {
+    if (entry.speaker) {
+      ctx.fillStyle = '#f0c860';
+      ctx.font = 'bold 16px Georgia, serif';
+      ctx.fillText(entry.speaker, innerX, py + 18);
+      py += 28;
+    }
+    ctx.fillStyle = '#e6dec5';
+    ctx.font = '18px Georgia, serif';
+    const lines = wrapTextLong(entry.text, innerW, 18);
+    for (const line of lines) {
+      ctx.fillText(line, innerX, py + 18);
+      py += lineH;
+    }
+    py += paraGap;
+  }
+  // Recorded choices + consequences — rendered below the dialog body
+  // so the player sees every choice they committed to at this beat
+  // and what happened. Multi-choice encounters (door: pick the lock
+  // AND step back) get one stanza per choice in the order picked.
+  // Legacy single-object format from older saves is normalized into
+  // a one-element list so the loop handles both shapes.
+  let recordedChoices = journalChoices[journalSelectedEncounter];
+  if (recordedChoices && !Array.isArray(recordedChoices)) recordedChoices = [recordedChoices];
+  if (Array.isArray(recordedChoices) && recordedChoices.length > 0) {
+    py += paraGap;
+    // Soft divider so the recap block reads as a distinct section.
+    ctx.strokeStyle = '#665535';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(innerX, py);
+    ctx.lineTo(innerX + innerW, py);
+    ctx.stroke();
+    py += 12;
+    const header = recordedChoices.length > 1 ? 'Your choices:' : 'Your choice:';
+    ctx.fillStyle = '#bba068';
+    ctx.font = 'bold 14px Georgia, serif';
+    ctx.fillText(header, innerX, py + 16);
+    py += 26;
+    for (let ci = 0; ci < recordedChoices.length; ci++) {
+      const rec = recordedChoices[ci];
+      if (!rec || (!rec.choice && !rec.result)) continue;
+      if (ci > 0) {
+        // Thin inner divider between stanzas so multi-choice entries
+        // read as distinct beats.
+        ctx.strokeStyle = '#3a3324';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(innerX, py);
+        ctx.lineTo(innerX + innerW * 0.4, py);
+        ctx.stroke();
+        py += 10;
+      }
+      if (rec.choice) {
+        ctx.fillStyle = '#f0c860';
+        ctx.font = 'italic 17px Georgia, serif';
+        const choiceLines = wrapTextLong(rec.choice, innerW, 17);
+        for (const line of choiceLines) {
+          ctx.fillText(line, innerX, py + 16);
+          py += lineH - 2;
+        }
+        py += 6;
+      }
+      if (rec.result) {
+        ctx.fillStyle = '#e6dec5';
+        ctx.font = '17px Georgia, serif';
+        const resultLines = wrapTextLong(rec.result, innerW, 17);
+        for (const line of resultLines) {
+          ctx.fillText(line, innerX, py + 16);
+          py += lineH - 2;
+        }
+        py += 8;
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function handleJournalClick(x, y) {
+  for (const area of journalClickAreas) {
+    if (hitTest(x, y, area)) {
+      if (area.kind === 'select-encounter') {
+        journalSelectedEncounter = area.encounterId;
+        journalScrollY = 0;
+        playSound('click');
+      } else if (area.kind === 'toggle-section') {
+        if (journalCollapsed.has(area.sectionId)) {
+          journalCollapsed.delete(area.sectionId);
+        } else {
+          journalCollapsed.add(area.sectionId);
+        }
+        journalListScrollY = 0;
+        playSound('click');
+      } else if (area.kind === 'close-journal') {
+        playSound('book_close');
+        state = journalReturnState || GameState.MAP;
+        journalReturnState = null;
+      }
       return;
     }
   }

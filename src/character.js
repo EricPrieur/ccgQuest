@@ -812,6 +812,54 @@ export class Character {
         }
         break;
       }
+      case 'shield_wall_tick': {
+        // Shield Wall — guard tick. effectValue carries the current
+        // stack count (one stack per cast). Grant that many Shield
+        // to the character and every alive ally creature.
+        this.shield = (this.shield || 0) + effectValue;
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Shield`,
+          color: '#64b4dc',
+          token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc',
+          buff,
+        });
+        for (const ally of (this.creatures || [])) {
+          if (!ally.isAlive) continue;
+          ally.shield = (ally.shield || 0) + effectValue;
+          logs.push({
+            text: `    ${ally.name}: +${effectValue} Shield`,
+            color: '#64b4dc',
+            token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc',
+            buff,
+            creature: ally,
+          });
+        }
+        break;
+      }
+      case 'battle_shout_tick': {
+        // Battle Shout — rally tick. effectValue carries the current
+        // stack count (one stack per cast). Grant that many Heroism
+        // to the character and every alive ally creature.
+        this.heroism = (this.heroism || 0) + effectValue;
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Heroism`,
+          color: '#ffd700',
+          token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
+          buff,
+        });
+        for (const ally of (this.creatures || [])) {
+          if (!ally.isAlive) continue;
+          ally.heroism = (ally.heroism || 0) + effectValue;
+          logs.push({
+            text: `    ${ally.name}: +${effectValue} Heroism`,
+            color: '#ffd700',
+            token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
+            buff,
+            creature: ally,
+          });
+        }
+        break;
+      }
       case 'magma_tablet_tick': {
         this.ignite = (this.ignite || 0) + effectValue;
         logs.push({

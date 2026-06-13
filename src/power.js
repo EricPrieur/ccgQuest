@@ -649,6 +649,10 @@ export function getClassPower(className) {
     Rogue: createQuickStrike,
     Warrior: createBattleFury,
     Druid: createFeralForm,
+    // Necromancer (Path of the Necromancer side quest) — clones the
+    // Wizard kit for now. Future passes will swap in necromancer-
+    // specific abilities (raise dead, drain life, etc.).
+    Necromancer: createElementalInfusion,
   };
   return (powers[className] || createCleave)();
 }

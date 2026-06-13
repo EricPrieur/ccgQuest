@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.171';
+export const GAME_VERSION = '2.207';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -8,6 +8,11 @@ export const SCREEN_HEIGHT = 960;
 // === Game States ===
 export const GameState = Object.freeze({
   MENU: 'MENU',
+  // Debug-only quest picker shown between MENU and CHARACTER_SELECT
+  // when the player presses Play with debug mode enabled. Lets the
+  // tester pick the Main Quest or one of the side stories before
+  // dropping into the standard new-game flow.
+  QUEST_SELECT: 'QUEST_SELECT',
   CHARACTER_SELECT: 'CHARACTER_SELECT',
   ABILITY_SELECT: 'ABILITY_SELECT',
   MAP: 'MAP',
@@ -53,6 +58,7 @@ export const GameState = Object.freeze({
   GAME_OVER: 'GAME_OVER',
   VICTORY: 'VICTORY',
   CODEX: 'CODEX',
+  JOURNAL: 'JOURNAL',
   // Loot-pick screen: player chooses N cards out of M offered
   // (e.g. Varimatras drops 5, player keeps 2). Used in place of
   // the standard ENCOUNTER_LOOT auto-roll when a phase carries

@@ -230,6 +230,17 @@ export function saveGame(state, saveName = '') {
     completedEncounters: state.completedEncounters instanceof Set
       ? Array.from(state.completedEncounters)
       : (Array.isArray(state.completedEncounters) ? state.completedEncounters.slice() : []),
+    // Journal — encounter ids whose TEXT phase the player has read.
+    // Serialized as an array (Set isn't JSON-friendly); rehydrated to
+    // a Set on load in main.js so the Journal scan stays cheap.
+    seenDialogs: state.seenDialogs instanceof Set
+      ? Array.from(state.seenDialogs)
+      : (Array.isArray(state.seenDialogs) ? state.seenDialogs.slice() : []),
+    // Journal — choice + consequence text per encounter id.
+    // Already a plain object; clone to be safe.
+    journalChoices: state.journalChoices && typeof state.journalChoices === 'object'
+      ? { ...state.journalChoices }
+      : {},
     // Obsidian Wastes labyrinth — seed + state so the same layout is
     // regenerated on load.
     labyrinthGenerated: !!state.labyrinthGenerated,

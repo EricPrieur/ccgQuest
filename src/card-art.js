@@ -304,6 +304,7 @@ export const CARD_ART_MAP = {
   ring_mail: 'RingMail.jpg',
   steel_dagger: 'SteelDagger.jpg',
   scroll_of_potency: 'ScrollOfPotency.jpg',
+  apprentices_spellbook: 'ApprenticesSpellbook.jpg',
   minor_healing_potion: 'MinorHealingPotion.jpg',
   potion_of_greater_healing: 'PotionOfGreaterHealing.jpg',
   wand_of_fire: 'WandOfFire.jpg',
@@ -419,8 +420,19 @@ export const CARD_ART_MAP = {
   rogue_class: 'RogueCharacter.jpg',
   warrior_class: 'WarriorCharacterCard.jpg',
   druid_class: 'DruidCharacterClass.jpg',
+  // Path of the Necromancer side quest uses the young apprentice
+  // portrait. When the necromancer ships as a full main-game class
+  // we'll swap this filename for OlderNecromancerCharacter.png.
+  necromancer_class: 'YoungNecromancerCharacter.png',
 
   // === Monster portraits ===
+  // Path of the Necromancer — Plague Cockroach (dining-room fight).
+  // Same image powers the in-combat portrait AND the Skitter Bite
+  // card the cockroach plays so the bug face shows up everywhere.
+  plague_cockroach: 'PlagueCockRoach.png',
+  skitter_bite: 'PlagueCockRoach.png',
+  // Chitin Shield — cockroach husk loot drop from the same fight.
+  chitin_shield: 'ChitinShield.png',
   giant_rat: 'GiantRatMonster.jpg',
   bone_pile: 'BonePile.jpg',
   bone_pile_monster: 'BonePile.jpg',

@@ -1865,6 +1865,100 @@ export function createNestInteriorMap() {
   return map;
 }
 
+// === Necromancer's House (Path of the Necromancer side quest) ===
+// Opening map for the side quest. Single starting node (Apprentice's
+// Room) holds the intro dialog. The map art is a placeholder —
+// `mapImages` points at a file that may not exist yet; the map view
+// falls back to a dark fill if the asset hasn't been wired in.
+// Additional nodes (Master's Room, the rest of the house, the abbey)
+// get appended once the side quest is fleshed out.
+export function createNecromancerHouseMap() {
+  const map = new GameMap('necromancer_house', "Master Mortain's House");
+  map.mapImages = {
+    necromancer_house: 'Maps/UndertakerHouseFirstFloor.png',
+  };
+  // Hub-and-spokes layout. Corridor is the central junction; the four
+  // rooms (Bedroom, Dining Room, Door, Upstairs) each link only back
+  // to the corridor, so traversal is always Room → Corridor → Room.
+  const nodes = [
+    {
+      id: 'bedroom',
+      name: 'Bedroom',
+      description: "Your small bedchamber. Empty plates and a guttered candle. The rats again behind the wall.",
+      // Opening monologue fires when the player arrives here on
+      // run start. Encounter id intentionally kept as 'apprentice_room'
+      // (the encounter's identity is the dialog, not the room).
+      encounterId: 'apprentice_room',
+      connections: ['corridor'],
+      position: [340, 320],
+      mapArea: 'necromancer_house',
+      canRevisit: false,
+    },
+    {
+      id: 'corridor',
+      name: 'Corridor',
+      description: "The hallway runs the length of the house. Doors on every wall.",
+      encounterId: '',
+      connections: ['bedroom', 'dining_room', 'door', 'upstairs', 'storage_area'],
+      position: [600, 580],
+      mapArea: 'necromancer_house',
+      canRevisit: true,
+    },
+    {
+      id: 'storage_area',
+      name: 'Storage Area',
+      description: "A nook crammed with crates, old linens, and tools that belonged to nobody you remember.",
+      // One-shot rummage encounter — the apprentice digs through the
+      // crates and finds something useful (Scraps added to deck).
+      encounterId: 'storage_area',
+      connections: ['corridor'],
+      position: [760, 170],
+      mapArea: 'necromancer_house',
+      canRevisit: false,
+    },
+    {
+      id: 'dining_room',
+      name: 'Dining Room',
+      description: "A long table, dust-thick. The chairs have not been pushed in since the last meal.",
+      // One-shot Plague Cockroach fight; the dialog + COMBAT phase
+      // fires on first arrival and the node is "done" afterwards.
+      encounterId: 'dining_room',
+      connections: ['corridor'],
+      position: [350, 820],
+      mapArea: 'necromancer_house',
+      canRevisit: false,
+    },
+    {
+      id: 'door',
+      name: 'Front Door',
+      description: "The heavy front door, barred and chained from the inside the way Master Mortain left it.",
+      // One-shot peek-through-the-door dialog; after it fires the node
+      // is "done" but still walkable (the player can wander past the
+      // door without re-triggering the warning).
+      encounterId: 'front_door',
+      connections: ['corridor'],
+      position: [560, 930],
+      mapArea: 'necromancer_house',
+      canRevisit: false,
+    },
+    {
+      id: 'upstairs',
+      name: 'Upstairs',
+      description: "The narrow stair climbs up into the dark. Master Mortain's room is somewhere above.",
+      encounterId: '',
+      connections: ['corridor'],
+      position: [910, 760],
+      mapArea: 'necromancer_house',
+      canRevisit: true,
+    },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'bedroom';
+  return map;
+}
+
 // Temple of Moradin — post-dragon side quest side-map reached from the
 // Tharnag throne room. Two nodes: the entry (teleport pair back to the
 // throne) and the altar (prayer encounter — 200 gp for a Tier 2 class
