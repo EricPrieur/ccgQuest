@@ -47,7 +47,7 @@ import {
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
   createWoodenAxe, createWoodenGreatsword, createRockMace,
-  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createOldSpectralHand, createShortBow, createShortStaff,
+  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
   createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
@@ -3477,8 +3477,14 @@ const CARD_REGISTRY = {
   mortains_staff: createMortainsStaff,
   // Path of the Necromancer — Forgotten Shrine reward, Tier 1 spell.
   drain_life: createDrainLife,
+  // Path of the Necromancer — Worn Floor reward (post-Army-of-the-Dead),
+  // Tier 1 ability that summons 2 skeletons and grants them Haste.
+  army_of_the_dead: createArmyOfTheDeadCard,
   // Path of the Necromancer — Forgotten Specter signature card.
   old_spectral_hand: createOldSpectralHand,
+  // Path of the Necromancer — Specter of Death signature card. 5 dmg
+  // with a Hit: Death rider that loses the game if any HP damage lands.
+  death_sickle: createDeathSickle,
   short_staff: createShortStaff, small_pouch: createSmallPouch,
   kobold_spear: createKoboldSpear, kobold_shield: createKoboldShield,
   bone_dagger: createBoneDagger, cloth_armor: createClothArmor,
@@ -4143,6 +4149,12 @@ async function loadAssets() {
     loadImage('char_select_bg', `${BASE}assets/Backgrounds/CharacterSelection.jpg`),
     loadImage('combat_bg', `${BASE}assets/Backgrounds/PrisonBackground.jpg`),
     loadImage('game_end_bg', `${BASE}assets/Backgrounds/GameEnd.jpg`),
+    // Specter of Death — Stone Stair fight portrait. Reuses the
+    // GameEnd backdrop (Death-itself art) as the boss splash + codex
+    // portrait. Eager-preloaded so the splash doesn't blank on first
+    // entry; the enemy.name lookup at the boss-splash and codex tile
+    // both resolve via images['specter_of_death'].
+    loadImage('specter_of_death', `${BASE}assets/Backgrounds/GameEnd.jpg`),
     loadImage('map_prison_cell', `${BASE}assets/Maps/PrisonCellMap.jpg`),
     loadImage('map_sewers', `${BASE}assets/Maps/SewerMap.jpg`),
     loadImage('map_upper_prison', `${BASE}assets/Maps/KoboldCastlePrisonMap.jpg`),
@@ -11006,6 +11018,7 @@ const ENCOUNTER_BG_MAP = {
   tunnel1_shrine: 'bg_necromancer_shrine',
   east_corridor: 'bg_underground_tunnel_1',
   tunnel2_mid: 'bg_underground_tunnel_2',
+  tunnel3_mid: 'bg_underground_tunnel_3',
   tunnel3_door: 'bg_underground_tunnel_3',
   // study_desk intentionally omitted — falls through to the
   // standard `images.map_necromancer_study` fallback in
@@ -13597,6 +13610,11 @@ const ENEMY_HAND_SIZE = {
   // the 4 starting skeletons + the Army of the Dead respawn / buff
   // power, same shape as Wolf Pack / Piranhas Swarm.
   army_of_the_dead: 0,
+  // Specter of Death — Stone Stair encounter. 1-card hand so the
+  // Specter swings exactly one Death Sickle (5 dmg + Hit: Death) per
+  // turn. The apprentice has to fully absorb every swing or the run
+  // ends. Arcane Shield (Block 5) is the intended counter.
+  specter_of_death: 1,
 };
 
 function setupEnemyForCombat(enemyId) {
@@ -13643,21 +13661,22 @@ function setupEnemyForCombat(enemyId) {
       enemy.addPower(createArmorPower());
     },
     // Path of the Necromancer — Worn Floor mid-fight boss. Invulnerable
-    // commander of an undead host. Starts with 4 skeletons in play
+    // commander of an undead host. Starts with 5 skeletons in play
     // (1/1 with 1 armor each, Skeleton trait) and the Army of the
-    // Dead passive: every turn-start either summons another skeleton
-    // (up to 4 alive at once) or buffs a random one by +1/+1. The
-    // win condition is the new _clearFieldToWin flag — the fight only
-    // ends when every alive Skeleton on the boss's side is dead. Kill-
-    // count won't work here because the power keeps respawning and
-    // would close the fight while skeletons still stand on the field.
+    // Dead passive: every turn-start fires 3 rolls, each summoning
+    // a skeleton (up to 4 alive at once) or buffing a random one
+    // by +1/+1. The win condition is the new _clearFieldToWin flag —
+    // the fight only ends when every alive Skeleton on the boss's
+    // side is dead. Kill-count won't work here because the power
+    // keeps respawning and would close the fight while skeletons
+    // still stand on the field.
     army_of_the_dead: () => {
       enemy = new Character('Army of the Dead');
       enemy.deck = new Deck();
       enemy._invulnerable = true;
       enemy._clearFieldToWin = true;
       enemy.addPower(createArmyOfTheDead());
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         const skel = new Creature({
           name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
           traits: ['Skeleton'],
@@ -13679,6 +13698,35 @@ function setupEnemyForCombat(enemyId) {
       enemy.deck = new Deck();
       for (let i = 0; i < 5; i++) enemy.deck.addCard(createOldSpectralHand());
       enemy.addPower(createDireFury());
+    },
+    // Path of the Necromancer — Stone Stair encounter. Death itself
+    // arrives at the top of the stair. 10-card deck of Death Sickle
+    // (4 dmg + Hit: Death rider). Ethereal clamps every player swing
+    // to 1 dmg → 10 hits to clear the fight. Hand size 1 means the
+    // Specter swings exactly once per turn; the apprentice has to
+    // fully absorb every swing (Block 4 Arcane Shield = 0 leak, no
+    // death trigger). One leaked HP = run over.
+    //
+    // Master Mortain's book activates during the TEXT phase; the
+    // encounter's LOOT phase grants Arcane Shield via the standard
+    // addLootedCard pipeline (master deck + a hand copy when there's
+    // room), so the apprentice opens turn 1 holding the ward. No
+    // need to push a second copy here. _enemy_surprise flips the
+    // turn so Death swings FIRST, matching the Kobold Slyblade
+    // ambush pattern; the apprentice has to block the opening
+    // sickle with the granted ward.
+    specter_of_death: () => {
+      enemy = new Character('Specter of Death');
+      enemy.deck = new Deck();
+      for (let i = 0; i < 10; i++) enemy.deck.addCard(createDeathSickle());
+      enemy.addPower(createEthereal());
+      // Overwhelm — any ally the apprentice happens to drop in front
+      // of the sickle (e.g. a summoned Skeleton) doesn't soak the
+      // killing blow. Overflow rolls onto the apprentice, where the
+      // Hit: Death rider can still find her. No "throw the meat
+      // shield at Death" cheese.
+      enemy.addPower(createOverwhelm());
+      enemy._enemy_surprise = true;
     },
     bone_pile: () => {
       enemy = new Character('Bone Pile');
@@ -13741,11 +13789,13 @@ function setupEnemyForCombat(enemyId) {
       // Thorb fights at the player's side in the corner-cell rescue. Matches
       // PY: `if encounter.id == "corner_cell": player.add_creature(thorb)`.
       // He arrives ready to act on the player's first turn (no summoning
-      // sickness, since he was already there waiting to be freed). In a
+      // sickness, since he was already there waiting to be freed). On a
       // ccgQuest+ run the rescue grants the tier-up Thorb card via
-      // resolveCompanionCardForTierOffset — the in-fight Thorb has to
-      // match so the loot-screen card lines up with the ally you just
-      // fought beside.
+      // resolveCompanionCardForTierOffset (which only ever swaps inside
+      // the thorb_card / thorb_card_2 / thorb_card_3 chain — never an
+      // unrelated card). The in-fight Thorb has to match the awarded
+      // card's tier so the recruit beat lines up with what the player
+      // is about to play from their deck.
       if (currentEncounter && currentEncounter.id === 'corner_cell') {
         const off = playerTierOffset || 0;
         let thorb;
@@ -18528,15 +18578,20 @@ function startCombat() {
     });
   }
 
-  // Enemy surprise (PY game.py:5219+). Only the Kobold Slyblade
-  // uses this for now — the enemy moves first instead of the
+  // Enemy surprise (PY game.py:5219+). Kobold Slyblade and Specter
+  // of Death use this — the enemy moves first instead of the
   // player. Flip the turn and kick the enemy action loop so the
-  // slyblade gets a free swing before the player can react.
+  // ambusher gets a free swing before the player can react. The
+  // first-action timer is bumped to wait past the combat-intro
+  // boss-splash (3000 ms); otherwise the splash is still on screen
+  // when the card showcase + arrow fire over the top, making the
+  // opening swing read as instantaneous.
   if (enemy && enemy._enemy_surprise) {
     enemy._enemy_surprise = false;
     addLog(`Surprise! ${enemy.name} strikes first.`, Colors.RED);
     isPlayerTurn = false;
     startEnemyTurn();
+    enemyActionTimer = Math.max(enemyActionTimer, 2200 * getEnemySpeedMul());
   }
 }
 
@@ -22366,6 +22421,23 @@ function drawCharacterPanel(character, side) {
     ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`Kill ${remaining} Enemies`, barX + barW / 2, barY + 16);
+  } else if (!isPlayer && character._invulnerable && character._clearFieldToWin) {
+    // Clear-the-field fights (Army of the Dead): boss is invulnerable
+    // with no deck, so the standard HP bar would show 0/0. Show the
+    // alive-creature count instead — that's the actual win condition
+    // checkCombatEnd reads via _clearFieldToWin.
+    const aliveCount = (character.creatures || []).filter(c => c && c.isAlive).length;
+    const startCount = Math.max(aliveCount, 1);
+    const pct = aliveCount / startCount;
+    ctx.fillStyle = Colors.RED;
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.strokeStyle = Colors.WHITE;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = Colors.WHITE;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Kill all enemies (${aliveCount} left)`, barX + barW / 2, barY + 16);
   } else if (!isPlayer && swimTarget > 0) {
     const remaining = Math.max(0, swimTarget - swimCount);
     const pct = remaining / swimTarget;
@@ -23766,6 +23838,27 @@ function handleCombatClick(x, y) {
           }
           return;
         }
+        // Magic Missile auto-barrage — rebuilt Magic Missiles flow. No
+        // optional pre-pay phase: the card's standard recharge cost is
+        // the whole cost, and the barrage immediately enters 3-shot
+        // mode against player-picked targets. Per-shot damage = effect
+        // value. Draw fires from finishBarrage after the 3 shots land.
+        const mmBarrageEff = (card.effects || []).find(e => e.effectType === 'magic_missile_barrage');
+        if (mmBarrageEff && needsTarget(card)) {
+          selectedCardIndex = i;
+          barrageMode = true;
+          barrageDescending = false;
+          barrageCardIndex = i;
+          barrageRechargedCard = null;
+          barrageShotsTotal = 3;
+          barrageShotsLeft = 3;
+          barrageShotsFired = 0;
+          barrageShotDamage = mmBarrageEff.value || 1;
+          _handOrderSnapshot = [...player.deck.hand];
+          state = GameState.TARGETING;
+          showStyledToast(`${card.name}: 3 shots — click a target (each shot picks its own)`, 'multi');
+          return;
+        }
         // Check for Arcane Beam — click cards to charge (+N dmg each),
         // click enemy to fire. Both the base + bonus values come from
         // the card's effects so future cards can reuse the pattern.
@@ -25105,6 +25198,13 @@ let attacksThisTurn = 0; // for sneak_attack scaling
 // riders like Skitter Bite's `apply_poison_on_damage` so they only
 // fire when the previous damage broke through shield/armor/block.
 let _lastEffectDamageLanded = 0;
+// Specter of Death's "Hit: Death" rider. Death Sickle stamps this on
+// play; finishIncomingDamage checks it after the player's DEFENDING
+// resolves — if any HP damage actually landed, the game ends. Block /
+// Shield that fully absorb the 5 damage clear the flag without
+// triggering. Reset every check so a fully-blocked swing doesn't carry
+// over into the next Death Sickle swing.
+let _specterDeathlyStrike = false;
 let _activePlayCard = null; // the card currently being resolved (set during playCardSelf/etc.)
 // When true, summon_* handlers skip playing their entry SFX so the caller
 // (e.g. Revivify) can stagger the sound on its own timeline.
@@ -25188,7 +25288,8 @@ function needsTarget(card) {
      e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
      e.effectType === 'apply_bleed' ||
      e.effectType === 'damage_range' ||
-     e.effectType === 'dragon_bow_barrage')
+     e.effectType === 'dragon_bow_barrage' ||
+     e.effectType === 'magic_missile_barrage')
   );
 }
 
@@ -26425,12 +26526,13 @@ function resolveEffect(eff, caster, target) {
       // most recent damage effect on this card actually landed. Reads
       // the _lastEffectDamageLanded snapshot the damage handler stamps
       // (same plumbing apply_poison_on_damage uses). Routes through
-      // healPlayer when the caster is the player so Poison / Bleed
-      // get scrubbed first in standard priority order.
+      // healPlayer so Poison / Bleed get scrubbed first in standard
+      // priority order — healPlayer already fires its own +N heal
+      // float, so no extra spawnHealOnTarget here (was double-popping
+      // a green +N over the apprentice every drain).
       const drained = _lastEffectDamageLanded;
       if (drained > 0) {
         addLog(`  Drain: Heal ${drained}`, Colors.GREEN);
-        spawnHealOnTarget(caster, drained);
         if (caster === player) healPlayer(drained);
       }
       break;
@@ -28702,6 +28804,41 @@ function resolveEffect(eff, caster, target) {
       } else {
         addLog(`  No room for the White Dragon Egg.`, Colors.GRAY);
       }
+      break;
+    }
+    case 'summon_army_of_the_dead': {
+      // Path of the Necromancer "Army of the Dead" card (Tier 1).
+      // Summons `eff.value` (default 2) fresh 1/1 Skeletons with 1
+      // armor + the Skeleton trait. Every Skeleton-trait ally on the
+      // field (the freshly raised pair + any standing Skeleton Mastery
+      // summons) then gets Haste so they all swing the same turn the
+      // card is played. The Haste pass uses creature.ready() so both
+      // exhausted and justSummoned clear in one shot. bones_clatter
+      // plays once at the top of the resolve for the audio cue.
+      playSound('bones_clatter', 0.7);
+      const count = Math.max(1, eff.value || 2);
+      let lastSkel = null;
+      for (let i = 0; i < count; i++) {
+        const skel = new Creature({
+          name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+          haste: true,
+          traits: ['Skeleton'],
+        });
+        if (!caster.addCreature(skel)) break;
+        lastSkel = skel;
+      }
+      // Stamp Haste onto every Skeleton-trait ally (newly raised +
+      // existing). ready() clears summoning sickness so they can swing
+      // immediately. haste flag persists for the codex / hover preview.
+      for (const c of caster.creatures) {
+        if (!c.isAlive) continue;
+        if (!Array.isArray(c.traits) || !c.traits.includes('Skeleton')) continue;
+        c.haste = true;
+        c.ready();
+      }
+      addLog(`  ${count} Skeleton${count > 1 ? 's rise' : ' rises'} and the host gains Haste!`, Colors.PURPLE);
+      const lastEntry = combatLog[combatLog.length - 1];
+      if (lastEntry) lastEntry.creature = lastSkel;
       break;
     }
     case 'summon_pet_slime': {
@@ -32433,6 +32570,14 @@ function finishIncomingDamage() {
   pendingIncomingDamage = 0;
   _pendingHitSfx = null;
   _painPlayedForCurrentDamageEvent = false;
+  // Death Sickle's "Hit: Death" rider — if Death Sickle was the swing
+  // that just resolved AND any HP damage actually landed, the
+  // apprentice loses. Block 5 (Arcane Shield) fully absorbs the 5
+  // damage and skips this branch. The flag is always cleared at the
+  // end of the event so a single missed block doesn't carry over.
+  const deathlyStrike = _specterDeathlyStrike;
+  const deathlyLanded = _playerDamageLandedThisEvent;
+  _specterDeathlyStrike = false;
   // Ice Shatter on the player — fires if any deck/hand pay actually
   // happened this event. Skipped on fully blocked / fully shielded
   // hits since the flag never flipped.
@@ -32442,6 +32587,23 @@ function finishIncomingDamage() {
   }
   hideToast();
   state = GameState.COMBAT;
+  if (deathlyStrike && deathlyLanded) {
+    addLog(`  ☠ Death's sickle struck home...`, Colors.PURPLE);
+    playSound('defeat');
+    fadeOutMusic(1500);
+    stopAmbienceLayer(800);
+    trackEvent('run_died', {
+      cause: 'specter_of_death',
+      encounter_id: currentEncounter && currentEncounter.id,
+      encounter_name: currentEncounter && currentEncounter.name,
+      enemy_name: enemy && enemy.name,
+      class: selectedClass,
+      level: player && player.level,
+      map_id: currentMap && currentMap.id,
+    });
+    state = GameState.GAME_OVER;
+    return;
+  }
   if (checkCombatEnd()) return;
   // If we were resolving the end-of-enemy-turn damage flow, transition to the player turn now.
   if (awaitingEnemyDamage) {
@@ -34323,33 +34485,44 @@ function startEnemyTurn() {
           playSound('bones_clatter', 0.85);
         }
       } else if (power.id === 'army_of_the_dead') {
-        // Worn Floor boss power. Count Skeleton-trait allies on the
-        // boss's side; if fewer than 4 are alive, summon a fresh 1/1
-        // with 1 armor + the Skeleton trait. Otherwise pick one of
-        // the existing skeletons at random and grant +1 attack /
-        // +1 max HP (also healing the bonus HP, like Amalgam's buff
-        // tick). The bones-clatter cue plays on both branches so the
-        // power audibly fires either way.
-        const skeletons = enemy.creatures.filter(
-          c => c.isAlive && Array.isArray(c.traits) && c.traits.includes('Skeleton')
-        );
-        if (skeletons.length < 4) {
-          const skel = new Creature({
-            name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-            traits: ['Skeleton'],
-          });
-          if (enemy.addCreature(skel)) {
-            addLog(`  Army of the Dead! A new Skeleton claws up.`, Colors.PURPLE);
-            playSound('bones_clatter', 0.7);
+        // Worn Floor boss power. Rolls 3 independent random outcomes
+        // per turn; each roll is a 50/50 between "summon a fresh 1/1
+        // Skeleton with 1 armor (capped at 4 alive)" and "give +1/+1
+        // to a random alive Skeleton (also heals the bonus HP)". The
+        // randomness means some turns spawn a fat army, some turns
+        // pile +3/+3 onto a single skeleton, most fall in between.
+        // bones_clatter plays once at the top of the power.
+        playSound('bones_clatter', 0.7);
+        addLog(`  Army of the Dead summons!`, Colors.PURPLE);
+        for (let roll = 0; roll < 3; roll++) {
+          const skeletons = enemy.creatures.filter(
+            c => c.isAlive && Array.isArray(c.traits) && c.traits.includes('Skeleton')
+          );
+          // 50/50 — flip the coin first, then fall back to the other
+          // branch if the chosen one has no legal effect (e.g. summon
+          // hit the 4-cap → switch to a buff; nothing alive to buff →
+          // switch to a summon).
+          let chooseSummon = Math.random() < 0.5;
+          if (chooseSummon && skeletons.length >= 4) chooseSummon = false;
+          if (!chooseSummon && skeletons.length === 0) chooseSummon = true;
+          if (chooseSummon) {
+            if (skeletons.length >= 4) continue; // 4-cap, no buff target either
+            const skel = new Creature({
+              name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+              traits: ['Skeleton'],
+            });
+            if (enemy.addCreature(skel)) {
+              addLog(`  -> A new Skeleton claws up.`, Colors.PURPLE);
+            }
+          } else {
+            if (skeletons.length === 0) continue;
+            const pick = skeletons[Math.floor(Math.random() * skeletons.length)];
+            pick.attack = (pick.attack || 0) + 1;
+            pick.maxHp = (pick.maxHp || 0) + 1;
+            pick.currentHp = Math.min(pick.maxHp, (pick.currentHp || 0) + 1);
+            spawnTokenOnTarget(pick, 1, 'Atk', Colors.RED);
+            addLog(`  -> ${pick.name} grows stronger (+1/+1).`, Colors.PURPLE);
           }
-        } else {
-          const pick = skeletons[Math.floor(Math.random() * skeletons.length)];
-          pick.attack = (pick.attack || 0) + 1;
-          pick.maxHp = (pick.maxHp || 0) + 1;
-          pick.currentHp = Math.min(pick.maxHp, (pick.currentHp || 0) + 1);
-          spawnTokenOnTarget(pick, 1, 'Atk', Colors.RED);
-          addLog(`  Army of the Dead! ${pick.name} grows stronger (+1/+1).`, Colors.PURPLE);
-          playSound('bones_clatter', 0.7);
         }
       } else if (power.id === 'dark_vision') {
         // Obsidian Oracle passive. Peek the top N of the player's
@@ -35468,6 +35641,16 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+      } else if (eff.effectType === 'mark_deathly_strike') {
+        // Death Sickle's "Hit: Death" rider. Stamps a module flag the
+        // damage flow checks once the player's DEFENDING phase
+        // resolves — if any HP damage actually landed, the game ends.
+        // Block / Shield / Armor that fully absorb the 5 damage skip
+        // the trigger. Specter has hand size 1, so the turn's queued
+        // damage = this card's damage; no risk of bleeding into other
+        // enemy swings.
+        _specterDeathlyStrike = true;
+        addLog(`  ☠ Hit: Death`, Colors.PURPLE);
       } else if (eff.effectType === 'damage_range') {
         // Random-roll damage on the enemy's turn (Old Spectral Hand).
         // Value encodes min/max as min*10 + max (so 13 = 1 to 3, 14 =
@@ -38263,6 +38446,9 @@ function getDeathSfxKey(c) {
   // Forgotten Specter — Path of the Necromancer East Corridor wraith.
   // Shares the demon-screech death cue with the chapter-7 cousin.
   if (name === 'forgotten specter') return 'specter_screech';
+  // Specter of Death — Stone Stair wraith. Same demon-screech as the
+  // sibling specters; the Specter dissolves at the end of the fight.
+  if (name === 'specter of death') return 'specter_screech';
   // Frost Drake — alien wail on death.
   if (name === 'frost drake') return 'frost_drake_scream';
   // The 3 Ancestors — per-spirit death cue (also used for the swing
@@ -38376,6 +38562,11 @@ function getFightStartSfxKey(rawName) {
   // unfold out of the corners at fight start, so the bones-clatter
   // bone rattle is the natural sting.
   if (name === 'army of the dead') return 'bones_clatter';
+  // Specter of Death — Stone Stair gate-keeper. Same demon-screech
+  // bookend the Forgotten Specter / Dwarven Specter use; ties the
+  // wraith family together sonically and underscores the arrival
+  // beat after the book activates.
+  if (name === 'specter of death') return 'specter_screech';
   // Overseer Gnikan — chapter-8 summit boss. Reuses the heaviest
   // reptilian hiss aliased as gnikan_hiss.
   if (name === 'overseer gnikan') return 'gnikan_hiss';
@@ -44986,6 +45177,12 @@ const CARD_SFX_OVERRIDES = {
   // grabbing. Same alias the Dwarven Specter uses for its fight-start
   // sting (Monster/monster_demon_screech_01).
   old_spectral_hand:        { play: 'specter_screech', flesh: 'specter_screech', blocked: 'specter_screech' },
+  // Death Sickle — Specter of Death's signature swing. Same demon-
+  // screech the rest of the wraith family uses, fired on cast + on
+  // landed flesh + on a blocked block — so the sickle reads as Death
+  // itself shrieking whether it strikes home, gets blocked, or
+  // (rarely) gets stalled by ice.
+  death_sickle:             { play: 'specter_screech', flesh: 'specter_screech', blocked: 'specter_screech' },
   // Drain Life — Tier 1 Necromancer Ability from the Forgotten
   // Shrine. Dark-spell incantation on cast (same family as Obsidian
   // Curse + Obsidian Shard banish) so the necromancer-flavored
@@ -48501,9 +48698,11 @@ function getCodexMonsterIds() {
     // Path of the Necromancer side-quest enemies. Plague Cockroach is
     // the dining-room fight, Apprentice's Skeleton is the study
     // reveal, Forgotten Specter is the East Corridor wraith, Army of
-    // the Dead is the Worn Floor invulnerable boss.
+    // the Dead is the Worn Floor invulnerable boss, Specter of Death
+    // is the Stone Stair gate-keeper (book-activated Arcane Shield
+    // gate).
     'plague_cockroach', 'apprentice_skeleton', 'forgotten_specter',
-    'army_of_the_dead',
+    'army_of_the_dead', 'specter_of_death',
   ];
 }
 
@@ -49051,7 +49250,7 @@ function buildCodexSourceCache() {
     // Path of the Necromancer side quest enemies — sandbox-scanned so
     // their decks/powers surface in the codex Source-line builder.
     'plague_cockroach', 'apprentice_skeleton', 'forgotten_specter',
-    'army_of_the_dead',
+    'army_of_the_dead', 'specter_of_death',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the

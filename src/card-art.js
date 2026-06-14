@@ -437,6 +437,9 @@ export const CARD_ART_MAP = {
   mortains_staff: 'MortainsStaff.png',
   // Drain Life — Forgotten Shrine reward, Tier 1 Necromancer spell.
   drain_life: 'DrainLife.png',
+  // Army of the Dead — Worn Floor reward, Tier 1 Necromancer card.
+  // Shares the same artwork as the boss-side power.
+  army_of_the_dead: 'ArmyOfTheDead.png',
   // Old Spectral Hand — Forgotten Specter's signature dual-mode card.
   // Distinct id from the chapter-7 `spectral_hand` so both can coexist.
   old_spectral_hand: 'SpectralHand.jpg',
@@ -470,6 +473,15 @@ export const CARD_ART_MAP = {
   // Army of the Dead — Worn Floor invulnerable boss. The lookup
   // resolves to 'army_of_the_dead' via enemy.name.toLowerCase().
   army_of_the_dead: 'ArmyOfTheDead.png',
+  // Specter of Death portrait is eager-preloaded as
+  // images['specter_of_death'] from Backgrounds/GameEnd.jpg in
+  // loadAssets — no Cards/ entry here, since the image lives under
+  // Backgrounds/ and getCardArt only resolves under Cards/.
+  // Death Sickle — Specter of Death's signature swing. Same
+  // GameEnd.jpg art the boss portrait uses, so the card face
+  // matches the enemy splash. Path escapes assets/Cards/ via
+  // ../Backgrounds/ since the source lives under Backgrounds/.
+  death_sickle: '../Backgrounds/GameEnd.jpg',
   // Ruga the Slave Master — Hall of Ancestors boss. The enemy
   // character is named "Ruga the Slave Master" (lowercased +
   // underscored → ruga_the_slave_master), and the encounter id is

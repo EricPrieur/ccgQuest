@@ -5904,8 +5904,70 @@ export function createTunnel2MidEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText("The fourth skeleton falls and does not get up. The thick feeling lifts off the room like a held breath let go. Whatever was directing them is done watching for today."),
-        new EncounterText("You straighten up over the bones. The corridor stretches ahead of you, quiet again.", '!'),
+        new EncounterText("The last skeleton folds in on itself and the thick feeling lifts off the room like a held breath let go. Whatever was directing them is done — and what was directing them is the book in your bag."),
+        new EncounterText("The pages flutter open against your hip without you touching them. The bones at your feet rattle once, settle. You feel the leash slide from the book to your own hand."),
+        new EncounterText("They were never going to stop. They were waiting to see if you could take them. You can.", '!'),
+        new EncounterText("They are yours now. You will call them when you need them.", '?'),
+      ],
+    }),
+    // Loot — Tier 1 Necromancer ability card claimed off the defeated
+    // host. lootTitle banners the grant; the LOOT pipeline rolls the
+    // card into the player's master deck via the standard add path.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['army_of_the_dead'],
+      lootTitle: 'You claim the Army of the Dead!',
+    }),
+  ]);
+}
+
+// Tunnel 3 Stone Stair — Specter of Death encounter. The apprentice
+// climbs the stair toward the heavy stone door and, halfway up,
+// senses Death itself approaching. Master Mortain's book — the one
+// she pocketed from the study — flares open and a ward manifests
+// directly in her hand: Arcane Shield. The injection happens in
+// setupEnemyForCombat (the COMBAT setup hook for specter_of_death
+// pushes the card onto player.deck.hand before startCombat's opening
+// draw, so the shield is sitting in the apprentice's opening hand
+// when the fight begins). The Specter swings Death Sickle every
+// turn — 5 damage, Hit: Death (lose game if any HP damage lands).
+// Block 5 is the intended counter; the apprentice needs to play
+// Arcane Shield every turn she would otherwise eat the swing.
+export function createTunnel3MidEncounter() {
+  return new Encounter('tunnel3_mid', 'Stone Stair', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("You climb the worn steps between the columns. The torches do not flicker — but the air around them does, somehow, as if the light is the only thing still moving."),
+        new EncounterText("Halfway up the stair, you stop. You cannot say why. Only that the cold has changed shape — it is no longer the cold of stone."),
+        new EncounterText("Something is coming down the stair toward you. You cannot see it yet. You only feel it: a presence, patient, unhurried, certain of the appointment.", '!'),
+        new EncounterText("Death has come for the apprentice."),
+        new EncounterText("Inside your coat, Master Mortain's book grows warm. You did not open it. It opens itself."),
+        new EncounterText("Pages turn under no hand. Ink rearranges. A single sigil burns up out of the paper and settles, glowing, against your palm — a ward you did not know, drawn in the master's careful script."),
+        new EncounterText("Arcane Shield. The word arrives in your mind already known. The card is in your hand before you remember closing your fingers.", '!'),
+        new EncounterText("Above you, on the stair, the air parts. The Specter of Death lifts its sickle."),
+      ],
+    }),
+    // LOOT phase before COMBAT — the Arcane Shield manifests in the
+    // apprentice's hand. The standard loot pipeline adds it to the
+    // deck; setupEnemyForCombat's specter_of_death hook pushes a
+    // second copy directly into the opening hand so it's ready when
+    // Death's sickle falls on turn 1 (the Specter swings first via
+    // _enemy_surprise).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['arcane_shield'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'specter_of_death',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The Specter's sickle hangs in the air, then dissolves. Death itself thins, frays, and is gone — back, perhaps, to whatever appointment it has next."),
+        new EncounterText("The book in your coat is cool again. The page that flared has gone blank, but you can still feel the shape of the ward in your palm.", '!'),
+        new EncounterText("You stand on the stair a long moment, breathing. The torches have not moved. Above you, the heavy stone door is still closed — but you are still on this side of it."),
       ],
     }),
   ]);
@@ -6031,6 +6093,7 @@ export const ENCOUNTER_REGISTRY = {
   tunnel1_shrine: createTunnel1ShrineEncounter,
   east_corridor: createEastCorridorEncounter,
   tunnel2_mid: createTunnel2MidEncounter,
+  tunnel3_mid: createTunnel3MidEncounter,
   tunnel3_door: createTunnel3DoorEncounter,
   giant_rat: createGiantRatEncounter,
   locked_door: createLockedDoorEncounter,

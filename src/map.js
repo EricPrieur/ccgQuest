@@ -2188,13 +2188,15 @@ export function createUndergroundTunnel3Map() {
       id: 'tunnel3_mid',
       name: 'Stone Stair',
       description: "Worn steps climb between rough-hewn columns. Two torches still hold a faint flame — someone has kept this passage lit.",
-      // No encounter — Stone Stair is a silent walkway between the
-      // Lower Landing and the Closed Door now.
-      encounterId: '',
+      // Specter of Death encounter — Master Mortain's book activates
+      // on the stair and grants Arcane Shield in hand before the
+      // fight. One-shot; canRevisit false so the apprentice doesn't
+      // re-trigger the fight on the way back down.
+      encounterId: 'tunnel3_mid',
       connections: ['tunnel3_entry', 'tunnel3_door'],
       position: [512, 520],
       mapArea: 'underground_tunnel_3',
-      canRevisit: true,
+      canRevisit: false,
     },
     {
       id: 'tunnel3_door',

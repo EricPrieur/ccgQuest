@@ -353,22 +353,20 @@ export function createPlagueSpawn() {
   });
 }
 
-// Army of the Dead — Worn Floor boss power. At the start of every
-// enemy turn: if fewer than 4 Skeleton-trait allies are alive on the
-// boss's side, summon a fresh 1/1 Skeleton with 1 armor. Otherwise
-// pick one of the existing Skeletons at random and give it +1/+1
-// (attack and max HP, healing the bonus HP). The boss itself is
-// invulnerable, so the fight is won by accumulating 4 Skeleton kills
-// while keeping pace with the respawns.
+// Army of the Dead — Worn Floor boss power. Fires BOTH effects every
+// turn: summon a fresh 1/1 Skeleton with 1 armor (capped at 4 alive),
+// AND grant a random alive Skeleton +1 attack / +1 max HP. The boss
+// itself is invulnerable, so the fight is won by clearing the entire
+// field of alive Skeletons (see _clearFieldToWin in main.js).
 export function createArmyOfTheDead() {
   return new Power({
     id: 'army_of_the_dead',
     name: 'Army of the Dead',
     costDescription: 'Passive',
-    effectDescription: 'Turn Start: Create a Skeleton or add +1/+1 to one.',
+    effectDescription: 'Turn Start: Summon an Army of the Dead. 3 rolls, each either summons a Skeleton or +1/+1 to one.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'Spawn or\n+1/+1\nSkeleton',
+    shortDesc: 'Summon Army\n3 rolls/turn',
     // No tier scaling for now — the side-quest fight stays at base.
     noTierOffset: true,
   });

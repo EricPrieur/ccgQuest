@@ -613,17 +613,26 @@ export function createIceBolt() {
   return new Card({
     id: 'ice_bolt',
     name: 'Ice Bolt',
-    description: 'Deal 1 Damage and Ice, Draw.',
-    shortDesc: '1 Dmg+Ice, Draw',
+    description: 'Recharge 2 Cards ->\nDeal 3 Ice + 1 Damage, Draw.',
+    shortDesc: 'R+1->3 Ice\n+1 Dmg, Draw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
+    // Effect order matters: stack 3 Ice on the target FIRST, then the
+    // 1 damage rolls through with a fresh chance to trigger Ice
+    // Shatter (the shatter rider checks the target's ice stack count
+    // AT the moment damage lands; with 3 stacks now sitting on the
+    // target, the 1 damage has a real chance to detonate). Draw closes
+    // the play. recharge_extra 1 makes the cast cost 2 cards (Ice Bolt
+    // itself + 1 more recharged from hand) — same template as the
+    // martial 2H weapons.
     effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_ice', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    gamePlusOffset: { damage: 1 },
+    gamePlusOffset: { damage: 1, apply_ice: 1 },
     characterClass: ['wizard'],
     tier: 1,
     rarity: 'uncommon',
@@ -634,22 +643,19 @@ export function createMagicMissiles() {
   return new Card({
     id: 'magic_missiles',
     name: 'Magic Missiles',
-    description:
-      'Deal 1 Damage, Draw.\nOptional: Recharge 1 more -> 3 shots of 1 damage each.',
-    shortDesc: '1 Dmg, Draw\nOpt R+1->3x1 Dmg',
+    description: 'Recharge a Card ->\nDeal a barrage of 3 attacks of 1 Damage, Draw.',
+    shortDesc: 'R->3x1 Dmg\nDraw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
+    // magic_missile_barrage value = per-shot damage. Shot count is
+    // hard-fixed at 3 in the handler (matches the rebuilt card text).
+    // Draw fires after the barrage completes via finishBarrage.
     effects: [
-      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('magic_missile_barrage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
-      new CardEffect('barrage', 2, TargetType.SELF),
     ],
-    // +1 per-shot damage AND +1 barrage shot on the recharge-extra.
-    // Description is rebuilt by applyGamePlusOffsetInPlace from the
-    // scaled values (regex swap can't handle two damage numbers + a
-    // shot count derived from barrage+1).
-    gamePlusOffset: { damage: 1, barrage: 1 },
+    gamePlusOffset: { magic_missile_barrage: 1 },
     characterClass: ['wizard'],
     tier: 1,
     rarity: 'uncommon',
@@ -673,7 +679,13 @@ export function createArcaneShield() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     gamePlusOffset: { block: 3 },
-    characterClass: ['wizard'],
+    // Tier 1 ability for both Wizard and Necromancer — the apprentice
+    // gets a copy granted from the book at the Stone Stair scene. The
+    // 4 block alone is one short of Death Sickle's 5 damage, so the
+    // apprentice has to layer another point of mitigation (armor,
+    // residual shield, a second defense card) on top to fully absorb
+    // and skip the "Hit: Death" rider.
+    characterClass: ['wizard', 'necromancer'],
     tier: 1,
     rarity: 'uncommon',
   });
@@ -2377,6 +2389,33 @@ export function createDrainLife() {
   });
 }
 
+// Army of the Dead — Worn Floor reward (Tier 1 Necromancer ability).
+// The apprentice claims the defeated army through the book and can
+// now call them at will: summons 2 fresh 1/1 Skeletons with 1 armor
+// AND grants Haste to every Skeleton-trait ally on the field (the
+// two she just raised + any standing from Skeleton Mastery), so they
+// all swing the same turn they enter. The same id is shared with the
+// invulnerable boss's power but they live in different registries
+// (CARD_REGISTRY vs the power-card art keyed off `power_<id>`).
+export function createArmyOfTheDeadCard() {
+  return new Card({
+    id: 'army_of_the_dead',
+    name: 'Army of the Dead',
+    description: 'Summon 2 Skeletons.\nSkeletons gain Haste.',
+    shortDesc: 'Summon 2 Skels\nSkeletons +Haste',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_army_of_the_dead', 2, TargetType.SUMMON),
+    ],
+    characterClass: ['necromancer'],
+    tier: 1,
+    rarity: 'uncommon',
+    noTierOffset: true,
+  });
+}
+
 // Skitter Bite — Plague Cockroach's dual-mode signature card. Top-
 // level effects are the attack mode (used on the cockroach's turn);
 // modes[0] is the defense mode (used reactively when the apprentice
@@ -2441,6 +2480,32 @@ export function createOldSpectralHand() {
         new CardEffect('heal', 5, TargetType.SELF),
         new CardEffect('draw', 1, TargetType.SELF),
       ]),
+    ],
+  });
+}
+
+// Specter of Death's signature swing. 4 damage with a "Hit: Death"
+// rider — if any damage lands on the player's HP (i.e. mitigation
+// didn't fully absorb), the game ends. Arcane Shield's Block 4 is
+// the intended counter: full absorption skips the rider's
+// damageLanded check at finishIncomingDamage. The rider is
+// implemented via the mark_deathly_strike effect, which flips a
+// module flag the damage flow consults once the DEFENDING phase
+// resolves. Dropped 5 → 4 so the apprentice survives a no-draw
+// turn on Arcane Shield alone; 5 would have killed any turn the
+// player whiffed an additional defense.
+export function createDeathSickle() {
+  return new Card({
+    id: 'death_sickle',
+    name: 'Death Sickle',
+    description: 'Deal 4 Damage.\nHit: Death.',
+    shortDesc: '4 Dmg\nHit: Death',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('mark_deathly_strike', 1, TargetType.SELF),
     ],
   });
 }
