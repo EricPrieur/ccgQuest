@@ -13647,14 +13647,15 @@ function setupEnemyForCombat(enemyId) {
     // (1/1 with 1 armor each, Skeleton trait) and the Army of the
     // Dead passive: every turn-start either summons another skeleton
     // (up to 4 alive at once) or buffs a random one by +1/+1. The
-    // win condition is the kill-count system — defeat 4 skeletons
-    // cumulative to end the fight. Same shape as Wolf Pack except
-    // capped at 4 instead of always-topping-up.
+    // win condition is the new _clearFieldToWin flag — the fight only
+    // ends when every alive Skeleton on the boss's side is dead. Kill-
+    // count won't work here because the power keeps respawning and
+    // would close the fight while skeletons still stand on the field.
     army_of_the_dead: () => {
       enemy = new Character('Army of the Dead');
       enemy.deck = new Deck();
       enemy._invulnerable = true;
-      enemy._killTarget = 4;
+      enemy._clearFieldToWin = true;
       enemy.addPower(createArmyOfTheDead());
       for (let i = 0; i < 4; i++) {
         const skel = new Creature({
@@ -37413,6 +37414,22 @@ function checkCombatEnd() {
   // complete cleanly; the actual phase advance happens once we return
   // to the original intercept call.
   if (_inGnikanP1Transition) return false;
+  // Clear-the-field victory (Army of the Dead). The boss is invulnerable
+  // and never carries a deck — the win condition is wiping every alive
+  // creature on the boss's side. Different from killTarget because the
+  // boss respawns minions every turn; counting cumulative kills would
+  // close the fight while skeletons still stand. Checked BEFORE the
+  // kill-count branch so the two are mutually exclusive.
+  if (enemy && enemy._invulnerable && enemy._clearFieldToWin) {
+    const aliveCount = (enemy.creatures || []).filter(c => c && c.isAlive).length;
+    if (aliveCount === 0) {
+      addLog(`VICTORY! All ${enemy.name} summons destroyed!`, Colors.GOLD);
+      const endKey = getDeathSfxKey(enemy);
+      if (endKey) playSound(endKey, 0.7);
+      combatVictory();
+      return true;
+    }
+  }
   // Kill count victory (wolf pack, etc.)
   if (killTarget > 0 && killCount >= killTarget) {
     addLog(`VICTORY! Killed ${killCount}/${killTarget}!`, Colors.GOLD);
@@ -45429,6 +45446,19 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'restless bone') {
       return { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' };
     }
+    // Skeleton (player Skeleton Mastery summon AND the enemy Army of
+    // the Dead minions — same creature.name, same audio profile).
+    // Layered cue: 1H blunt mace + a bones-clatter rattle, both fired
+    // simultaneously, so every swing reads as bone-on-target with the
+    // creature's own bone frame rattling at the same time. The
+    // `layer` field is picked up by playAttackHitSfx in addition to
+    // the standard flesh/blocked key.
+    if (name === 'skeleton') {
+      return {
+        flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
+        layer: 'bones_clatter',
+      };
+    }
     // Treant (Druid Summon Treants) — leaf-fall rustle on every swing
     // so a hasted forest of them stutters across the screen sonically.
     if (name === 'treant') {
@@ -45826,8 +45856,18 @@ function playAttackHitSfx(originalDmg, taken, delay = 0) {
     key = sfx.flesh;
   }
   if (!key) return;
-  if (delay > 0) setTimeout(() => playSound(key, 0.7), delay);
-  else playSound(key, 0.7);
+  // `layer` is an optional second alias played at the SAME beat as
+  // the main flesh/blocked cue. Used by the Skeleton swing (mace
+  // thud + bones-clatter rattle simultaneously) and reserved for any
+  // future creature that needs a layered swing identity.
+  const layerKey = sfx && sfx.layer;
+  if (delay > 0) {
+    setTimeout(() => playSound(key, 0.7), delay);
+    if (layerKey) setTimeout(() => playSound(layerKey, 0.6), delay);
+  } else {
+    playSound(key, 0.7);
+    if (layerKey) playSound(layerKey, 0.6);
+  }
 }
 
 // Spawn a damage number anchored to the bottom of a target's card rect

@@ -5902,7 +5902,11 @@ export function createBoneStorm() {
 export function createValdrisaCreature() {
   return new Creature({
     name: 'Valdrisa', attack: 3, maxHp: 5, isCompanion: true,
-    description: '+2 vs Armor/Shield. Turn End: Heal 2 a random damaged ally.',
+    // +3 vs Armor/Shield (Tier 3 parity). armorBonusOverride bumps the
+    // default +2 obsidian-family bonus to +3 — applyObsidianAllyBonus
+    // reads this when the swing target has any armor or shield.
+    armorBonusOverride: 3,
+    description: '+3 vs Armor/Shield. Turn End: Heal 2 a random damaged ally.',
     noTierOffset: true,
   });
 }
@@ -6169,48 +6173,41 @@ export function createQueensLocket() {
 // (the actual shield-gain hook lives in main.js's endPlayerTurn — keyed by
 // creature.name === "Thorb").
 export function createThorbCreature() {
-  const c = new Creature({
+  return new Creature({
     name: 'Thorb',
     attack: 2,
-    maxHp: 6,
+    maxHp: 5,
     armor: 1,
     isCompanion: true,
-    description: 'Turn End: +Shield',
-    // Companion-chain creature — the upgraded / Tier-3 variants are
-    // distinct factories swapped in on loot, so per-tier creature
-    // scaling stays opt-out at the codex level.
+    // Turn End: +Shield power dropped across all three Thorb tiers
+    // (per balance pass) — the standing buff is just Armor 1 now.
+    description: '',
     noTierOffset: true,
   });
-  // Flag the turn-end shield tick — the Thorb-loop in main.js checks
-  // this so tier 3 (which drops the power) doesn't fire it.
-  c.turnEndSelfShield = true;
-  return c;
 }
 
 export function createThorbUpgradedCreature() {
-  const c = new Creature({
+  return new Creature({
     name: 'Thorb',
     attack: 3,
-    maxHp: 7,
+    maxHp: 6,
     armor: 1,
     sentinel: true,
     isCompanion: true,
-    description: 'Sentinel. Turn End: +Shield',
+    description: 'Sentinel.',
     noTierOffset: true,
   });
-  c.turnEndSelfShield = true;
-  return c;
 }
 
 // Thorb tier 3 — ccgQuest+ rescue version (offset 2+). Bigger stat
 // line over tier 2 (+1 attack), keeps Sentinel + 1 armor. Turn End
-// shield power dropped per user balance pass — the armor + Sentinel
-// kit is the standing buff now. No turnEndSelfShield flag.
+// shield power dropped per balance pass — the armor + Sentinel kit
+// is the standing buff now.
 export function createThorbTier3Creature() {
   return new Creature({
     name: 'Thorb',
     attack: 4,
-    maxHp: 9,
+    maxHp: 8,
     armor: 1,
     sentinel: true,
     isCompanion: true,
