@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.221';
+export const GAME_VERSION = '2.222';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -73,6 +73,10 @@ export const GameState = Object.freeze({
   // placeholder — gathers Game+ options (TBD) and routes into the
   // standard CHARACTER_SELECT flow with the gamePlus flag set.
   GAME_PLUS_SETUP: 'GAME_PLUS_SETUP',
+  // Path of the Necromancer reward splash — shown after the Abbey
+  // Courtyard epilogue. Big "You have unlocked the Necromancer class!"
+  // title + the older necromancer portrait, then fades to MENU.
+  NECROMANCER_UNLOCK: 'NECROMANCER_UNLOCK',
 });
 
 // === Card Enums ===

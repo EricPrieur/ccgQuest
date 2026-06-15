@@ -508,11 +508,16 @@ export const SOUND_MAP = {
   // Old God's Blessing — eerie wood-glitch reveal when the buff is
   // granted at the Old God Statue. Plays once on the loot page.
   dark_glitch_wood: 'Magic/dark_glitch_wood_01',
+  // Plague (Necromancer) cast cue — the heavier glitch variant.
+  dark_glitch_wood_02: 'Magic/dark_glitch_wood_02',
   // Obsidian Oracle family — dark incantation for the Curse + a
   // distinct warp cue for Dark Vision. Same file names as the SOUND_PACKS
   // entries; this map wires the SOUND_MAP keys callers reference.
   dark_spell_01:    'Magic/dark_spell_01',
   dark_warp_01:     'Magic/dark_warp_01',
+  // Direct alias for the heavier warp variant — Shadow Bolt's cast
+  // (CARD_SFX_OVERRIDES). Same file as drain_essence below.
+  dark_warp_02:     'Magic/dark_warp_02',
   // Drain Essence — Dwarven Specter's signature cast. Heavier
   // dark warp variant so it reads distinct from Dark Vision's
   // dark_warp_01.
@@ -641,6 +646,8 @@ export const SOUND_MAP = {
   faery_cast:     'Magic/wand_shimmer_01',
   // Meta / progression cues — fired by UI transitions, not card play.
   level_up_screen: 'Magic/buff_powerup_02',
+  // Direct alias — the Necromancer class-unlock splash plays this.
+  buff_powerup_02: 'Magic/buff_powerup_02',
   perk_pick:       'Magic/buff_powerup_01',
   // Power-grant fanfare — fired by the LOOT phase when a lootPower
   // showcase grants a new character power (Skeleton Mastery after
@@ -652,6 +659,8 @@ export const SOUND_MAP = {
   // ward gives way. Same alias is reusable for any future "weight
   // hits the floor" / "seal cracks" beat.
   dark_impact_deep_01: 'Magic/dark_impact_deep_01',
+  // Corpse Explosion (Necromancer) — heavy wet detonation on cast.
+  dark_impact_deep_03: 'Magic/dark_impact_deep_03',
   splash_dive:     'Misc/water_bodyfall_01',
   // Direct alias used by Fish Scale Boots' defense cue — same sample as
   // splash_dive, kept under the file's own name so the CARD_SFX_OVERRIDES
@@ -672,6 +681,8 @@ export const SOUND_MAP = {
   hero_female_pain_high: 'Heroes/hero_female_pain_03',
   book_open:    'RpgAudio/bookOpen',
   book_close:   'RpgAudio/bookClose',
+  // Page flip — Apprentice's Spellbook cast.
+  book_flip:    'RpgAudio/bookFlip1',
   gold:         'RpgAudio/handleCoins',
   victory:      '',
   defeat:       '',

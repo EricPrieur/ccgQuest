@@ -39,6 +39,7 @@ export class Creature {
     isCompanion = false,
     endTurnDamage = 0,
     onDeathDamage = 0,
+    onDeathPoisonAll = 0,
     onDeathFireHits = 0,
     onDeathDiscardOrDamage = 0,
     onAttackSnagCard = false,
@@ -52,6 +53,26 @@ export class Creature {
     // (Ice Elemental's Ice-Absorb math) so the "needs rules" red
     // badge in the codex stays off. Read by creatureHasOffsetRules.
     noTierOffset = false,
+    // Ethereal-style per-hit damage cap (0 = uncapped). When > 0,
+    // takeDamage / takeUnpreventableDamage clamp each incoming hit to
+    // this value — a 3-HP creature with damageCap 1 needs 3 hits to
+    // die (Death Specter horde summon mirrors the Specter of Death's
+    // Ethereal power).
+    damageCap = 0,
+    // Hit: Death — when this creature lands an attack on the PLAYER,
+    // arm the Specter-of-Death instakill (resolved by
+    // finishIncomingDamage if HP damage actually got through).
+    hitDeath = false,
+    // Lifesteal — the creature heals itself for the damage its swing
+    // deals (Forgotten Specter horde summon).
+    lifesteal = false,
+    // Field footprint in grid cells (default 1x1). A creature with a
+    // larger footprint (e.g. the enemy Butcher at 2x2) occupies that
+    // many cells of the 12-cell ally grid and renders proportionally
+    // bigger. addCreature reserves the block; getCreatureSlotRect
+    // spans the rect.
+    slotW = 1,
+    slotH = 1,
   }) {
     this.name = name;
     this.attack = attack;
@@ -112,6 +133,7 @@ export class Creature {
 
     this.endTurnDamage = endTurnDamage;
     this.onDeathDamage = onDeathDamage;
+    this.onDeathPoisonAll = onDeathPoisonAll;
     this.onDeathFireHits = onDeathFireHits;
     this.onDeathDiscardOrDamage = onDeathDiscardOrDamage;
     // Kraken Tentacle: on swing land, splice 1 random hand card off
@@ -126,6 +148,11 @@ export class Creature {
     this.description = description;
     this.sourceCard = sourceCard;
     this.noTierOffset = noTierOffset;
+    this.damageCap = damageCap;
+    this.hitDeath = hitDeath;
+    this.lifesteal = lifesteal;
+    this.slotW = slotW;
+    this.slotH = slotH;
     this.slot = -1;
   }
 
@@ -134,6 +161,9 @@ export class Creature {
   }
 
   takeDamage(amount) {
+    // Ethereal cap — clamp the whole hit before armor/shield so the
+    // post-mitigation HP loss can never exceed damageCap.
+    if (this.damageCap > 0) amount = Math.min(amount, this.damageCap);
     // Armor absorbs FIRST — a permanent flat reduction off the top
     // of every hit. Without this, a swing equal to the armor value
     // (e.g. 1 dmg vs 1 armor) would burn a Shield stack instead of
@@ -154,6 +184,8 @@ export class Creature {
   }
 
   takeUnpreventableDamage(amount) {
+    // Ethereal caps even true damage — "can't take more than N".
+    if (this.damageCap > 0) amount = Math.min(amount, this.damageCap);
     this.currentHp = Math.max(0, this.currentHp - amount);
     return amount;
   }

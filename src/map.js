@@ -1875,7 +1875,7 @@ export function createNestInteriorMap() {
 export function createNecromancerHouseMap() {
   const map = new GameMap('necromancer_house', "Master Mortain's House");
   map.mapImages = {
-    necromancer_house: 'Maps/UndertakerHouseFirstFloor.png',
+    necromancer_house: 'Maps/UndertakerHouseFirstFloor.jpg',
   };
   // Hub-and-spokes layout. Corridor is the central junction; the four
   // rooms (Bedroom, Dining Room, Door, Upstairs) each link only back
@@ -1995,7 +1995,7 @@ export function createNecromancerHouseMap() {
 export function createNecromancerStudyMap() {
   const map = new GameMap('necromancer_study', "Master Mortain's Study");
   map.mapImages = {
-    necromancer_study: 'Maps/NecromancerStudyMap.png',
+    necromancer_study: 'Maps/NecromancerStudyMap.jpg',
   };
   const nodes = [
     {
@@ -2042,7 +2042,7 @@ export function createNecromancerStudyMap() {
 export function createUndergroundTunnel1Map() {
   const map = new GameMap('underground_tunnel_1', 'Underground Tunnels');
   map.mapImages = {
-    underground_tunnel_1: 'Maps/UndergroundTunnel1.png',
+    underground_tunnel_1: 'Maps/UndergroundTunnel1.jpg',
   };
   const nodes = [
     {
@@ -2119,7 +2119,7 @@ export function createUndergroundTunnel1Map() {
 export function createUndergroundTunnel2Map() {
   const map = new GameMap('underground_tunnel_2', 'Underground Tunnels');
   map.mapImages = {
-    underground_tunnel_2: 'Maps/UndergroundTunnel2.png',
+    underground_tunnel_2: 'Maps/UndergroundTunnel2.jpg',
   };
   const nodes = [
     {
@@ -2170,7 +2170,7 @@ export function createUndergroundTunnel2Map() {
 export function createUndergroundTunnel3Map() {
   const map = new GameMap('underground_tunnel_3', 'Underground Tunnels');
   map.mapImages = {
-    underground_tunnel_3: 'Maps/UndergroundTunnel3.png',
+    underground_tunnel_3: 'Maps/UndergroundTunnel3.jpg',
   };
   const nodes = [
     {
@@ -2202,9 +2202,13 @@ export function createUndergroundTunnel3Map() {
       id: 'tunnel3_door',
       name: 'Closed Door',
       description: "A heavy stone door at the top of the stair, banded in old iron. It will not open for you — not yet.",
-      // Placeholder one-shot beat. The encounter says the door is
-      // sealed and the apprentice's path stops here for now; future
-      // chapters of the side story will wire it through.
+      // First visit (pre-Stone-Stair): the door is sealed and the
+      // apprentice's path stops here. Post-Stone-Stair the dispatch
+      // in startNodeEncounter swaps to the Open variant — the door
+      // unseals and a mini level-up fires (full heal + Necromancer
+      // perk pick). canRevisit:true lets the open variant fire as a
+      // second beat; a dedicated stoneDoorOpened flag latches after
+      // the open variant runs so revisits after that are silent.
       encounterId: 'tunnel3_door',
       connections: ['tunnel3_mid'],
       position: [512, 80],

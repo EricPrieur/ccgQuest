@@ -392,6 +392,27 @@ export function createAmalgam() {
   });
 }
 
+// Endless Dead — Plague Gravekeeper (Abbey Courtyard). At the start
+// of each of his turns he rolls the Undead Horde table ceil(turn/2)
+// times (1 roll on turns 1-2, 2 on turns 3-4, …), each roll summoning
+// a different flavour of undead. The horde contents are deliberately
+// hidden from the player — the codex / hover only show the generic
+// "Summon an Undead Horde" line; the roll table lives in the
+// turn-start handler in main.js.
+export function createEndlessDead() {
+  return new Power({
+    id: 'endless_dead',
+    name: 'Endless Dead',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Summon an Undead Horde.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Summon\nUndead Horde',
+    // Side-quest fixed fight — no ccgQuest+ scaling.
+    noTierOffset: true,
+  });
+}
+
 // Piranhas Swarm — invulnerable boss power, summons 2-4 piranhas
 // each turn. Mirrors PY create_piranhas_swarm_power.
 export function createPiranhasSwarm() {

@@ -59,6 +59,12 @@ When adding any of these, also update the listed file:
    `CARD_SFX_OVERRIDES`/play/flesh/blocked/defense — e.g. a card's
    `playCardAmbient` special-case, an enemy power's start-of-turn
    hook, a fight-start splash, a death cue, an ambient layer) →
+   - **The common case needs NO codex wiring:** a card's own cast / hit
+     sound added via `CARD_SFX_OVERRIDES` (`play` / `flesh` / `blocked`)
+     is surfaced in the codex Sounds tab automatically — the builder
+     iterates `CARD_SFX_OVERRIDES` and lists the card under its sound.
+     You ONLY have to add the alias to `SOUND_MAP`. The bullets below
+     cover sounds that fall OUTSIDE that auto-surfaced path.
    - Make sure the alias is in `SOUND_MAP` (`src/sound.js`); if it's
      only in `SOUND_PACKS` it won't actually play.
    - If the cue is layered on top of a card cast, register it in

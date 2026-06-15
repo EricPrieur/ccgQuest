@@ -613,7 +613,7 @@ export function createIceBolt() {
   return new Card({
     id: 'ice_bolt',
     name: 'Ice Bolt',
-    description: 'Recharge 2 Cards ->\nDeal 3 Ice + 1 Damage, Draw.',
+    description: 'Recharge a Card ->\nDeal 3 Ice + 1 Damage, Draw.',
     shortDesc: 'R+1->3 Ice\n+1 Dmg, Draw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
@@ -652,6 +652,7 @@ export function createMagicMissiles() {
     // hard-fixed at 3 in the handler (matches the rebuilt card text).
     // Draw fires after the barrage completes via finishBarrage.
     effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('magic_missile_barrage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
@@ -1464,6 +1465,28 @@ export function getRangerStarterDeck() {
 export function getNecromancerStarterDeck() {
   const cards = [];
   for (let i = 0; i < 3; i++) cards.push(createClothArmor());
+  return cards;
+}
+
+// Necromancer MAIN-GAME starter deck — used when the Necromancer is
+// picked as a full class at character select (unlocked by finishing
+// the Path of the Necromancer side quest). Unlike the side-quest
+// apprentice (bare 3 Cloth Armor), the experienced necromancer starts
+// with a complete kit AND the Skeleton Mastery power (granted at the
+// class start, see startGameWithAbility). The three signature spells
+// (Drain Life / Army of the Dead / Shadow Bolt) are baked in, so this
+// class skips the character-creation ability pick.
+export function getNecromancerMainDeck() {
+  const cards = [];
+  for (let i = 0; i < 3; i++) cards.push(createClothArmor());
+  cards.push(createScraps());
+  cards.push(createShortStaff());
+  for (let i = 0; i < 2; i++) cards.push(createBoneDagger());
+  cards.push(createMortainsStaff());
+  cards.push(createApprenticesSpellbook());
+  cards.push(createDrainLife());
+  cards.push(createArmyOfTheDeadCard());
+  cards.push(createShadowBolt());
   return cards;
 }
 
@@ -2297,6 +2320,19 @@ export function getDruidAbilityChoices() {
           createNaturesHealing()];
 }
 
+// Necromancer ability pool. Tier 1: Arcane Shield (shared with
+// Wizard, the ward against the Specter), Shadow Bolt, Drain Life,
+// Army of the Dead. Tier 2: The Butcher (companion call) and Plague
+// (AoE poison burst). Cards carry their own `tier`, so the codex /
+// getAbilityChoices split them into the Tier 1 and Tier 2 decks. This
+// is the canonical list the full Necromancer class will draw from.
+export function getNecromancerAbilityChoices() {
+  return [createArcaneShield(), createShadowBolt(), createDrainLife(),
+          createArmyOfTheDeadCard(),
+          createTheButcher(), createPlague(),
+          createCorpseExplosion(), createBoneStormNecromancer()];
+}
+
 export function getAbilityChoices(className, count = 3, tier = 1) {
   const choiceFns = {
     Paladin: getPaladinAbilityChoices,
@@ -2305,9 +2341,10 @@ export function getAbilityChoices(className, count = 3, tier = 1) {
     Rogue: getRogueAbilityChoices,
     Warrior: getWarriorAbilityChoices,
     Druid: getDruidAbilityChoices,
-    // Necromancer (Path of the Necromancer side quest) — clones the
-    // Wizard ability pool for now.
-    Necromancer: getWizardAbilityChoices,
+    // Necromancer (Path of the Necromancer side quest) — its own
+    // Tier 1 pool (Arcane Shield / Shadow Bolt / Drain Life / Army
+    // of the Dead).
+    Necromancer: getNecromancerAbilityChoices,
   };
   const all = (choiceFns[className] || getPaladinAbilityChoices)();
   const tierMatch = all.filter(c => c.tier === tier);
@@ -2368,6 +2405,50 @@ export function createMortainsStaff() {
 // _lastEffectDamageLanded snapshot the damage handler stamps right
 // before this effect resolves, so a partial hit (target died on the
 // first point) heals only what actually drained.
+// Shadow Bolt — Tier 1 Necromancer ability. Standard recharge cost,
+// 2 damage + 1 Poison + draw. The card's hook is the heroism rider:
+// any standing Heroism is consumed here and added to the Poison
+// stack instead of contributing to the damage effect that runs
+// after, so the apprentice has a way to push raw heroism into a
+// long-tail Poison tick instead of one big swing. Wired but NOT
+// yet placed in the necromancer ability pool — drops in via a
+// future encounter / shrine pick once the granting beat is written.
+export function createShadowBolt() {
+  return new Card({
+    id: 'shadow_bolt',
+    name: 'Shadow Bolt',
+    // "Recharge a Card" = recharge ONE extra card on top of Shadow
+    // Bolt itself (cards always recharge themselves by default), so
+    // the cast costs 2 cards total. recharge_extra 1 below is what
+    // backs the wording.
+    description: 'Recharge a Card ->\nDeal 2 + Poison, Draw.\nHeroism: +Poison.',
+    // shortDesc keeps the full "Heroism" word so the inline-badge
+    // regex catches it and renders the Heroism icon — abbreviating
+    // to "H:" silently skips the conversion and the hover preview
+    // ends up with a bare letter where the gold token should be.
+    shortDesc: 'R+1->2 Dmg\n+Poison, Draw\nHeroism: +Poison',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    // Effect order: convert heroism → poison FIRST (this also clears
+    // caster.heroism), then the damage effect runs from the bare
+    // eff.value with no heroism bonus. Draw closes the play.
+    // recharge_extra 1 makes the cast cost 2 cards (Shadow Bolt
+    // itself + 1 more recharged from hand) — same template as
+    // Ice Bolt / 2H martials.
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_poison_with_heroism', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    gamePlusOffset: { damage: 1, apply_poison_with_heroism: 1 },
+    characterClass: ['necromancer'],
+    tier: 1,
+    rarity: 'uncommon',
+  });
+}
+
 export function createDrainLife() {
   return new Card({
     id: 'drain_life',
@@ -2401,8 +2482,8 @@ export function createArmyOfTheDeadCard() {
   return new Card({
     id: 'army_of_the_dead',
     name: 'Army of the Dead',
-    description: 'Summon 2 Skeletons.\nSkeletons gain Haste.',
-    shortDesc: 'Summon 2 Skels\nSkeletons +Haste',
+    description: 'Summon a Skeleton or\nBolster one X 2.\nUndead gain Haste.',
+    shortDesc: 'Summon/Bolster x2\nUndead +Haste',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -2413,6 +2494,170 @@ export function createArmyOfTheDeadCard() {
     tier: 1,
     rarity: 'uncommon',
     noTierOffset: true,
+  });
+}
+
+// The Butcher — Necromancer Tier 2 companion call. A hulking 3/10
+// undead that swings at 2 targets with a Bleed rider. Stats live on
+// the creature (kept in sync with the summon_butcher handler in
+// main.js). Like Misha/Huffer he's UNIQUE on the field — the
+// unique-companion guard blocks a second summon while one is alive,
+// even though a player may run several copies of the Tier 2 card.
+export function createButcherCreature() {
+  return new Creature({
+    name: 'The Butcher', attack: 3, maxHp: 10,
+    bleedAttack: 1, multiAttack: 2, isCompanion: true,
+    traits: ['Undead'],
+    // 2x2 footprint — a hulk that eats 4 of the 12 ally cells.
+    slotW: 2, slotH: 2,
+    // On Death: bursts Poison across the enemy side.
+    onDeathPoisonAll: 1,
+    description: 'Attacks 2 targets. On Death: Poison ALL.',
+  });
+}
+
+export function createTheButcher() {
+  return new Card({
+    id: 'the_butcher', name: 'The Butcher',
+    description: 'Recharge a Card ->\nCall The Butcher!\nDraw.',
+    shortDesc: 'R-Card->Call\nThe Butcher, Draw',
+    subtype: 'ability',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('summon_butcher', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    // Codex Summons tab + hover preview pull from this; the live
+    // summon is built in the summon_butcher handler with the same stats.
+    previewCreature: createButcherCreature(),
+    gamePlusOffset: {},
+  });
+}
+
+// Plague — Necromancer Tier 2. Stacks Poison on every enemy, then
+// immediately resolves all standing Poison as damage (a festering
+// burst). Poison never decays in this engine, so the stacks linger
+// and keep ticking on later turns — Plague just front-loads them.
+export function createPlague() {
+  return new Card({
+    id: 'plague', name: 'Plague',
+    description: 'Deal Poison to ALL.\nApply all Poison Damage.',
+    shortDesc: '+Poison to all\nDetonate Poison',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_all_poison_damage', 0, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    gamePlusOffset: { apply_poison_all: 1 },
+  });
+}
+
+// Book of the Dead — Necromancer Tier 1. Stays in hand and pumps one
+// of your Undead allies +1/+1 every turn it's held (the first living
+// Undead on the field). Master Elarion's "real stock" at the Arcane
+// Emporium.
+export function createBookOfTheDead() {
+  return new Card({
+    id: 'book_of_the_dead',
+    name: 'Book of the Dead',
+    description: 'One Undead gains +1/+1.\nStays in hand.',
+    shortDesc: '+1/+1 Undead\nStays',
+    subtype: 'scroll',
+    cardType: CardType.ITEM,
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('buff_one_undead', 1, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { buff_one_undead: 1 },
+  });
+}
+
+// Bone Buckler — Necromancer Tier 1 clothing. Shields you AND one of
+// your Undead allies, and draws on the first shield of the play (same
+// "First Shield: Draw" rider as the Buckler).
+export function createBoneBuckler() {
+  return new Card({
+    id: 'bone_buckler',
+    name: 'Bone Buckler',
+    description: 'Gain Shield.\nOne Undead Gain Shield.\nFirst Shield: Draw.',
+    shortDesc: '+2 Shield\n+2 Undead\n1st Shield: Draw',
+    subtype: 'clothing',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 2, TargetType.SELF),
+      new CardEffect('buff_one_undead_shield', 2, TargetType.SELF),
+      new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { gain_shield: 1, buff_one_undead_shield: 1 },
+  });
+}
+
+// Corpse Explosion — Necromancer Tier 2. Sacrifices one of your allies
+// (the highest-HP one) and detonates it: every enemy takes damage equal
+// to that ally's current HP, and all enemies are Poisoned. A finisher
+// that turns a fat skeleton (or The Butcher) into a board-wide nuke.
+export function createCorpseExplosion() {
+  return new Card({
+    id: 'corpse_explosion',
+    name: 'Corpse Explosion',
+    description: 'Kill an ally.\nDeal its HP to ALL.\nDeal Poison to ALL.',
+    shortDesc: 'Kill ally ->\nHP dmg to all\n+Poison all',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      // SINGLE_ALLY — the player clicks which of their own creatures to
+      // sacrifice; that corpse's HP becomes the AoE damage.
+      new CardEffect('corpse_explosion', 0, TargetType.SINGLE_ALLY),
+      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    gamePlusOffset: { apply_poison_all: 1 },
+  });
+}
+
+// Bone Storm — Necromancer Tier 2. Strips every enemy's Shield and
+// converts it into your own, chips all enemies for 1, and bolsters your
+// whole undead host +1/+1.
+export function createBoneStormNecromancer() {
+  return new Card({
+    id: 'bone_storm_necromancer',
+    name: 'Bone Storm',
+    description: 'Steal ALL Shield.\nDeal 1 to ALL.\nUndead +1/+1. Draw.',
+    shortDesc: 'Steal Shields\n1 to all, Undead +1/+1\nDraw',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('strip_all_shields_gain', 0, TargetType.ALL_ENEMIES),
+      new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('buff_all_undead', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    gamePlusOffset: { damage_all: 1, buff_all_undead: 0.5 },
   });
 }
 
@@ -5868,30 +6113,26 @@ export function createMephitSkinGloves() {
   });
 }
 
-// Magma Tablet — uncommon scroll. Gain 1 Ignite + 1 Ignite/turn for
-// 4 turns. If Burning: +1 Ignite + Draw. Mirrors PY
-// cards_basic.py:create_magma_tablet.
+// Magma Tablet — uncommon scroll. Stays in hand and pings 2 Ignite
+// onto the player every turn it's held (same shape as the Apprentice's
+// Spellbook's Heroism ping).
 export function createMagmaTablet() {
   return new Card({
     id: 'magma_tablet',
     name: 'Magma Tablet',
-    description: 'Discard -> Gain 3 Ignite and Ignite for 4 turns.\nBurning: Draw.',
-    shortDesc: 'D->+3 Ignite\n+1/turn 4T\nBurning: Draw',
+    description: 'Gain 2 Ignite.\nStays in hand.',
+    shortDesc: '+2 Ignite\nStays',
     subtype: 'scroll',
     cardType: CardType.ITEM,
-    costType: CostType.DISCARD,
+    costType: CostType.FREE,
     effects: [
-      new CardEffect('gain_ignite', 3, TargetType.SELF),
-      new CardEffect('grant_magma_tablet_buff', 4, TargetType.SELF),
-      new CardEffect('if_burning_draw', 1, TargetType.SELF),
+      new CardEffect('gain_ignite', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon',
     tier: 2,
-    // +1 on-play Ignite per offset (handled by the generic gain_ignite
-    // swap above). +0.5 turns per offset (4 → 5 at +2, 6 at +4 …) on
-    // the buff duration. Per-turn Ignite stays at 1 — the headline
-    // value is the on-play gain.
-    gamePlusOffset: { gain_ignite: 1, grant_magma_tablet_buff: 0.5 },
+    // +1 Ignite per offset on the per-turn ping.
+    gamePlusOffset: { gain_ignite: 1 },
   });
 }
 

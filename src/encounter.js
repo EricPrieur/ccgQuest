@@ -3160,6 +3160,32 @@ export function createArcaneEmporiumEncounter() {
   ]);
 }
 
+// Arcane Emporium — NECROMANCER variant. Master Elarion recognizes the
+// late Master Mortain's student, his demeanor cooling from warm
+// shopkeeper to something older and stranger as the dialog goes on. On
+// the "mind the steps" beat the bg cuts to the abbey-shrine art and the
+// music crossfades to the eerie choir (wired in handleEncounterTextClick).
+// He leads you to the occult cellar — the "real stock" — and the shop
+// that opens after carries the bone gear (see buildArcaneEmporiumInventory).
+// Same encounter id 'arcane_emporium' so the post-dialog auto-shop hook
+// still fires.
+export function createArcaneEmporiumNecromancerEncounter() {
+  return new Encounter('arcane_emporium', 'The Arcane Emporium', 'A shop of magical curiosities.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The silver-haired elf glances up from his ledger as the bell chimes — then goes very still. \"You have the look of him,\" he says quietly. \"Edric. Master Mortain.\" His pale eyes search your face. \"His son?\"", 'Elarion', 'bg_arcane_emporium'),
+        new EncounterText("You shake your head. No kin of his — the Abbey took you in as an orphan, young enough to forget whatever life came before, and meant you for vows you never spoke. It was Mortain who found you years later among the gravestones, and taught you what the chapel would not. \"His apprentice,\" you say. \"Before the end, he bid me come here — to find you, Master Elarion.\"", '', 'bg_arcane_emporium'),
+        new EncounterText("The elf sets down his pen and studies you a long, weighing moment. \"So. He is gone, then,\" he says softly. \"I felt it, some weeks past — a candle pinched out across a great distance.\" Whatever he reads in your face seems to settle the matter, and the wariness leaves him. \"An apprentice of Mortain's is always welcome under this roof. He wrote to me before the end — said his finest student would walk up my street one day, and that I was to give them whatever they needed.\"", 'Elarion', 'bg_arcane_emporium'),
+        new EncounterText("\"He spoke very highly of you. He did not do that often.\" A faint, sad smile — then the warmth in his voice cools by a single degree. \"Browse the shelves, by all means. Scrolls, wands, the usual charms.\" His pale eyes settle on you. \"But Edric did not send you all this way for parlor tricks. Did he.\"", 'Elarion', 'bg_arcane_emporium'),
+        new EncounterText("He turns a ring on his finger, and somewhere beneath your feet a latch lets go. A seam opens in the floorboards; a stair folds down into the dark. \"Come,\" he says — and his voice has changed. Quieter. Older. Threaded with something that is not quite kindness. \"Mind the steps.\"", 'Elarion', 'bg_necromancer_shrine'),
+        new EncounterText("The room below is no shopfront. Black candles gutter in still air. A low stone altar squats at its heart, banded in old iron — you have seen its twin, in the dark beneath your master's house. Bone wands lie racked like a surgeon's tools. Jars line the shelves, and some of them are moving.", '!', 'bg_necromancer_shrine'),
+        new EncounterText("\"Most who climb my stairs never learn this place exists,\" Elarion murmurs. \"But you are Mortain's work, near enough.\" He gestures across the shelves, almost tenderly. \"This is the real stock. The honest stuff. Take what serves you, child of the grave — and come back when you are ready to truly learn.\"", 'Elarion', 'bg_necromancer_shrine'),
+      ],
+    }),
+  ]);
+}
+
 // First-visit antiquity-shop encounter: Grimbold begs for help → choice →
 // pre-combat creep → Mimic fight → post-combat thanks. After this encounter
 // completes the auto-shop hook in main.js opens Grimbold's storefront and
@@ -5973,10 +5999,12 @@ export function createTunnel3MidEncounter() {
   ]);
 }
 
-// Tunnel 3 door — placeholder. The next chapter of the side story
-// picks up beyond this door; for now the dialog just acknowledges
-// the apprentice cannot get through yet so the player understands
-// they have reached the end of the current content.
+// Tunnel 3 door — first-visit dialog. Fires until the apprentice has
+// beaten the Specter of Death on the Stone Stair below. The sigil
+// reads her palm as empty; she doesn't have the strength the door
+// asks for yet. After the Specter falls (completedEncounters has
+// 'tunnel3_mid'), startNodeEncounter routes to the Open variant
+// below instead.
 export function createTunnel3DoorEncounter() {
   return new Encounter('tunnel3_door', 'Closed Door', '', [
     new EncounterPhaseData({
@@ -5985,6 +6013,79 @@ export function createTunnel3DoorEncounter() {
         new EncounterText("The door is stone, banded in iron, and set deep into the rock. There is no handle, no keyhole, no chalked seal — only a single circular sigil cut into the center, the size of your palm."),
         new EncounterText("You set your palm against it. It is warm. It does not open.", '!'),
         new EncounterText("Whatever opens this door, you do not have it yet. Not tonight."),
+      ],
+    }),
+  ]);
+}
+
+// Tunnel 3 door — post-Specter variant. After the Stone Stair fight,
+// Master Mortain's book has woken something in the apprentice; the
+// sigil now reads her palm as something it recognizes. Door opens.
+// advanceEncounterPhase fires a mini level-up on completion: full
+// heal + necromancer perk pick. No HP +1, no deck rebalancing.
+// The first three beats stay on the tunnel corridor where the door
+// sits (bg_underground_tunnel_3). On the fourth beat the stone opens
+// — the bg cuts to the abbey courtyard and handleEncounterTextClick
+// fires the door_unlock cue on that transition (see the per-encounter
+// SFX hook in main.js). The perk pick that follows continues on the
+// courtyard art via _perkSelectBgKey.
+export function createTunnel3DoorOpenEncounter() {
+  return new Encounter('tunnel3_door', 'Stone Door', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The door is still stone, still banded in iron — but the sigil at its center is no longer just a carving. It pulses faintly, in time with something inside you.", '', 'bg_underground_tunnel_3'),
+        new EncounterText("You set your palm against it again. The warmth is the same. You are not.", '', 'bg_underground_tunnel_3'),
+        new EncounterText("Something in your chest answers the sigil — a steadiness the book left behind when it shut. The carving recognizes you.", '!', 'bg_underground_tunnel_3'),
+        new EncounterText("A line of pale light traces the edge of the door. The frame breathes with it. The stone opens.", '', 'bg_abbey_courtyard'),
+      ],
+    }),
+  ]);
+}
+
+// Abbey Courtyard — chained continuation of the Stone Door opening.
+// Fired from handlePerkSelectClick once the apprentice picks her
+// blessing perk. The door is behind her now; the courtyard is in
+// front. A hunching figure crosses the gravel toward her. The book
+// warms a second time, the new Shadow Bolt sigil writes itself onto
+// the page, and she fires it before she knows she's casting. Loot
+// phase grants Shadow Bolt; combat starts against the Plague
+// Gravekeeper. Music swaps to the boss theme on combat start (wired
+// in startCombat via the boss-track lookup).
+export function createAbbeyCourtyardEncounter() {
+  return new Encounter('abbey_courtyard', 'Abbey Courtyard', '', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The tunnel is behind you. You stand on damp gravel, in cold air, under a stained sky. An abbey rises in the middle distance — and you are standing well outside its walls."),
+        new EncounterText("Before you can take it in, a figure detaches from the far side of the courtyard. Hunched. Robed. Moving toward you with the patient, unhurried walk of someone who has done this work for a very long time."),
+        new EncounterText("Brother Hessen. The grave-tender. The one Master Mortain sent his bodies to.", '!'),
+        new EncounterText("Is that him? Something about him is wrong. The way the robes hang. The wet sound of his breathing across the gravel."),
+        new EncounterText("The book is warming again. Your arm extends without your permission. Dark light coils down your sleeve and gathers in your palm — a bolt of it, ready to fly."),
+        new EncounterText("Shadow Bolt. The name lands in your mind already known.", '!'),
+        new EncounterText("You let it go."),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['shadow_bolt'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'plague_gravekeeper',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText("The Gravekeeper folds onto the gravel and does not get back up. Whatever he had become unspools from the bones with a wet sigh and is gone.", '', 'bg_abbey_courtyard'),
+        new EncounterText("You stand alone in the courtyard. The abbey watches.", '!', 'bg_abbey_courtyard'),
+        // Epilogue — Path of the Necromancer ends here. Stays on the
+        // abbey art until the frontier-road beat, which cuts to the
+        // story-selector backdrop ahead of the unlock splash.
+        new EncounterText("With the Gravekeeper dead, the restless dead seem content to leave you be — for a time.", '', 'bg_abbey_courtyard'),
+        new EncounterText("You find your way through the backcountry north of the abbey, sleeping rough, keeping the turned earth behind you.", '', 'bg_abbey_courtyard'),
+        new EncounterText("Eventually the wild thins and you strike the Frontier Road — two wheel-ruts worn into the grass, running east and west.", '', 'bg_story_selector'),
+        new EncounterText("As Master Mortain suggested, you follow the Frontier Road east — toward a city, toward a name not yet your own, toward the hope of a better life.", '', 'bg_story_selector'),
       ],
     }),
   ]);
@@ -6095,6 +6196,7 @@ export const ENCOUNTER_REGISTRY = {
   tunnel2_mid: createTunnel2MidEncounter,
   tunnel3_mid: createTunnel3MidEncounter,
   tunnel3_door: createTunnel3DoorEncounter,
+  abbey_courtyard: createAbbeyCourtyardEncounter,
   giant_rat: createGiantRatEncounter,
   locked_door: createLockedDoorEncounter,
   bone_pile: createBonePileEncounter,
@@ -6193,6 +6295,7 @@ export const ENCOUNTER_REGISTRY = {
   inn: createInnEncounter,
   church: createChurchEncounter,
   arcane_emporium: createArcaneEmporiumEncounter,
+  arcane_emporium_necromancer: createArcaneEmporiumNecromancerEncounter,
   antiquity_shop: createAntiquityShopEncounter,
   antiquity_shop_cleared: createAntiquityShopClearedEncounter,
   guild_hall: createGuildHallEncounter,

@@ -421,25 +421,41 @@ export const CARD_ART_MAP = {
   warrior_class: 'WarriorCharacterCard.jpg',
   druid_class: 'DruidCharacterClass.jpg',
   // Path of the Necromancer side quest uses the young apprentice
-  // portrait. When the necromancer ships as a full main-game class
-  // we'll swap this filename for OlderNecromancerCharacter.png.
-  necromancer_class: 'YoungNecromancerCharacter.png',
+  // portrait.
+  necromancer_class: 'YoungNecromancerCharacter.jpg',
+  // Full main-game Necromancer class — the grown, experienced portrait.
+  necromancer_class_old: 'OlderNecromancerCharacter.jpg',
 
   // === Monster portraits ===
   // Path of the Necromancer — Plague Cockroach (dining-room fight).
   // Same image powers the in-combat portrait AND the Skitter Bite
   // card the cockroach plays so the bug face shows up everywhere.
-  plague_cockroach: 'PlagueCockRoach.png',
-  skitter_bite: 'PlagueCockRoach.png',
+  plague_cockroach: 'PlagueCockRoach.jpg',
+  skitter_bite: 'PlagueCockRoach.jpg',
   // Chitin Shield — cockroach husk loot drop from the same fight.
   chitin_shield: 'ChitinShield.jpg',
   // Mortain's Staff — desk pickup before the first skeleton fight.
-  mortains_staff: 'MortainsStaff.png',
+  mortains_staff: 'MortainsStaff.jpg',
   // Drain Life — Forgotten Shrine reward, Tier 1 Necromancer spell.
-  drain_life: 'DrainLife.png',
+  drain_life: 'DrainLife.jpg',
   // Army of the Dead — Worn Floor reward, Tier 1 Necromancer card.
   // Shares the same artwork as the boss-side power.
-  army_of_the_dead: 'ArmyOfTheDead.png',
+  army_of_the_dead: 'ArmyOfTheDead.jpg',
+  // Shadow Bolt — Tier 1 Necromancer ability.
+  shadow_bolt: 'ShadowBolt.jpg',
+  // The Butcher — Necromancer Tier 2 companion. Same key drives the
+  // card face AND the in-combat creature portrait (creature.name
+  // 'The Butcher' → 'the_butcher').
+  the_butcher: 'TheButcher.jpg',
+  // Plague — Necromancer Tier 2 AoE poison burst.
+  plague: 'PlagueNecromancerTier2.jpg',
+  // Book of the Dead + Bone Buckler — Necromancer Tier 1, Arcane
+  // Emporium "real stock".
+  book_of_the_dead: 'BookOfTheDead.jpg',
+  bone_buckler: 'BoneBuckler.jpg',
+  // Corpse Explosion + Bone Storm — Necromancer Tier 2 abilities.
+  corpse_explosion: 'CorpseExplosion.jpg',
+  bone_storm_necromancer: 'BoneStormNecromancer.jpg',
   // Old Spectral Hand — Forgotten Specter's signature dual-mode card.
   // Distinct id from the chapter-7 `spectral_hand` so both can coexist.
   old_spectral_hand: 'SpectralHand.jpg',
@@ -448,12 +464,12 @@ export const CARD_ART_MAP = {
   // necromancer-power piece. The `skeleton` alias matches
   // enemy.name.toLowerCase() lookup in the combat portrait resolver
   // (the Character is named 'Skeleton', not 'apprentice_skeleton').
-  apprentice_skeleton: 'NecromancerPower.png',
-  skeleton: 'NecromancerPower.png',
+  apprentice_skeleton: 'NecromancerPower.jpg',
+  skeleton: 'NecromancerPower.jpg',
   // Cockroach minion summoned by Plague Spawn — same bug portrait
   // as the boss so the small skitterer has art at all (was rendering
   // as a broken-image placeholder).
-  cockroach: 'PlagueCockRoach.png',
+  cockroach: 'PlagueCockRoach.jpg',
   giant_rat: 'GiantRatMonster.jpg',
   bone_pile: 'BonePile.jpg',
   bone_pile_monster: 'BonePile.jpg',
@@ -472,7 +488,12 @@ export const CARD_ART_MAP = {
   forgotten_specter: 'DwarvenSpecter.jpg',
   // Army of the Dead — Worn Floor invulnerable boss. The lookup
   // resolves to 'army_of_the_dead' via enemy.name.toLowerCase().
-  army_of_the_dead: 'ArmyOfTheDead.png',
+  army_of_the_dead: 'ArmyOfTheDead.jpg',
+  // Plague Gravekeeper — Abbey Courtyard ambush (Brother Hessen, the
+  // grave-tender). enemy.name 'Plague Gravekeeper' resolves to
+  // 'plague_gravekeeper' (toLowerCase + space-to-_), so this drives
+  // both the in-combat portrait and the codex Heroes & Monsters entry.
+  plague_gravekeeper: 'PlagueGravekeeper.jpg',
   // Specter of Death portrait is eager-preloaded as
   // images['specter_of_death'] from Backgrounds/GameEnd.jpg in
   // loadAssets — no Cards/ entry here, since the image lives under
@@ -482,6 +503,10 @@ export const CARD_ART_MAP = {
   // matches the enemy splash. Path escapes assets/Cards/ via
   // ../Backgrounds/ since the source lives under Backgrounds/.
   death_sickle: '../Backgrounds/GameEnd.jpg',
+  // Death Specter — EndlessDead horde summon. Reuses the same
+  // GameEnd.jpg art as the Specter of Death (enemy.name 'Death
+  // Specter' resolves to 'death_specter' via toLowerCase + space-_).
+  death_specter: '../Backgrounds/GameEnd.jpg',
   // Ruga the Slave Master — Hall of Ancestors boss. The enemy
   // character is named "Ruga the Slave Master" (lowercased +
   // underscored → ruga_the_slave_master), and the encounter id is
@@ -587,6 +612,10 @@ export const CARD_ART_MAP = {
   balanced:        'BalanceDruidPerk.jpg',
   lucky_find:      'LuckyFindPerk.jpg',
   harvest:         'HarvestDruidSpec.jpg',
+  // Skeletal Strength — Necromancer unique perk. Reuses the Skeleton
+  // Mastery card art (NecromancerPower.jpg) since the perk leans
+  // on the same first-skeleton beat.
+  skeletal_strength: 'NecromancerPower.jpg',
 
   // === Enemy Encounter Portraits ===
   kobold_patrol:   'KoboldPatrolEncounter.jpg',
@@ -634,14 +663,16 @@ export const POWER_ART_MAP = {
   kobold_backup: 'KoboldGuard.jpg',
   // Path of the Necromancer — Plague Cockroach's turn-start summon
   // power. Reuses the boss portrait for the power card art.
-  plague_spawn: 'PlagueCockRoach.png',
+  plague_spawn: 'PlagueCockRoach.jpg',
   // Necromancer Power — apprentice's signature active, granted after
   // the first skeleton fight. Uses the same skeleton portrait the
-  // raised skeleton creature does (NecromancerPower.png).
-  necromancer_power: 'NecromancerPower.png',
+  // raised skeleton creature does (NecromancerPower.jpg).
+  necromancer_power: 'NecromancerPower.jpg',
   // Army of the Dead — Worn Floor boss power. Same portrait piece
   // as the boss it powers.
-  army_of_the_dead: 'ArmyOfTheDead.png',
+  army_of_the_dead: 'ArmyOfTheDead.jpg',
+  // Endless Dead — Plague Gravekeeper's turn-start Undead Horde power.
+  endless_dead: 'EndlessDead.jpg',
   kobold_army: 'KoboldArmy.jpg',
   // Kobold Drake Rider's escalating-swarm variant uses the same art
   // as General Zhost's kobold_army power.

@@ -221,6 +221,8 @@ export function saveGame(state, saveName = '') {
     chapter8SlybladeSeen: !!state.chapter8SlybladeSeen,
     valdrisaJoined: !!state.valdrisaJoined,
     studyVisited: !!state.studyVisited,
+    stoneDoorOpened: !!state.stoneDoorOpened,
+    necromancerMainGame: !!state.necromancerMainGame,
     upperStairsReturnSeen: !!state.upperStairsReturnSeen,
     tharnagExitSeen: !!state.tharnagExitSeen,
     // Globally completed encounter ids — persisted as a flat list so

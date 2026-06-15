@@ -9,17 +9,18 @@ import {
   createTalentedPerk, createFirstStrikePerk, createFlashOfGeniusPerk,
   createSecondWindPerk, createAmbushPerk, createArmoredPerk,
   createPowerSurgePerk, createBalancedPerk,
-  createLuckyFindPerk, createHarvestPerk,
+  createLuckyFindPerk, createHarvestPerk, createSkeletalStrengthPerk,
 } from './character.js';
 import { Deck } from './deck.js';
 import { Creature } from './creature.js';
 import { Card, CardEffect } from './card.js';
 import {
-  getPaladinStarterDeck, getRangerStarterDeck, getWizardStarterDeck, getNecromancerStarterDeck,
+  getPaladinStarterDeck, getRangerStarterDeck, getWizardStarterDeck, getNecromancerStarterDeck, getNecromancerMainDeck,
   getRogueStarterDeck, getWarriorStarterDeck, getDruidStarterDeck,
   getAbilityChoices,
   getPaladinAbilityChoices, getRangerAbilityChoices, getWizardAbilityChoices,
   getRogueAbilityChoices, getWarriorAbilityChoices, getDruidAbilityChoices,
+  getNecromancerAbilityChoices,
   createBite, createToughHide, createSkreeeeeeeek,
   createSkitterBite,
   createBigBone, createLooseBone,
@@ -47,7 +48,7 @@ import {
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
   createWoodenAxe, createWoodenGreatsword, createRockMace,
-  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
+  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createShadowBolt, createTheButcher, createPlague, createBookOfTheDead, createBoneBuckler, createCorpseExplosion, createBoneStormNecromancer, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
   createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
@@ -122,7 +123,7 @@ import {
   createNaturesHealing,
 } from './cards.js';
 import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter } from './encounter.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -130,7 +131,7 @@ import {
   createQuickStrike, createBattleFury, createFeralForm,
   createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower, createFeralWrathPower,
   createMassiveOgreRam, createGoblinSapperSquad,
-  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead,
+  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
@@ -215,6 +216,20 @@ let _gamePlusSavesScrollY = 0;
 // Cap at 9 defensively so a bug can't run it away.
 const GAMEPLUS_UNLOCK_LS_KEY = 'cq_gameplus_unlock_v1';
 let _gamePlusMaxUnlocked = 0;
+// Account-level Necromancer-class unlock. Latched when the player
+// finishes the Path of the Necromancer side quest (Abbey Courtyard
+// epilogue). Persisted across saves/runs in localStorage — the main
+// game will read this later to offer the Necromancer at class select.
+const NECROMANCER_UNLOCK_LS_KEY = 'cq_necromancer_unlock_v1';
+let _necromancerUnlocked = false;
+function loadNecromancerUnlock() {
+  try { _necromancerUnlocked = localStorage.getItem(NECROMANCER_UNLOCK_LS_KEY) === '1'; }
+  catch (e) { _necromancerUnlocked = false; }
+}
+function saveNecromancerUnlock() {
+  try { localStorage.setItem(NECROMANCER_UNLOCK_LS_KEY, _necromancerUnlocked ? '1' : '0'); }
+  catch (e) { /* private mode / corrupt storage — unlock just won't persist */ }
+}
 // Persisted ccgQuest+ toggle state. Once a player flips the toggle ON
 // from the menu it sticks across reloads so they don't have to re-arm
 // it every session. Saved alongside the unlock key.
@@ -1727,6 +1742,12 @@ let lastTime = 0;
 let player = null;
 let enemy = null;
 let selectedClass = '';
+// True when the player is running the Necromancer as a full MAIN-GAME
+// class (unlocked at character select), as opposed to the Path of the
+// Necromancer side-quest apprentice. Drives the older portrait, the
+// from-start Skeleton Mastery power, and the save/load power re-grant.
+// Persisted via save.js.
+let _necromancerMainGame = false;
 let isPlayerTurn = true;
 let selectedCardIndex = -1;
 let combatLog = [];
@@ -1954,6 +1975,11 @@ let valdrisaJoined = false;
 // onto the aftermath encounter (no fight, no chitin/rations loot)
 // instead of the live cockroach fight. Persisted via save.js.
 let studyVisited = false;
+// Path of the Necromancer — latches after the Stone Door opens
+// (post-Specter Open variant + mini level-up). Revisits to the door
+// node after this stay silent — no dialog refire, no second perk
+// pick. Persisted via save.js.
+let stoneDoorOpened = false;
 // One-shot dialog at the upper stairs after the throne audience —
 // "So, a prince" recap with Raena, then a nudge toward the artisans.
 let upperStairsReturnSeen = false;
@@ -2236,6 +2262,10 @@ const CLASS_ARMOR = {
   Rogue:   new Set(['clothing', 'light_armor']),
   Warrior: new Set(['clothing', 'light_armor', 'heavy_armor']),
   Druid:   new Set(['clothing', 'light_armor']),
+  // Necromancer — Clothing only (mirrors the Wizard). Without this
+  // entry canClassEquip rejected the class's own Cloth Armor and it
+  // never showed in the deck-rebalance "can equip" list.
+  Necromancer: new Set(['clothing']),
 };
 // simple_2h is the bludgeoning 2H tier (Bone Club, Greatclub, Ogre Maul)
 // — every class that can wield martial_2h also gets it for free, plus
@@ -2256,7 +2286,7 @@ const CLASS_ITEMS = {
   Paladin: new Set(['item', 'potion', 'relic']),
   Ranger:  new Set(['item', 'potion', 'relic']),
   Wizard:  new Set(['item', 'potion', 'relic', 'scroll']),
-  Rogue:   new Set(['item', 'potion', 'relic', 'scroll']),
+  Rogue:   new Set(['item', 'potion', 'relic']),
   Warrior: new Set(['item', 'potion', 'relic']),
   Druid:   new Set(['item', 'potion', 'relic']),
   Necromancer: new Set(['item', 'potion', 'relic', 'scroll']),
@@ -2769,9 +2799,13 @@ function drawSectionInfoBadge(rect, tutorialId, offsetY = 0) {
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
   ctx.fillText('i', ix, iy - 4);
+  // restore() puts textAlign / textBaseline / font / shadow back to
+  // whatever the caller had — do NOT force them to 'left' / 'alphabetic'
+  // afterward. That stray reset was clobbering the caller's centered
+  // textAlign, so any header or stat line drawn right after a badge
+  // (the "Character" title, the Hand/Deck/Discard column) silently
+  // left-aligned from its center-x and drifted right.
   ctx.restore();
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign = 'left';
   if (hov) {
     _sectionInfoHover = { tutorialId, anchorX: ix - 4, anchorY: iy + 10 };
   }
@@ -3480,6 +3514,25 @@ const CARD_REGISTRY = {
   // Path of the Necromancer — Worn Floor reward (post-Army-of-the-Dead),
   // Tier 1 ability that summons 2 skeletons and grants them Haste.
   army_of_the_dead: createArmyOfTheDeadCard,
+  // Path of the Necromancer — Tier 1 ability. 2 dmg + Poison + draw,
+  // with a heroism-to-poison rider (caster.heroism is consumed and
+  // added to the poison stack instead of the damage bonus). Wired
+  // through the registry so future encounters / shrine picks can
+  // grant it; not yet in the ability-choice pool.
+  shadow_bolt: createShadowBolt,
+  // Necromancer Tier 2 — The Butcher (unique 3/10 companion that
+  // swings 2 targets + Bleed) and Plague (AoE poison burst).
+  the_butcher: createTheButcher,
+  plague: createPlague,
+  // Necromancer Tier 1 — Arcane Emporium "real stock". Book of the
+  // Dead (stays-in-hand +1/+1 to an Undead) and Bone Buckler (shield
+  // self + an Undead, First Shield draw).
+  book_of_the_dead: createBookOfTheDead,
+  bone_buckler: createBoneBuckler,
+  // Necromancer Tier 2 — Corpse Explosion (sacrifice an ally for AoE +
+  // Poison) and Bone Storm (steal shields, chip all, bolster undead).
+  corpse_explosion: createCorpseExplosion,
+  bone_storm_necromancer: createBoneStormNecromancer,
   // Path of the Necromancer — Forgotten Specter signature card.
   old_spectral_hand: createOldSpectralHand,
   // Path of the Necromancer — Specter of Death signature card. 5 dmg
@@ -4144,8 +4197,8 @@ async function loadAssets() {
     // loadImage tolerates 404s (Image.onerror just leaves the cache
     // entry undefined) so missing art falls back to a styled tile.
     loadImage('quest_main', `${BASE}assets/Backgrounds/MainScreen.jpg`),
-    loadImage('quest_select_bg', `${BASE}assets/Backgrounds/StorySelectorBG.png`),
-    loadImage('quest_necromancer', `${BASE}assets/Backgrounds/PathoftheNecromancerBG.png`),
+    loadImage('quest_select_bg', `${BASE}assets/Backgrounds/StorySelectorBG.jpg`),
+    loadImage('quest_necromancer', `${BASE}assets/Backgrounds/PathoftheNecromancerBG.jpg`),
     loadImage('char_select_bg', `${BASE}assets/Backgrounds/CharacterSelection.jpg`),
     loadImage('combat_bg', `${BASE}assets/Backgrounds/PrisonBackground.jpg`),
     loadImage('game_end_bg', `${BASE}assets/Backgrounds/GameEnd.jpg`),
@@ -4207,23 +4260,28 @@ async function loadAssets() {
     loadImage('map_deeper_tunnels', `${BASE}assets/Maps/DwarvenCityDeeperTunnels.jpg`),
     loadImage('map_artisan_district', `${BASE}assets/Maps/DwarvenCityArtisanDistrict.jpg`),
     loadImage('map_temple_of_moradin', `${BASE}assets/Maps/TempleofMoradin.jpg`),
-    // Path of the Necromancer (side quest) — opening map. PNG until
-    // it's converted; the loader is fine with either extension.
-    loadImage('map_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.png`),
-    loadImage('bg_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.png`),
+    // Path of the Necromancer (side quest) — opening map.
+    loadImage('map_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.jpg`),
+    loadImage('bg_necromancer_house', `${BASE}assets/Maps/UndertakerHouseFirstFloor.jpg`),
     // Path of the Necromancer — Study side-map (upstairs).
-    loadImage('map_necromancer_study', `${BASE}assets/Maps/NecromancerStudyMap.png`),
+    loadImage('map_necromancer_study', `${BASE}assets/Maps/NecromancerStudyMap.jpg`),
     // Path of the Necromancer — Underground Tunnels (3 chained maps
-    // reached through the bedroom trap door). Same PNG-still-here
-    // pattern as the rest of the side quest.
-    loadImage('map_underground_tunnel_1', `${BASE}assets/Maps/UndergroundTunnel1.png`),
-    loadImage('map_underground_tunnel_2', `${BASE}assets/Maps/UndergroundTunnel2.png`),
-    loadImage('map_underground_tunnel_3', `${BASE}assets/Maps/UndergroundTunnel3.png`),
-    loadImage('bg_underground_tunnel_1', `${BASE}assets/Maps/UndergroundTunnel1.png`),
-    loadImage('bg_underground_tunnel_2', `${BASE}assets/Maps/UndergroundTunnel2.png`),
-    loadImage('bg_underground_tunnel_3', `${BASE}assets/Maps/UndergroundTunnel3.png`),
+    // reached through the bedroom trap door).
+    loadImage('map_underground_tunnel_1', `${BASE}assets/Maps/UndergroundTunnel1.jpg`),
+    loadImage('map_underground_tunnel_2', `${BASE}assets/Maps/UndergroundTunnel2.jpg`),
+    loadImage('map_underground_tunnel_3', `${BASE}assets/Maps/UndergroundTunnel3.jpg`),
+    loadImage('bg_underground_tunnel_1', `${BASE}assets/Maps/UndergroundTunnel1.jpg`),
+    loadImage('bg_underground_tunnel_2', `${BASE}assets/Maps/UndergroundTunnel2.jpg`),
+    loadImage('bg_underground_tunnel_3', `${BASE}assets/Maps/UndergroundTunnel3.jpg`),
     // Forgotten Shrine altar art — Tunnel 1 prayer beat backdrop.
-    loadImage('bg_necromancer_shrine', `${BASE}assets/Backgrounds/NecromancerShrine.png`),
+    loadImage('bg_necromancer_shrine', `${BASE}assets/Backgrounds/NecromancerShrine.jpg`),
+    // Abbey Courtyard — backdrop for the Stone Door open dialog, the
+    // perk pick screen, and the Plague Gravekeeper ambush that
+    // chains off the door. The map asset folder is the source.
+    loadImage('bg_abbey_courtyard', `${BASE}assets/Maps/AbbeyCourtward.jpg`),
+    // Older Necromancer portrait — shown on the class-unlock splash at
+    // the end of the Path of the Necromancer epilogue.
+    loadImage('necromancer_unlock_portrait', `${BASE}assets/Cards/OlderNecromancerCharacter.jpg`),
     loadImage('map_top_of_infinite_stairs', `${BASE}assets/Maps/TopOfStairsOfInfinite.jpg`),
     loadImage('map_last_watch', `${BASE}assets/Maps/TheLastWatch.jpg`),
     loadImage('map_high_valley_1', `${BASE}assets/Maps/HighValley1.jpg`),
@@ -4360,6 +4418,10 @@ async function loadAssets() {
     loadImage('balanced_perk',        `${BASE}assets/Cards/BalanceDruidPerk.jpg`),
     loadImage('lucky_find_perk',      `${BASE}assets/Cards/LuckyFindPerk.jpg`),
     loadImage('harvest_perk',         `${BASE}assets/Cards/HarvestDruidSpec.jpg`),
+    // Skeletal Strength — Necromancer-flavored unique perk. Reuses
+    // the Skeleton Mastery card piece since the perk leans into the
+    // same first-skeleton beat.
+    loadImage('skeletal_strength_perk', `${BASE}assets/Cards/NecromancerPower.jpg`),
   ]);
   // Block on the 6 class-select portraits so they're guaranteed in the
   // card-art cache before the menu becomes interactive. Otherwise the
@@ -4371,6 +4433,8 @@ async function loadAssets() {
     // Path of the Necromancer side quest portrait — same blocking
     // preload so the run-start splash doesn't flash a placeholder.
     'necromancer_class',
+    // Full main-game Necromancer class card uses the older portrait.
+    'necromancer_class_old',
   ]);
   // Eagerly preload ALL card + power art so getCardArt never returns null
   // for a known id. Without this, the first draw of each card shows a
@@ -4897,6 +4961,9 @@ function handleClick(x, y) {
     case GameState.END_CREDITS:
       handleEndCreditsClick();
       break;
+    case GameState.NECROMANCER_UNLOCK:
+      handleNecromancerUnlockClick();
+      break;
     case GameState.COMBAT:
       handleCombatClick(x, y);
       break;
@@ -5408,6 +5475,7 @@ const SIDE_QUESTS = [
   {
     id: 'necromancer',
     title: 'Path of the Necromancer',
+    subtitle: 'For experienced players',
     artId: 'quest_necromancer',
   },
 ];
@@ -5489,7 +5557,8 @@ function drawQuestSelect() {
       x: tx, y: rowY, w: tileW, h: tileH,
       art: images[sq.artId],
       title: sq.title,
-      titlePx: 18,
+      subtitle: sq.subtitle,
+      titlePx: 18, subtitlePx: 13,
       onClick: () => {
         selectedQuest = sq.id;
         if (sq.id === 'necromancer') {
@@ -5526,32 +5595,34 @@ function drawQuestTile({ x, y, w, h, art, title, subtitle, titlePx, subtitlePx, 
     ctx.textAlign = 'center';
     ctx.fillText('(art pending)', x + w / 2, y + h / 2);
   }
-  // Darkened label band so the title reads over any art. Band is
-  // taller when a subtitle is present so the two labels each get
-  // their own row without the title's descender clipping into the
-  // subtitle's ascender (which was happening at 72 + 38px title).
-  const bandH = subtitle ? 96 : 48;
+  // Darkened label band so the title reads over any art. Both rows
+  // hug the BOTTOM of the tile with a tight gap, and the band is sized
+  // to just back the two lines — so it scales with the title size
+  // instead of a fixed height and stays compact for the small (18px)
+  // side-quest titles while still fitting the big (38px) main title.
+  const tPx = titlePx || 24;
+  const sPx = subtitlePx || 16;
+  const subBaseline = y + h - 11;                      // subtitle near the bottom edge
+  const titleBaseline = subtitle
+    ? subBaseline - sPx - 5                            // title one tight row above it
+    : y + h - 15;                                      // no subtitle: single low row
+  const bandTop = titleBaseline - tPx - 6;            // ~6px pad above the title caps
+  const bandH = (y + h) - bandTop;
   ctx.fillStyle = 'rgba(0, 0, 0, 0.66)';
-  ctx.fillRect(x, y + h - bandH, w, bandH);
+  ctx.fillRect(x, bandTop, w, bandH);
   // Gold border
   ctx.strokeStyle = Colors.GOLD;
   ctx.lineWidth = 2;
   ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-  // Label text — title sits near the top of the band, subtitle near
-  // the bottom. ~12px breathing room between them.
-  const tPx = titlePx || 24;
-  const sPx = subtitlePx || 16;
+  // Title row, then subtitle just beneath it.
   ctx.fillStyle = Colors.GOLD;
   ctx.font = `bold ${tPx}px serif`;
   ctx.textAlign = 'center';
-  const titleBaseline = subtitle
-    ? y + h - bandH + tPx + 8
-    : y + h - bandH + tPx + 6;
   ctx.fillText(title, x + w / 2, titleBaseline);
   if (subtitle) {
     ctx.fillStyle = '#e8d59a';
     ctx.font = `italic ${sPx}px serif`;
-    ctx.fillText(subtitle, x + w / 2, y + h - 14);
+    ctx.fillText(subtitle, x + w / 2, subBaseline);
   }
   menuButtons.push({ x, y, w, h, action: onClick });
 }
@@ -6000,6 +6071,8 @@ const MUSIC_TAGS = {
     'boss: Roc (chick swarm)',
     'boss: Overseer Gnikan (Phase 2 — awakened master)',
   ],
+  // Path of the Necromancer — the Plague Gravekeeper fight's dirge.
+  'Music/music_shadow_of_mortus_01': ['boss: Plague Gravekeeper'],
   'Music/music_forgotten_castle_01': ['area: entry_corridor', 'area: gate_area', 'area: hall_of_ancestors', 'area: monument_alley', 'area: grand_stairs', 'area: deeper_tunnels', 'area: artisan_district', 'area: dwarven_throne_room', 'area: map_room'],
   // Looping wet-magma bubble bed — layered during any fight whose
   // boss carries the lava_floor passive (Magma Drake at the Plaza,
@@ -6085,6 +6158,22 @@ const MUSIC_FOR_NODE = {
 let _lastMusicNodeId = null;
 function updateMusicForCurrentScene() {
   if (!currentMap) return;
+  // Path of the Necromancer — eerie-choir latch. Once the apprentice
+  // has gone upstairs (studyVisited latches at the "try the door"
+  // choice), the eerie choir becomes the persistent MAP bed for the
+  // rest of the run, overriding every per-node / per-area track.
+  // Combat music still swaps via getCombatMusicTrack; this only
+  // governs the map ambience. startCombat resets _lastMusicArea on
+  // every fight, so this re-applies the choir after each combat. A
+  // sentinel area value keeps it from re-crossfading every frame.
+  if (studyVisited) {
+    if (_lastMusicArea !== '__necro_eerie__') {
+      _lastMusicNodeId = null;
+      _lastMusicArea = '__necro_eerie__';
+      crossfadeMusic('Music/music_eerie_choir_01', 1500, 2500);
+    }
+    return;
+  }
   const node = currentMap.getCurrentNode && currentMap.getCurrentNode();
   const area = node && node.mapArea ? node.mapArea : null;
   const nodeId = node && node.id ? node.id : null;
@@ -6125,16 +6214,12 @@ function updateMusicForCurrentScene() {
 // ccgQuest+ toggle is active and the unlock check passes; otherwise
 // drops straight into the standard new-game / character-select flow.
 function onPlayClicked() {
-  // Debug-only: divert to the Quest Select screen so the tester can
-  // pick the Main Quest or a side story (Path of the Necromancer, …)
-  // before the normal new-game flow kicks in. Production play (no
-  // debug) skips this and falls straight through to the existing
+  // Always divert to the Quest Select screen so every player can pick
+  // the Main Quest or a side story (Path of the Necromancer, …) before
+  // the normal new-game flow. (Previously debug-only.) Picking the
+  // Main Quest tile calls startMainQuestFlow, which keeps the existing
   // ccgQuest+ / class-pick routing.
-  if (debugMode) {
-    state = GameState.QUEST_SELECT;
-    return;
-  }
-  startMainQuestFlow();
+  state = GameState.QUEST_SELECT;
 }
 
 // Existing post-Play flow extracted so both onPlayClicked (non-debug)
@@ -6337,7 +6422,7 @@ function startGamePlusFromSave(slot) {
   currentEncounter = null;
   // Re-arm the menu music handoff (heroic main theme → prison
   // ambience) the same way startGameWithAbility does for a fresh run.
-  crossfadeMusic('Music/ambience_prison_01', 1500, 2500);
+  crossfadeMusic('Music/ambience_prison_01', 1500, 4500);
   _lastMusicArea = 'prison_cell';
   _menuMusicStarted = false;
   _hasEnteredCombat = true; // bypass the menu-music re-arm
@@ -6414,6 +6499,8 @@ function resetStoryFlags() {
   _encounterBgOverride = null;
   valdrisaJoined = false;
   studyVisited = false;
+  stoneDoorOpened = false;
+  _necromancerMainGame = false;
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
@@ -6522,6 +6609,8 @@ function startNewGame() {
   _encounterBgOverride = null;
   valdrisaJoined = false;
   studyVisited = false;
+  stoneDoorOpened = false;
+  _necromancerMainGame = false;
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
@@ -6940,15 +7029,43 @@ const CLASS_INFO = [
   { name: 'Druid', color: '#33691e', desc: 'Nature shapeshifter' },
 ];
 
+// The class roster — the six base classes, plus the Necromancer once
+// it's been unlocked by finishing the Path of the Necromancer side
+// quest (account-level _necromancerUnlocked flag).
+function getClassInfoList() {
+  const list = CLASS_INFO.slice();
+  if (_necromancerUnlocked) {
+    list.push({ name: 'Necromancer', color: '#5a3a7a', desc: 'Death mage with undead minions' });
+  }
+  return list;
+}
+
+// Portrait art id for the ACTIVE run's class. The full main-game
+// Necromancer uses the older portrait; everyone else — including the
+// Path of the Necromancer side-quest apprentice — uses the standard
+// <class>_class art.
+function activeClassPortraitId() {
+  if (selectedClass === 'Necromancer' && _necromancerMainGame) return 'necromancer_class_old';
+  return `${selectedClass.toLowerCase()}_class`;
+}
+
 function getClassRects() {
-  const cols = 3, cardW = 200, cardH = 280, gap = 30;
-  const startX = (SCREEN_WIDTH - (cols * cardW + (cols - 1) * gap)) / 2;
+  const cardW = 200, cardH = 280, gap = 30;
+  const list = getClassInfoList();
+  const n = list.length;
+  // Two centered rows: ceil(n/2) on top, floor(n/2) below. Six classes
+  // → 3 + 3; with the Necromancer unlocked, seven → 4 + 3. Each row is
+  // centered independently so the layout stays balanced at either count.
+  const row0Count = Math.ceil(n / 2);
   const startY = 160;
-  return CLASS_INFO.map((cls, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
+  return list.map((cls, i) => {
+    const row = i < row0Count ? 0 : 1;
+    const idxInRow = row === 0 ? i : i - row0Count;
+    const rowCount = row === 0 ? row0Count : (n - row0Count);
+    const rowW = rowCount * cardW + (rowCount - 1) * gap;
+    const startX = (SCREEN_WIDTH - rowW) / 2;
     return {
-      x: startX + col * (cardW + gap),
+      x: startX + idxInRow * (cardW + gap),
       y: startY + row * (cardH + gap),
       w: cardW, h: cardH, ...cls,
     };
@@ -7012,6 +7129,10 @@ function startGameWithAbility(ability) {
   // to the main menu.
   _fromGamePlusSetup = false;
   _fromQuestSelect = false;
+  // This path is reached ONLY from character select (never the side
+  // quest), so a Necromancer here is the full main-game class. Set the
+  // flag definitively from selectedClass so it can't be left stale.
+  _necromancerMainGame = (selectedClass === 'Necromancer');
   // Create player with starter deck + chosen ability
   player = new Character(selectedClass);
   player.deck = new Deck();
@@ -7022,10 +7143,11 @@ function startGameWithAbility(ability) {
     Rogue: getRogueStarterDeck,
     Warrior: getWarriorStarterDeck,
     Druid: getDruidStarterDeck,
-    // Necromancer (Path of the Necromancer side quest) — bare starter
-    // (3 Cloth Armor + 2 Scraps). The rest of the kit is unlocked by
-    // exploring Master Mortain's house and the abbey beyond.
-    Necromancer: getNecromancerStarterDeck,
+    // Necromancer here is the FULL main-game class (this path is only
+    // reached from character select, never the side quest). Complete
+    // kit via getNecromancerMainDeck; the side-quest apprentice's bare
+    // getNecromancerStarterDeck is used by its own setup elsewhere.
+    Necromancer: getNecromancerMainDeck,
   };
   const cards = deckFns[selectedClass]();
   // ccgQuest+ player scaling — bump every starter card's
@@ -7039,7 +7161,9 @@ function startGameWithAbility(ability) {
     }
     player.deck.addCard(c);
   }
-  player.deck.addCard(ability);
+  // The Necromancer skips the ability pick (ability === null); every
+  // other class adds its chosen tier-1 ability here.
+  if (ability) player.deck.addCard(ability);
   // (Removed: debug-seeded Gnikan's Staff copies. The staff is now
   // handed to the player by Raena during the P2→P3 transition in
   // the Varimatras encounter, so the starter deck no longer needs
@@ -7057,6 +7181,13 @@ function startGameWithAbility(ability) {
     }
     player.addPower(power);
   }
+  // Full main-game Necromancer — Skeleton Mastery from the first turn
+  // (getClassPower returns null for the side-quest path, which earns it
+  // later from study_desk). restoreFromSave re-grants it on load via
+  // the _necromancerMainGame flag.
+  if (selectedClass === 'Necromancer' && _necromancerMainGame) {
+    player.addPower(createNecromancerPower());
+  }
 
   // Initialize map
   currentMap = createPrisonCellMap();
@@ -7070,7 +7201,7 @@ function startGameWithAbility(ability) {
   // ambience is already breathing by the time gameplay starts.
   // Stamp _lastMusicArea so the first node-step (mapArea === 'prison_cell')
   // doesn't re-trigger another crossfade to the same track.
-  crossfadeMusic('Music/ambience_prison_01', 1500, 2500);
+  crossfadeMusic('Music/ambience_prison_01', 1500, 4500);
   _lastMusicArea = 'prison_cell';
 
   // Show title card then start first encounter
@@ -7116,6 +7247,10 @@ function drawCharacterSelect() {
   const classArtIds = {
     Paladin: 'paladin_class', Ranger: 'ranger_class', Wizard: 'wizard_class',
     Rogue: 'rogue_class', Warrior: 'warrior_class', Druid: 'druid_class',
+    // The full-class Necromancer uses the OLDER necromancer portrait
+    // (the apprentice has grown up), distinct from the side quest's
+    // young apprentice art.
+    Necromancer: 'necromancer_class_old',
   };
 
   const artShift = 10; // push hero art down further so the top filigree clears faces/heads
@@ -7587,6 +7722,11 @@ function drawAbilitySelect() {
     ctx.fillText('Class Power', leftX + panelW / 2, headerY);
     try {
       let power = getClassPower(selectedClass);
+      // Necromancer's getClassPower returns null (the side-quest
+      // apprentice earns Skeleton Mastery mid-quest), but the full
+      // main-game class starts with it — preview it here at character
+      // creation so the "Class Power" panel isn't blank.
+      if (!power && selectedClass === 'Necromancer') power = createNecromancerPower();
       if (power) {
         power.exhausted = false;
         // ccgQuest+ — show the offset-applied power on the
@@ -11019,7 +11159,14 @@ const ENCOUNTER_BG_MAP = {
   east_corridor: 'bg_underground_tunnel_1',
   tunnel2_mid: 'bg_underground_tunnel_2',
   tunnel3_mid: 'bg_underground_tunnel_3',
+  // tunnel3_door — closed-door dialog still uses the tunnel art; the
+  // Open variant + perk + courtyard chain swap to the abbey courtyard
+  // background via the per-encounter ID override below (the open
+  // variant keeps the same `tunnel3_door` id, but the dialog tail
+  // hands off to the abbey_courtyard encounter, which carries its
+  // own bg key here).
   tunnel3_door: 'bg_underground_tunnel_3',
+  abbey_courtyard: 'bg_abbey_courtyard',
   // study_desk intentionally omitted — falls through to the
   // standard `images.map_necromancer_study` fallback in
   // getEncounterBg, so the desk dialog draws over the study art.
@@ -11099,10 +11246,19 @@ const encounterBgImages = {};
 const ENCOUNTER_BG_FILES = {
   // Path of the Necromancer side quest — the front-door peek shows
   // the courtyard / abbey scene from the side-story splash.
-  bg_path_of_necromancer: 'PathoftheNecromancerBG.png',
+  bg_path_of_necromancer: 'PathoftheNecromancerBG.jpg',
   // Forgotten Shrine altar — Tunnel 1 west alcove. Lit candles +
   // dark stone altar piece used as the shrine encounter backdrop.
-  bg_necromancer_shrine: 'NecromancerShrine.png',
+  bg_necromancer_shrine: 'NecromancerShrine.jpg',
+  // Abbey Courtyard — Stone Door open dialog, the perk-pick screen,
+  // and the Plague Gravekeeper ambush. Lives under Maps/ (the 'Maps/'
+  // prefix routes getEncounterBgImage to the shared map-art folder).
+  // Without this entry getEncounterBgImage can't resolve the key and
+  // the whole chain silently falls back to tunnel / combat art.
+  bg_abbey_courtyard: 'Maps/AbbeyCourtward.jpg',
+  // Story-selector splash — reused as the frontier-road backdrop for
+  // the Path of the Necromancer epilogue (and the unlock splash).
+  bg_story_selector: 'StorySelectorBG.jpg',
   bg_prison: 'PrisonBackground.jpg', bg_prison_entrance: 'PrisonEntranceBackground.jpg',
   bg_prison_wing: 'PrisonWingBackground.jpg', bg_kitchen: 'PrisonKitchenBackground.jpg',
   bg_leaving_prison: 'LeavingPrisonBackground.jpg',
@@ -12048,6 +12204,30 @@ function startNodeEncounter(nodeId) {
     advanceEncounterPhase();
     return;
   }
+  // Path of the Necromancer — Tunnel 3 Closed Door dispatch. After
+  // the Specter of Death fight on the Stone Stair (tunnel3_mid in
+  // completedEncounters), the book has left enough of itself in the
+  // apprentice that the sigil recognizes her palm. Swap to the Open
+  // variant; the door opens, the encounter completes with a mini
+  // level-up beat in advanceEncounterPhase (full heal + necromancer
+  // perk pick, no HP +1 or deck rebalancing).
+  if (nodeId === 'tunnel3_door' && completedEncounters.has('tunnel3_mid')
+      && !stoneDoorOpened
+      && currentMap && currentMap.id === 'underground_tunnel_3') {
+    currentEncounter = createTunnel3DoorOpenEncounter();
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    advanceEncounterPhase();
+    return;
+  }
+  // Silence revisits to the open door — no dialog, no encounter, no
+  // mini level-up refire. The map node just acts as a regular
+  // walkway after the blessing has settled.
+  if (nodeId === 'tunnel3_door' && stoneDoorOpened
+      && currentMap && currentMap.id === 'underground_tunnel_3') {
+    return;
+  }
   // Upward Passage skip: once the player has made any Kitchen choice, they
   // already know where this passage leads — don't make them sit through the
   // "the tunnel slopes upward" dialog again. Just mark it done so clicking
@@ -12288,6 +12468,14 @@ function startNodeEncounter(nodeId) {
       ...sampleShopCardIds('city_square', 1),
     ];
     currentEncounter = factory(picker1, picker2);
+  } else if (node.encounterId === 'arcane_emporium'
+      && selectedClass === 'Necromancer' && _necromancerMainGame) {
+    // Master Elarion's necromancer welcome — recognizes the late Master
+    // Mortain's student, then leads them down to the occult cellar. Same
+    // 'arcane_emporium' encounter id, so the post-dialog auto-shop hook
+    // still opens the storefront (which surfaces the bone gear via
+    // buildArcaneEmporiumInventory).
+    currentEncounter = ENCOUNTER_REGISTRY.arcane_emporium_necromancer();
   } else if (node.encounterId === 'antiquity_shop') {
     // After the Mimic is dead the node still points at 'antiquity_shop',
     // but we swap to the cleared-shop short variant so revisits don't
@@ -12661,6 +12849,55 @@ function advanceEncounterPhase() {
     // map cache miss (player happens to be on the study map at
     // dialog close) finds the necromancer_house copy via _mapCache
     // and flips the right node.
+    // Path of the Necromancer — FINALE. The Abbey Courtyard epilogue
+    // closes the side quest: latch the account-level Necromancer
+    // unlock and roll into the class-unlock splash instead of dropping
+    // back to the tunnel map. The encounter bookkeeping above already
+    // marked abbey_courtyard complete.
+    if (completedEncounterId === 'abbey_courtyard') {
+      _necromancerUnlocked = true;
+      saveNecromancerUnlock();
+      hideToast();
+      // Unlock fanfare over the splash (heroic music keeps playing
+      // underneath).
+      playSound('buff_powerup_02', 0.9);
+      state = GameState.NECROMANCER_UNLOCK;
+      return;
+    }
+    // Path of the Necromancer — Stone Door opens after the Specter
+    // of Death falls. Fires a mini level-up beat: full heal (deck
+    // rebalance merges discard / recharge back to draw and refreshes
+    // hand) + a perk pick from the Necromancer table. Deliberately
+    // skips the regular level-up's level++ and the +1 deck-category
+    // bonus pending — this is the door's blessing, not a tier-up.
+    // Gated on the Stone Stair fight (tunnel3_mid) being complete so
+    // a debug warp straight onto the door doesn't trigger it.
+    if (completedEncounterId === 'tunnel3_door'
+        && completedEncounters.has('tunnel3_mid')
+        && !stoneDoorOpened) {
+      stoneDoorOpened = true;
+      if (player && player.deck) {
+        player.deck.rebalance(getPlayerHandSize(), MAX_HAND_SIZE);
+      }
+      // Curated pick for the Stone Door blessing — NOT a random roll
+      // off the Necromancer table. The mini quest always offers
+      // exactly Prepared + Skeletal Strength; the player keeps one.
+      perkChoices = [createPreparedPerk(), createSkeletalStrengthPerk()];
+      _perkSelectReturnToMap = true;
+      // Draw the perk pick over the abbey courtyard so the blessing
+      // screen reads as "standing at the open threshold" rather than
+      // the default leaving-prison chapter-end art.
+      _perkSelectBgKey = 'bg_abbey_courtyard';
+      // After the pick, chain straight into the Abbey Courtyard beat
+      // (courtyard dialog → Shadow Bolt loot → Plague Gravekeeper
+      // fight) instead of dropping back to the tunnel map. Consumed
+      // in handlePerkSelectClick.
+      _perkSelectThenEncounterId = 'abbey_courtyard';
+      addLog(`The door's blessing settles into you. Pick a perk.`, Colors.GOLD);
+      state = GameState.PERK_SELECT;
+      autosaveNow();
+      return;
+    }
     if (completedEncounterId === 'bedroom_trap_door') {
       const houseMap = _mapCache['necromancer_house']
         || (currentMap && currentMap.id === 'necromancer_house' ? currentMap : null);
@@ -13615,6 +13852,10 @@ const ENEMY_HAND_SIZE = {
   // turn. The apprentice has to fully absorb every swing or the run
   // ends. Arcane Shield (Block 5) is the intended counter.
   specter_of_death: 1,
+  // Plague Gravekeeper — Abbey Courtyard ambush. 3-card hand so the
+  // monk can credibly swing AND layer a Buckler / Ring Mail / Bone
+  // Mace in the same beat instead of dribbling one card at a time.
+  plague_gravekeeper: 3,
 };
 
 function setupEnemyForCombat(enemyId) {
@@ -13679,7 +13920,7 @@ function setupEnemyForCombat(enemyId) {
       for (let i = 0; i < 5; i++) {
         const skel = new Creature({
           name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-          traits: ['Skeleton'],
+          traits: ['Skeleton', 'Undead'],
         });
         skel.ready();
         enemy.addCreature(skel);
@@ -13700,9 +13941,9 @@ function setupEnemyForCombat(enemyId) {
       enemy.addPower(createDireFury());
     },
     // Path of the Necromancer — Stone Stair encounter. Death itself
-    // arrives at the top of the stair. 10-card deck of Death Sickle
+    // arrives at the top of the stair. 12-card deck of Death Sickle
     // (4 dmg + Hit: Death rider). Ethereal clamps every player swing
-    // to 1 dmg → 10 hits to clear the fight. Hand size 1 means the
+    // to 1 dmg → 12 hits to clear the fight. Hand size 1 means the
     // Specter swings exactly once per turn; the apprentice has to
     // fully absorb every swing (Block 4 Arcane Shield = 0 leak, no
     // death trigger). One leaked HP = run over.
@@ -13715,10 +13956,34 @@ function setupEnemyForCombat(enemyId) {
     // turn so Death swings FIRST, matching the Kobold Slyblade
     // ambush pattern; the apprentice has to block the opening
     // sickle with the granted ward.
+    // Path of the Necromancer — Abbey Courtyard ambush. Brother
+    // Hessen, the grave-tender Master Mortain sent his bodies to,
+    // wearing the plague the same as the rest of the abbey. Wide
+    // hand (3 cards) so the kit can either swing or layer armor on
+    // any given turn; 33-card deck weighted toward Wooden Axe (10)
+    // with a Greatclub (5) backbone, Bone Mace (6), and a Buckler /
+    // Ring Mail defense pair (6 each). Armor 1 power gives a flat
+    // chip-reduction on every swing. Plus the Endless Dead horde
+    // power. Music: Shadow of Mortus during the fight, swelling to
+    // the heroic theme on his death (see getCombatMusicTrack /
+    // combatVictory).
+    plague_gravekeeper: () => {
+      enemy = new Character('Plague Gravekeeper');
+      enemy.deck = new Deck();
+      for (let i = 0; i < 7; i++) enemy.deck.addCard(createBuckler());
+      for (let i = 0; i < 6; i++) enemy.deck.addCard(createRingMail());
+      for (let i = 0; i < 5; i++) enemy.deck.addCard(createGreatclub());
+      for (let i = 0; i < 7; i++) enemy.deck.addCard(createBoneMace());
+      for (let i = 0; i < 10; i++) enemy.deck.addCard(createWoodenAxe());
+      enemy.addPower(createArmorPower(1));
+      // Endless Dead — turn-start Undead Horde summon. Roll table +
+      // count scaling live in the startEnemyTurn power loop below.
+      enemy.addPower(createEndlessDead());
+    },
     specter_of_death: () => {
       enemy = new Character('Specter of Death');
       enemy.deck = new Deck();
-      for (let i = 0; i < 10; i++) enemy.deck.addCard(createDeathSickle());
+      for (let i = 0; i < 12; i++) enemy.deck.addCard(createDeathSickle());
       enemy.addPower(createEthereal());
       // Overwhelm — any ally the apprentice happens to drop in front
       // of the sickle (e.g. a summoned Skeleton) doesn't soak the
@@ -13727,6 +13992,9 @@ function setupEnemyForCombat(enemyId) {
       // shield at Death" cheese.
       enemy.addPower(createOverwhelm());
       enemy._enemy_surprise = true;
+      // Slightly shorter opening-swing delay than the default ambush
+      // (2200ms) — the Specter's sickle comes down a touch faster.
+      enemy._surpriseOpenDelayMs = 1700;
     },
     bone_pile: () => {
       enemy = new Character('Bone Pile');
@@ -14418,15 +14686,17 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.general_zhost_boss = () => {
     enemy = new Character('General Zhost');
     enemy.deck = new Deck();
-    // Mirrors PY: 4 White Claw + 4 Zhost's Buckler + 3 Kobold Spear + 4
-    // Chain Shirt, dire_fury power.
+    // 4 White Claw + 4 Zhost's Buckler + 6 Kobold Spear + 4 Chain
+    // Shirt, dire_fury power. The heavier Kobold Spear count leans on
+    // the "On Kill: Draw" rider — picking off the necromancer's
+    // skeletons refills Zhost's hand and snowballs the boss.
     for (let i = 0; i < 4; i++) enemy.deck.addCard(createWhiteClaw());
     for (let i = 0; i < 4; i++) enemy.deck.addCard(createZhostsBuckler());
-    for (let i = 0; i < 3; i++) enemy.deck.addCard(createKoboldSpear());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createKoboldSpear());
     for (let i = 0; i < 4; i++) enemy.deck.addCard(createChainShirt());
     enemy.addPower(createDireFury());
   };
-  ENEMY_HAND_SIZE.general_zhost_boss = 2;
+  ENEMY_HAND_SIZE.general_zhost_boss = 3;
 
   ENEMY_DECKS.wolf_pack = () => {
     enemy = new Character('Wolf Pack');
@@ -15391,6 +15661,33 @@ function handleEncounterTextClick() {
     // line is revealed.
     if (currentEncounter && currentEncounter.id === 'prison_wing' && encounterTextIndex === 1) {
       playSound('door_unlock', 0.7);
+    }
+    // Stone Door (post-Specter Open variant) — the bg cuts from the
+    // tunnel corridor to the abbey courtyard on the "the stone opens"
+    // beat. Fire the door-unlock cue on that one transition. Only the
+    // Open variant carries an abbey-courtyard bg, so gating on the
+    // bg-switch is enough to avoid double-firing on later beats.
+    if (currentEncounter && currentEncounter.id === 'tunnel3_door') {
+      const t = phase.texts[encounterTextIndex];
+      const prev = encounterTextIndex > 0 ? phase.texts[encounterTextIndex - 1] : null;
+      if (t && t.bgOverride === 'bg_abbey_courtyard'
+          && (!prev || prev.bgOverride !== 'bg_abbey_courtyard')) {
+        playSound('door_unlock', 0.8);
+      }
+    }
+    // Arcane Emporium (Necromancer cellar) — on the "mind the steps"
+    // beat the bg cuts to the abbey-shrine art; fade the bright shop
+    // music out and the eerie choir in to mark Elarion's tonal shift.
+    // _lastMusicArea reset so leaving the shop re-applies the city bed.
+    if (currentEncounter && currentEncounter.id === 'arcane_emporium') {
+      const t = phase.texts[encounterTextIndex];
+      const prev = encounterTextIndex > 0 ? phase.texts[encounterTextIndex - 1] : null;
+      if (t && t.bgOverride === 'bg_necromancer_shrine'
+          && (!prev || prev.bgOverride !== 'bg_necromancer_shrine')) {
+        crossfadeMusic('Music/music_eerie_choir_01', 2500, 3500);
+        _lastMusicArea = null;
+        _lastMusicNodeId = null;
+      }
     }
     // Bedroom trap-door reveal — at the seal-breaking beat (index 7,
     // the "chalk lines go dark, hatch settles" line), drop a heavy
@@ -16630,7 +16927,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -18310,6 +18607,12 @@ function getCombatMusicTrack() {
   if (enemy && enemy._enemyId === 'varimatras') {
     return 'Music/music_the_trailer_01';
   }
+  // Path of the Necromancer — the Plague Gravekeeper fight has its own
+  // dirge. On his death combatVictory swells music_heroic_01, which
+  // then carries through the epilogue + unlock splash into the menu.
+  if (enemy && enemy._enemyId === 'plague_gravekeeper') {
+    return 'Music/music_shadow_of_mortus_01';
+  }
   if (enemy && enemy._enemyId && COMBAT_MUSIC_ONE_LAST_BATTLE.has(enemy._enemyId)) {
     return 'Music/music_one_last_battle_01';
   }
@@ -18591,7 +18894,10 @@ function startCombat() {
     addLog(`Surprise! ${enemy.name} strikes first.`, Colors.RED);
     isPlayerTurn = false;
     startEnemyTurn();
-    enemyActionTimer = Math.max(enemyActionTimer, 2200 * getEnemySpeedMul());
+    // Per-enemy opening delay (default 2200ms past the boss-splash);
+    // the Specter of Death sets a shorter 1700ms in its setup.
+    const openDelay = enemy._surpriseOpenDelayMs || 2200;
+    enemyActionTimer = Math.max(enemyActionTimer, openDelay * getEnemySpeedMul());
   }
 }
 
@@ -18914,6 +19220,37 @@ function applyPerksCombatStart() {
       addLog(`  First Strike: ${firstStrike} dmg to ${enemy.name}!`, Colors.GOLD, fsPerk);
     }
   }
+  // Skeletal Strength — arm the first-Skeleton buff for this combat.
+  // The actual application fires at each Skeleton summon site via
+  // maybeApplySkeletalStrength, which checks _skeletalStrengthArmed and
+  // decrements on use. Reset to 0 here every combat regardless of the
+  // perk count so the previous fight's state can't leak forward.
+  _skeletalStrengthArmed = player.getPerkStacks('combat_first_skeleton_buff');
+}
+
+// Skeletal Strength counter — number of fresh Skeleton summons that
+// will still receive the +1/+1 buff this combat. Set in
+// applyPerksOnCombatStart from the perk stack count; decremented by
+// maybeApplySkeletalStrength after each Skeleton-trait summon on the
+// player side. Module-scoped because the buff is global state, not a
+// property of any specific summon site.
+let _skeletalStrengthArmed = 0;
+
+// Called after a player-side summon adds a creature to the field.
+// Buffs the creature +1/+1 (atk + maxHp + currentHp) IF it carries
+// the Skeleton trait AND the perk's per-combat charge is unspent.
+// Returns true when the buff fired (helps callers log a unified
+// "raised stronger" line).
+function maybeApplySkeletalStrength(creature) {
+  if (!creature || _skeletalStrengthArmed <= 0) return false;
+  if (!Array.isArray(creature.traits) || !creature.traits.includes('Skeleton')) return false;
+  creature.attack = (creature.attack || 0) + 1;
+  creature.maxHp = (creature.maxHp || 0) + 1;
+  creature.currentHp = (creature.currentHp || 0) + 1;
+  _skeletalStrengthArmed--;
+  addLog(`  Skeletal Strength: +1/+1 on ${creature.name}!`,
+    Colors.GOLD, perkToCardLike(createSkeletalStrengthPerk()));
+  return true;
 }
 
 function applyPerksStartOfTurn() {
@@ -19016,7 +19353,12 @@ function getHandCardHoverRect(rects, index) {
 // Enemies use 2 rows of 6 starting at the top of the enemy character card.
 // Players use 1 row of 6 aligned with the player power row (bottom of the row sits
 // at the same y as the bottom of the power cards, just above the player character card).
-function getCreatureSlotRect(ownerIsPlayer, slot) {
+// slotW/slotH (default 1x1) span the returned rect across that many
+// grid cells so a multi-cell creature (enemy Butcher 2x2) renders and
+// hit-tests at its true size. All ~38 rect consumers read x/y/w/h, so
+// the bigger rect flows through targeting, arrows, hover, and damage
+// numbers automatically.
+function getCreatureSlotRect(ownerIsPlayer, slot, slotW = 1, slotH = 1) {
   const charRect = getCharacterCardRect(ownerIsPlayer);
   const startX = charRect.x + charRect.w + 16;
   const startY = ownerIsPlayer
@@ -19026,7 +19368,9 @@ function getCreatureSlotRect(ownerIsPlayer, slot) {
   const row = Math.floor(slot / CREATURE_COLS);
   const x = startX + col * (CREATURE_CARD_W + CREATURE_GRID_GAP);
   const y = startY + row * (CREATURE_CARD_H + CREATURE_GRID_GAP);
-  return { x, y, w: CREATURE_CARD_W, h: CREATURE_CARD_H };
+  const w = CREATURE_CARD_W * slotW + CREATURE_GRID_GAP * (slotW - 1);
+  const h = CREATURE_CARD_H * slotH + CREATURE_GRID_GAP * (slotH - 1);
+  return { x, y, w, h };
 }
 
 function getEnemyCreatureRects() {
@@ -19034,7 +19378,7 @@ function getEnemyCreatureRects() {
   if (creatures.length === 0) return [];
   return creatures.map((c, i) => {
     const slot = (c.slot >= 0 ? c.slot : i);
-    return getCreatureSlotRect(false, slot);
+    return getCreatureSlotRect(false, slot, c.slotW || 1, c.slotH || 1);
   });
 }
 
@@ -19043,7 +19387,7 @@ function getPlayerCreatureRects() {
   if (creatures.length === 0) return [];
   return creatures.map((c, i) => {
     const slot = (c.slot >= 0 ? c.slot : i);
-    return getCreatureSlotRect(true, slot);
+    return getCreatureSlotRect(true, slot, c.slotW || 1, c.slotH || 1);
   });
 }
 
@@ -21812,7 +22156,7 @@ function drawCharacterSplash() {
 
   // Pick the portrait art id
   const portraitArtId = characterSplashIsPlayer
-    ? `${selectedClass.toLowerCase()}_class`
+    ? activeClassPortraitId()
     : c.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
   // Eager-preloaded boss/character art lives in `images[id]` and was
   // never in CARD_ART_MAP — drawCharacterPanel reads from both, but
@@ -22123,7 +22467,7 @@ function drawCharacterPanel(character, side) {
   // Portrait art fills the card
   let portraitArtId;
   if (isPlayer) {
-    portraitArtId = `${selectedClass.toLowerCase()}_class`;
+    portraitArtId = activeClassPortraitId();
   } else {
     portraitArtId = character.name.toLowerCase().replace(/ /g, '_');
     // Wolf Pack uses the lone wolf portrait (WolfInSnow.jpg). Without
@@ -23694,6 +24038,14 @@ function handleCombatClick(x, y) {
         showToast(`Field is full — can't summon more allies.`);
         return;
       }
+      // The Butcher is a 2x2 hulk — he needs a free 4-cell block. With
+      // 9+ of the 12 ally cells already used there's no room, so block
+      // the play (cost not paid) rather than whiff the summon.
+      if ((card.effects || []).some(e => e && e.effectType === 'summon_butcher')
+          && ownerUsedCells(player) > 8) {
+        showToast(`No room for The Butcher — too many allies.`);
+        return;
+      }
       // Unique companion guard — refuse to play a Thorb / Raena /
       // Valdrisa card while the named companion is already alive on
       // the field. The card SHOULD stay in the play pile after the
@@ -23888,12 +24240,22 @@ function handleCombatClick(x, y) {
         if (cardIsFeralSwipe(card)) {
           enterFeralSwipeTargeting(i);
         } else if (cardNeedsAllyTarget(card)) {
-          // Heal spells — pick yourself or any ally to receive the heal.
+          // Heal spells — pick yourself or any ally. Corpse Explosion
+          // reuses the same ally-target flow but must hit an ALLY (you
+          // can't sacrifice yourself), so it needs at least one alive
+          // creature on the field.
+          const isCorpse = (card.effects || []).some(e => e.effectType === 'corpse_explosion');
+          if (isCorpse && !(player.creatures || []).some(c => c && c.isAlive)) {
+            showToast(`No ally to sacrifice for ${card.name}.`);
+            return;
+          }
           selectedCardIndex = i;
           healTargetMode = true;
           _handOrderSnapshot = [...player.deck.hand];
           state = GameState.TARGETING;
-          showStickyToast(`${card.name}: click yourself or an ally`);
+          showStickyToast(isCorpse
+            ? `${card.name}: click an ally to sacrifice`
+            : `${card.name}: click yourself or an ally`);
         } else if (canPlayWithoutTarget(card)) {
           playCardSelf(i);
         } else if (cardIsMultiTarget(card)) {
@@ -24035,6 +24397,30 @@ function handleCardRechargeClick(x, y) {
           barrageShotDamage = descBarrageEff.value || 4;
           state = GameState.TARGETING;
           showStyledToast(`${selectedCard.name}: 3 shots left — click a target (or Done)`, 'multi');
+          return;
+        }
+        // Magic Missiles — after the "Recharge a Card ->" cost is paid
+        // (player-picked, same as every other recharge_extra card), fire
+        // the auto 3-shot barrage. Each shot picks its own target; the
+        // draw fires from finishBarrage.
+        const mmBarrageEff = selectedCard
+          ? (selectedCard.effects || []).find(e => e.effectType === 'magic_missile_barrage')
+          : null;
+        if (mmBarrageEff) {
+          for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+          pendingRechargeNames = [];
+          cardRechargedCards = [];
+          _handOrderSnapshot = null;
+          barrageMode = true;
+          barrageDescending = false;
+          barrageCardIndex = selectedCardIndex;
+          barrageRechargedCard = null;
+          barrageShotsTotal = 3;
+          barrageShotsLeft = 3;
+          barrageShotsFired = 0;
+          barrageShotDamage = mmBarrageEff.value || 1;
+          state = GameState.TARGETING;
+          showStyledToast(`${selectedCard.name}: 3 shots — click a target (each shot picks its own)`, 'multi');
           return;
         }
         // Modal cards with a recharge cost (Animal Companion: recharge_extra
@@ -24633,8 +25019,15 @@ function handleTargetingClick(x, y) {
   // Heal-targeting (Flash Heal, Holy Light, Healing Touch, ...): click
   // the player char or any living ally creature to receive the heal.
   if (healTargetMode) {
+    const _htCard = player.deck.hand[selectedCardIndex];
+    const _htCorpse = _htCard && (_htCard.effects || []).some(e => e.effectType === 'corpse_explosion');
     const playerRect = getCharacterCardRect(true);
     if (hitTest(x, y, playerRect)) {
+      // Corpse Explosion can't target the player — only allies.
+      if (_htCorpse) {
+        showStyledToast(`Pick an ally to sacrifice — not yourself.`, 'multi', 1300);
+        return;
+      }
       const idx = selectedCardIndex;
       _handOrderSnapshot = null;
       hideToast();
@@ -24987,6 +25380,9 @@ function finishBarrage() {
     const card = player.deck.hand[barrageCardIndex];
     if (barrageShotsFired === 0) addLog(`You play ${card.name}`, Colors.GREEN, card);
     player.deck.hand.splice(barrageCardIndex, 1);
+    // The recharge_extra cost ("Recharge a Card ->") is paid up front
+    // via the player-picked cardRechargeMode flow before the barrage
+    // starts — nothing extra to recharge here.
     const drawn = player.deck.draw(1, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
     player.deck.placeByCost(card);
@@ -25943,29 +26339,39 @@ function resolveEffect(eff, caster, target) {
       dmg = applyMarkBonus(target, dmg);
       playAttackHitSfx(dmg, dmg);
       if (target instanceof Creature) {
-        target.takeUnpreventableDamage(dmg);
-        spawnDamageOnTarget(target, dmg, Colors.ORANGE);
-        addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
+        // Ethereal-capped creatures (Death Specter, damageCap) clamp
+        // the actual HP loss — read the return so the shown damage,
+        // the on-hit triggers, AND the Drain Life heal all use the
+        // real (capped) amount, not the pre-cap roll. Without this,
+        // Drain Life read 2 / healed 2 against a 1-cap Death Specter.
+        const actual = target.takeUnpreventableDamage(dmg);
+        spawnDamageOnTarget(target, actual, Colors.ORANGE);
+        addLog(`  ${actual} true dmg to ${target.name}`, Colors.ORANGE);
         // On-attacked triggers (Obsidian Slime body armor peel + slime
         // split, Vanish, Brute, on_attacked_split) fire on true damage
         // too — the attack DID hit, the defense layers just couldn't
         // soak it. Was missing here, so Dwarven Crossbow / Spectral
         // Hand bypassed every on-hit reaction.
-        triggerSplitPower(target, dmg > 0);
-        consumePoisonBuff(caster, target, dmg);
+        triggerSplitPower(target, actual > 0);
+        consumePoisonBuff(caster, target, actual);
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
         // Stamp landed-damage snapshot so the heal_for_landed_damage
-        // rider (Drain Life) can read how much actually drained. True
-        // damage bypasses defenses, so the full dmg always "lands".
-        _lastEffectDamageLanded = dmg;
+        // rider (Drain Life) heals for the capped amount actually drained.
+        _lastEffectDamageLanded = actual;
       } else {
-        target.takeDamageFromDeck(dmg);
-        spawnDamageOnTarget(target, dmg, Colors.ORANGE);
-        addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
-        triggerSplitPower(target, dmg > 0);
-        consumePoisonBuff(caster, target, dmg);
-        if (caster === player && target === enemy) onPlayerHitEnemy(dmg);
-        _lastEffectDamageLanded = dmg;
+        // takeDamageFromDeck applies the Ethereal (Specter) clamp and
+        // returns the post-clamp value — read it so the shown damage,
+        // on-hit triggers, and the Drain Life heal all use the real
+        // amount. Without this, true damage on an Ethereal enemy read
+        // (and healed) the raw roll (e.g. Drain Life 3 / heal 3) even
+        // though only 1 HP was actually lost.
+        const actual = target.takeDamageFromDeck(dmg);
+        spawnDamageOnTarget(target, actual, Colors.ORANGE);
+        addLog(`  ${actual} true dmg to ${target.name}`, Colors.ORANGE);
+        triggerSplitPower(target, actual > 0);
+        consumePoisonBuff(caster, target, actual);
+        if (caster === player && target === enemy) onPlayerHitEnemy(actual);
+        _lastEffectDamageLanded = actual;
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
@@ -26501,6 +26907,32 @@ function resolveEffect(eff, caster, target) {
       }
       spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
       firePowerSurgeIfArmed(caster, 'poison');
+      break;
+    }
+    case 'apply_poison_with_heroism': {
+      // Shadow Bolt (Necromancer Tier 1) — base poison stacks +
+      // caster.heroism, then zero out heroism so the damage effect
+      // queued after this one doesn't ALSO consume it as a damage
+      // bonus. End result: heroism flows into Poison ticks instead
+      // of a one-shot damage spike. Same target as the damage
+      // effect that follows, so the poison sits on the thing about
+      // to take the hit.
+      const heroism = (caster && caster.heroism) || 0;
+      const stacks = (eff.value || 0) + heroism;
+      if (heroism > 0) {
+        addLog(`  Heroism +${heroism} -> Poison`, Colors.GOLD);
+        caster.heroism = 0;
+      }
+      if (stacks > 0) {
+        if (target instanceof Creature) {
+          target.poisonStacks = (target.poisonStacks || 0) + stacks;
+        } else if (target && typeof target.applyStatus === 'function') {
+          target.applyStatus('POISON', stacks);
+        }
+        addLog(`  +${stacks} Poison on ${target.name}`, Colors.GREEN);
+        spawnTokenOnTarget(target, stacks, 'Poison', Colors.GREEN);
+        firePowerSurgeIfArmed(caster, 'poison');
+      }
       break;
     }
     case 'apply_poison_on_damage': {
@@ -27203,6 +27635,113 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'buff_one_undead': {
+      // Book of the Dead — +eff.value/+eff.value (atk + maxHp +
+      // currentHp) to ONE living Undead-trait ally (the first on the
+      // field). No-op with a gray note if no Undead are out.
+      const undead = (caster.creatures || []).filter(c =>
+        c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Undead'));
+      if (undead.length === 0) {
+        addLog(`  No Undead to empower.`, Colors.GRAY);
+        break;
+      }
+      const t = undead[0];
+      const amt = eff.value || 1;
+      t.attack = (t.attack || 0) + amt;
+      t.maxHp = (t.maxHp || 0) + amt;
+      t.currentHp = (t.currentHp || 0) + amt;
+      addLog(`  ${t.name} rises stronger: +${amt}/+${amt}!`, Colors.PURPLE);
+      spawnTokenOnTarget(t, amt, 'Atk', Colors.RED);
+      break;
+    }
+    case 'buff_one_undead_shield': {
+      // Bone Buckler — eff.value Shield to ONE living Undead-trait ally
+      // (the first on the field). Silent no-op if no Undead are out.
+      const undead = (caster.creatures || []).filter(c =>
+        c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Undead'));
+      if (undead.length === 0) break;
+      const t = undead[0];
+      const amt = eff.value || 1;
+      t.shield = (t.shield || 0) + amt;
+      addLog(`  ${t.name} gains ${amt} Shield.`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(t, amt, 'Shield', Colors.ALLY_BLUE);
+      break;
+    }
+    case 'buff_all_undead': {
+      // Bone Storm — +eff.value/+eff.value to EVERY living Undead ally.
+      const amt = eff.value || 1;
+      let n = 0;
+      for (const c of (caster.creatures || [])) {
+        if (!c.isAlive || !Array.isArray(c.traits) || !c.traits.includes('Undead')) continue;
+        c.attack = (c.attack || 0) + amt;
+        c.maxHp = (c.maxHp || 0) + amt;
+        c.currentHp = (c.currentHp || 0) + amt;
+        spawnTokenOnTarget(c, amt, 'Atk', Colors.RED);
+        n++;
+      }
+      if (n > 0) addLog(`  The undead host swells: +${amt}/+${amt} to ${n}!`, Colors.PURPLE);
+      break;
+    }
+    case 'strip_all_shields_gain': {
+      // Bone Storm — yank every enemy's Shield off and convert the total
+      // into the caster's own Shield. Hits the main enemy + its creatures.
+      // Cascade 4 staggered bone-rattles on cast — same wave the enemy
+      // Bone Storm uses, so the player version sounds identical.
+      playSound('bones_clatter', 0.85);
+      setTimeout(() => playSound('bones_clatter', 0.75), 70);
+      setTimeout(() => playSound('bones_clatter', 0.9), 150);
+      setTimeout(() => playSound('bones_clatter', 0.7), 240);
+      let stolen = 0;
+      if (enemy && !enemy._invulnerable && (enemy.shield || 0) > 0) {
+        stolen += enemy.shield; enemy.shield = 0;
+      }
+      for (const e of (enemy.creatures || [])) {
+        if (!e.isAlive || e._invulnerable) continue;
+        if ((e.shield || 0) > 0) { stolen += e.shield; e.shield = 0; }
+      }
+      if (stolen > 0) {
+        caster.shield = (caster.shield || 0) + stolen;
+        addLog(`  Bone Storm rips away ${stolen} Shield — and it's yours!`, Colors.ALLY_BLUE);
+        spawnTokenOnTarget(caster, stolen, 'Shield', Colors.ALLY_BLUE);
+      } else {
+        addLog(`  No Shields to strip.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'corpse_explosion': {
+      // Corpse Explosion — sacrifice the CLICKED ally (SINGLE_ALLY
+      // target) and deal damage equal to its current HP to ALL enemies
+      // (the poison rides a sibling apply_poison_all effect). Falls back
+      // to the highest-HP ally if no valid target came through.
+      let corpse = (target instanceof Creature && target.isAlive) ? target : null;
+      if (!corpse) {
+        const allies = (caster.creatures || []).filter(c => c && c.isAlive);
+        if (allies.length === 0) {
+          addLog(`  No corpse to burst.`, Colors.GRAY);
+          break;
+        }
+        allies.sort((a, b) => (b.currentHp || 0) - (a.currentHp || 0));
+        corpse = allies[0];
+      }
+      const x = corpse.currentHp || 0;
+      addLog(`  ${corpse.name} is torn apart — ${x} damage to all enemies!`, Colors.PURPLE);
+      corpse.currentHp = 0;
+      spawnDeathAnimation(corpse);
+      // Deal X to the main enemy + every alive enemy creature.
+      if (x > 0) {
+        if (enemy && enemy.isAlive) {
+          if (enemy._invulnerable) { /* no-op vs invuln boss */ }
+          else { const [, taken] = enemy.takeDamageWithDefense(x); spawnDamageOnTarget(enemy, taken, Colors.ORANGE); }
+        }
+        for (const e of (enemy.creatures || [])) {
+          if (!e.isAlive || e._invulnerable) continue;
+          const actual = e.takeDamage(x);
+          if (actual > 0) spawnDamageOnTarget(e, actual, Colors.ORANGE);
+        }
+      }
+      countAndRemoveDeadCreatures();
+      break;
+    }
     case 'if_burning_gain_ignite': {
       // Mephit Skin Gloves / Magma Tablet. Same snapshot-based gate.
       // Mirrors PY game.py:10887-10890.
@@ -27590,6 +28129,35 @@ function resolveEffect(eff, caster, target) {
         addLog(`  +${eff.value} Poison on ${c.name}`, Colors.GREEN);
         spawnTokenOnTarget(c, eff.value, 'Poison', Colors.GREEN);
       }
+      break;
+    }
+    case 'apply_all_poison_damage': {
+      // Plague (Necromancer Tier 2) — immediately resolve every
+      // enemy-side target's standing Poison as damage, on top of the
+      // apply_poison_all that ran just before. Poison never decays in
+      // this engine, so the stacks persist and still tick at end of
+      // turn — Plague just front-loads the burst. Unpreventable,
+      // mirrors the end-of-turn poison tick in processStatusEffects.
+      if (enemy && enemy.isAlive && !enemy._invulnerable) {
+        const ep = enemy.getStatus('POISON') || 0;
+        if (ep > 0) {
+          enemy.takeDamageFromDeck(ep);
+          spawnDamageOnTarget(enemy, ep, Colors.GREEN);
+          addLog(`  Plague! ${enemy.name} takes ${ep} Poison damage`, Colors.GREEN);
+          if (caster === player) onPlayerHitEnemy(ep);
+        }
+      }
+      for (const c of [...(enemy.creatures || [])]) {
+        if (!c.isAlive || c._invulnerable) continue;
+        const cp = c.poisonStacks || 0;
+        if (cp > 0) {
+          c.takeUnpreventableDamage(cp);
+          spawnDamageOnTarget(c, cp, Colors.GREEN);
+          addLog(`  Plague! ${c.name} takes ${cp} Poison damage`, Colors.GREEN);
+          if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
+        }
+      }
+      countAndRemoveDeadCreatures();
       break;
     }
     case 'apply_fire_all': {
@@ -28493,6 +29061,46 @@ function resolveEffect(eff, caster, target) {
       playSound('pig_grunt', 0.7);
       break;
     }
+    case 'summon_butcher': {
+      // The Butcher — Necromancer Tier 2 companion (3/10, attacks 2
+      // targets, +Bleed). Companion-routed like Misha/Huffer: the
+      // card sits in the play pile while he's alive and returns to
+      // discard when he falls. UNIQUE — the handleHandClick guard
+      // blocks a second cast while one is up; this is the belt-and-
+      // suspenders no-op for any other summon path. Stats mirror
+      // createButcherCreature in cards.js.
+      if ((player.creatures || []).some(c => c && c.isAlive && c.name === 'The Butcher')) {
+        addLog(`  The Butcher is already in the fight.`, Colors.GRAY);
+        break;
+      }
+      const butcher = new Creature({
+        name: 'The Butcher', attack: 3, maxHp: 10,
+        bleedAttack: 1, multiAttack: 2, isCompanion: true,
+        traits: ['Undead'],
+        // 2x2 footprint — a hulk on the player's field too. The
+        // handleHandClick guard blocks the play when there's no room
+        // (9+ ally cells used); this places him centre-field, shuffling
+        // existing allies aside. The bottom row may tuck under the hand
+        // on the player's single-row layout — acceptable.
+        slotW: 2, slotH: 2,
+        onDeathPoisonAll: 2,
+        description: 'Attacks 2 targets. On Death: Poison ALL.',
+      });
+      scaleCreatureWithOffset(butcher, playerTierOffset || 0, 'player');
+      butcher.sourceCard = _activePlayCard || null;
+      // The Butcher card is uncommon — the in-combat creature card
+      // frame inherits the rarity + subtype so it matches the parent.
+      butcher._sourceRarity = 'uncommon';
+      butcher._sourceSubtype = 'ability';
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      // Centre-field placement with an ally shuffle (same as the enemy
+      // raise). Falls back to a normal lowest-slot add if somehow full
+      // — the pre-play guard should have blocked that case already.
+      if (!placeButcherCentered(player, butcher)) player.addCreature(butcher);
+      addLog(`  The Butcher lumbers into the fight!`, Colors.PURPLE);
+      playSound('bones_clatter', 0.7);
+      break;
+    }
     case 'summon_treants': {
       // Druid Tier 2 — Summon 2-(4+floor(0.5*offset)) Treants (2/1
       // Haste). +0.5 max per offset (offset 2 → 2-5, offset 4 → 2-6).
@@ -28807,38 +29415,56 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_army_of_the_dead': {
-      // Path of the Necromancer "Army of the Dead" card (Tier 1).
-      // Summons `eff.value` (default 2) fresh 1/1 Skeletons with 1
-      // armor + the Skeleton trait. Every Skeleton-trait ally on the
-      // field (the freshly raised pair + any standing Skeleton Mastery
-      // summons) then gets Haste so they all swing the same turn the
-      // card is played. The Haste pass uses creature.ready() so both
-      // exhausted and justSummoned clear in one shot. bones_clatter
-      // plays once at the top of the resolve for the audio cue.
+      // Path of the Necromancer "Army of the Dead" card (Tier 1). Rolls
+      // `eff.value` (default 2) times; each roll either RAISES a fresh
+      // 1/1 Skeleton (1 armor, Skeleton + Undead) or BOLSTERS one
+      // standing Skeleton +1/+1 — same shape as the boss power, just 2
+      // rolls. With no Skeletons out yet a roll is forced to summon, so
+      // the card always lands at least one (then either a second
+      // Skeleton or that first one bolstered to 2/2). Every Undead then
+      // gains Haste (justSummoned-only ready, no double-attack).
       playSound('bones_clatter', 0.7);
-      const count = Math.max(1, eff.value || 2);
+      const rolls = Math.max(1, eff.value || 2);
       let lastSkel = null;
-      for (let i = 0; i < count; i++) {
-        const skel = new Creature({
-          name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-          haste: true,
-          traits: ['Skeleton'],
-        });
-        if (!caster.addCreature(skel)) break;
-        lastSkel = skel;
+      const bolster = (s) => {
+        s.attack = (s.attack || 0) + 1;
+        s.maxHp = (s.maxHp || 0) + 1;
+        s.currentHp = Math.min(s.maxHp, (s.currentHp || 0) + 1);
+        spawnTokenOnTarget(s, 1, 'Atk', Colors.RED);
+        lastSkel = s;
+      };
+      for (let r = 0; r < rolls; r++) {
+        const skels = caster.creatures.filter(c =>
+          c.isAlive && Array.isArray(c.traits) && c.traits.includes('Skeleton'));
+        let chooseSummon = Math.random() < 0.5;
+        if (!chooseSummon && skels.length === 0) chooseSummon = true; // none out → must raise
+        if (chooseSummon) {
+          const skel = new Creature({
+            name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+            haste: true, traits: ['Skeleton', 'Undead'],
+          });
+          if (caster.addCreature(skel)) {
+            if (caster === player) maybeApplySkeletalStrength(skel);
+            lastSkel = skel;
+          } else if (skels.length > 0) {
+            bolster(skels[Math.floor(Math.random() * skels.length)]); // field full → bolster
+          }
+        } else {
+          bolster(skels[Math.floor(Math.random() * skels.length)]);
+        }
       }
-      // Stamp Haste onto every Skeleton-trait ally (newly raised +
-      // existing). ready() clears summoning sickness so they can swing
-      // immediately. haste flag persists for the codex / hover preview.
+      // Grant Haste to every UNDEAD-trait ally. Haste = "can attack the
+      // turn it's summoned" — clears SUMMONING SICKNESS only, never
+      // un-exhausts an ally that already swung.
       for (const c of caster.creatures) {
         if (!c.isAlive) continue;
-        if (!Array.isArray(c.traits) || !c.traits.includes('Skeleton')) continue;
+        if (!Array.isArray(c.traits) || !c.traits.includes('Undead')) continue;
         c.haste = true;
-        c.ready();
+        if (c.justSummoned) c.ready();
       }
-      addLog(`  ${count} Skeleton${count > 1 ? 's rise' : ' rises'} and the host gains Haste!`, Colors.PURPLE);
+      addLog(`  The undead host stirs and gains Haste!`, Colors.PURPLE);
       const lastEntry = combatLog[combatLog.length - 1];
-      if (lastEntry) lastEntry.creature = lastSkel;
+      if (lastEntry && lastSkel) lastEntry.creature = lastSkel;
       break;
     }
     case 'summon_pet_slime': {
@@ -29858,6 +30484,9 @@ const _UNIQUE_COMPANION_BY_EFFECT = {
   summon_raena_tier3: 'Raena',
   summon_valdrisa: 'Valdrisa',
   summon_valdrisa_tier3: 'Valdrisa',
+  // The Butcher — Necromancer Tier 2 companion. Unique on the field
+  // even though the player may run multiple copies of the card.
+  summon_butcher: 'The Butcher',
 };
 function _uniqueCompanionNameFromCardEffects(card) {
   if (!card || !Array.isArray(card.effects)) return null;
@@ -32360,7 +32989,7 @@ function executePower(power) {
       if (skeletons.length === 0) {
         const skel = new Creature({
           name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-          traits: ['Skeleton'],
+          traits: ['Skeleton', 'Undead'],
           // No description: the small box section under the hover
           // card was duplicating "Armor: 1." when the left-side card
           // strip already shows the armor icon + value. Empty
@@ -32368,6 +32997,7 @@ function executePower(power) {
         });
         if (player.addCreature(skel)) {
           addLog(`  Raise! A new Skeleton claws up beside you.`, Colors.PURPLE);
+          maybeApplySkeletalStrength(skel);
         } else {
           addLog(`  No room for another Skeleton.`, Colors.GRAY);
         }
@@ -34344,6 +34974,52 @@ function applyFireToTarget(target, amount) {
 }
 let awaitingEnemyDamage = false; // true while the player is resolving enemy damage flow
 
+// Raise the EndlessDead Butcher — a 3/10 2x2 hulk — at the CENTRE of
+// the enemy's 2-row ally grid, shuffling the existing 1x1 undead out
+// to the flanking cells so the middle 2x2 block opens up. Unique
+// (skips if one is already shambling). Only fires when there's room
+// for the footprint (<= 8 of the 12 cells used); otherwise the roll
+// whiffs. The centre block is cells {2,3,8,9} (cols 2-3, both rows).
+// Number of grid cells an owner's allies currently occupy (footprints).
+function ownerUsedCells(owner) {
+  return (owner && owner.creatures || [])
+    .reduce((n, c) => n + ((c.slotW || 1) * (c.slotH || 1)), 0);
+}
+
+// Seat a pre-built 2x2 Butcher in the CENTRE of an owner's ally grid
+// (cells 2,3,8,9), shuffling the existing 1x1 allies out to the eight
+// flanking cells to open the block. Used by BOTH the enemy raise and
+// the player summon. Returns false (no placement) when there isn't room
+// for the 2x2 — i.e. more than 8 of the 12 cells are already used.
+function placeButcherCentered(owner, butcher) {
+  if (!owner) return false;
+  if (ownerUsedCells(owner) > 8) return false; // no room for the 2x2
+  const centre = new Set([2, 3, 8, 9]);
+  const flank = [];
+  for (let s = 0; s < Character.MAX_CREATURES; s++) if (!centre.has(s)) flank.push(s);
+  let fi = 0;
+  for (const c of owner.creatures) { if (fi < flank.length) c.slot = flank[fi++]; }
+  butcher.owner = owner;
+  butcher.slot = 2; // top-left of the centre 2x2
+  owner.creatures.push(butcher);
+  return true;
+}
+
+function raiseEnemyButcher() {
+  if (!enemy) return false;
+  if ((enemy.creatures || []).some(c => c && c.isAlive && c.name === 'The Butcher')) return false;
+  const butcher = new Creature({
+    name: 'The Butcher', attack: 3, maxHp: 10,
+    bleedAttack: 1, multiAttack: 2, traits: ['Undead'],
+    slotW: 2, slotH: 2,
+    onDeathPoisonAll: 2,
+    description: 'Attacks 2 targets. On Death: Poison ALL.',
+  });
+  if (!placeButcherCentered(enemy, butcher)) return false;
+  addLog(`  -> The Butcher heaves up out of the grave-mud.`, Colors.PURPLE);
+  return true;
+}
+
 function startEnemyTurn() {
   enemyTurnNumber++;
   _enemyCardsThisTurn = 0;
@@ -34509,7 +35185,7 @@ function startEnemyTurn() {
             if (skeletons.length >= 4) continue; // 4-cap, no buff target either
             const skel = new Creature({
               name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-              traits: ['Skeleton'],
+              traits: ['Skeleton', 'Undead'],
             });
             if (enemy.addCreature(skel)) {
               addLog(`  -> A new Skeleton claws up.`, Colors.PURPLE);
@@ -34522,6 +35198,67 @@ function startEnemyTurn() {
             pick.currentHp = Math.min(pick.maxHp, (pick.currentHp || 0) + 1);
             spawnTokenOnTarget(pick, 1, 'Atk', Colors.RED);
             addLog(`  -> ${pick.name} grows stronger (+1/+1).`, Colors.PURPLE);
+          }
+        }
+      } else if (power.id === 'endless_dead') {
+        // Plague Gravekeeper — Undead Horde. Roll the table
+        // ceil(turn/2) times (1 roll on turns 1-2, 2 on 3-4, …).
+        // enemyTurnNumber was already incremented at the top of
+        // startEnemyTurn, so it's the gravekeeper's current 1-based
+        // turn here. The table is an even pick over 4 entries; from
+        // turn 6 on it widens to 5 (The Butcher joins the pool). The
+        // horde contents stay hidden from the player (the power card
+        // only advertises "Summon an Undead Horde").
+        const rolls = Math.max(1, Math.ceil((enemyTurnNumber || 1) / 2));
+        const tableSize = (enemyTurnNumber || 1) >= 5 ? 5 : 4;
+        playSound('bones_clatter', 0.7);
+        addLog(`  Endless Dead! The horde rises (${rolls} roll${rolls > 1 ? 's' : ''}).`, Colors.PURPLE);
+        for (let r = 0; r < rolls; r++) {
+          const roll = Math.floor(Math.random() * tableSize);
+          if (roll === 0) {
+            // 1-3 lesser undead — each is a coin-flip between a 1/1
+            // armored Skeleton (Army of the Dead style, Skeleton +
+            // Undead traits) and a 1/2 Restless Bone (the Bone Pile
+            // fight's summon, mirrored exactly).
+            const n = 1 + Math.floor(Math.random() * 3);
+            let raised = 0;
+            for (let s = 0; s < n; s++) {
+              const c = (Math.random() < 0.5)
+                ? new Creature({ name: 'Skeleton', attack: 1, maxHp: 1, armor: 1, traits: ['Skeleton', 'Undead'] })
+                : new Creature({ name: 'Restless Bone', attack: 1, maxHp: 2 });
+              if (!enemy.addCreature(c)) break;
+              raised++;
+            }
+            if (raised > 0) addLog(`  -> ${raised} lesser undead claw up.`, Colors.PURPLE);
+          } else if (roll === 4) {
+            // The Butcher — 3/10 2x2 hulk (turn 6+, tableSize 5).
+            // Unique + center-placed with a field shuffle; see helper.
+            raiseEnemyButcher();
+          } else if (roll === 1) {
+            // 1 Bone Amalgam (3/3) — same shell the amalgam power spawns.
+            const amalgam = new Creature({ name: 'Bone Amalgam', attack: 3, maxHp: 3 });
+            if (enemy.addCreature(amalgam)) addLog(`  -> A Bone Amalgam heaves together.`, Colors.PURPLE);
+          } else if (roll === 2) {
+            // 1 Death Specter — 4/2, Ethereal (max 1 dmg/hit), Hit:
+            // Death. Same instakill rider as the Specter of Death.
+            // Unique — only one Death Specter on the field at a time
+            // (a Hit: Death creature is lethal enough; never stack two).
+            if (!(enemy.creatures || []).some(cc => cc && cc.isAlive && cc.name === 'Death Specter')) {
+              const ds = new Creature({
+                name: 'Death Specter', attack: 4, maxHp: 2,
+                damageCap: 1, hitDeath: true,
+                description: 'Ethereal (max 1 dmg). Hit: Death.',
+              });
+              if (enemy.addCreature(ds)) addLog(`  -> A Death Specter forms — its touch is the end.`, Colors.PURPLE);
+            }
+          } else {
+            // 1 Forgotten Specter — 2/3, heals for the damage it deals.
+            const fs = new Creature({
+              name: 'Forgotten Specter', attack: 2, maxHp: 3,
+              lifesteal: true,
+              description: 'Heals for the damage it deals.',
+            });
+            if (enemy.addCreature(fs)) addLog(`  -> A Forgotten Specter drifts in.`, Colors.PURPLE);
           }
         }
       } else if (power.id === 'dark_vision') {
@@ -34872,8 +35609,19 @@ function startEnemyTurn() {
     let availableForCost = enemy.deck.hand.length;
     let any = false;
     // Re-sort fresh in case we re-entered after a safeguard redraw.
+    // Recharge-cost cards (recharge_extra > 0, e.g. Greatclub) sort
+    // FIRST so they get queued while the hand is still full enough to
+    // pay their cost — otherwise a cheaper 1-cost card consumes the
+    // budget and the expensive card silently never plays. Ties fall
+    // back to priority.
+    const extraCostOf = (c) => (c.effects || [])
+      .reduce((n, e) => n + (e.effectType === 'recharge_extra' ? (e.value || 0) : 0), 0);
     const local = [...enemy.deck.hand];
-    local.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    local.sort((a, b) => {
+      const ax = extraCostOf(a), bx = extraCostOf(b);
+      if (ax !== bx) return bx - ax;
+      return (b.priority || 0) - (a.priority || 0);
+    });
     for (const card of local) {
       if (card.cardType === CardType.DEFENSE) continue;
       const hasBackstabRestriction = (card.effects || []).some(e => e.effectType === 'backstab_restriction');
@@ -35310,6 +36058,40 @@ function updateEnemyTurn(dt) {
       } else {
         swingLanded = routeEnemyDamageToTarget(target, swingDmg, c.name, c) || 0;
       }
+      // Forgotten Specter (EndlessDead horde) — lifesteal. Heal the
+      // creature for the damage its swing dealt.
+      if (c.lifesteal && swingLanded > 0) {
+        const before = c.currentHp || 0;
+        c.currentHp = Math.min(c.maxHp || 0, before + swingLanded);
+        const healed = c.currentHp - before;
+        if (healed > 0) addLog(`  ${c.name} drains ${healed} life (HP:${c.currentHp}/${c.maxHp})`, Colors.PURPLE);
+      }
+      // Death Specter (EndlessDead horde) — Hit: Death. Against the
+      // player it arms the Specter-of-Death instakill (finishIncoming
+      // Damage gates the game-over on whether HP damage actually got
+      // through, identical to the Death Sickle). Against an ALLY it
+      // outright unmakes any creature it manages to wound — one point
+      // of HP damage is lethal, no matter the ally's max HP.
+      if (c.hitDeath) {
+        if (target === player) {
+          // Only arm the instakill if the Specter's OWN swing actually
+          // got HP damage through (past per-hit shield/armor). Without
+          // this, the flag armed merely because it TARGETED the player,
+          // so a fully-shielded Specter swing + 1 leaked point from
+          // another attacker (the Gravekeeper) read as "1 damage and
+          // you died." swingLanded is this swing's contribution to the
+          // damage accumulator.
+          if (swingLanded > 0) {
+            _specterDeathlyStrike = true;
+            addLog(`  ☠ Hit: Death`, Colors.PURPLE);
+          }
+        } else if (target instanceof Creature && target.isAlive && swingLanded > 0) {
+          target.currentHp = 0;
+          spawnDeathAnimation(target);
+          addLog(`  ☠ Hit: Death — ${target.name} is unmade.`, Colors.PURPLE);
+          countAndRemoveDeadCreatures();
+        }
+      }
       // Attack-effect riders: Fire (Slinger), Ice (frost drake), Poison
       // (spider). All land on the same target as the swing.
       if (c.fireAttack > 0) {
@@ -35641,6 +36423,11 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        // On Kill: Draw rider (Kobold Spear etc.) — fires for the enemy
+        // too when their swing kills one of the player's allies.
+        // maybeFireDrawOnKill reads draw_on_kill off _activePlayCard
+        // (set to this card above) and only acts on creature kills.
+        maybeFireDrawOnKill(enemy, cardTarget);
       } else if (eff.effectType === 'mark_deathly_strike') {
         // Death Sickle's "Hit: Death" rider. Stamps a module flag the
         // damage flow checks once the player's DEFENDING phase
@@ -35709,6 +36496,21 @@ function updateEnemyTurn(dt) {
         if (isPoisoned && eff.value > 0) {
           addLog(`  Poisoned! +${eff.value} bonus damage!`, Colors.GREEN);
           routeEnemyDamageToTarget(cardTarget, eff.value, card.name);
+        }
+      } else if (eff.effectType === 'apply_poison_vs_armor') {
+        // Bone Mace rider (enemy side) — +Poison on the target if it
+        // has Armor or Shield. Bone Mace's effects list this BEFORE
+        // the damage so it reads pre-hit armor/shield. Mirrors the
+        // player handler at resolveEffect:apply_poison_vs_armor.
+        const hasArmor = (cardTarget.armor || 0) > 0 || (cardTarget.shield || 0) > 0;
+        if (hasArmor && eff.value > 0) {
+          if (cardTarget instanceof Creature) {
+            cardTarget.poisonStacks = (cardTarget.poisonStacks || 0) + eff.value;
+          } else if (cardTarget && typeof cardTarget.applyStatus === 'function') {
+            cardTarget.applyStatus('POISON', eff.value);
+          }
+          addLog(`  Bone splinters! +${eff.value} Poison on ${cardTarget.name || 'you'}`, Colors.GREEN);
+          spawnTokenOnTarget(cardTarget, eff.value, 'Poison', Colors.GREEN);
         }
       } else if (eff.effectType === 'armor_bonus_damage') {
         // Mirror the player handler's value encoding: <100 → base*10+bonus,
@@ -36069,10 +36871,14 @@ function updateEnemyTurn(dt) {
         for (const c of (enemy.creatures || [])) {
           if (c.isAlive) applyIceToTarget(c, eff.value);
         }
-      } else if (eff.effectType === 'damage_random_split') {
-        // Varimatras Claw — picks up to 2 distinct random alive
-        // player-side targets (player + alive allies) and hits each
-        // for the value. Preventable like a normal enemy swing:
+      } else if (eff.effectType === 'damage_random_split' || eff.effectType === 'multi_damage') {
+        // Varimatras Claw (damage_random_split) AND enemy-cast
+        // multi_damage (Wooden Axe — the player path lives in
+        // resolveEffect, but enemies route through here). Picks up to
+        // maxTargets (default 2) distinct random alive player-side
+        // targets (player + alive allies) and hits each for the value
+        // with the standard two-arrow batch. Preventable like a
+        // normal enemy swing:
         // player damage routes through Block/Shield/Armor +
         // accumulator, ally damage hits synchronously via Creature
         // shield/armor. Heroism / Rage / Brute / Ice cancel apply
@@ -36084,7 +36890,8 @@ function updateEnemyTurn(dt) {
         }
         const picks = [];
         const pool = [...aliveTargets];
-        while (pool.length > 0 && picks.length < 2) {
+        const maxPicks = eff.maxTargets || 2;
+        while (pool.length > 0 && picks.length < maxPicks) {
           const idx = Math.floor(Math.random() * pool.length);
           picks.push(pool.splice(idx, 1)[0]);
         }
@@ -36660,11 +37467,27 @@ function updateEnemyTurn(dt) {
     // utility plays (Sprint, Defensive Formation) shouldn't scale it.
     addLog(`${enemy.name} plays ${card.name}`, Colors.RED, card);
     playCardAmbient(card);
+    // Snapshot pre-play shield so "First Shield" riders
+    // (draw_if_no_shield, Buckler) read the state BEFORE this card's
+    // own gain_shield bumps it — mirrors the player's
+    // _shieldAtCardStart freeze.
+    const _enemyShieldAtCardStart = enemy.shield || 0;
     for (const eff of card.currentEffects) {
       if (eff.effectType === 'gain_shield') {
         enemy.shield += eff.value;
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
+      } else if (eff.effectType === 'draw_if_no_shield') {
+        // Buckler's "First Shield: Draw" — the enemy draws 1 if it
+        // had no shield when the card started. Uses the pre-play
+        // snapshot so a sibling gain_shield on the same card doesn't
+        // gate it out.
+        if (_enemyShieldAtCardStart === 0) {
+          const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
+          const drawn = enemy.deck.draw(1, cap);
+          if (debugMode) for (const d of drawn) addLog(`  Shield up! Draw: ${d.name}`, Colors.GRAY, d);
+          queueEnemyDrawnCards(drawn);
+        }
       } else if (eff.effectType === 'block') {
         // Varimatras Scale + any other enemy ABILITY card whose
         // payoff is one-turn temp block (cleared at end of the
@@ -38717,6 +39540,33 @@ function countAndRemoveDeadCreatures() {
     c.onDeathDamage = 0;
     if (typeof playSound === 'function') playSound('goblin_explosion', 0.7);
   }
+  // On-death Poison AoE — The Butcher (either side). When it falls it
+  // bursts Poison across the OPPOSING side: a player Butcher poisons
+  // the enemy + its creatures; an enemy Butcher poisons the player +
+  // their allies. Flag zeroed so a re-sweep can't double-fire.
+  {
+    const playerCreatures = new Set(player.creatures);
+    for (const c of [...enemy.creatures, ...player.creatures]) {
+      if (c.isAlive) continue;
+      if (!(c.onDeathPoisonAll > 0)) continue;
+      const n = c.onDeathPoisonAll;
+      c.onDeathPoisonAll = 0;
+      if (playerCreatures.has(c)) {
+        if (enemy && enemy.isAlive && !enemy._invulnerable) {
+          enemy.applyStatus('POISON', n); spawnTokenOnTarget(enemy, n, 'Poison', Colors.GREEN);
+        }
+        for (const e of (enemy.creatures || [])) {
+          if (e.isAlive && !e._invulnerable) { e.poisonStacks = (e.poisonStacks || 0) + n; spawnTokenOnTarget(e, n, 'Poison', Colors.GREEN); }
+        }
+      } else {
+        if (player) { player.applyStatus('POISON', n); spawnTokenOnTarget(player, n, 'Poison', Colors.GREEN); }
+        for (const a of (player.creatures || [])) {
+          if (a.isAlive) { a.poisonStacks = (a.poisonStacks || 0) + n; spawnTokenOnTarget(a, n, 'Poison', Colors.GREEN); }
+        }
+      }
+      addLog(`  ${c.name} bursts — Poison everywhere!`, Colors.GREEN);
+    }
+  }
   // onDeathFireHits — Magma Mephit and friends: when killed, fling
   // 1..N (random) single-stack Fire applications at random player-side
   // targets. Each hit picks an independent target from {player + alive
@@ -38806,7 +39656,21 @@ function combatVictory() {
   // ambience here; fights without a music override are a no-op
   // (updateMusicForCurrentScene early-returns when the area track
   // is already playing).
-  updateMusicForCurrentScene();
+  //
+  // Path of the Necromancer finale — the Gravekeeper's death swells
+  // the heroic theme instead of dropping back to the scene bed. It's
+  // the same track the main menu uses, so it carries unbroken through
+  // the abbey epilogue, the class-unlock splash, and back into the
+  // menu (returnToMenuFromNecroUnlock leaves it playing rather than
+  // restarting). Mark _menuMusicStarted so the eventual menu hand-off
+  // is a no-op. Doing it as an else avoids a double crossfade with the
+  // eerie-choir map latch updateMusicForCurrentScene would apply.
+  if (enemy && enemy._enemyId === 'plague_gravekeeper') {
+    crossfadeMusic('Music/music_heroic_01', 1500, 2500);
+    _menuMusicStarted = true;
+  } else {
+    updateMusicForCurrentScene();
+  }
   const gritHeal = player.getPerkStacks('combat_end_heal');
   if (gritHeal > 0) {
     healPlayer(gritHeal);
@@ -38917,6 +39781,33 @@ function handlePerkSelectClick(x, y) {
       const perk = perkChoices[i];
       player.perks.push(perk);
       addLog(`Perk gained: ${perk.name}!`, Colors.GOLD);
+      // Mini level-up beats (currently just the Path of the Necromancer
+      // Stone Door blessing) skip the rest / deck-tutorial / inventory
+      // tail entirely — heal already fired with the rebalance call at
+      // the trigger site, and the brief is "no deck rebalancing" so
+      // the player doesn't open the deck-category picker.
+      if (_perkSelectReturnToMap) {
+        _perkSelectReturnToMap = false;
+        _perkSelectBgKey = null;
+        // Optional chained encounter (Stone Door blessing → Abbey
+        // Courtyard). Launch it the same way the free-standing
+        // dining-room / post-dragon dialogs do: build it from the
+        // registry, reset the per-phase indices, and let
+        // advanceEncounterPhase enter the first TEXT phase + set the
+        // ENCOUNTER_TEXT state. Falls back to the map if unset.
+        const chainId = _perkSelectThenEncounterId;
+        _perkSelectThenEncounterId = null;
+        if (chainId && ENCOUNTER_REGISTRY[chainId]) {
+          currentEncounter = ENCOUNTER_REGISTRY[chainId]();
+          encounterTextIndex = 0;
+          encounterChoiceResult = null;
+          _encounterHadCombat = false;
+          advanceEncounterPhase();
+          return;
+        }
+        state = GameState.MAP;
+        return;
+      }
       // First rest ever: show the deck-balancing tutorial before handing
       // the player the inventory. Later rests skip straight to rebalancing.
       if (!shownDeckTutorial) {
@@ -38930,10 +39821,30 @@ function handlePerkSelectClick(x, y) {
   }
 }
 
+// One-shot flag set just before entering PERK_SELECT for non-level-up
+// perk grants (Stone Door blessing). Tells handlePerkSelectClick to
+// route straight back to the map after the pick instead of falling
+// into the standard rest / inventory tail.
+let _perkSelectReturnToMap = false;
+
+// Optional per-pick background override key for the perk screen. Set
+// alongside _perkSelectReturnToMap at mini-level-up trigger sites
+// (Stone Door blessing → 'bg_abbey_courtyard'); cleared after the
+// pick. null falls back to the default leaving-prison art.
+let _perkSelectBgKey = null;
+
+// Optional encounter id to chain into after a _perkSelectReturnToMap
+// pick instead of dropping straight back to the map (Stone Door
+// blessing → 'abbey_courtyard'). Consumed + cleared in
+// handlePerkSelectClick. null = just return to the map.
+let _perkSelectThenEncounterId = null;
+
 function drawPerkSelect() {
-  // Background: use the leaving-prison / chapter-end art when available,
-  // matching the ability-select screen that precedes this.
-  const bg = getEncounterBgImage('bg_leaving_prison');
+  // Background: a per-pick override (e.g. the Stone Door blessing's
+  // abbey courtyard) when set, else the leaving-prison / chapter-end
+  // art that matches the ability-select screen preceding this.
+  const bg = getEncounterBgImage(_perkSelectBgKey || 'bg_leaving_prison')
+    || getEncounterBgImage('bg_leaving_prison');
   if (bg) {
     ctx.drawImage(bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -40258,6 +41169,18 @@ function buildDwarvenTavernInventory() {
 // branch in createDwarvenSmithyEncounter mirrors this — the smith
 // acknowledges the player as a dragon-slayer before the shelves
 // fill out.
+// Arcane Emporium stock — the public shelf for everyone, plus Master
+// Elarion's "real stock" (bone gear) surfaced ONLY for the full
+// main-game Necromancer, shown after the downstairs dialog.
+function buildArcaneEmporiumInventory() {
+  const base = (SHOP_INVENTORIES['arcane_emporium'] || []).slice();
+  if (selectedClass === 'Necromancer' && _necromancerMainGame) {
+    base.push(createBoneStaff, createBoneWand, createBookOfTheDead, createBoneBuckler,
+              createSlimeJar, createPetSlimeCard);
+  }
+  return base;
+}
+
 function buildDwarvenSmithyInventory() {
   const base = [
     createDwarvenCrossbow,
@@ -40358,6 +41281,19 @@ function getCodexShopInventory(shopId) {
       { creator: createWhitescaleBrew, postDragon: true },
     ];
   }
+  if (shopId === 'arcane_emporium') {
+    // The live shop adds the Necromancer's secret-cellar stock (bone
+    // gear + the slime curiosities) via buildArcaneEmporiumInventory,
+    // gated on a main-game Necromancer. The codex is a "what could
+    // appear" view, so surface the full catalog here — base emporium
+    // stock plus the necromancer-only additions — so every member card
+    // picks up its "Shop: The Arcane Emporium" source line.
+    return [
+      ...(SHOP_INVENTORIES['arcane_emporium'] || []),
+      createBoneStaff, createBoneWand, createBookOfTheDead, createBoneBuckler,
+      createSlimeJar, createPetSlimeCard,
+    ];
+  }
   return SHOP_INVENTORIES[shopId] || [];
 }
 
@@ -40374,6 +41310,8 @@ function openShop(shopId, name) {
     ? buildDwarvenSmithyInventory()
     : shopId === 'dwarven_tavern'
     ? buildDwarvenTavernInventory()
+    : shopId === 'arcane_emporium'
+    ? buildArcaneEmporiumInventory()
     : (SHOP_INVENTORIES[shopId] || []);
   shopCards = inventory.map(entry => {
     const { creator, priceOverride } = resolveShopEntry(entry);
@@ -41633,6 +42571,9 @@ function drawInventory() {
     // Stash the rect so the click handler picks it up.
     _shopEquipPillRect = { x: px, y: pillY, w: pw, h: pillH };
   } else {
+    // 'Character' header centers on the whole section. The card itself
+    // is docked left (see drawInventoryCharacter), but the section
+    // title stays section-centered.
     ctx.fillText('Character', sections.character.x + sections.character.w / 2, sections.character.y + 25);
     _shopEquipPillRect = null;
   }
@@ -42101,18 +43042,19 @@ function drawInventoryCharacter(rect) {
   // Character card sized to leave room for a power card to its right (same ratio as combat).
   const cardW = 160;
   const cardH = Math.round(cardW * (COMBAT_CHAR_H / COMBAT_CHAR_W)); // ~218
-  // Character card is ALWAYS centered horizontally in the section,
-  // regardless of whether the player has a power. The power card (if
-  // any) gets stacked below the character card instead of beside it,
-  // so the class-name + Hand / Deck / Discard column under the art
-  // stays anchored to the section center. Previous attempts to
-  // squeeze the power into the gutter beside the art pushed the
-  // whole block off-center; centering the art is the more honest fix.
-  const cardX = rect.x + Math.round((rect.w - cardW) / 2);
+  // The character card is ALWAYS docked to the left of the section so
+  // it never shifts when the class gains or loses a power. The power
+  // card (if any) sits in the right gutter at proper size; with no
+  // power that space simply stays empty. The name / Hand / Deck /
+  // Discard / HP text centers INSIDE the card (textX = cardX + cardW/2);
+  // the "Character" section header centers on the whole section
+  // (drawn separately in drawInventory).
+  const hasPower = player.powers && player.powers.length > 0;
+  const cardX = rect.x + 8;
   const cardY = rect.y + 50;
 
   // Portrait art fills the card
-  const portraitArtId = `${selectedClass.toLowerCase()}_class`;
+  const portraitArtId = activeClassPortraitId();
   const portrait = getCardArt(portraitArtId);
   const hasArt = !!portrait;
 
@@ -42224,14 +43166,17 @@ function drawInventoryCharacter(rect) {
   ctx.textAlign = 'center';
   ctx.fillText(`HP: ${hp}/${maxHp}`, barX + barW / 2, barY + 13);
 
-  // Power card(s) — anchored to the right gutter of the section so
-  // the character art stays section-centered. The full-size power
-  // (76x101 in combat) would overlap the centered art; sized down
-  // to fit cleanly in the remaining ~52 px gutter between the right
-  // edge of the centered art and the section's right border.
-  if (player.powers && player.powers.length > 0) {
+  // Power card(s) — placed in the gutter to the right of the (now
+  // left-aligned) character art. With the art left-anchored the gutter
+  // is the full right half of the section, so the power renders at its
+  // proper combat size (76 wide) instead of a squashed thumbnail.
+  if (hasPower) {
     const gutter = rect.x + rect.w - (cardX + cardW) - 8;
-    const pwrW = Math.max(40, Math.min(gutter, 76));
+    // Match the COMBAT character-card : power-card size ratio exactly so
+    // the inventory power reads at the same relative size as in combat
+    // (power is COMBAT_POWER_W wide against a COMBAT_CHAR_W character).
+    // Clamp to the gutter so it can't overflow the section.
+    const pwrW = Math.min(gutter, Math.round(cardW * (COMBAT_POWER_W / COMBAT_CHAR_W)));
     const pwrH = Math.round(pwrW * (COMBAT_POWER_H / COMBAT_POWER_W));
     const pwrX = cardX + cardW + 4;
     const pwrY = cardY;
@@ -42771,6 +43716,13 @@ function commitSaveEditing() {
     // this the flag reset to false on load and the dialog never
     // re-triggered.
     studyVisited,
+    // Latches when the Stone Door opens (post-Specter mini level-up
+    // fires once). Persisted so revisits stay silent across loads.
+    stoneDoorOpened,
+    // True for a full main-game Necromancer run (vs the side-quest
+    // apprentice) — drives the older portrait + the Skeleton Mastery
+    // re-grant on load.
+    necromancerMainGame: _necromancerMainGame,
     completedEncounters,
     seenDialogs,
     journalChoices,
@@ -43382,15 +44334,20 @@ function restoreFromSave(data) {
     }
     player.addPower(power);
   }
+  // Full main-game Necromancer flag — restored BEFORE the power
+  // re-grant below so a main-game run gets Skeleton Mastery back even
+  // though it never completes the side quest's study_desk encounter.
+  _necromancerMainGame = !!data.necromancerMainGame;
   // Path of the Necromancer — re-grant Skeleton Mastery if the
-  // apprentice has already finished the study_desk encounter. The
-  // grant is one-shot (study_desk completion hook), so on save/load
-  // we need to project completedEncounters back onto player.powers.
-  // Without this, every reload after the study fight comes back with
-  // an empty power slot. createNecromancerPower lives in power.js.
+  // apprentice has already finished the study_desk encounter (side
+  // quest) OR this is a full main-game Necromancer (power from the
+  // start). The grant is one-shot, so on save/load we project it back
+  // onto player.powers; without this, every reload comes back with an
+  // empty power slot. createNecromancerPower lives in power.js.
   if (selectedClass === 'Necromancer'
-      && Array.isArray(data.completedEncounters)
-      && data.completedEncounters.includes('study_desk')
+      && (_necromancerMainGame
+          || (Array.isArray(data.completedEncounters)
+              && data.completedEncounters.includes('study_desk')))
       && !player.powers.some(p => p && p.id === 'necromancer_power')) {
     player.addPower(createNecromancerPower());
   }
@@ -43470,6 +44427,7 @@ function restoreFromSave(data) {
   studyVisited = !!data.studyVisited
     || (Array.isArray(data.completedEncounters)
         && data.completedEncounters.includes('study_desk'));
+  stoneDoorOpened = !!data.stoneDoorOpened;
   upperStairsReturnSeen = !!data.upperStairsReturnSeen;
   tharnagExitSeen = !!data.tharnagExitSeen;
   completedEncounters = new Set(Array.isArray(data.completedEncounters) ? data.completedEncounters : []);
@@ -43785,6 +44743,9 @@ function draw() {
       break;
     case GameState.END_CREDITS:
       drawEndCredits();
+      break;
+    case GameState.NECROMANCER_UNLOCK:
+      drawNecromancerUnlock();
       break;
     case GameState.COMBAT:
     case GameState.TARGETING:
@@ -44777,6 +45738,84 @@ function finishEndCredits() {
   state = GameState.MENU;
 }
 
+// === Necromancer-class unlock splash (Path of the Necromancer finale) ===
+// Entered from advanceEncounterPhase when the Abbey Courtyard epilogue
+// completes. Shows the reward title + older-necromancer portrait over
+// the frontier-road backdrop, then fades to the main menu on click.
+let _necroUnlockExiting = false;
+let _necroUnlockFade = 0;
+
+function returnToMenuFromNecroUnlock() {
+  _necroUnlockExiting = false;
+  _necroUnlockFade = 0;
+  // Tear the finished run down the same way "Quit to Menu" does so the
+  // title screen comes back clean and the menu theme restarts.
+  state = GameState.MENU;
+  player = null;
+  currentMap = null;
+  currentEncounter = null;
+  _encounterBgOverride = null;
+  // Music: the heroic theme started on the Gravekeeper's death IS the
+  // menu track, so leave it playing for a seamless hand-off instead of
+  // stopping + restarting it. combatVictory already set
+  // _menuMusicStarted, so startMenuMusicIfNeeded is a no-op here; the
+  // call is a safety net in case the track somehow stopped.
+  _hasEnteredCombat = false;
+  _lastMusicArea = null;
+  _lastMusicNodeId = null;
+  startMenuMusicIfNeeded();
+}
+
+function handleNecromancerUnlockClick() {
+  if (_necroUnlockExiting) return;
+  playSound('click');
+  _necroUnlockExiting = true;
+}
+
+function drawNecromancerUnlock() {
+  // Last backdrop — the frontier-road / story-selector art the
+  // epilogue ended on.
+  const bg = images['quest_select_bg'];
+  if (bg) ctx.drawImage(bg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  else { ctx.fillStyle = '#0a0a12'; ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); }
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 28px serif';
+  ctx.fillText('You have unlocked', SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.15);
+  ctx.font = 'bold 52px serif';
+  ctx.fillText('THE NECROMANCER CLASS', SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.235);
+
+  const portrait = images['necromancer_unlock_portrait'];
+  if (portrait && portrait.width) {
+    const maxH = SCREEN_HEIGHT * 0.5;
+    const scale = maxH / portrait.height;
+    const pw = portrait.width * scale;
+    const ph = portrait.height * scale;
+    const px = (SCREEN_WIDTH - pw) / 2;
+    const py = SCREEN_HEIGHT * 0.3;
+    ctx.drawImage(portrait, px, py, pw, ph);
+    ctx.strokeStyle = Colors.GOLD;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px, py, pw, ph);
+  }
+
+  ctx.fillStyle = Colors.WHITE;
+  ctx.font = '18px sans-serif';
+  ctx.fillText('Click to continue', SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.93);
+  ctx.textAlign = 'left';
+
+  // Click-triggered fade-out to the main menu.
+  if (_necroUnlockExiting) {
+    _necroUnlockFade = Math.min(1, _necroUnlockFade + 0.035);
+    ctx.fillStyle = `rgba(0,0,0,${_necroUnlockFade})`;
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    if (_necroUnlockFade >= 1) returnToMenuFromNecroUnlock();
+  }
+}
+
 function drawEndCredits() {
   // Solid black backdrop — credits-style.
   ctx.fillStyle = '#000';
@@ -45188,6 +46227,20 @@ const CARD_SFX_OVERRIDES = {
   // Curse + Obsidian Shard banish) so the necromancer-flavored
   // spells share a sonic identity.
   drain_life:               { play: 'dark_spell_01' },
+  // Shadow Bolt — Necromancer Tier 1. Heavier warp variant on cast
+  // so the bolt reads distinct from Drain Life's dark_spell_01.
+  shadow_bolt:              { play: 'dark_warp_02' },
+  // Apprentice's Spellbook — page-flip on cast.
+  apprentices_spellbook:    { play: 'book_flip' },
+  // Plague (Necromancer Tier 2) — glitchy necrotic spread on cast.
+  plague:                   { play: 'dark_glitch_wood_02' },
+  // Corpse Explosion (Necromancer Tier 2) — heavy wet detonation.
+  corpse_explosion:         { play: 'dark_impact_deep_03' },
+  // The Warden's Whip + Tentacle Whip — crack on cast. Both deal only
+  // Bleed (no `damage` effect), so the weapon flesh/blocked hooks never
+  // fire; the whip crack has to ride the play cue instead.
+  wardens_whip:             { play: 'whip_flesh' },
+  tentacle_whip:            { play: 'whip_flesh' },
   // Obsidian Oracle's Curse — dark incantation on cast.
   obsidian_curse:           { play: 'dark_spell_01' },
   // Obsidian Shard token — when the player banishes it (recharge
@@ -45244,7 +46297,7 @@ const CARD_SFX_OVERRIDES = {
   // cold_whoosh via the apply_ice_all handler's status SFX.
   fish_scale_boots:         { flesh: 'boots_flesh', defense: 'water_bodyfall_01' },
   zhosts_buckler:           { flesh: 'shield_flesh', blocked: 'shield_blocked' },
-  kobold_shield:            { flesh: 'shield_flesh', blocked: 'shield_flesh' },
+  kobold_shield:            { play: 'shield_flesh', flesh: 'shield_flesh', blocked: 'shield_flesh' },
   kobold_spear:             { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
   trident_thrust:           { flesh: 'spear_flesh',       blocked: 'spear_blocked' },
   trident_throw:            { flesh: 'spear_throw_flesh', blocked: 'spear_blocked' },
@@ -45585,6 +46638,15 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // chick's audio identity is a single recurring shriek.
     if (name === 'roc chick') {
       return { flesh: 'monster_scream_01', blocked: 'monster_scream_01', play: 'monster_scream_01' };
+    }
+    // Death Specter (EndlessDead horde) — same screech as the Specter
+    // of Death's Death Sickle so its killing swing reads identically.
+    if (name === 'death specter') {
+      return { flesh: 'specter_screech', blocked: 'specter_screech', play: 'specter_screech' };
+    }
+    // Forgotten Specter — the standard specter screech on every swing.
+    if (name === 'forgotten specter') {
+      return { flesh: 'specter_screech', blocked: 'specter_screech', play: 'specter_screech' };
     }
     // Valdrisa Emberforge (companion ally) — standard 1H mace family.
     if (name === 'valdrisa') {
@@ -46612,8 +47674,8 @@ const ALL_POWER_CREATORS = [
   createObsidianOracleBodyPower,
   createVanish, createBrute, createEthereal,
   // Path of the Necromancer — Plague Cockroach + Necromancer's Power
-  // + Army of the Dead (Worn Floor boss).
-  createPlagueSpawn, createNecromancerPower, createArmyOfTheDead,
+  // + Army of the Dead (Worn Floor boss) + Endless Dead (Gravekeeper).
+  createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
 ];
 
 // Extra player-side cards not in CARD_REGISTRY because they're never
@@ -47592,7 +48654,7 @@ function drawCodexLootGrid(L) {
   const perkTableEntries = [];
   for (const tier of Object.keys(CLASS_PERK_WEIGHTS)) {
     const perTier = CLASS_PERK_WEIGHTS[tier] || {};
-    const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
+    const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid', 'Necromancer'];
     for (const className of CLASS_ORDER) {
       const weights = perTier[className];
       if (!weights || Object.keys(weights).length === 0) continue;
@@ -48103,7 +49165,7 @@ function getPerkTableAppearances(perkId) {
     }
   }
   // Sort by class order (fixed) then tier.
-  const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
+  const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid', 'Necromancer'];
   out.sort((a, b) => {
     const ai = CLASS_ORDER.indexOf(a.className); const bi = CLASS_ORDER.indexOf(b.className);
     if (ai !== bi) return ai - bi;
@@ -48122,6 +49184,7 @@ const PERK_TRIGGER_LABELS = {
   combat_start_first_strike:   'Combat Start',
   combat_first_unpreventable:  'Combat Start',
   combat_first_debuff_spread:  'Combat',
+  combat_first_skeleton_buff:  'Combat',
   loot_bonus_gold:             'Loot',
   combat_start_goodberry:      'Combat Start',
   combat_end_heal:             'Combat End',
@@ -48700,9 +49763,10 @@ function getCodexMonsterIds() {
     // reveal, Forgotten Specter is the East Corridor wraith, Army of
     // the Dead is the Worn Floor invulnerable boss, Specter of Death
     // is the Stone Stair gate-keeper (book-activated Arcane Shield
-    // gate).
+    // gate). Plague Gravekeeper is the Abbey Courtyard ambush that
+    // chains off the Stone Door opening.
     'plague_cockroach', 'apprentice_skeleton', 'forgotten_specter',
-    'army_of_the_dead', 'specter_of_death',
+    'army_of_the_dead', 'specter_of_death', 'plague_gravekeeper',
   ];
 }
 
@@ -48950,6 +50014,8 @@ function buildCodexSourceCache() {
     ['Rogue',   getRogueStarterDeck],
     ['Warrior', getWarriorStarterDeck],
     ['Druid',   getDruidStarterDeck],
+    // Path of the Necromancer — apprentice starter (3 Cloth Armor).
+    ['Necromancer', getNecromancerStarterDeck],
   ];
   for (const [cls, fn] of starterDecks) {
     const cards = fn();
@@ -48989,6 +50055,9 @@ function buildCodexSourceCache() {
     ['Rogue',   getRogueAbilityChoices],
     ['Warrior', getWarriorAbilityChoices],
     ['Druid',   getDruidAbilityChoices],
+    // Path of the Necromancer — Tier 1 spell pool (also the future
+    // full-class list).
+    ['Necromancer', getNecromancerAbilityChoices],
   ];
   for (const [cls, fn] of classAbilityChoices) {
     const all = fn();
@@ -49148,7 +50217,7 @@ function buildCodexSourceCache() {
   // buff-target logic can find it.
   const skeletonSummon = new Creature({
     name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-    traits: ['Skeleton'],
+    traits: ['Skeleton', 'Undead'],
     // No description — the armor icon strip on the left of the
     // hover card already shows "1 Armor", so the small box section
     // doesn't need to repeat it.
@@ -49250,7 +50319,7 @@ function buildCodexSourceCache() {
     // Path of the Necromancer side quest enemies — sandbox-scanned so
     // their decks/powers surface in the codex Source-line builder.
     'plague_cockroach', 'apprentice_skeleton', 'forgotten_specter',
-    'army_of_the_dead', 'specter_of_death',
+    'army_of_the_dead', 'specter_of_death', 'plague_gravekeeper',
   ];
   const savedEnemy = enemy;
   // Some enemy setup branches mutate `player` as a side effect — the
@@ -50247,7 +51316,7 @@ function handleCodexClick(x, y) {
         codexLootHighlightId = link.id;
         const cardTableCount = Object.keys(LOOT_TABLES).length;
         // Stable class/tier order matches drawCodexLootGrid.
-        const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
+        const CLASS_ORDER = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid', 'Necromancer'];
         let perkIdx = 0, found = false;
         for (const tier of Object.keys(CLASS_PERK_WEIGHTS).sort()) {
           for (const cls of CLASS_ORDER) {
@@ -50632,6 +51701,7 @@ function handleJournalClick(x, y) {
 loadTutorialState();
 loadGamePlusUnlock();
 loadGamePlusToggle();
+loadNecromancerUnlock();
 loadOptionsFromStorage();
 loadAssets().then(() => {
   requestAnimationFrame(gameLoop);

@@ -369,22 +369,71 @@ export class Character {
   // Hard cap on simultaneous allies. Mirrors PY (player + enemy max_creatures
   // = 12 in this build) — anything past the cap is silently refused so
   // callers can branch on the return value to short-circuit summon effects.
+  // The field is a CREATURE_COLS-wide grid (2 rows of 6). Capacity is
+  // counted in CELLS, not array entries, so a multi-cell creature (the
+  // enemy Butcher at 2x2 = 4 cells) eats its footprint of the 12.
   static MAX_CREATURES = 12;
+  static CREATURE_COLS = 6;
+
+  // Total grid cells currently occupied by allies (sum of footprints).
+  // Equals creatures.length whenever every creature is the default 1x1.
+  usedCells() {
+    let n = 0;
+    for (const c of this.creatures) n += (c.slotW || 1) * (c.slotH || 1);
+    return n;
+  }
+
+  // Set of grid-cell indices covered by the existing creatures' footprints.
+  _occupiedCells() {
+    const cols = Character.CREATURE_COLS;
+    const occ = new Set();
+    for (const c of this.creatures) {
+      const a = c.slot;
+      if (a == null || a < 0) continue;
+      const cw = c.slotW || 1, ch = c.slotH || 1;
+      const ac = a % cols, ar = Math.floor(a / cols);
+      for (let dr = 0; dr < ch; dr++) {
+        for (let dc = 0; dc < cw; dc++) occ.add((ac + dc) + (ar + dr) * cols);
+      }
+    }
+    return occ;
+  }
 
   addCreature(creature) {
-    if (this.creatures.length >= Character.MAX_CREATURES) return false;
+    const cols = Character.CREATURE_COLS;
+    const rows = Character.MAX_CREATURES / cols; // 2
+    const fw = creature.slotW || 1;
+    const fh = creature.slotH || 1;
+    // Cell-budget check first (fast reject).
+    if (this.usedCells() + fw * fh > Character.MAX_CREATURES) return false;
+    // Find the lowest anchor whose fw x fh block is fully in-grid AND
+    // free. For 1x1 creatures this is just the lowest free slot, so
+    // existing behavior is unchanged.
+    const occ = this._occupiedCells();
+    let anchor = -1;
+    for (let s = 0; s < cols * rows; s++) {
+      const ac = s % cols, ar = Math.floor(s / cols);
+      if (ac + fw > cols || ar + fh > rows) continue; // off the grid
+      let fits = true;
+      for (let dr = 0; dr < fh && fits; dr++) {
+        for (let dc = 0; dc < fw && fits; dc++) {
+          if (occ.has((ac + dc) + (ar + dr) * cols)) fits = false;
+        }
+      }
+      if (fits) { anchor = s; break; }
+    }
+    if (anchor < 0) return false; // no contiguous block (fragmented field)
     creature.owner = this;
-    // Assign the lowest free slot so creatures fill 2 rows of 6 in display order
-    const used = new Set(this.creatures.map(c => c.slot).filter(s => s >= 0));
-    let slot = 0;
-    while (used.has(slot)) slot++;
-    creature.slot = slot;
+    creature.slot = anchor;
     this.creatures.push(creature);
     return true;
   }
 
+  // True if a default 1x1 ally can still be summoned. Footprint-aware
+  // callers (the enemy Butcher) rely on addCreature's boolean return
+  // instead, which checks the actual 2x2 block.
   canSummonMore() {
-    return this.creatures.length < Character.MAX_CREATURES;
+    return this.usedCells() < Character.MAX_CREATURES;
   }
 
   readyCreatures() {
@@ -1077,6 +1126,20 @@ export function createBalancedPerk() {
   });
 }
 
+// Necromancer-flavored unique: the first Skeleton-trait ally summoned
+// during combat gets a one-time +1/+1 (atk + maxHp + currentHp). Tied
+// to the Skeleton Mastery / Army of the Dead summon flow — fires once
+// per combat regardless of how many skeletons go on to enter the
+// field after. Uses the Skeleton Mastery art (NecromancerPower.jpg).
+export function createSkeletalStrengthPerk() {
+  return new Perk({
+    id: 'skeletal_strength', name: 'Skeletal Strength',
+    description: 'Combat: Your First Skeleton gets +1/+1.',
+    imageId: 'skeletal_strength_perk', effectType: 'combat_first_skeleton_buff', effectValue: 1,
+    unique: true,
+  });
+}
+
 // Druid-flavored unique: tops up a Goodberry in hand on combat start,
 // mirroring the Druid's starter ally-food card. Uses the Druid-themed
 // "Harvest" art.
@@ -1100,6 +1163,9 @@ export const CLASS_PERK_WEIGHTS = {
     Ranger:  { tough: 0.5,  prepared: 1.0,  flash_of_genius: 0.25, grit: 0.5,  arsenal: 0.5,  first_strike: 0.25, lucky_find: 0.5 },
     Paladin: { tough: 1.0,  prepared: 0.5,  flash_of_genius: 0.25, grit: 0.5,  arsenal: 0.5,  armored: 0.25,     lucky_find: 0.5 },
     Druid:   { tough: 0.75, prepared: 0.75, flash_of_genius: 0.25, grit: 0.5,  balanced: 0.5, harvest: 0.25,     lucky_find: 0.5 },
+    // Necromancer — heavy on Grit, light on Skeletal Strength / Talented.
+    // Targets ~ 14/14/14/14/7/29/7 distribution over total weight 3.5.
+    Necromancer: { tough: 0.5, prepared: 0.5, flash_of_genius: 0.5, grit: 1.0, talented: 0.25, lucky_find: 0.5, skeletal_strength: 0.25 },
   },
   2: {
     // Tier 2 rolls currently empty; getPerkChoices falls back to tier 1.
@@ -1123,6 +1189,7 @@ export const PERK_REGISTRY = {
   power_surge:     createPowerSurgePerk,
   balanced:        createBalancedPerk,
   harvest:         createHarvestPerk,
+  skeletal_strength: createSkeletalStrengthPerk,
 };
 
 // Pick `count` unique perks via weighted random without replacement from
