@@ -2643,12 +2643,13 @@ export function createBoneStormNecromancer() {
   return new Card({
     id: 'bone_storm_necromancer',
     name: 'Bone Storm',
-    description: 'Steal ALL Shield.\nDeal 1 to ALL.\nUndead +1/+1. Draw.',
-    shortDesc: 'Steal Shields\n1 to all, Undead +1/+1\nDraw',
+    description: 'Recharge a Card ->\nSteal ALL Shield. Deal 1 to ALL.\nUndead +1/+1. Draw.',
+    shortDesc: 'R-Card->Steal Shields\n1 to all, Undead +1/+1\nDraw',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('strip_all_shields_gain', 0, TargetType.ALL_ENEMIES),
       new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('buff_all_undead', 1, TargetType.SELF),
