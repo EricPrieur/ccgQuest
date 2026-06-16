@@ -41,7 +41,7 @@ import {
   createValdrisaTier3Creature,
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
-  createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffElfReinforcements,
+  createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffRegrowthLegacy, createBuffElfReinforcements,
   createBuffBlizzard, createBuffSahuaginEye, createBuffOldGodBlessing, createBuffObsidianCore,
   createBuffMagmaTablet, createBuffVolcanoBlessing, createBuffMapKnowledge,
   createBadRations, createSturdyBoots,
@@ -54,13 +54,13 @@ import {
   createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
   createDragonBoneBow, createDragonEyeMace, createWhiteDragonEgg,
   createWhiteDragonWyrmling,
-  createHeroicStrike, createHolyLight, createShieldOfFaith, createFlashHeal,
+  createHeroicStrike, createHolyLight, createShieldOfFaith, createFlashHeal, createHeroicHeal,
   createFireBurst, createIceBolt, createMagicMissiles, createArcaneShield,
   createVialOfPoison, createSneakAttack, createPetSpider, createCarefulStrike, createHeroicTumble,
   createGreaterCleave, createCharge, createRecklessStrike, createShieldBash,
   createMultiShot, createAimedShotCard, createGoodberries, createGoodberry, createTamedRat,
   createFireToken, createIceToken, createCatFormToken, createBearFormToken,
-  createWrath, createRegrowth, createFeralSwipe, createFeralSwipeLegacy,
+  createWrath, createRegrowth, createRegrowthLegacy, createFeralSwipe, createFeralSwipeLegacy,
   createSpearThrow, createIcyBreath, createShieldBashEnemy, createZhostsBuckler,
   createWhiteClaw, createGreatclub, createQuarterstaff, createAle,
   createTravelRations, createBandages, createCuredBandage, createTravelersClothing, createSack,
@@ -117,7 +117,7 @@ import {
   createElementalWeapon,
   createBurningHands, createIceNova, createIceBlock, createIceShatter, createColdBreath, createArcaneBeam,
   createVarimatrasBite, createVarimatrasClaw, createVarimatrasTail, createVarimatrasWing, createVarimatrasScale,
-  createFanOfBlades, createBackstab, createPoisonedDagger, createSprint,
+  createFanOfBlades, createBladeFlurry, createBackstab, createPoisonedDagger, createSprint, createSprintEnemy,
   createThunderclap, createShieldWall, createBattleShout, createExecute,
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
@@ -1150,6 +1150,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
     // regen). Generic swap can only hit one before the other
     // collides. Rebuild the full description from the scaled values.
     if (c.id === 'regrowth') {
+      const healOnPlay = (c.effects.find(e => e.effectType === 'heal_overheal_treant')?.value) || 0;
+      const turns = (c.effects.find(e => e.effectType === 'regen_treant_buff')?.value) || 0;
+      const healPerTurn = 1 + offset;
+      c.description = `Heal ${healOnPlay}, Heal ${healPerTurn} for ${turns} Turns.\nOverheal: Summon a Treant.`;
+      c.shortDesc = `Heal ${healOnPlay}, Regen ${turns}t\nOverheal: Treant`;
+    }
+    if (c.id === 'regrowth_legacy') {
       const healOnPlay = (c.effects.find(e => e.effectType === 'heal')?.value) || 0;
       const turns = (c.effects.find(e => e.effectType === 'regen_buff')?.value) || 0;
       const healPerTurn = 1 + offset;
@@ -3448,6 +3455,9 @@ let barrageShotsTotal = 0;        // total shots this barrage (barrage value + 1
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
 let barrageShotDamage = 1;        // per-shot base damage from the MM card
+let barrageBonusPoison = 0;       // intrinsic per-shot Poison (Poisoned Daggers "1 + Poison")
+let barrageStaysInHand = false;   // card stays in hand on finish (no recharge/draw)
+let barrageDrawOnFinish = 1;      // cards drawn when a non-stays barrage finishes (MM = 1, Blade Flurry = 0)
 // Dragon Bone Bow variant: when true, each shot's base damage tapers
 // down by (shotsFired - 1) from barrageShotDamage. Top damage = 4 →
 // shot 1 = 4, shot 2 = 3, shot 3 = 2. Reset in finishBarrage /
@@ -3550,7 +3560,7 @@ const CARD_REGISTRY = {
   white_dragon_wyrmling: createWhiteDragonWyrmling,
   // Abilities
   heroic_strike: createHeroicStrike, holy_light: createHolyLight,
-  shield_of_faith: createShieldOfFaith, flash_heal: createFlashHeal,
+  shield_of_faith: createShieldOfFaith, flash_heal: createFlashHeal, heroic_heal: createHeroicHeal,
   fire_burst: createFireBurst, ice_bolt: createIceBolt,
   magic_missiles: createMagicMissiles, arcane_shield: createArcaneShield,
   vial_of_poison: createVialOfPoison, sneak_attack: createSneakAttack,
@@ -3560,7 +3570,7 @@ const CARD_REGISTRY = {
   shield_bash: createShieldBash, multi_shot: createMultiShot,
   aimed_shot_card: createAimedShotCard,
   goodberries: createGoodberries, tamed_rat: createTamedRat,
-  wrath: createWrath, regrowth: createRegrowth, feral_swipe: createFeralSwipe,
+  wrath: createWrath, regrowth: createRegrowth, regrowth_legacy: createRegrowthLegacy, feral_swipe: createFeralSwipe,
   // Legacy shield-then-damage Feral Swipe; kept registered so older
   // saves that already had the card still deserialize cleanly. No
   // level-up / shrine pick ever offers it.
@@ -3583,7 +3593,7 @@ const CARD_REGISTRY = {
   // buildCodexSourceCache) instead of cluttering the Player Cards
   // tab. They're still imported above for ENEMY_DECKS.varimatras +
   // continueCombatPhase2's force-injected Cold Breath.
-  fan_of_blades: createFanOfBlades, backstab: createBackstab,
+  fan_of_blades: createFanOfBlades, blade_flurry: createBladeFlurry, backstab: createBackstab,
   poisoned_dagger: createPoisonedDagger, sprint: createSprint,
   thunderclap: createThunderclap, shield_wall: createShieldWall,
   battle_shout: createBattleShout, execute: createExecute,
@@ -6463,6 +6473,20 @@ function startGamePlusFromSave(slot) {
       if (oldPower) newPower.exhausted = oldPower.exhausted;
       player.powers = [];
       player.addPower(newPower);
+    }
+    // Necromancer — getClassPower returns null (Skeleton Mastery is
+    // normally earned from the study_desk encounter), so the rebuild
+    // above skips it. A Game+ run ALWAYS launches from a main-story
+    // Part-1 completion (the side quest never produces a
+    // part1_complete save), so this is always a main-game Necromancer
+    // who should have the power. Force the flag + re-grant if missing —
+    // also rescues older saves written before necromancerMainGame was
+    // persisted.
+    if (selectedClass === 'Necromancer') {
+      _necromancerMainGame = true;
+      if (!player.powers.some(p => p && p.id === 'necromancer_power')) {
+        player.addPower(createNecromancerPower());
+      }
     }
   }
   // ccgQuest+ restart wipes player.persistentBuffs alongside the
@@ -14941,7 +14965,7 @@ function setupEnemyForCombat(enemyId) {
     // (+2 if Poisoned). Same ordering as PY.
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createPoisonedDagger, 26));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createSlyBlade, 22));
-    for (let i = 0; i < 1; i++) enemy.deck.addCard(withPriority(createSprint, 18));
+    for (let i = 0; i < 1; i++) enemy.deck.addCard(withPriority(createSprintEnemy, 18));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createPetSpider, 15));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createBow, 14));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createCarefulStrike, 11));
@@ -16138,6 +16162,11 @@ function handleEncounterChoiceClick(x, y) {
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
               mapTableRested, caveEntranceDoubledBack,
               mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize,
+              // Persist the main-game Necromancer flag so a Game+ run
+              // loaded from this slot re-grants Skeleton Mastery (a
+              // main-game Necromancer never completes the study_desk
+              // side quest, so the completedEncounters fallback misses).
+              necromancerMainGame: _necromancerMainGame,
               playerTierOffset, monsterTierOffset,
             }, `part1_complete_${classKey}`, `End of Part 1 — ${selectedClass}`);
           } catch (err) {
@@ -18791,9 +18820,10 @@ function startCombat() {
   const startBuffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(startBuffLogs);
   for (const log of startBuffLogs) {
-    addLog(log.text, log.color, log.card || null, log.buff || null);
+    if (log.text) addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
     if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
+    if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
   }
 
   addLog(`Your turn! Play cards from your hand.`, Colors.GREEN);
@@ -19018,9 +19048,10 @@ function continueCombatPhase2() {
   const phase2BuffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(phase2BuffLogs);
   for (const log of phase2BuffLogs) {
-    addLog(log.text, log.color, log.card || null, log.buff || null);
+    if (log.text) addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
     if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
+    if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
   }
 
   // Boss-music swap to the "one last battle" theme.
@@ -19591,7 +19622,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overwhelm|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overheal|Overwhelm|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -19711,6 +19742,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // keyword so it pairs visually with other recharge mechanics.
         badge = { type: 'badge', label: 'WHEN RECHARGED',
           bg: 'rgba(40,70,110,0.92)', border: '#9cd6ff', fg: '#d6ecff' };
+      } else if (phrase === 'Overheal') {
+        // Heal-payoff keyword (Heroic Heal). Healing past the target's
+        // max HP isn't wasted — each overflow point converts into a
+        // bonus (here, Heroism). Healing-green palette so the pill
+        // reads as a heal mechanic and pairs with the heal numbers.
+        badge = { type: 'badge', label: 'OVERHEAL',
+          bg: 'rgba(30,100,64,0.92)', border: '#80e0a4', fg: '#ccf6dd' };
       } else if (phrase === 'Overwhelm') {
         // Enemy-power keyword (Dire Fury card). Hovering the pill
         // pops the full Overwhelm power card via the hoveredPower-
@@ -20271,6 +20309,7 @@ const PILL_DESCRIPTIONS = {
   '2 TARGETS': 'Triggers when you pick 2 distinct targets — no damage needed, just the second pick.',
   'FIRST SHIELD': 'Triggers only when you had 0 Shield BEFORE playing this card — the first shield card in a sequence pays off, follow-ups do not.',
   'STAYS IN HAND': 'The card never leaves your hand — no recharge or discard pile. You can keep using it every turn at its normal cost.',
+  'OVERHEAL': 'Healing past the target’s max HP is not wasted — each overflow point is converted, one for one, into the bonus the card names instead.',
   'ON KILL': 'Fires when this swing drops a creature to 0 HP. Works on both sides — if an enemy plays a kill-rider card and slays one of your allies, they get the benefit too.',
   'BEVERAGE': 'The drink slot. Buff stays active across every combat until you rest. You can only have one Beverage at a time — consuming another replaces it.',
   'MEAL': 'The food slot. Buff stays active across every combat until you rest. You can only have one Meal at a time — consuming another replaces it. Independent of the Beverage slot.',
@@ -21456,6 +21495,10 @@ function drawCombat() {
           effects: [],
           modes: null,
           currentEffects: [],
+          // Buffs that can spawn a creature (Regrowth → Treant) carry a
+          // previewCreature so the hover pops the mini summon card beside
+          // the buff tooltip, same as hovering the source card.
+          previewCreature: area.buff.previewCreature || null,
           copy: () => buffCard,
           exhausted: false,
         };
@@ -23097,6 +23140,31 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   // draw alongside the persistent buff badges so the player can see
   // the shark's compounding damage without inspecting the full card.
   drawCreatureBadgeIcon('icon_rage', creature.rage, '#ff7878');
+  // Regen buffs (Regrowth heal-over-time on an ally) — render the SOURCE
+  // CARD ART as the buff icon, exactly like the player's Regrowth buff
+  // (getCardArt(buff.imageId)), with the turns remaining. Sits in the
+  // badge row beside Shield / Heroism / etc.
+  for (const rb of (Array.isArray(creature.regenBuffs) ? creature.regenBuffs : [])) {
+    if (!(rb.turnsRemaining > 0)) continue;
+    const RB = 16;
+    const buffArt = getCardArt(rb.imageId || 'regrowth');
+    if (buffArt) {
+      ctx.drawImage(buffArt, bx, badgeY - 2, RB, RB);
+      ctx.strokeStyle = Colors.GREEN;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, badgeY - 2, RB, RB);
+      bx += RB + 1;
+    }
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.95)';
+    ctx.shadowBlur = 3; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+    ctx.fillStyle = '#80e0a4';
+    ctx.font = 'bold 15px sans-serif';
+    const rbTxt = rb.turnsRemaining.toString();
+    ctx.fillText(rbTxt, bx, badgeY + 6);
+    ctx.restore();
+    bx += ctx.measureText(rbTxt).width + 6;
+  }
   ctx.font = 'bold 12px sans-serif';
   // Status effects: fire / ice / poison / shock — left-aligned with icons
   const cIconSize = 14;
@@ -24272,6 +24340,52 @@ function handleCombatClick(x, y) {
           showStyledToast(`${card.name}: 3 shots — click a target (each shot picks its own)`, 'multi');
           return;
         }
+        // Poisoned Daggers — 2-shot poison barrage. Same per-shot,
+        // pick-your-own-target flow as Magic Missiles (each shot carries
+        // ALL riders via resolveBarrageShot), but each shot also stamps
+        // the card's intrinsic +1 Poison, and the card STAYS IN HAND
+        // (finishBarrage just exhausts it — no recharge / draw).
+        const poisonBarrageEff = (card.effects || []).find(e => e.effectType === 'poison_dagger_barrage');
+        if (poisonBarrageEff && needsTarget(card)) {
+          selectedCardIndex = i;
+          barrageMode = true;
+          barrageDescending = false;
+          barrageCardIndex = i;
+          barrageRechargedCard = null;
+          barrageShotsTotal = 2;
+          barrageShotsLeft = 2;
+          barrageShotsFired = 0;
+          barrageShotDamage = poisonBarrageEff.value || 1;
+          barrageBonusPoison = 1;
+          barrageStaysInHand = true;
+          _handOrderSnapshot = [...player.deck.hand];
+          state = GameState.TARGETING;
+          showStyledToast(`${card.name}: 2 attacks — click a target (each picks its own, Done to stop)`, 'multi');
+          return;
+        }
+        // Blade Flurry — 5-shot damage barrage. Same per-shot, pick-your-
+        // own-target flow as Magic Missiles (each shot carries ALL riders
+        // via resolveBarrageShot). No intrinsic poison, no stays-in-hand,
+        // and no Draw on finish (barrageDrawOnFinish 0).
+        const fluryBarrageEff = (card.effects || []).find(e => e.effectType === 'blade_flurry_barrage');
+        if (fluryBarrageEff && needsTarget(card)) {
+          selectedCardIndex = i;
+          barrageMode = true;
+          barrageDescending = false;
+          barrageCardIndex = i;
+          barrageRechargedCard = null;
+          barrageShotsTotal = 5;
+          barrageShotsLeft = 5;
+          barrageShotsFired = 0;
+          barrageShotDamage = fluryBarrageEff.value || 1;
+          barrageBonusPoison = 0;
+          barrageStaysInHand = false;
+          barrageDrawOnFinish = 0;
+          _handOrderSnapshot = [...player.deck.hand];
+          state = GameState.TARGETING;
+          showStyledToast(`${card.name}: 5 attacks — click a target (each picks its own, Done to stop)`, 'multi');
+          return;
+        }
         // Check for Arcane Beam — click cards to charge (+N dmg each),
         // click enemy to fire. Both the base + bonus values come from
         // the card's effects so future cards can reuse the pattern.
@@ -25404,6 +25518,11 @@ function resolveBarrageShot(target) {
     const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
     applyPoisonRider(enemy, barragePoisonStacks, taken);
+    if (barrageBonusPoison > 0) {
+      enemy.applyStatus('POISON', barrageBonusPoison);
+      spawnTokenOnTarget(enemy, barrageBonusPoison, 'Poison', Colors.GREEN);
+      addLog(`  +${barrageBonusPoison} Poison`, Colors.GREEN);
+    }
     if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
     if (taken > 0) applyElementalWeaponRider(enemy, taken);
     if (taken > 0) applyBleedWeaponRider(enemy, taken);
@@ -25414,6 +25533,11 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, actual);
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
     applyPoisonRider(target, barragePoisonStacks, actual);
+    if (barrageBonusPoison > 0 && target.isAlive) {
+      target.poisonStacks = (target.poisonStacks || 0) + barrageBonusPoison;
+      spawnTokenOnTarget(target, barrageBonusPoison, 'Poison', Colors.GREEN);
+      addLog(`  +${barrageBonusPoison} Poison on ${target.name}`, Colors.GREEN);
+    }
     if (actual > 0) applyIgniteRider(target, barrageIgnite);
     if (actual > 0) applyElementalWeaponRider(target, actual);
     if (actual > 0) applyBleedWeaponRider(target, actual);
@@ -25440,14 +25564,24 @@ function finishBarrage() {
   if (barrageCardIndex >= 0 && barrageCardIndex < player.deck.hand.length) {
     const card = player.deck.hand[barrageCardIndex];
     if (barrageShotsFired === 0) addLog(`You play ${card.name}`, Colors.GREEN, card);
-    player.deck.hand.splice(barrageCardIndex, 1);
-    // The recharge_extra cost ("Recharge a Card ->") is paid up front
-    // via the player-picked cardRechargeMode flow before the barrage
-    // starts — nothing extra to recharge here.
-    const drawn = player.deck.draw(1, MAX_HAND_SIZE);
-    for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
-    player.deck.placeByCost(card);
+    if (barrageStaysInHand) {
+      // Poisoned Daggers — the card stays in hand; just exhaust it so it
+      // can't replay this turn. No draw, no recharge/placeByCost.
+      card.exhausted = true;
+    } else {
+      player.deck.hand.splice(barrageCardIndex, 1);
+      // The recharge_extra cost ("Recharge a Card ->") is paid up front
+      // via the player-picked cardRechargeMode flow before the barrage
+      // starts — nothing extra to recharge here. barrageDrawOnFinish is
+      // the card's own Draw (Magic Missiles = 1, Blade Flurry = 0).
+      const drawn = player.deck.draw(barrageDrawOnFinish, MAX_HAND_SIZE);
+      for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+      player.deck.placeByCost(card);
+    }
   }
+  barrageBonusPoison = 0;
+  barrageStaysInHand = false;
+  barrageDrawOnFinish = 1;
   barrageRechargedCard = null;
   barrageMode = false;
   barrageDescending = false;
@@ -25498,6 +25632,9 @@ function cancelBarrage() {
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
   barrageShotDamage = 1;
+  barrageBonusPoison = 0;
+  barrageStaysInHand = false;
+  barrageDrawOnFinish = 1;
   barragePoisonStacks = 0;
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
@@ -25746,7 +25883,9 @@ function needsTarget(card) {
      e.effectType === 'apply_bleed' ||
      e.effectType === 'damage_range' ||
      e.effectType === 'dragon_bow_barrage' ||
-     e.effectType === 'magic_missile_barrage')
+     e.effectType === 'magic_missile_barrage' ||
+     e.effectType === 'poison_dagger_barrage' ||
+     e.effectType === 'blade_flurry_barrage')
   );
 }
 
@@ -26968,6 +27107,25 @@ function resolveEffect(eff, caster, target) {
       }
       spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
       firePowerSurgeIfArmed(caster, 'poison');
+      break;
+    }
+    case 'poison_dagger_barrage': {
+      // The PLAYER path runs the UI barrage (handleHandClick / resolve
+      // BarrageShot, each shot carrying all riders). This case is only
+      // reached for the ENEMY (or any non-barrage caster) playing
+      // Poisoned Daggers — resolve as 2 hits of (value dmg + 1 Poison).
+      for (let s = 0; s < 2; s++) {
+        resolveEffect(new CardEffect('damage', eff.value, eff.target), caster, target);
+        resolveEffect(new CardEffect('apply_poison', 1, eff.target), caster, target);
+      }
+      break;
+    }
+    case 'blade_flurry_barrage': {
+      // ENEMY / non-barrage fallback for Blade Flurry — 5 hits of value
+      // damage. The player path runs the UI barrage instead.
+      for (let s = 0; s < 5; s++) {
+        resolveEffect(new CardEffect('damage', eff.value, eff.target), caster, target);
+      }
       break;
     }
     case 'apply_poison_with_heroism': {
@@ -28491,6 +28649,34 @@ function resolveEffect(eff, caster, target) {
         }
       }
       break;
+    case 'heal_overheal_heroism': {
+      // Heroic Heal (Paladin T1) — heal N like Flash Heal, but any
+      // overflow past the target's max HP isn't wasted: each leftover
+      // point converts 1:1 into Heroism on the same target. Routes to
+      // the picked ally for SINGLE_ALLY (player or ally creature),
+      // same as the plain `heal` case.
+      let _ohTarget = null;
+      let _overheal = 0;
+      if (eff.target === TargetType.SINGLE_ALLY && target instanceof Creature) {
+        _overheal = healCreature(target, eff.value) || 0;
+        _ohTarget = target;
+      } else if (eff.target === TargetType.SINGLE_ALLY && target === player) {
+        _overheal = healPlayer(eff.value) || 0;
+        _ohTarget = player;
+      } else if (caster === player) {
+        _overheal = healPlayer(eff.value) || 0;
+        _ohTarget = player;
+      } else if (caster instanceof Creature) {
+        // Enemy/ally creature self-cast — plain heal, no Heroism math.
+        healCreature(caster, eff.value);
+      }
+      if (_overheal > 0 && _ohTarget) {
+        _ohTarget.heroism = (_ohTarget.heroism || 0) + _overheal;
+        addLog(`  Overheal! +${_overheal} Heroism`, Colors.GOLD);
+        spawnTokenOnTarget(_ohTarget, _overheal, 'Heroism', Colors.GOLD);
+      }
+      break;
+    }
     case 'heal_n_negative_effects': {
       // Cleansing — strip up to N Ailment stacks off the target (or
       // the caster when self-cast) in the Bleed → Poison → Fire →
@@ -28589,7 +28775,7 @@ function resolveEffect(eff, caster, target) {
       const buff = new CombatBuff({
         id: 'regrowth_regen',
         name: 'Regrowth',
-        description: `Heal ${healPerTurn} at start of turn (${eff.value} turns)`,
+        description: `Turn Start: Heal ${healPerTurn}.`,
         imageId: 'regrowth',
         effectType: 'heal',
         effectValue: healPerTurn,
@@ -28599,6 +28785,53 @@ function resolveEffect(eff, caster, target) {
       });
       caster.addCombatBuff(buff);
       addLog(`  Regrowth: Heal ${healPerTurn} for ${eff.value} turns`, Colors.GREEN);
+      break;
+    }
+    case 'heal_overheal_treant': {
+      // Regrowth on-play heal — heal N (SELF) and sprout a Treant per
+      // overheal point. Same overheal→payoff shape as Heroic Heal, but
+      // the overflow becomes Treants instead of Heroism. The regen tick
+      // reuses this same effectType inside the buff (see character.js).
+      let _oh = 0;
+      if (eff.target === TargetType.SINGLE_ALLY && target instanceof Creature) {
+        _oh = healCreature(target, eff.value) || 0;
+      } else {
+        _oh = healPlayer(eff.value) || 0;
+      }
+      if (_oh > 0) summonRegrowthTreants(_oh);
+      break;
+    }
+    case 'regen_treant_buff': {
+      // Regrowth regen — Heal N/turn for eff.value turns; each turn's
+      // overheal sprouts a Treant.
+      const healPerTurn = 1 + (playerTierOffset || 0);
+      if (eff.target === TargetType.SINGLE_ALLY && target instanceof Creature) {
+        // Ally-targeted — attach to the creature's lightweight regen
+        // channel (ticked by tickAllyRegen). Creatures don't run the
+        // Character combatBuffs system, so this is how a regen buff
+        // lands on an ally.
+        if (!Array.isArray(target.regenBuffs)) target.regenBuffs = [];
+        target.regenBuffs.push({ healPerTurn, turnsRemaining: eff.value, summonsTreant: true, imageId: 'regrowth', previewCreature: makeRegrowthTreantPreview() });
+        addLog(`  Regrowth: ${target.name} — Turn Start: Heal ${healPerTurn}. Overheal: Summon a Treant.`, Colors.GREEN);
+        break;
+      }
+      // Self / player — the standard CombatBuff path. Buff tick runs
+      // effectType 'heal_overheal_treant' (character.js), which flags
+      // overheal via a `summonTreant` log that processCombatBuffs reads.
+      const buff = new CombatBuff({
+        id: 'regrowth_regen',
+        name: 'Regrowth',
+        description: `Turn Start: Heal ${healPerTurn}. Overheal: Summon a Treant.`,
+        imageId: 'regrowth',
+        effectType: 'heal_overheal_treant',
+        effectValue: healPerTurn,
+        trigger: 'start_of_turn',
+        combatsRemaining: 1,
+        turnsRemaining: eff.value,
+      });
+      buff.previewCreature = makeRegrowthTreantPreview();
+      (caster === player ? player : caster).addCombatBuff(buff);
+      addLog(`  Regrowth — Turn Start: Heal ${healPerTurn}. Overheal: Summon a Treant.`, Colors.GREEN);
       break;
     }
     case 'grant_potency_buff': {
@@ -29273,7 +29506,7 @@ function resolveEffect(eff, caster, target) {
           const dire = new Creature({
             name: 'Dire Rat', attack: 2, maxHp: 2, armor: 1,
             bloodfrenzy: 1,
-            description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 33% to dig up\na Cave Shroom on attack.',
+            description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 50% to dig up\na Cave Shroom on attack.',
           });
           dire._forageCreator = createCaveShroom;
           dire._forageLabel = 'Cave Shroom';
@@ -29301,7 +29534,7 @@ function resolveEffect(eff, caster, target) {
         for (let i = 0; i < want; i++) {
           const rat = new Creature({
             name: 'Tamed Rat', attack: 1, maxHp: 1,
-            description: 'Forage: 33% to scrounge\na Goodberry on attack.',
+            description: 'Forage: 50% to scrounge\na Goodberry on attack.',
           });
           rat._forageCreator = createGoodberry;
           rat._forageLabel = 'Goodberry';
@@ -29891,6 +30124,24 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'draw_if_empty_hand': {
+      // Sprint — if this card is the LAST one you play (no OTHER cards
+      // left in hand when it resolves), Draw N. playCardSelf lifts the
+      // card before effects run, so the hand here is "everything else";
+      // the _activePlayCard guard covers the stays-in-hand case where it
+      // hasn't been lifted.
+      if (!caster.deck) break;
+      const others = (caster.deck.hand || []).filter(c => c !== _activePlayCard).length;
+      if (others === 0) {
+        const drawn = caster.deck.draw(eff.value || 0, MAX_HAND_SIZE);
+        for (const d of drawn) addLog(`  Sprint: Draw ${d.name}`, Colors.BLUE, d);
+        if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
+        if (drawn.length === 0) addLog(`  Sprint: deck empty — nothing to draw.`, Colors.GRAY);
+      } else {
+        addLog(`  Sprint: ${others} card${others === 1 ? '' : 's'} still in hand — no draw.`, Colors.GRAY);
+      }
+      break;
+    }
     case 'discard_extra': {
       // Talon Blade — when the PLAYER plays it, the discard pick is
       // resolved upfront via cardDiscardPickMode (see
@@ -30201,7 +30452,11 @@ function resolveEffect(eff, caster, target) {
       if (enemy && enemy.isAlive && !enemy._invulnerable) splitTargets.push(enemy);
       for (const c of enemy.creatures) if (c.isAlive && !c._invulnerable) splitTargets.push(c);
       if (splitTargets.length === 0) break;
-      let pool = eff.value + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+      // "Heroism: +N" nomenclature — a card can make each Heroism point
+      // worth more than the default +1 damage by setting heroismDamageMult
+      // (Consecration: +2). Default 1 leaves the standard behavior.
+      const _splitHeroMult = (_activePlayCard && _activePlayCard.heroismDamageMult) || 1;
+      let pool = eff.value + (caster.heroism * _splitHeroMult) + (caster.rage || 0) + getDamageModifier(caster);
       if (caster.heroism > 0) { caster.heroism = 0; }
       pool = Math.max(0, pool);
       pool = consumeIceForAttack(caster, pool);
@@ -30966,7 +31221,9 @@ function dealDamageToEnemy(amount, target) {
 // Restore HP on an ally creature. Capped at maxHp so over-heals are
 // silent. Logs only when at least 1 HP is gained.
 function healCreature(creature, amount) {
-  if (!creature || !creature.isAlive) return;
+  // Returns the OVERHEAL — heal beyond max HP (after ailments) that
+  // couldn't land. Heroic Heal converts it to Heroism.
+  if (!creature || !creature.isAlive) return 0;
   // Same priority as healPlayer: Bleed → Poison → HP. Each heal point
   // first scrubs a Bleed stack, then a Poison stack, then bumps HP
   // by 1. A 5-heal on a Bleed 2 / Poison 1 / 3 HP ally clears all
@@ -30998,9 +31255,63 @@ function healCreature(creature, amount) {
     addLog(`  ${creature.name}: +${gained} HP (now ${creature.currentHp}/${creature.maxHp})`, Colors.GREEN);
   } else if (bleedCleared === 0 && poisonCleared === 0) {
     addLog(`  ${creature.name} is already at full HP.`, Colors.GRAY);
-    return;
+    return remaining;
   }
   playSound('heal');
+  return Math.max(0, remaining - gained);
+}
+
+// A scaled Treant creature for the Regrowth buff's hover side-preview
+// (so hovering the buff pops the mini Treant card it can summon).
+function makeRegrowthTreantPreview() {
+  const t = new Creature({ name: 'Treant', attack: 2, maxHp: 1, haste: true, description: 'Haste' });
+  scaleCreatureWithOffset(t, playerTierOffset || 0, 'player');
+  return t;
+}
+
+// Regrowth overheal payoff — sprout `count` Treants (2/1 Haste) onto the
+// player's field, scaled by the current Game+ offset. Called both by the
+// on-play heal_overheal_treant effect and by the regen tick's
+// summonTreant log flag in processCombatBuffs. Stops early if the field
+// is full.
+function summonRegrowthTreants(count) {
+  const off = playerTierOffset || 0;
+  let summoned = 0;
+  for (let i = 0; i < count; i++) {
+    const treant = new Creature({
+      name: 'Treant', attack: 2, maxHp: 1, haste: true, description: 'Haste',
+    });
+    scaleCreatureWithOffset(treant, off, 'player');
+    if (!player.addCreature(treant)) break;
+    summoned++;
+  }
+  if (summoned > 0) {
+    addLog(`  Overheal! Summon ${summoned} Treant${summoned > 1 ? 's' : ''}.`, Colors.GREEN);
+    playSound('leaf_fall');
+  }
+  return summoned;
+}
+
+// Tick every ally creature's heal-over-time buffs once per player turn.
+// Mirrors the player's regen CombatBuff: heal the creature, sprout
+// Treants on overheal (Regrowth), then count the buff down and drop
+// expired entries. Lets buff-style heals (Regrowth and future regen
+// cards) land on allies even though Creatures don't run the full
+// Character combatBuffs system.
+function tickAllyRegen() {
+  // Snapshot — summonRegrowthTreants() pushes new Treants onto
+  // player.creatures, so iterate a copy to avoid ticking the freshly
+  // sprouted ones this same turn.
+  const allies = [...(player.creatures || [])];
+  for (const ally of allies) {
+    if (!ally || !ally.isAlive || !Array.isArray(ally.regenBuffs) || ally.regenBuffs.length === 0) continue;
+    for (const rb of ally.regenBuffs) {
+      const overheal = healCreature(ally, rb.healPerTurn || 1) || 0;
+      if (overheal > 0 && rb.summonsTreant) summonRegrowthTreants(overheal);
+      if (rb.turnsRemaining > 0) rb.turnsRemaining--;
+    }
+    ally.regenBuffs = ally.regenBuffs.filter(rb => (rb.turnsRemaining || 0) > 0);
+  }
 }
 
 // Discard rider — fires every time a player card lands in the
@@ -31204,7 +31515,10 @@ function healPlayer(amount) {
     // Nothing to heal
     addLog(`  Nothing to heal.`, Colors.GRAY);
   }
-  return healed;
+  // Return the OVERHEAL — heal that couldn't land because the deck was
+  // already full (discard empty) with no ailments left to scrub. Heroic
+  // Heal reads this to convert the overflow into Heroism.
+  return Math.max(0, remaining - healed);
 }
 
 // --- End turn ---
@@ -34214,7 +34528,7 @@ function maybeForage(ally) {
     ally._forageLabel = label;
     ally._forageVerb = verb;
   }
-  if (Math.random() >= 0.33) return;
+  if (Math.random() >= 0.5) return;
   if (player.deck.hand.length >= MAX_HAND_SIZE) {
     addLog(`  ${ally.name} ${verb} a ${label}... hand full!`, Colors.GRAY);
     return;
@@ -38167,10 +38481,15 @@ function completePlayerTurnTransition() {
   const buffLogs = player.processCombatBuffs(enemy);
   playBuffTickSfxQueue(buffLogs);
   for (const log of buffLogs) {
-    addLog(log.text, log.color, log.card || null, log.buff || null);
+    if (log.text) addLog(log.text, log.color, log.card || null, log.buff || null);
     if (log.healed) spawnHealOnTarget(player, log.healed);
     if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
+    if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
   }
+  // Ally creature heal-over-time (Regrowth cast on an ally) ticks right
+  // after the player's own regen — same start-of-turn beat, before the
+  // status DoTs.
+  tickAllyRegen();
 
   // Status DoTs fire AFTER meals (PY parity was status-first; we
   // intentionally diverge so food can shield the player from Poison
@@ -40253,8 +40572,8 @@ function finalizeRevivifyHeal() {
   // X = number of allies, minimum 1 (the just-summoned one). `after`
   // already includes the new ally, so a successful revive guarantees
   // after >= 1.
-  const heal = Math.max(1, after);
-  addLog(`  Revivify: Heal ${heal} (${after} all${after === 1 ? 'y' : 'ies'} on field)`, Colors.GREEN);
+  const heal = Math.max(1, after) * 2;
+  addLog(`  Revivify: Heal ${heal} (2 per ally × ${after} on field)`, Colors.GREEN);
   healPlayer(heal);
 }
 
@@ -46429,6 +46748,11 @@ const CARD_SFX_OVERRIDES = {
   sneak_attack:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   backstab:                 { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   fan_of_blades:            { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  // Blade Flurry + Poisoned Daggers — each barrage strike plays the
+  // dagger hit (resolveBarrageShot reads CARD_SFX_OVERRIDES per shot,
+  // same path Magic Missiles uses for its per-shot missile_flesh).
+  blade_flurry:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  poisoned_dagger:          { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   // Sly Blade — Slyblade's signature dagger. `id.includes('dagger')`
   // fallback misses (no "dagger" in the id), so wire it explicitly so
   // it sounds like Bone Dagger / Poisoned Dagger.
@@ -47794,7 +48118,7 @@ const ALL_EXTRA_CARD_CREATORS = [
   // These surface in the codex Buffs filter.
   createBuffRunning, createBuffHiding, createBuffCalculating,
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
-  createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffElfReinforcements,
+  createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffRegrowthLegacy, createBuffElfReinforcements,
   createBuffBlizzard, createBuffSahuaginEye, createBuffOldGodBlessing, createBuffObsidianCore,
   createBuffMagmaTablet, createBuffVolcanoBlessing, createBuffMapKnowledge,
 ];
@@ -47871,6 +48195,10 @@ const FORCE_ENEMY_CARD_IDS = new Set([
 // this set and wire it back into the relevant pool.
 const LEGACY_CARD_IDS = new Set([
   'feral_swipe_legacy',  // Druid ability — replaced by bleed-themed Feral Swipe
+  'regrowth_legacy',     // Druid tier 1 — replaced by overheal→Treant Regrowth
+  'buff_regrowth_legacy',// Old Regrowth combat-buff entry — replaced by overheal→Treant buff
+  'fan_of_blades',       // Rogue tier 2 — replaced by Blade Flurry in the player pool (still a Slyblade enemy card)
+  'flash_heal',          // Paladin tier 1 — replaced by Heroic Heal (overheal → Heroism)
   'holy_light',          // Paladin tier 1 — swapped out for Shield Bash
   'piercing_shot',       // Ranger ability — replaced by Elemental Weapon
   'healing_touch',       // Druid ability — replaced by Nature's Healing
@@ -50666,6 +50994,9 @@ function buildCodexSourceCache() {
   // note for ids without an explicit blurb.
   const LEGACY_REASONS = {
     feral_swipe_legacy: 'Legacy: replaced by the bleed-themed Feral Swipe; no active source.',
+    regrowth_legacy:    'Legacy: replaced by the overheal→Treant Regrowth.',
+    fan_of_blades:      'Legacy (player): replaced by Blade Flurry in the Rogue pool. Still played by the Kobold Slyblade.',
+    buff_regrowth_legacy:'Legacy: old Regrowth buff; replaced by the overheal→Treant version.',
     holy_light:         'Legacy: swapped out of the Paladin tier-1 pool for Shield Bash.',
     piercing_shot:      'Legacy: pulled from the Ranger ability pool in favor of Elemental Weapon.',
     healing_touch:      'Legacy: pulled from the Druid ability pool in favor of Nature’s Healing.',

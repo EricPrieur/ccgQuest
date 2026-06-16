@@ -605,6 +605,40 @@ export class Character {
         }
         break;
       }
+      case 'heal_overheal_treant': {
+        // Regrowth regen tick — heal exactly like the 'heal' case, but
+        // any overflow past full HP (deck full, no ailments left) is
+        // flagged as `summonTreant` so main.js sprouts that many Treants.
+        let remaining = Math.max(1, effectValue || 1);
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
+        if (poison > 0 && remaining > 0) {
+          const toClear = Math.min(poison, remaining);
+          this.removeStatus('POISON', toClear);
+          remaining -= toClear;
+          logs.push({ text: `  ${buff.name}: Purged ${toClear} Poison`, color: '#3cc83c', buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+        }
+        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
+        if (bleed > 0 && remaining > 0) {
+          const toClear = Math.min(bleed, remaining);
+          this.removeStatus('BLEED', toClear);
+          remaining -= toClear;
+          logs.push({ text: `  ${buff.name}: Stopped ${toClear} Bleed`, color: '#ff5050', buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+        }
+        while (remaining > 0 && this.deck && this.deck.discardPile.length > 0) {
+          const card = this.deck.discardPile.pop();
+          this.deck.addToRechargePile(card);
+          logs.push({ text: `  ${buff.name}: Healed 1 (${card.name})`, color: '#3cc83c', card, healed: 1, buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+          remaining--;
+        }
+        // Leftover = overheal → Summon Treants. Flag-only entry (no
+        // text); main.js's summonTreant handler emits the single
+        // "Overheal! Summon N Treant" log so it isn't doubled.
+        if (remaining > 0) {
+          logs.push({ summonTreant: remaining, buff });
+        }
+        break;
+      }
       case 'goodberry_sustenance': {
         // Tick variant of the on-play goodberry_sustenance roll. 50%
         // for nothing, otherwise pick one of: +1 Shield / +1 Heroism /
@@ -948,7 +982,13 @@ export class Character {
 
   processCombatBuffs(enemy = null) {
     const logs = [];
-    for (const buff of this.combatBuffs) {
+    // Overheal-converter ticks (Regrowth: heal_overheal_treant) must
+    // fire AFTER plain heals (food / meal buffs) so the food tops the
+    // player off FIRST, leaving Regrowth's heal to overflow into
+    // Treants. Stable sort keeps every other buff in insertion order.
+    const tickOrder = (b) => (b && b.effectType === 'heal_overheal_treant') ? 1 : 0;
+    const ordered = [...this.combatBuffs].sort((a, b) => tickOrder(a) - tickOrder(b));
+    for (const buff of ordered) {
       if (buff.trigger === 'start_of_turn') {
         // Multi-effect provisions (Bad Rations Meal, Whitescale Brew)
         // carry an effects array and resolve each entry per tick.

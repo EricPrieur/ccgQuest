@@ -80,6 +80,7 @@ export class Card {
     gamePlusOffset = null,
     noTierOffset = false,
     sellable = false,
+    heroismDamageMult = 1,
   }) {
     this.id = id;
     this.name = name;
@@ -115,6 +116,9 @@ export class Card {
     // codex preview, but the codex flags them with a red "+N?" badge
     // until offset rules are wired.
     this.gamePlusOffset = gamePlusOffset;
+    // "Heroism: +N" nomenclature — each Heroism point adds this much to
+    // the card's damage instead of the default +1 (Consecration: 2).
+    this.heroismDamageMult = heroismDamageMult;
     // Explicit "this card does not scale with tier offset" marker —
     // suppresses the codex red "+N?" badge for cards/powers that
     // intentionally stay flat (Overwhelm, Vanish, etc.).

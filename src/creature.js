@@ -106,6 +106,13 @@ export class Creature {
     this.inkCloudStacks = 0;
     this.markStacks = 0;
 
+    // Heal-over-time buffs (Regrowth and similar). Each entry is
+    // { healPerTurn, turnsRemaining, summonsTreant }. Ticked once per
+    // player turn by tickAllyRegen() in main.js — Creatures don't run
+    // the full Character combatBuffs system, so this is the lightweight
+    // regen channel that lets buff-style heals land on allies.
+    this.regenBuffs = [];
+
     this.poisonAttack = poisonAttack;
     this.traits = Array.isArray(traits) ? [...traits] : [];
     this.fireAttack = fireAttack;

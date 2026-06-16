@@ -37,6 +37,7 @@ export const CARD_ART_MAP = {
   holy_light: 'HolyLightPaladin.jpg',
   shield_of_faith: 'ShieldOfFaithPaladin.jpg',
   flash_heal: 'FlashHeal.jpg',
+  heroic_heal: 'FlashHeal.jpg', // shares Flash Heal art for now
   consecration: 'Consecration.jpg',
   hammer_of_wrath: 'HammerofWrath.jpg',
   holy_sword: 'HolySword.jpg',
@@ -83,6 +84,7 @@ export const CARD_ART_MAP = {
   sneak_attack: 'SneakAttack.jpg',
   pet_spider: 'PetSpider.jpg',
   fan_of_blades: 'FanofBlades.jpg',
+  blade_flurry: 'BladeFlurry.jpg',
   backstab: 'Backstab.jpg',
   poisoned_dagger: 'PoisonedDagger.jpg',
   sprint: 'Sprint.jpg',
@@ -111,6 +113,7 @@ export const CARD_ART_MAP = {
   // === Druid ===
   wrath: 'WrathDruid.jpg',
   regrowth: 'RegrowthDruid.jpg',
+  regrowth_legacy: 'RegrowthDruid.jpg',
   feral_swipe: 'FeralSwipe.jpg',
   feral_swipe_legacy: 'FeralSwipe.jpg',
   cat_form_token: 'DruidFelineForm.jpg',
@@ -166,6 +169,7 @@ export const CARD_ART_MAP = {
   buff_ale: 'Ale.jpg',
   buff_dwarven_brew: 'DwarvenBrew.jpg',
   buff_regrowth: 'RegrowthDruid.jpg',
+  buff_regrowth_legacy: 'RegrowthDruid.jpg',
   buff_elf_reinforcements: 'ElfWarrior.jpg',
   buff_blizzard: 'BlizzardEnv.jpg',
   buff_sahuagin_eye: 'SahuaginEye.jpg',

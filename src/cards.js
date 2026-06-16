@@ -643,8 +643,8 @@ export function createMagicMissiles() {
   return new Card({
     id: 'magic_missiles',
     name: 'Magic Missiles',
-    description: 'Recharge a Card ->\nDeal a barrage of 3 attacks of 1 Damage, Draw.',
-    shortDesc: 'R->3x1 Dmg\nDraw',
+    description: 'Recharge a Card ->\nDeal 1 Damage X 3, Draw.',
+    shortDesc: 'R->1 Dmg X3\nDraw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -786,16 +786,23 @@ export function createHeroicStrike() {
   return new Card({
     id: 'heroic_strike',
     name: 'Heroic Strike',
-    description: 'Gain 4 Heroism.',
-    shortDesc: 'Heroism 4',
+    // Melee counterpart to Aimed Shot — a single 4-damage hit that
+    // spends Heroism twice (Heroism: +2 via the heroism_double rider
+    // the 'damage' case reads). A Heroism SPENDER to pay off the
+    // generators (Heroic Heal overheal, etc.), not another generator.
+    description: 'Deal 4 Damage.\nHeroism: +2.',
+    shortDesc: '4 Dmg\nHeroism: +2',
     subtype: 'ability',
-    cardType: CardType.ABILITY,
+    cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('gain_heroism', 4, TargetType.SELF)],
+    effects: [
+      new CardEffect('heroism_double', 1, TargetType.SELF),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+    ],
     characterClass: ['paladin', 'warrior'],
     tier: 1,
     rarity: 'uncommon',
-    gamePlusOffset: { gain_heroism: 3 },
+    gamePlusOffset: { damage: 3 },
   });
 }
 
@@ -993,8 +1000,8 @@ export function createAimedShotCard() {
   return new Card({
     id: 'aimed_shot_card',
     name: 'Aimed Shot',
-    description: 'Recharge a Card -> Deal 4 Damage.\nHeroism is added twice.\nDraw.',
-    shortDesc: 'R-Card->4 Dmg\nHeroism x2\nDraw',
+    description: 'Recharge a Card -> Deal 4 Damage, Draw.\nHeroism: +2.',
+    shortDesc: 'R-Card->4 Dmg, Draw\nHeroism: +2',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -1340,9 +1347,12 @@ export function createWrath() {
   });
 }
 
-export function createRegrowth() {
+// Legacy Regrowth — the original Heal 2 + flat Regen 4 version, kept
+// registered (LEGACY_CARD_IDS) so older saves still deserialize. The
+// active 'regrowth' below replaced it with the overheal→Treant kit.
+export function createRegrowthLegacy() {
   return new Card({
-    id: 'regrowth',
+    id: 'regrowth_legacy',
     name: 'Regrowth',
     description: 'Heal 2. Heal 1 at start of turn for 4 turns.',
     shortDesc: 'Heal 2\n+Regen 4t',
@@ -1356,10 +1366,38 @@ export function createRegrowth() {
     characterClass: ['druid'],
     tier: 1,
     rarity: 'uncommon',
-    // +2 on-play heal per offset. Per-turn regen bumps in the runtime
-    // (regen_buff handler reads playerTierOffset → healPerTurn).
-    // Custom regrowth handler rebuilds the dual-heal description.
     gamePlusOffset: { heal: 2, regen_per_turn: 1 },
+  });
+}
+
+// Regrowth — Druid Tier 1. Heal 1 now + Heal 1/turn for 4 turns; ANY
+// overheal (healing past max HP, on the on-play heal OR a regen tick)
+// sprouts a Treant (2/1 Haste) instead of being wasted. Shows the
+// Treant as a side preview via previewCreature.
+export function createRegrowth() {
+  return new Card({
+    id: 'regrowth',
+    name: 'Regrowth',
+    description: 'Heal 1, Heal 1 for 4 Turns.\nOverheal: Summon a Treant.',
+    shortDesc: 'Heal 1, Regen 4t\nOverheal: Treant',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    // SINGLE_ALLY — cast on yourself OR any ally (rare for a regen, but
+    // the ally regen channel now supports it). The immediate heal and
+    // the 4-turn regen both land on whoever you pick.
+    effects: [
+      new CardEffect('heal_overheal_treant', 1, TargetType.SINGLE_ALLY),
+      new CardEffect('regen_treant_buff', 4, TargetType.SINGLE_ALLY),
+    ],
+    characterClass: ['druid'],
+    tier: 1,
+    rarity: 'uncommon',
+    previewCreature: createTreantCreature(),
+    // +1 on-play heal per offset; per-turn regen bumps in the runtime
+    // (heal_overheal_treant buff tick reads playerTierOffset). Custom
+    // regrowth handler rebuilds the description from scaled values.
+    gamePlusOffset: { heal_overheal_treant: 1, regen_per_turn: 1 },
   });
 }
 
@@ -1583,12 +1621,33 @@ export function createFlashHeal() {
   });
 }
 
+// Heroic Heal — Paladin Tier 1. Replaces Flash Heal in the tier-1 pool.
+// Heal 4 (targetable at the player or any ally, like every other heal);
+// any healing beyond the target's max HP overflows into Heroism 1:1
+// instead of being wasted. Same FlashHeal.jpg art for now.
+export function createHeroicHeal() {
+  return new Card({
+    id: 'heroic_heal',
+    name: 'Heroic Heal',
+    description: 'Heal 4.\nOverheal: Heroism.',
+    shortDesc: 'Heal 4\nOverheal: Heroism',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('heal_overheal_heroism', 4, TargetType.SINGLE_ALLY)],
+    characterClass: ['paladin'],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { heal_overheal_heroism: 3 },
+  });
+}
+
 function createTamedRatCreature() {
   return new Creature({
     name: 'Tamed Rat',
     attack: 1,
     maxHp: 1,
-    description: 'Forage: 33% to scrounge\na Goodberry on attack.',
+    description: 'Forage: 50% to scrounge\na Goodberry on attack.',
   });
 }
 
@@ -1603,7 +1662,7 @@ function createDireRatCreature() {
     maxHp: 2,
     armor: 1,
     bloodfrenzy: 1,
-    description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 33% to dig up\na Cave Shroom on attack.',
+    description: 'Bloodfrenzy: +1 Rage after attacking.\nForage: 50% to dig up\na Cave Shroom on attack.',
   });
 }
 
@@ -1641,14 +1700,16 @@ export function createTamedRat() {
 export function createConsecration() {
   return new Card({
     id: 'consecration', name: 'Consecration',
-    description: 'Deal 8 Damage split\nevenly across ALL enemies.',
-    shortDesc: '8 Dmg split ALL', subtype: 'ability',
+    description: 'Deal 8 split across ALL.\nHeroism: +2.',
+    shortDesc: '8 split ALL\nHeroism: +2', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // damage_split_all — eff.value is the TOTAL pool, divided by the
     // number of alive non-invulnerable enemies and rounded UP per
     // target. 1 enemy = 8, 2 = 4 each, 3 = 3 each, 4 = 2 each.
+    // heroismDamageMult 2 — each Heroism adds +2 to the pool, not +1.
     effects: [new CardEffect('damage_split_all', 8, TargetType.ALL_ENEMIES)],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    heroismDamageMult: 2,
     gamePlusOffset: { damage_split_all: 2 },
   });
 }
@@ -1674,24 +1735,24 @@ export function createHammerOfWrath() {
 export function createHolySword() {
   return new Card({
     id: 'holy_sword', name: 'Holy Sword',
-    description: 'Recharge a Card -> Deal 7 Damage. Heal 4.',
-    shortDesc: 'R-Card->7 Dmg, Heal 4', subtype: 'martial',
+    description: 'Recharge a Card ->\nDeal 10 Damage, Heal 2.\nOverheal: Heroism.',
+    shortDesc: 'R-Card->10 Dmg\nHeal 2, Overheal', subtype: 'martial',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 7, TargetType.SINGLE_ENEMY),
-      new CardEffect('heal', 4, TargetType.SELF),
+      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('heal_overheal_heroism', 2, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { damage: 3, heal: 1 },
+    gamePlusOffset: { damage: 3, heal_overheal_heroism: 1 },
   });
 }
 
 export function createRevivify() {
   return new Card({
     id: 'revivify', name: 'Revivify',
-    description: 'Revive 1 dead ally,\nHeal 1 per ally.',
-    shortDesc: 'Revive 1 ally\nHeal 1 per ally', subtype: 'ability',
+    description: 'Revive 1 dead ally,\nHeal 2 per ally.',
+    shortDesc: 'Revive 1 ally\nHeal 2 per ally', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [new CardEffect('revivify', 3, TargetType.SELF)],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
@@ -2044,6 +2105,23 @@ export function createFanOfBlades() {
   });
 }
 
+// Blade Flurry — Rogue Tier 2. Replaces Fan of Blades in the player
+// pool. A 5-shot barrage (1 dmg each): click once, aim each strike at
+// any target (same enemy to focus, or spread). Every shot carries all
+// riders (Heroism, poison buffs, Ignite, etc.) via resolveBarrageShot.
+export function createBladeFlurry() {
+  return new Card({
+    id: 'blade_flurry', name: 'Blade Flurry',
+    description: 'Deal 1 Damage X 5.',
+    shortDesc: '1 Dmg X5', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [new CardEffect('blade_flurry_barrage', 1, TargetType.SINGLE_ENEMY)],
+    characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
+    // +1 damage per strike per offset.
+    gamePlusOffset: { blade_flurry_barrage: 1 },
+  });
+}
+
 export function createBackstab() {
   return new Card({
     id: 'backstab', name: 'Backstab',
@@ -2064,32 +2142,50 @@ export function createBackstab() {
 
 export function createPoisonedDagger() {
   return new Card({
-    id: 'poisoned_dagger', name: 'Poisoned Dagger',
-    description: 'Deal 2 Damage + Poison.\nStays in hand.',
-    shortDesc: '2 Dmg+Poison\nStays', subtype: 'simple',
+    id: 'poisoned_dagger', name: 'Poisoned Daggers',
+    description: 'Deal 1 + Poison Damage X 2.\nStays in hand',
+    shortDesc: '1+Poison X2\nStays', subtype: 'simple',
     cardType: CardType.ATTACK, costType: CostType.FREE,
+    // 2-shot poison barrage — click once, aim each of the 2 daggers
+    // (1 dmg + 1 Poison) at any target or Done to skip the 2nd. Each
+    // shot carries all riders (Heroism, poison buffs, Ignite, etc.).
     effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
-      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('poison_dagger_barrage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     characterClass: ['rogue'], tier: 2,
     rarity: 'uncommon',
-    // +1 dmg, +0.5 poison (floor) per offset.
-    gamePlusOffset: { damage: 1, apply_poison: 0.5 },
+    // +1 dmg per shot per offset.
+    gamePlusOffset: { poison_dagger_barrage: 1 },
   });
 }
 
 export function createSprint() {
   return new Card({
     id: 'sprint', name: 'Sprint',
-    description: 'Recharge your Hand -> Draw that many cards + 1.',
-    shortDesc: 'R Hand->Draw +1', subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    // value = +1 bonus drawn on top of however many hand cards were
-    // recharged by the effect. Handler in main.js (`recharge_hand_then_draw`).
-    effects: [new CardEffect('recharge_hand_then_draw', 1, TargetType.SELF)],
+    description: 'Discard ->\nNo cards in hand: Draw 2.',
+    shortDesc: 'Discard->No cards\nDraw 2', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.DISCARD,
+    // Draw 2 only if Sprint is the last card in hand when played
+    // (handler in main.js — `draw_if_empty_hand`).
+    effects: [new CardEffect('draw_if_empty_hand', 2, TargetType.SELF)],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
+    noTierOffset: true,
+  });
+}
+
+// Slyblade-deck Sprint — enemy-only simpler variant. The player Sprint
+// only draws when its hand is empty (a combo card); the Kobold Slyblade
+// AI just wants a plain "Draw 2" it can use any turn, so it runs this
+// copy instead. Not in CARD_REGISTRY (enemy-only; codex surfaces it via
+// the Slyblade deck scan).
+export function createSprintEnemy() {
+  return new Card({
+    id: 'sprint_enemy', name: 'Sprint',
+    description: 'Draw 2.',
+    shortDesc: 'Draw 2', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [new CardEffect('draw', 2, TargetType.SELF)],
     noTierOffset: true,
   });
 }
@@ -2284,7 +2380,7 @@ export function getPaladinAbilityChoices() {
   // creator stays in CARD_REGISTRY so older saves that already had it
   // still deserialize, but it's no longer offered on level-up / pick
   // screens. If/when we want it back, just put it back in this list.
-  return [createHeroicStrike(), createShieldBash(), createShieldOfFaith(), createFlashHeal(),
+  return [createHeroicStrike(), createShieldBash(), createShieldOfFaith(), createHeroicHeal(),
           createConsecration(), createHammerOfWrath(), createHolySword(), createRevivify()];
 }
 
@@ -2303,7 +2399,7 @@ export function getWizardAbilityChoices() {
 
 export function getRogueAbilityChoices() {
   return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createHeroicTumble(),
-          createFanOfBlades(), createBackstab(), createPoisonedDagger(), createSprint()];
+          createBladeFlurry(), createBackstab(), createPoisonedDagger(), createSprint()];
 }
 
 export function getWarriorAbilityChoices() {
@@ -4119,11 +4215,28 @@ export function createBuffRegrowth() {
   return new Card({
     id: 'buff_regrowth',
     name: 'Regrowth',
+    description: 'Turn Start: Heal 1.\nOverheal: Summon a Treant.',
+    shortDesc: 'Heal 1/turn\nOverheal: Treant',
+    subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
+    effects: [],
+    // Side preview of the Treant the overheal can summon (codex + hover).
+    previewCreature: createTreantCreature(),
+    // Buff tick scales +1 Heal per offset via the heal_overheal_treant handler.
+    gamePlusOffset: {},
+  });
+}
+
+// Legacy Regrowth buff — the old flat "Start of Turn: Heal 1" version,
+// kept as a legacy codex entry (LEGACY_CARD_IDS) after the overheal→
+// Treant rework above replaced it.
+export function createBuffRegrowthLegacy() {
+  return new Card({
+    id: 'buff_regrowth_legacy',
+    name: 'Regrowth',
     description: 'Start of Turn: Heal 1',
     shortDesc: 'Heal 1/turn',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
-    // Buff tick scales +1 Heal per offset via the regen_buff handler.
     gamePlusOffset: {},
   });
 }
