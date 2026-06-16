@@ -3533,11 +3533,11 @@ const CARD_REGISTRY = {
   // Poison) and Bone Storm (steal shields, chip all, bolster undead).
   corpse_explosion: createCorpseExplosion,
   bone_storm_necromancer: createBoneStormNecromancer,
-  // Path of the Necromancer — Forgotten Specter signature card.
-  old_spectral_hand: createOldSpectralHand,
-  // Path of the Necromancer — Specter of Death signature card. 5 dmg
-  // with a Hit: Death rider that loses the game if any HP damage lands.
-  death_sickle: createDeathSickle,
+  // NOTE: Old Spectral Hand (Forgotten Specter) and Death Sickle
+  // (Specter of Death) are MONSTER-ONLY cards — deliberately NOT in
+  // CARD_REGISTRY so they never appear as player cards. They're built
+  // directly in their enemies' decks (setupEnemyForCombat) and the
+  // codex surfaces them on the Enemy Cards tab via the enemy-deck scan.
   short_staff: createShortStaff, small_pouch: createSmallPouch,
   kobold_spear: createKoboldSpear, kobold_shield: createKoboldShield,
   bone_dagger: createBoneDagger, cloth_armor: createClothArmor,
@@ -6298,7 +6298,7 @@ function startNecromancerQuest() {
 // Build a list of `part1_complete_<class>` saves available to use as
 // a ccgQuest+ basis. Returns [{ slot, info, displayClass }, ...].
 function listGamePlusSaveOptions() {
-  const classes = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid'];
+  const classes = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid', 'Necromancer'];
   const out = [];
   for (const cls of classes) {
     const slot = `part1_complete_${cls.toLowerCase()}`;
@@ -29083,7 +29083,7 @@ function resolveEffect(eff, caster, target) {
         // existing allies aside. The bottom row may tuck under the hand
         // on the player's single-row layout — acceptable.
         slotW: 2, slotH: 2,
-        onDeathPoisonAll: 2,
+        onDeathPoisonAll: 1,
         description: 'Attacks 2 targets. On Death: Poison ALL.',
       });
       scaleCreatureWithOffset(butcher, playerTierOffset || 0, 'player');
@@ -29091,7 +29091,7 @@ function resolveEffect(eff, caster, target) {
       // The Butcher card is uncommon — the in-combat creature card
       // frame inherits the rarity + subtype so it matches the parent.
       butcher._sourceRarity = 'uncommon';
-      butcher._sourceSubtype = 'ability';
+      butcher._sourceSubtype = 'allies';
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       // Centre-field placement with an ally shuffle (same as the enemy
       // raise). Falls back to a normal lowest-slot add if somehow full
@@ -29099,6 +29099,7 @@ function resolveEffect(eff, caster, target) {
       if (!placeButcherCentered(player, butcher)) player.addCreature(butcher);
       addLog(`  The Butcher lumbers into the fight!`, Colors.PURPLE);
       playSound('bones_clatter', 0.7);
+      playSound('sahuagin_scream_03', 0.85);
       break;
     }
     case 'summon_treants': {
@@ -35012,11 +35013,12 @@ function raiseEnemyButcher() {
     name: 'The Butcher', attack: 3, maxHp: 10,
     bleedAttack: 1, multiAttack: 2, traits: ['Undead'],
     slotW: 2, slotH: 2,
-    onDeathPoisonAll: 2,
+    onDeathPoisonAll: 1,
     description: 'Attacks 2 targets. On Death: Poison ALL.',
   });
   if (!placeButcherCentered(enemy, butcher)) return false;
   addLog(`  -> The Butcher heaves up out of the grave-mud.`, Colors.PURPLE);
+  playSound('sahuagin_scream_03', 0.85);
   return true;
 }
 
@@ -35856,21 +35858,40 @@ function updateEnemyTurn(dt) {
       // game.py:14283-14308. Riders (fire / ice / poison) and the
       // bloodfrenzy bump apply per-target. One arrow per target via
       // enemyArrowsBatch so the volley reads as one wide swing.
-      if (c.attackAll) {
+      if (c.attackAll || (c.multiAttack > 1 && c.multiAttack < 99)) {
         const targets = [];
-        for (const ally of (player.creatures || [])) {
-          if (ally.isAlive) targets.push(ally);
-        }
-        targets.push(player);
-        // attackAllIncludingOwn (Roc Chick) extends the swing to the
-        // attacker's own teammates too — sibling chicks + unhatched
-        // eggs all eat the same screech. Self is excluded so the
-        // chick doesn't deal damage to itself.
-        if (c.attackAllIncludingOwn) {
-          for (const own of (enemy.creatures || [])) {
-            if (own === c) continue;
-            if (own && own.isAlive) targets.push(own);
+        if (c.attackAll) {
+          for (const ally of (player.creatures || [])) {
+            if (ally.isAlive) targets.push(ally);
           }
+          targets.push(player);
+          // attackAllIncludingOwn (Roc Chick) extends the swing to the
+          // attacker's own teammates too — sibling chicks + unhatched
+          // eggs all eat the same screech. Self is excluded so the
+          // chick doesn't deal damage to itself.
+          if (c.attackAllIncludingOwn) {
+            for (const own of (enemy.creatures || [])) {
+              if (own === c) continue;
+              if (own && own.isAlive) targets.push(own);
+            }
+          }
+        } else {
+          // multiAttack (The Butcher, 2x2 hulk) — strike up to N DISTINCT
+          // player-side targets at once, like the player's Wooden Axe:
+          // never the same target twice. Pool is the player + every alive
+          // ally; shuffle and take N. Riders (Bleed) apply per target via
+          // the shared loop below, so each victim eats the swing + Bleed.
+          const pool = [];
+          for (const ally of (player.creatures || [])) {
+            if (ally.isAlive) pool.push(ally);
+          }
+          pool.push(player);
+          for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+          }
+          const n = Math.min(c.multiAttack, pool.length);
+          for (let i = 0; i < n; i++) targets.push(pool[i]);
         }
         // Arrow batch — one segment per target from the swinger's rect.
         const srcRect = (() => {
@@ -39157,6 +39178,10 @@ function getCreaturePlaySfxKey(c) {
   // sounds route through the creature-name branch in
   // getWeaponSfxKeys (monster_bite_01).
   if (name === 'white dragon wyrmling') return 'monster_scream_01';
+  // The Butcher (Necromancer Tier 2 hulk, player + enemy) — heaviest
+  // cave-monster scream on summon. Same sample bookends every swing
+  // (getWeaponSfxKeys) and its death (getDeathSfxKey).
+  if (name === 'the butcher') return 'sahuagin_scream_03';
   return null;
 }
 
@@ -39247,6 +39272,9 @@ function getDeathSfxKey(c) {
     return 'sahuagin_scream';
   }
   if (name === 'sahuagin baron') return 'sahuagin_baron_scream';
+  // The Butcher (player + enemy 2x2 hulk) — heaviest scream on death,
+  // matching its summon + swing cues.
+  if (name === 'the butcher') return 'sahuagin_scream_03';
   // Piranhas Swarm — bubbly pass-by bookending the fight.
   if (name === 'piranhas swarm') return 'piranha_swarm';
   // Deathjump Spiders — dry-leaf scuttle on fight start AND end so the
@@ -46667,6 +46695,12 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'bone amalgam') {
       return { flesh: 'big_bone_hit', blocked: 'big_bone_hit' };
     }
+    // The Butcher (Necromancer Tier 2 hulk, player + enemy) — bellows
+    // the heaviest cave-monster scream on every swing (one per target
+    // hit, like the Roc Chick's screech). Same sample on summon + death.
+    if (name === 'the butcher') {
+      return { flesh: 'sahuagin_scream_03', blocked: 'sahuagin_scream_03', play: 'sahuagin_scream_03' };
+    }
     // Ice Elemental — ice-blast cue on every swing so the elemental's
     // attack feels frosty. Same sample bookends summon + death via
     // getCreaturePlaySfxKey / getDeathSfxKey.
@@ -50227,6 +50261,24 @@ function buildCodexSourceCache() {
   skeletonSummon._sourceSubtype = 'ability';
   addCreature(skeletonSummon, 'Summoned by: Necromancer Power');
 
+  // The Butcher (ENEMY side) — the Plague Gravekeeper's Endless Dead
+  // horde heaves up a 3/10 2x2 hulk from turn 6 on (raiseEnemyButcher).
+  // The player-side Butcher is auto-discovered via the_butcher card's
+  // previewCreature, but the enemy raise has no card anchor and isn't in
+  // setupEnemyForCombat, so the sandbox scan misses it — surface it
+  // explicitly stamped enemy-side (distinct dedup key from the player
+  // Butcher, so both appear).
+  const enemyButcherSummon = new Creature({
+    name: 'The Butcher', attack: 3, maxHp: 10,
+    bleedAttack: 1, multiAttack: 2, traits: ['Undead'],
+    slotW: 2, slotH: 2, onDeathPoisonAll: 1,
+    description: 'Attacks 2 targets. On Death: Poison ALL.',
+  });
+  enemyButcherSummon._codexSide = 'enemy';
+  enemyButcherSummon._sourceRarity = 'uncommon';
+  enemyButcherSummon._sourceSubtype = 'allies';
+  addCreature(enemyButcherSummon, 'Summoned by: Endless Dead (Plague Gravekeeper)');
+
   // Ability-choice lists (level-up / Lost Shrine pick). We don't surface a
   // "Ability choice: X" line per card — the per-card characterClass already
   // tells the player which classes can pick it. Instead we just record which
@@ -50525,9 +50577,11 @@ function buildCodexSourceCache() {
   const classPowers = [
     ['Paladin', 'Cleave'], ['Ranger', 'Take Aim'], ['Wizard', 'Elemental Infusion'],
     ['Rogue', 'Quick Strike'], ['Warrior', 'Battle Fury'], ['Druid', 'Feral Form'],
+    ['Necromancer', 'Skeleton Mastery'],
   ];
   const classPowerIds = { cleave: 'Paladin', aimed_shot: 'Ranger', elemental_infusion: 'Wizard',
-                          quick_strike: 'Rogue', battle_fury: 'Warrior', feral_form: 'Druid' };
+                          quick_strike: 'Rogue', battle_fury: 'Warrior', feral_form: 'Druid',
+                          necromancer_power: 'Necromancer' };
   for (const [pid, cls] of Object.entries(classPowerIds)) {
     addPower(pid, `Class power: ${cls}`);
   }

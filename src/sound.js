@@ -552,6 +552,9 @@ export const SOUND_MAP = {
   // play SFX so every breath weapon feels like the dragon roaring
   // through the strike.
   varimatras_scream:     'Monster/sahuagin_scream_03',
+  // Direct alias for the heaviest scream — The Butcher (player + enemy
+  // 2x2 hulk) bellows it on summon, every swing, and death.
+  sahuagin_scream_03:    'Monster/sahuagin_scream_03',
   // White Dragon Egg — chirpy "chick hatching" sample. Layered on
   // top of the normal attack hit cue whenever the egg creature is
   // struck, so every blow on the egg sounds like the chick inside

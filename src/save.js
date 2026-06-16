@@ -410,7 +410,7 @@ export function hasAnySave() {
 // player who has cleared the dragon on ANY class qualifies for the
 // ccgQuest+ unlock.
 export function hasPart1CompleteSave() {
-  const classes = ['paladin', 'ranger', 'wizard', 'rogue', 'warrior', 'druid'];
+  const classes = ['paladin', 'ranger', 'wizard', 'rogue', 'warrior', 'druid', 'necromancer'];
   for (const cls of classes) {
     if (hasSave(`part1_complete_${cls}`)) return true;
   }

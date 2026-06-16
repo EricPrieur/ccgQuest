@@ -2521,7 +2521,9 @@ export function createTheButcher() {
     id: 'the_butcher', name: 'The Butcher',
     description: 'Recharge a Card ->\nCall The Butcher!\nDraw.',
     shortDesc: 'R-Card->Call\nThe Butcher, Draw',
-    subtype: 'ability',
+    // Ally card (the Butcher himself is the summon). Still a Tier 2
+    // Necromancer ability CHOICE — it stays in getNecromancerAbilityChoices.
+    subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
