@@ -4167,6 +4167,11 @@ function addLootedCard(card) {
 // === Asset Loading ===
 const images = {};
 let assetsLoaded = false;
+// First-load progress (critical asset batch in loadAssets) — drives the
+// boot loading bar so a player who clicks the URL cold isn't staring at
+// a black screen for ~20s while the maps/backgrounds decode.
+let _assetsLoadedCount = 0;
+let _assetsTotalCount = 0;
 
 function loadImage(id, src) {
   return new Promise((resolve) => {
@@ -4188,7 +4193,7 @@ function loadImage(id, src) {
 }
 
 async function loadAssets() {
-  await Promise.all([
+  const _critAssets = [
     loadImage('menu_bg', `${BASE}assets/Backgrounds/MainScreen.jpg`),
     // Debug-only Quest Select screen (between MENU → CHARACTER_SELECT).
     // quest_main reuses MainScreen.jpg for the main-quest tile art per
@@ -4422,7 +4427,13 @@ async function loadAssets() {
     // the Skeleton Mastery card piece since the perk leans into the
     // same first-skeleton beat.
     loadImage('skeletal_strength_perk', `${BASE}assets/Cards/NecromancerPower.jpg`),
-  ]);
+  ];
+  // Track first-load progress for the boot loading bar, then await the
+  // whole critical batch. loadImage never rejects (a 404 resolves null),
+  // so one .then per promise counts both hits and misses toward the bar.
+  _assetsTotalCount = _critAssets.length;
+  for (const p of _critAssets) p.then(() => { _assetsLoadedCount++; });
+  await Promise.all(_critAssets);
   // Block on the 6 class-select portraits so they're guaranteed in the
   // card-art cache before the menu becomes interactive. Otherwise the
   // first time the player clicks New Game, the portraits flash in one
@@ -4443,6 +4454,56 @@ async function loadAssets() {
   // so the menu appears immediately and card art streams in behind it.
   preloadAllArt(); // fire-and-forget — non-blocking
   assetsLoaded = true;
+}
+
+// Boot loading screen — drawn every frame WHILE loadAssets() is still
+// awaiting the critical batch, so a cold first-load shows a title + a
+// filling progress bar instead of ~20s of black canvas. Stops itself the
+// moment assetsLoaded flips (the real gameLoop takes over from there).
+function drawLoadingScreen() {
+  ctx.fillStyle = '#0d0a12';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  const cx = SCREEN_WIDTH / 2;
+  const cy = SCREEN_HEIGHT / 2;
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#e8d59a';
+  ctx.font = 'bold 40px Georgia, serif';
+  ctx.fillText('ccgQuest', cx, cy - 64);
+
+  ctx.fillStyle = '#9a8a6a';
+  ctx.font = 'italic 16px Georgia, serif';
+  ctx.fillText('Loading the realm…', cx, cy - 32);
+
+  const frac = _assetsTotalCount > 0
+    ? Math.min(1, _assetsLoadedCount / _assetsTotalCount)
+    : 0;
+  const barW = Math.min(440, SCREEN_WIDTH * 0.6);
+  const barH = 18;
+  const barX = cx - barW / 2;
+  const barY = cy;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = '#c8a84a';
+  ctx.fillRect(barX, barY, barW * frac, barH);
+  ctx.strokeStyle = '#e8d59a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  ctx.fillStyle = '#cfc0a0';
+  ctx.font = '13px Georgia, serif';
+  ctx.fillText(`${Math.round(frac * 100)}%`, cx, barY + barH + 24);
+
+  ctx.textAlign = 'left';
+}
+
+function loadingLoop() {
+  // Hand off to the real game loop the instant assets finish.
+  if (assetsLoaded) return;
+  drawLoadingScreen();
+  requestAnimationFrame(loadingLoop);
 }
 
 // === Input Handling ===
@@ -47769,13 +47830,21 @@ const CODEX_SUBTYPE_TO_CATEGORY = {
   ally: 'allies', allies: 'allies', companion: 'allies',
 };
 
-// Heroes / monsters for the second tab. Necromancer is the Path of
-// the Necromancer side-quest apprentice — uses YoungNecromancerCharacter
-// for now (wired via necromancer_class in CARD_ART_MAP). When the
-// full main-game Necromancer class ships, we'll add a second entry
-// for the older / experienced version using OlderNecromancerCharacter,
-// and consider renaming this one to "Apprentice Necromancer".
-const HERO_NAMES = ['Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid', 'Necromancer'];
+// Heroes / monsters for the second tab. The Necromancer ships in two
+// flavors, both surfaced as codex heroes:
+//  • 'Necromancer' — the main-game MASTER (older / experienced), drawn
+//    from OlderNecromancerCharacter via necromancer_class_old (the
+//    portrait the main game grants, see getClassArtId).
+//  • 'Apprentice Necromancer' — the Path of the Necromancer side-quest
+//    apprentice (young), YoungNecromancerCharacter via necromancer_class.
+// Entries may be a bare class name (portrait `${name}_class`) or an
+// object with an explicit { name, portraitId } so the two necromancers
+// can point at different art.
+const HERO_NAMES = [
+  'Paladin', 'Ranger', 'Wizard', 'Rogue', 'Warrior', 'Druid',
+  { name: 'Necromancer', portraitId: 'necromancer_class_old' },
+  { name: 'Apprentice Necromancer', portraitId: 'necromancer_class' },
+];
 
 // Enemy-only card ids whose creator lives in CARD_REGISTRY but
 // whose play side is the monster (Kraken boss combat cards). Default
@@ -48364,7 +48433,11 @@ function drawCodexCharacterGrid(L) {
   // Build entry list: heroes + monsters, optionally filtered by search text.
   let entries = [];
   if (codexFilter === 'all' || codexFilter === 'heroes') {
-    for (const name of HERO_NAMES) entries.push({ kind: 'hero', name });
+    for (const h of HERO_NAMES) {
+      const name = typeof h === 'string' ? h : h.name;
+      const portraitId = typeof h === 'string' ? null : h.portraitId;
+      entries.push({ kind: 'hero', name, portraitId });
+    }
   }
   if (codexFilter === 'all' || codexFilter === 'monsters') {
     for (const id of getCodexMonsterIds()) entries.push({ kind: 'monster', id });
@@ -49886,7 +49959,7 @@ function drawCodexCharacterPanel(entry, x, y, w, h) {
   };
   let portraitId, displayName;
   if (entry.kind === 'hero') {
-    portraitId = `${entry.name.toLowerCase()}_class`;
+    portraitId = entry.portraitId || `${entry.name.toLowerCase()}_class`;
     displayName = entry.name;
   } else {
     portraitId = PORTRAIT_REMAP[entry.id] || entry.id;
@@ -51757,6 +51830,11 @@ loadGamePlusUnlock();
 loadGamePlusToggle();
 loadNecromancerUnlock();
 loadOptionsFromStorage();
+// Kick the loading bar immediately so the first cold load shows a
+// filling progress bar (not a black screen) while the critical asset
+// batch decodes. It self-terminates when assetsLoaded flips, and the
+// real game loop takes over.
+requestAnimationFrame(loadingLoop);
 loadAssets().then(() => {
   requestAnimationFrame(gameLoop);
 });
