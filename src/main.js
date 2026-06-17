@@ -6586,6 +6586,11 @@ function resetStoryFlags() {
   studyVisited = false;
   stoneDoorOpened = false;
   _necromancerMainGame = false;
+  // Default the run to the MAIN quest; the Necromancer side quest
+  // overrides this to 'necromancer' after its reset. _necromancerMainGame
+  // is DERIVED from selectedQuest on load, so this keeps a stale value
+  // from leaking across runs.
+  selectedQuest = 'main';
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
@@ -6696,6 +6701,11 @@ function startNewGame() {
   studyVisited = false;
   stoneDoorOpened = false;
   _necromancerMainGame = false;
+  // Default the run to the MAIN quest; the Necromancer side quest
+  // overrides this to 'necromancer' after its reset. _necromancerMainGame
+  // is DERIVED from selectedQuest on load, so this keeps a stale value
+  // from leaking across runs.
+  selectedQuest = 'main';
   upperStairsReturnSeen = false;
   tharnagExitSeen = false;
   completedEncounters = new Set();
@@ -16147,7 +16157,7 @@ function handleEncounterChoiceClick(x, y) {
           try {
             const classKey = (selectedClass || 'unknown').toLowerCase();
             saveToSlot({
-              selectedClass, gold, player, currentMap, visitedNodes, backpack,
+              selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack,
               kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
@@ -17017,7 +17027,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -44111,7 +44121,7 @@ function commitSaveEditing() {
   if (!saveEditingSlot) return;
   const name = (saveEditingName || '').trim() || `Save ${saveEditingDisplayNum}`;
   const success = saveToSlot({
-    selectedClass, gold, player, currentMap, visitedNodes, backpack,
+    selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack,
     kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial,
     calmGroveRaenaJoined, calmGroveBreadTaken,
     antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
@@ -44747,18 +44757,17 @@ function restoreFromSave(data) {
     }
     player.addPower(power);
   }
-  // Full main-game Necromancer flag — restored BEFORE the power
-  // re-grant below so a main-game run gets Skeleton Mastery back even
-  // though it never completes the side quest's study_desk encounter.
-  _necromancerMainGame = !!data.necromancerMainGame;
-  // Rescue for Game+ runs saved before necromancerMainGame was persisted
-  // correctly (the resetStoryFlags timing bug): a Necromancer with a
-  // Game+ tier offset is ALWAYS the main-game (older) Necromancer — the
-  // Path of the Necromancer side quest never runs at an offset. Force the
-  // flag so the OLD portrait + Skeleton Mastery both come back on reload.
-  if (selectedClass === 'Necromancer' && playerTierOffset > 0) {
-    _necromancerMainGame = true;
-  }
+  // Main-game vs side-quest Necromancer is DERIVED from the quest type,
+  // not a separately-tracked flag (the old _necromancerMainGame flag kept
+  // drifting out of sync — Game+ reloads, resetStoryFlags timing, etc.).
+  // The Path of the Necromancer side quest sets selectedQuest =
+  // 'necromancer' (young apprentice, earns Skeleton Mastery from the
+  // study); EVERY other Necromancer run is the main-game master (old
+  // portrait, power from the start). Restore selectedQuest from the save
+  // when present; otherwise keep the in-memory default ('main') so old
+  // saves with no persisted quest read as main-game and get the fix.
+  if (typeof data.selectedQuest === 'string') selectedQuest = data.selectedQuest;
+  _necromancerMainGame = (selectedClass === 'Necromancer' && selectedQuest !== 'necromancer');
   // Path of the Necromancer — re-grant Skeleton Mastery if the
   // apprentice has already finished the study_desk encounter (side
   // quest) OR this is a full main-game Necromancer (power from the
