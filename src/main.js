@@ -2331,15 +2331,16 @@ const DECK_LIMIT_CATEGORIES = [
   { id: 'relic',   label: 'Relics',    subtypes: new Set(['relic']) },
 ];
 
-// Maximum +N a player can add to a category's base deck limit. Most
-// categories cap at +3 in the main game and +5 in Game+ (deckLimitCapBonus
-// adds 2). Relics are intentionally tighter — only +1 in the main game
-// (2 total) and +2 in Game+ (3 total) — so the run can't be padded with
-// stacked relic effects. Game+'s +2 cap bonus contributes only +1 to relics.
+// Maximum +N a player can add to a category's base deck limit. Each
+// Game+ restart raises deckLimitCapBonus by +2. Most categories get the
+// full +2 per Game+ (cap +3 in the main game, +5 / +7 / … as Game+ stacks).
+// Relics are HALF rate — +1 in the main game, then +1 per Game+ restart
+// (each +2 capBonus = +1 relic). So relics run 2 (main) → 3 (G+) → 4 (G++)
+// → 5 (G+++) total, vs the old code that clamped them at +1 forever.
 function getDeckLimitCap(catId) {
   const capBonus = (player && player.deckLimitCapBonus) || 0;
   if (catId === 'relic') {
-    return 1 + Math.min(1, capBonus);
+    return 1 + Math.floor(capBonus / 2);
   }
   return 3 + capBonus;
 }
