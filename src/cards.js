@@ -356,13 +356,13 @@ export function createBoneDagger() {
 export function createWhiteDragonscaleShield() {
   return new Card({
     id: 'white_dragonscale_shield', name: 'White Dragonscale Shield',
-    description: 'Recharge -> Gain 4 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.',
-    shortDesc: 'R->+4 Shield\nIce -> Shield\nDmg = Shield',
+    description: 'Recharge -> Gain 3 Shields.\nIce -> Shields on yourself.\nDeal damage = Shields.',
+    shortDesc: 'R->+3 Shield\nIce -> Shield\nDmg = Shield',
     subtype: 'light_armor',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('transform_ice_to_shield_self', 0, TargetType.SELF),
-      new CardEffect('shield_bash', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('shield_bash', 3, TargetType.SINGLE_ENEMY),
     ],
     tier: 2,
     rarity: 'epic',
@@ -3401,10 +3401,10 @@ export function createRockBarrage() {
       new CardEffect('enemy_damage_succession', 1, TargetType.SINGLE_ENEMY, 2),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    // +2 per-shot damage per offset (shot count stays at 2). The
-    // { value: 2 } shape uses the same bump helper but skips the
+    // +1 per-shot damage per offset (shot count stays at 2). The
+    // { value: 1 } shape uses the same bump helper but skips the
     // maxTargets bump that the earlier wiring added.
-    gamePlusOffset: { enemy_damage_succession: { value: 2 } },
+    gamePlusOffset: { enemy_damage_succession: { value: 1 } },
   });
 }
 
@@ -4046,13 +4046,13 @@ export function createBarnacleCoveredBuckler() {
   return new Card({
     id: 'barnacle_covered_buckler',
     name: 'Barnacle-Covered Buckler',
-    description: 'Gain 3 Shield. Create 1 Barnacle.\nFirst Shield, On Swim: Draw.',
-    shortDesc: '+3 Shield\n+1 Barnacle\n1st/Swim: Draw',
+    description: 'Gain 2 Shield. Create 1 Barnacle.\nFirst Shield, On Swim: Draw.',
+    shortDesc: '+2 Shield\n+1 Barnacle\n1st/Swim: Draw',
     subtype: 'light_armor',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('gain_shield', 3, TargetType.SELF),
+      new CardEffect('gain_shield', 2, TargetType.SELF),
       new CardEffect('create_barnacle', 1, TargetType.SELF),
       new CardEffect('draw_if_no_shield', 0, TargetType.SELF),
       new CardEffect('on_swim_recharge_draw', 1, TargetType.SELF),
@@ -5913,8 +5913,8 @@ export function createWhiteClawReforged() {
     ],
     rarity: 'rare',
     tier: 2,
-    // +3 dmg / +0.5 Ice (floor) per offset.
-    gamePlusOffset: { damage: 3, apply_ice_all: 0.5 },
+    // +5 dmg / +0.5 Ice (floor) per offset.
+    gamePlusOffset: { damage: 5, apply_ice_all: 0.5 },
   });
 }
 
@@ -6040,15 +6040,15 @@ export function createDwarvenTowerShield() {
   return new Card({
     id: 'dwarven_tower_shield',
     name: 'Dwarven Tower Shield',
-    description: 'Recharge a card -> Gain 4 Shields.\nStays in hand.',
-    shortDesc: 'R+1->+4 Shield\nStays in hand',
+    description: 'Recharge a card -> Gain 3 Shields.\nStays in hand.',
+    shortDesc: 'R+1->+3 Shield\nStays in hand',
     subtype: 'heavy_armor',
     // ABILITY (not DEFENSE) so it can only be played proactively on the
     // player's turn, not reactively during the defending phase.
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('gain_shield', 4, TargetType.SELF),
+      new CardEffect('gain_shield', 3, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -7549,16 +7549,14 @@ export function createRocTalonDagger() {
   });
 }
 
-// Roc Eggshell Shield — light shield defense card. Big +8 Shields
-// for a single discard, plus a draw rider that fires only if the
-// caster started the play with no Shield (the "First Shield"
-// payoff — same draw_if_no_shield gate Sturdy Boots uses).
+// Roc Eggshell Shield — light shield defense card. Big +6 Shields
+// for a single discard.
 export function createRocEggshellShield() {
   return new Card({
     id: 'roc_eggshell_shield',
     name: 'Roc Eggshell Shield',
-    description: 'Discard -> Gain 6 Shields.\nFirst Shield: Draw.',
-    shortDesc: 'D->+6 Shield\nFirst: Draw',
+    description: 'Discard -> Gain 6 Shields.',
+    shortDesc: 'D->+6 Shield',
     subtype: 'light_armor',
     // ABILITY (not DEFENSE) so the player plays it proactively on
     // their own turn — same shape as the other player-side shields
@@ -7569,7 +7567,6 @@ export function createRocEggshellShield() {
     costType: CostType.DISCARD,
     effects: [
       new CardEffect('gain_shield', 6, TargetType.SELF),
-      new CardEffect('draw_if_no_shield', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
     tier: 2,

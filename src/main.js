@@ -1012,13 +1012,12 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const cBonus = 2 + offset;
       c.description = `Recharge +1 -> Deal ${hitBase} Damage (+${hitBonus} vs Armor/Shield). Summon a ${cAtk}/${cHp} Obsidian Construct (Sentinel, ${cArmor} Armor, +${cBonus} vs Armor/Shield).`;
     }
-    // Drain Essence — both ends of the 1-N random roll slide up
-    // together. Card-level bump already pushed the max via
-    // necrotic_drain; rebuild the range string so the description
-    // / shortDesc display the right window.
+    // Drain Essence — only the UPPER end of the 1-N random roll bumps
+    // (+1 per offset via necrotic_drain); the floor stays at 1, so the
+    // range stretches (1-4 → 1-5 → 1-6). Rebuild the range string.
     if (c.id === 'drain_essence' && c.gamePlusOffset?.necrotic_drain) {
       const max = (c.effects.find(e => e.effectType === 'necrotic_drain')?.value) || 4;
-      const min = 1 + offset;
+      const min = 1;
       c.description = `Recharge -> Deal ${min}-${max} Necrotic damage. Heal for the same amount.`;
       c.shortDesc = `R->${min}-${max} True Dmg\nHeal same`;
     }
@@ -1051,9 +1050,10 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const cap = 5 + 2 * offset;
       c.effectDescription = `When Hit: -1 Armor, +1 Rage. Turn Start: +1 Armor (max ${cap}), -1 Rage.`;
     }
-    // From the Deep — random summon count grows by 1 per offset.
+    // From the Deep — random summon count grows by +0.5 per offset
+    // (floored): +1 max every 2 offsets.
     if (c.id === 'from_the_deep') {
-      const maxN = 1 + offset;
+      const maxN = 1 + Math.floor(0.5 * offset);
       const range = maxN > 1 ? `1-${maxN}` : '1';
       c.effectDescription = `Start of Turn: Summon ${range} Creature(s) from the Deep.`;
     }
@@ -1385,13 +1385,17 @@ function applyMonsterTierOffsetToEnemy() {
   for (const card of enemy.deck.masterDeck) {
     if (card && card.gamePlusOffset) applyGamePlusOffsetInPlace(card, monsterTierOffset);
   }
-  // 2. Duplicate the deck monsterTierOffset times so total HP scales
-  //    linearly. Offset 1 = 2× HP, offset 2 = 3× HP, etc.
+  // 2. Duplicate the deck to scale total HP. Default is +100% per
+  //    offset (offset 1 = 2× HP, offset 2 = 3× HP, …). The Dwarven
+  //    Specter is an Ethereal attrition slog whose pool already feels
+  //    heavy, so it scales at HALF rate — +50% HP per offset
+  //    (1.5× / 2× / 2.5× …).
+  const hpScalePerOffset = (enemy.name === 'Dwarven Specter') ? 0.5 : 1.0;
   const original = [...enemy.deck.masterDeck];
-  for (let k = 0; k < monsterTierOffset; k++) {
-    for (const c of original) {
-      enemy.deck.addCard(c.copy ? c.copy() : c);
-    }
+  const dupesToAdd = Math.round(original.length * hpScalePerOffset * monsterTierOffset);
+  for (let i = 0; i < dupesToAdd; i++) {
+    const src = original[i % original.length];
+    enemy.deck.addCard(src.copy ? src.copy() : src);
   }
   // 3. Apply gamePlusOffset to every power.
   for (const p of (enemy.powers || [])) {
@@ -3406,6 +3410,11 @@ let cardRechargeMode = false;
 // into the next fight.
 let flashOfGeniusMode = false;
 let flashOfGeniusRechargesLeft = 0;
+// Deferred Flash of Genius picker — set when combat opens with an enemy
+// surprise (ambush). The picker would otherwise overlay the enemy's
+// free opening swing and hide the surprise damage, so we hold it back
+// and open it on the player's first ACTUAL turn (in finishEnemyTurn).
+let _flashOfGeniusPending = 0;
 let _flashSkipRect = null;
 let cardRechargeNeeded = 0;
 let cardRechargedCards = []; // cards already paid as recharge cost
@@ -13265,6 +13274,7 @@ function advanceEncounterPhase() {
         encounterChoiceResult = null;
         _encounterHadCombat = false;
         advanceEncounterPhase();
+        autosaveNow(); // persist chapter entry so a death here doesn't revert past it
       });
       return;
     }
@@ -13463,6 +13473,7 @@ function advanceEncounterPhase() {
         "Find the source of the White Claw's power. End the threat to Tharnag.",
         () => {
           state = GameState.MAP;
+          autosaveNow(); // persist tharnagExitSeen so a death here doesn't revert past it
         }
       );
       return;
@@ -13516,6 +13527,13 @@ function advanceEncounterPhase() {
         currentMap = getOrCreateMap('tharnag', createTharnagMap);
         visitedNodes = new Set();
         startNodeEncounter('tharnag_entry');
+        // Force an autosave the moment we land in Tharnag with the forest
+        // cleared. The maze exit is a non-combat transition (no post-fight
+        // autosave fires), and the NEXT autosave only happens after the
+        // player WINS the first siege — so dying in that siege used to
+        // revert all the way back to before the forest. Persisting here
+        // makes a death drop them at the Tharnag gate, forest stays clear.
+        autosaveNow();
       });
       return;
     }
@@ -13535,6 +13553,7 @@ function advanceEncounterPhase() {
           currentMap = getOrCreateMap('lower_caverns', createLowerCavernsMap);
           visitedNodes = new Set(['cavern_entrance']);
           startNodeEncounter('cavern_entrance');
+          autosaveNow(); // persist chapter entry so a death here doesn't revert past it
         };
         // First-time entry shows the Chapter 7 title card; revisits
         // skip the cinematic and drop straight into the cavern map.
@@ -13561,6 +13580,7 @@ function advanceEncounterPhase() {
           currentMap = getOrCreateMap('entry_corridor', createEntryCorridorMap);
           visitedNodes = new Set(['corridor_entrance']);
           startNodeEncounter('corridor_entrance');
+          autosaveNow(); // persist chapter entry so a death here doesn't revert past it
         };
         if (isRevisit) {
           enterUpper();
@@ -18744,6 +18764,7 @@ function startCombat() {
   cardRechargeMode = false;
   flashOfGeniusMode = false;
   flashOfGeniusRechargesLeft = 0;
+  _flashOfGeniusPending = 0;
   _flashSkipRect = null;
   cardDiscardPickMode = false;
   cardDiscardPickNeeded = 0;
@@ -19302,10 +19323,17 @@ function applyPerksCombatStart() {
   // the Skip button + status banner render in drawCombatButtons.
   const flashStacks = player.getPerkStacks('combat_start_flash');
   if (flashStacks > 0) {
-    flashOfGeniusMode = true;
-    flashOfGeniusRechargesLeft = flashStacks;
-    addLog(`  Flash of Genius! Click a card to recharge it for +1 Draw (×${flashStacks}), or Skip.`,
-      Colors.GOLD, perkToCardLike(createFlashOfGeniusPerk()));
+    if (enemy && enemy._enemy_surprise) {
+      // Ambush fight (Kobold Slyblade, Specter, etc.) — the enemy takes a
+      // free opening swing first. Defer the picker to the player's first
+      // real turn so it doesn't overlay (and hide) the surprise damage.
+      _flashOfGeniusPending = flashStacks;
+    } else {
+      flashOfGeniusMode = true;
+      flashOfGeniusRechargesLeft = flashStacks;
+      addLog(`  Flash of Genius! Click a card to recharge it for +1 Draw (×${flashStacks}), or Skip.`,
+        Colors.GOLD, perkToCardLike(createFlashOfGeniusPerk()));
+    }
   }
   // First Strike perk
   const firstStrike = player.getPerkStacks('combat_start_first_strike');
@@ -30492,6 +30520,11 @@ function resolveEffect(eff, caster, target) {
           if (tk > 0) { spawnDamageOnTarget(enemy, tk, Colors.ORANGE); anyLanded = true; }
           addLog(`  ${tk} unpreventable dmg to ${enemy.name}`, Colors.ORANGE);
         } else {
+          // Let the enemy react first — Consecration is a real hit, so
+          // reactive defenses fire (e.g. the Bone Pile's Loose Bone,
+          // which spawns Restless Bones when it blocks). Same hook the
+          // single-target / barrage attacks use.
+          enemyAutoPlayDefenses(d);
           const [, tk] = enemy.takeDamageWithDefense(d);
           lastTaken = tk;
           if (tk > 0) { spawnDamageOnTarget(enemy, tk); anyLanded = true; }
@@ -30501,7 +30534,13 @@ function resolveEffect(eff, caster, target) {
         triggerSplitPower(enemy, lastTaken > 0);
         if (caster === player) onPlayerHitEnemy(lastTaken);
       }
-      for (const c of [...enemy.creatures]) {
+      // Iterate the ORIGINAL split targets (snapshotted before the boss
+      // split fired), not a live read of enemy.creatures — otherwise the
+      // Slimes / Restless Bones spawned by THIS Consecration would
+      // immediately eat the same AoE and die, reading as "nothing
+      // spawned." New spawns get hit by the NEXT attack instead.
+      for (const c of splitTargets) {
+        if (c === enemy) continue; // boss handled above
         if (!c.isAlive || c._invulnerable) continue;
         let d = perShare + getIncomingDamageModifier(c);
         d += applyEyeBonus(c, splitEye);
@@ -35909,10 +35948,10 @@ function startEnemyTurn() {
       } else if (power.id === 'from_the_deep') {
         // Mirrors PY: each turn, summon 1 random creature — Shark
         // (Bloodfrenzy), Sahuagin Sentinel, or High Priest. ccgQuest+
-        // bumps the upper bound on the random roll so a +1 offset
-        // makes the power summon 1-2 creatures per turn, +2 makes it
-        // 1-3, etc. Each summon picks its own type independently.
-        const maxRoll = 1 + (monsterTierOffset || 0);
+        // bumps the upper bound on the random roll by +0.5 per offset
+        // (floored): +1/+2 still summons 1, +2 makes it 1-2, +4 → 1-3.
+        // Each summon picks its own type independently.
+        const maxRoll = 1 + Math.floor(0.5 * (monsterTierOffset || 0));
         const count = 1 + Math.floor(Math.random() * maxRoll);
         for (let n = 0; n < count; n++) {
           const roll = Math.floor(Math.random() * 3);
@@ -36950,13 +36989,11 @@ function updateEnemyTurn(dt) {
         // actually drained (cards moved from its discardPile back to
         // drawPile). PY parity (game.py:13278-13325). Dedicated dark
         // warp cue instead of the generic flesh hit — the drain is
-        // magical, not a swing. ccgQuest+ shifts BOTH ends of the
-        // range by `monsterTierOffset` (eff.value already includes
-        // the upper-bound bump via gamePlusOffset; the min slides up
-        // to match so 1-4 reads 2-5 / 3-6 / … instead of stretching).
+        // magical, not a swing. ccgQuest+ bumps only the UPPER bound
+        // (eff.value via gamePlusOffset); the floor stays at 1, so the
+        // range STRETCHES (1-4 → 1-5 → 1-6) rather than sliding.
         playSound('drain_essence', 0.8);
-        const dOffset = monsterTierOffset || 0;
-        const minRoll = 1 + dOffset;
+        const minRoll = 1;
         const maxRoll = Math.max(minRoll, eff.value);
         const necroticDmg = minRoll + Math.floor(Math.random() * (maxRoll - minRoll + 1));
         // takeDamageFromDeck returns the number of NON-token cards
@@ -38509,6 +38546,18 @@ function completePlayerTurnTransition() {
   // the fight).
   processStatusEffects(player, 'You');
   if (checkCombatEnd()) return;
+
+  // Deferred Flash of Genius — a surprise/ambush fight held the picker
+  // back at combat start (see applyPerksCombatStart) so the enemy's free
+  // opening swing stayed visible. The ambush has now resolved and it's
+  // the player's first real turn, so open the picker. One-shot.
+  if (_flashOfGeniusPending > 0) {
+    flashOfGeniusMode = true;
+    flashOfGeniusRechargesLeft = _flashOfGeniusPending;
+    _flashOfGeniusPending = 0;
+    addLog(`  Flash of Genius! Click a card to recharge it for +1 Draw (×${flashOfGeniusRechargesLeft}), or Skip.`,
+      Colors.GOLD, perkToCardLike(createFlashOfGeniusPerk()));
+  }
 
   // Whirlpool — forced swim of 1 per stack. Show the Whirlpool
   // card on screen and route through the SWIMMING flow so On Swim
@@ -42448,6 +42497,7 @@ function exitInventory() {
         currentMap = createMountainPathMap();
         visitedNodes = new Set();
         startNodeEncounter('mountain_camp');
+        autosaveNow(); // persist chapter entry so a death here doesn't revert past it
       });
       return;
     }
@@ -42476,6 +42526,7 @@ function exitInventory() {
         // arriveAtNode kicks the area music + encounter check for the
         // landing node. No-op encounter (entry has empty encounterId).
         arriveAtNode('stairs1_entry', null, true);
+        autosaveNow(); // persist chapter entry so a death here doesn't revert past it
       });
       return;
     }
