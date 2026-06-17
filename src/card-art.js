@@ -20,6 +20,7 @@ export const CARD_ART_MAP = {
   dragon_tooth_dagger: 'DragonToothDagger.jpg',
   white_dragonscale_shield: 'WhiteDragonscaleShield.jpg',
   white_dragonscale_armor: 'WhiteDragonscaleArmor.jpg',
+  winterborn_robes: 'WinterbornRobes.jpg',
   dragon_bone_bow: 'DragonBoneBow.jpg',
   dragon_eye_mace: 'DragonEyeMace.jpg',
   white_dragon_egg: 'WhiteDragonEgg.jpg',

@@ -51,7 +51,7 @@ import {
   createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createShadowBolt, createTheButcher, createPlague, createBookOfTheDead, createBoneBuckler, createCorpseExplosion, createBoneStormNecromancer, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
-  createWhiteDragonscaleShield, createWhiteDragonscaleArmor,
+  createWhiteDragonscaleShield, createWhiteDragonscaleArmor, createWinterbornRobes,
   createDragonBoneBow, createDragonEyeMace, createWhiteDragonEgg,
   createWhiteDragonWyrmling,
   createHeroicStrike, createHolyLight, createShieldOfFaith, createFlashHeal, createHeroicHeal,
@@ -3564,6 +3564,7 @@ const CARD_REGISTRY = {
   dragon_tooth_dagger: createDragonToothDagger,
   white_dragonscale_shield: createWhiteDragonscaleShield,
   white_dragonscale_armor: createWhiteDragonscaleArmor,
+  winterborn_robes: createWinterbornRobes,
   dragon_bone_bow: createDragonBoneBow,
   dragon_eye_mace: createDragonEyeMace,
   white_dragon_egg: createWhiteDragonEgg,
@@ -3900,6 +3901,7 @@ const LOOT_TABLES = {
     { creator: createWhiteDragonscaleArmor,  weight: 1.0 },
     { creator: createDragonBoneBow,          weight: 1.0 },
     { creator: createDragonEyeMace,          weight: 1.0 },
+    { creator: createWinterbornRobes,        weight: 1.0 },
   ], { pickCount: 2, distinct: true }),
   // Dire Bear loot — Circular Ruins boss drops. Pick 2 distinct from a
   // weighted pool of bear-themed gear. Bleed-leaning Necklace + Claw,
@@ -4107,7 +4109,7 @@ const LOOT_TABLE_NOTES = {
   kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
   overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
-  varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace.",
+  varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace / Winterborn Robes.",
   dire_bear_loot:         'Dropped after defeating the Dire Bear in the Circular Ruins (resets on rest). Pick TWO distinct — Rations common, Claw / Hide Armor / Winterheart Pelt uncommon, Bear Teeth Necklace / Roaring Helm rare.',
   baby_roc_loot:          "Dropped after clearing the Roc's Nest (Baby Roc + eggs). Pick TWO distinct — Chick Leg / Talon Dagger / Eggshell Shield uncommon, Stormwing Feather / Adventurer's Ring rare, Unhatched Roc Egg ally epic.",
 };
@@ -27621,6 +27623,23 @@ function resolveEffect(eff, caster, target) {
         caster.shield = (caster.shield || 0) + ice;
         addLog(`  Ice -> Shield! +${ice} Shield (S:${caster.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(caster, ice, 'Shield', Colors.ALLY_BLUE);
+      }
+      break;
+    }
+    case 'transform_ice_to_heroism_self': {
+      // Winterborn Robes finisher — convert ALL Ice on the caster into
+      // Heroism, rounded UP (5 Ice -> 3 Heroism). Consumes the Ice.
+      // Resolves last on the robe so it sweeps the 4 Ice the same play
+      // granted PLUS any Ice already stacked from earlier this combat.
+      const iceH = (caster.getStatus && caster.getStatus('ICE')) || 0;
+      if (iceH > 0) {
+        const gained = Math.ceil(iceH / 2);
+        if (caster.removeStatus) caster.removeStatus('ICE', iceH);
+        caster.heroism = (caster.heroism || 0) + gained;
+        addLog(`  ${iceH} Ice -> +${gained} Heroism`, Colors.GOLD);
+        spawnTokenOnTarget(caster, gained, 'Heroism', Colors.GOLD);
+      } else {
+        addLog(`  No Ice to convert.`, Colors.GRAY);
       }
       break;
     }

@@ -398,6 +398,30 @@ export function createWhiteDragonscaleArmor() {
   });
 }
 
+// Winterborn Robes — Tier 2 epic clothing, 6th option in the Varimatras
+// hoard. A defensive setup robe that banks Block + card selection, frosts
+// you with 4 Ice, then cashes ALL your Ice in for Heroism (rounded up:
+// 5 Ice = 3 Heroism). The conversion sweeps Ice stacked earlier in the
+// fight too, so it rewards an Ice-leaning Wizard build.
+export function createWinterbornRobes() {
+  return new Card({
+    id: 'winterborn_robes', name: 'Winterborn Robes',
+    description: 'Block 4, Scry 4, Gain 4 Ice.\n2 Ice: Heroism',
+    shortDesc: 'Block 4, Scry 4\n+4 Ice\n2 Ice: Heroism',
+    subtype: 'clothing',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 4, TargetType.SELF),
+      new CardEffect('scry_pick', 4, TargetType.SELF),
+      new CardEffect('apply_ice_self', 4, TargetType.SELF),
+      new CardEffect('transform_ice_to_heroism_self', 0, TargetType.SELF),
+    ],
+    tier: 2,
+    rarity: 'epic',
+    gamePlusOffset: { block: 1, scry_pick: 1, apply_ice_self: 1 },
+  });
+}
+
 // Dragon Bone Bow — Tier 2 ranged drop. Recharge +1 cost (one
 // extra hand card burned alongside the bow itself), hits up to
 // 3 enemies for 4 damage each, then draws a card. The cycle
