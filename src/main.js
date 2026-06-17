@@ -6474,20 +6474,6 @@ function startGamePlusFromSave(slot) {
       player.powers = [];
       player.addPower(newPower);
     }
-    // Necromancer — getClassPower returns null (Skeleton Mastery is
-    // normally earned from the study_desk encounter), so the rebuild
-    // above skips it. A Game+ run ALWAYS launches from a main-story
-    // Part-1 completion (the side quest never produces a
-    // part1_complete save), so this is always a main-game Necromancer
-    // who should have the power. Force the flag + re-grant if missing —
-    // also rescues older saves written before necromancerMainGame was
-    // persisted.
-    if (selectedClass === 'Necromancer') {
-      _necromancerMainGame = true;
-      if (!player.powers.some(p => p && p.id === 'necromancer_power')) {
-        player.addPower(createNecromancerPower());
-      }
-    }
   }
   // ccgQuest+ restart wipes player.persistentBuffs alongside the
   // story flags so the run truly restarts at the chapter 1 baseline.
@@ -6500,6 +6486,20 @@ function startGamePlusFromSave(slot) {
   if (player) player.persistentBuffs = [];
   // Wipe the story / map state so the run RE-runs chapter 1.
   resetStoryFlags();
+  // Necromancer — resetStoryFlags() above zeroes _necromancerMainGame,
+  // so (re-)assert it HERE, AFTER the wipe. A Game+ run always launches
+  // from a main-story Part-1 completion (the side quest never produces a
+  // part1_complete save), so it's always a main-game Necromancer who
+  // keeps Skeleton Mastery. Without this the flag is saved false and the
+  // power vanishes on the next reload — which is exactly the bug.
+  // Re-grant the power too in case the rebuild above couldn't (older
+  // basis saves with no necromancerMainGame flag).
+  if (selectedClass === 'Necromancer') {
+    _necromancerMainGame = true;
+    if (player && !player.powers.some(p => p && p.id === 'necromancer_power')) {
+      player.addPower(createNecromancerPower());
+    }
+  }
   // Drop the player back at the chapter 1 entry node with the
   // carried-over deck. visitedNodes wipe so the map fog resets.
   currentMap = createPrisonCellMap();
@@ -44730,6 +44730,11 @@ function restoreFromSave(data) {
     const c = createCardFromSaveEntry(entry);
     if (c) player.deck.discardPile.push(c);
   }
+  // Anti-save-scum — reshuffle the held hand back into the deck and
+  // re-deal a fresh hand of the same size on every load. The discard
+  // pile (your HP / damage) is preserved exactly; only hand + draw pile
+  // are reshuffled, so reloading can't reroll into a better opening hand.
+  player.deck.reshuffleHand(MAX_HAND_SIZE);
 
   // Add class power. Re-apply ccgQuest+ offset on load so saved
   // runs come back with Take Aim+ etc. intact. Necromancer's

@@ -92,6 +92,19 @@ export class Deck {
     return this.draw(toDraw, maxHandSize);
   }
 
+  // Force a fresh hand: return the currently-held hand to the pool,
+  // rebuild + shuffle the draw pile (masterDeck minus discard), then
+  // redraw the SAME number of cards. The discard pile is untouched.
+  // Called on save-load so reloading can't reroll the hand.
+  reshuffleHand(maxHandSize = 10) {
+    const handSize = this.hand.length;
+    if (handSize === 0) return [];
+    // Clear the held hand so startCombat builds drawPile = masterDeck
+    // minus discard (hand no longer subtracted), shuffles, and re-deals.
+    this.hand = [];
+    return this.startCombat(handSize, maxHandSize);
+  }
+
   isInCombat() {
     return this.drawPile.length > 0 || this.hand.length > 0 ||
       this.rechargePile.length > 0 || this.playPile.length > 0;
