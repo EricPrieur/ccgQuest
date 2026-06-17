@@ -44751,6 +44751,14 @@ function restoreFromSave(data) {
   // re-grant below so a main-game run gets Skeleton Mastery back even
   // though it never completes the side quest's study_desk encounter.
   _necromancerMainGame = !!data.necromancerMainGame;
+  // Rescue for Game+ runs saved before necromancerMainGame was persisted
+  // correctly (the resetStoryFlags timing bug): a Necromancer with a
+  // Game+ tier offset is ALWAYS the main-game (older) Necromancer — the
+  // Path of the Necromancer side quest never runs at an offset. Force the
+  // flag so the OLD portrait + Skeleton Mastery both come back on reload.
+  if (selectedClass === 'Necromancer' && playerTierOffset > 0) {
+    _necromancerMainGame = true;
+  }
   // Path of the Necromancer — re-grant Skeleton Mastery if the
   // apprentice has already finished the study_desk encounter (side
   // quest) OR this is a full main-game Necromancer (power from the
