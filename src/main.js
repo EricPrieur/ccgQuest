@@ -210,6 +210,8 @@ let _pendingGamePlusConsumeSlot = null;
 // screen. Multiple class completions could pile up, so the list is
 // clipped to ~4 visible rows with mouse-wheel scrolling.
 let _gamePlusSavesScrollY = 0;
+// Scroll offset for the save list on the PART2_SETUP screen (WIP).
+let _part2SavesScrollY = 0;
 // ccgQuest+ progression — highest monster tier offset the player has
 // ever finished a run at. Persisted to localStorage so the unlock
 // survives across sessions. Finishing the base game (offset 0)
@@ -3534,6 +3536,12 @@ let barrageObsBonus = 0;
 let barrageHeroism = 0;
 let barrageIceReduction = 0;
 let barrageIgnite = 0;
+// Boarhide Bracers first-attack +2, snapshotted on the barrage's first
+// shot. attacksThisTurn is bumped before each shot's getDamageModifier
+// call, so the bracer's "first attack of the turn" check would see ≥1
+// and never fire mid-barrage. Snapshot it like heroism so the whole
+// volley gets +2 per shot (the same generosity heroism gets).
+let barrageBracerBonus = 0;
 
 // Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
 // element shots, each picks its own target — same enemy or different).
@@ -4287,6 +4295,8 @@ async function loadAssets() {
     // loadImage tolerates 404s (Image.onerror just leaves the cache
     // entry undefined) so missing art falls back to a styled tile.
     loadImage('quest_main', `${BASE}assets/Backgrounds/MainScreen.jpg`),
+    // Part 2 tile art (debug-only Quest Select). Part 2 is a WIP.
+    loadImage('quest_part2', `${BASE}assets/Backgrounds/Part2MainScreenBackground.jpg`),
     loadImage('quest_select_bg', `${BASE}assets/Backgrounds/StorySelectorBG.jpg`),
     loadImage('quest_necromancer', `${BASE}assets/Backgrounds/PathoftheNecromancerBG.jpg`),
     loadImage('char_select_bg', `${BASE}assets/Backgrounds/CharacterSelection.jpg`),
@@ -4939,6 +4949,9 @@ canvas.addEventListener('wheel', (e) => {
   if (state === GameState.GAME_PLUS_SETUP) {
     _gamePlusSavesScrollY = Math.max(0, _gamePlusSavesScrollY + scrollAmount);
   }
+  if (state === GameState.PART2_SETUP) {
+    _part2SavesScrollY = Math.max(0, _part2SavesScrollY + scrollAmount);
+  }
 }, { passive: false });
 
 // === Utility ===
@@ -5092,6 +5105,9 @@ function handleClick(x, y) {
       break;
     case GameState.GAME_PLUS_SETUP:
       handleGamePlusSetupClick(x, y);
+      break;
+    case GameState.PART2_SETUP:
+      handlePart2SetupClick(x, y);
       break;
     case GameState.CHARACTER_SELECT:
       handleCharSelectClick(x, y);
@@ -5667,28 +5683,60 @@ function drawQuestSelect() {
   ctx.font = 'italic 18px serif';
   ctx.fillText('Debug build · pick the storyline for this run', SCREEN_WIDTH / 2, 132);
 
-  // Main Quest tile — large, centered in the upper half. Uses
-  // MainScreen.jpg as the art per spec. Pulled tighter to the
-  // "Debug build" subtitle (160 vs 170) so the page reads as one
-  // grouped block instead of having an awkward gap up top.
-  const mainW = 720;
+  // Main Quest tile(s) in the upper half. Quest Select is shown to
+  // every player now, so the Part 2 (WIP) tile is gated on debugMode:
+  //  - debug: two large squares side by side — Part 1 + Part 2.
+  //  - normal: the original single centered Main Quest square.
   const mainH = 400;
-  const mainX = Math.round((SCREEN_WIDTH - mainW) / 2);
   const mainY = 155;
-  drawQuestTile({
-    x: mainX, y: mainY, w: mainW, h: mainH,
-    art: images.quest_main,
-    title: 'Main Quest',
-    subtitle: 'Escape the Prison · Save Qualibaf',
-    titlePx: 38, subtitlePx: 18,
-    onClick: () => {
-      selectedQuest = 'main';
-      // Flag the origin so the upcoming Character Select's Back
-      // button knows to return here rather than dropping to MENU.
-      _fromQuestSelect = true;
-      startMainQuestFlow();
-    },
-  });
+  if (debugMode) {
+    const mainW = 560;
+    const mainGap = 40;
+    const pairW = mainW * 2 + mainGap;
+    const mainX = Math.round((SCREEN_WIDTH - pairW) / 2);
+    drawQuestTile({
+      x: mainX, y: mainY, w: mainW, h: mainH,
+      art: images.quest_main,
+      title: 'Part 1 — Main Quest',
+      subtitle: 'Escape the Prison · Save Qualibaf',
+      titlePx: 32, subtitlePx: 17,
+      onClick: () => {
+        selectedQuest = 'main';
+        // Flag the origin so the upcoming Character Select's Back
+        // button knows to return here rather than dropping to MENU.
+        _fromQuestSelect = true;
+        startMainQuestFlow();
+      },
+    });
+    // Part 2 (WIP) — routes to the Part 2 setup screen, where the player
+    // picks a finished Part 1 run to carry into the epilogue + Chapter 1.
+    drawQuestTile({
+      x: mainX + mainW + mainGap, y: mainY, w: mainW, h: mainH,
+      art: images.quest_part2,
+      title: 'Part 2: The Blacks',
+      subtitle: 'Work in progress · continue a finished run',
+      titlePx: 32, subtitlePx: 17,
+      onClick: () => {
+        _part2SavesScrollY = 0;
+        state = GameState.PART2_SETUP;
+      },
+    });
+  } else {
+    const mainW = 720;
+    const mainX = Math.round((SCREEN_WIDTH - mainW) / 2);
+    drawQuestTile({
+      x: mainX, y: mainY, w: mainW, h: mainH,
+      art: images.quest_main,
+      title: 'Main Quest',
+      subtitle: 'Escape the Prison · Save Qualibaf',
+      titlePx: 38, subtitlePx: 18,
+      onClick: () => {
+        selectedQuest = 'main';
+        _fromQuestSelect = true;
+        startMainQuestFlow();
+      },
+    });
+  }
 
   // Side quest row — centered on screen so a single tile sits in the
   // middle instead of being left-anchored next to a left-justified
@@ -6036,6 +6084,171 @@ function handleGamePlusSetupClick(x, y) {
   for (const btn of menuButtons) {
     if (hitTest(x, y, btn)) { playSound('click'); btn.action(); return; }
   }
+}
+
+// === Part 2 setup (WIP, debug-only) ===
+// Reached from the Quest Select "Part 2: The Blacks" tile. Lists every
+// finished Part 1 run (the same part1_complete_<class> slots ccgQuest+
+// reads) and lets the player pick one to carry into the Part 2 epilogue
+// + Chapter 1 sequence. Picking a run loads it (restoreFromSave hydrates
+// the post-dragon state, including dragonSlain) and fades into the
+// epilogue.
+function drawPart2Setup() {
+  // Use the Part 2 art as the page backdrop when it loaded; otherwise
+  // fall back to the menu art so the screen still has atmosphere.
+  const bgImg = (images.quest_part2 && images.quest_part2.complete && images.quest_part2.naturalWidth > 0)
+    ? images.quest_part2 : images.menu_bg;
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  } else {
+    ctx.fillStyle = '#0e0e14';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  menuButtons.length = 0;
+
+  const panelW = 820;
+  const panelH = 620;
+  const panelX = (SCREEN_WIDTH - panelW) / 2;
+  const panelY = (SCREEN_HEIGHT - panelH) / 2;
+  ctx.fillStyle = 'rgba(28, 22, 16, 0.92)';
+  ctx.fillRect(panelX, panelY, panelW, panelH);
+  ctx.strokeStyle = '#ffc060';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+  // Title
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = '#ffc060';
+  ctx.font = 'bold 56px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Part 2: The Blacks', SCREEN_WIDTH / 2, panelY + 84);
+  ctx.restore();
+
+  ctx.fillStyle = '#e8d59a';
+  ctx.font = 'italic 20px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Choose a finished Part 1 run to carry into Part 2.', SCREEN_WIDTH / 2, panelY + 124);
+  ctx.fillStyle = '#ff9a70';
+  ctx.font = 'italic 15px serif';
+  ctx.fillText('Work in progress — the epilogue and Chapter 1 opening are playable so far.', SCREEN_WIDTH / 2, panelY + 152);
+
+  // Scrollable save list — one row per finished Part 1 run.
+  const listX = panelX + 40;
+  const listY = panelY + 190;
+  const listW = panelW - 80;
+  const rowH = 56;
+  const rowGap = 10;
+  const visibleRows = 5;
+  const listH = visibleRows * (rowH + rowGap) - rowGap;
+
+  const saves = listGamePlusSaveOptions();
+  if (saves.length === 0) {
+    ctx.fillStyle = '#8c7860';
+    ctx.font = 'italic 16px serif';
+    ctx.textAlign = 'center';
+    const anyExist = hasPart1CompleteSave();
+    const msg = anyExist
+      ? 'Every Part 1 save has already been consumed by a ccgQuest+ run. Finish Part 1 again to unlock one.'
+      : 'No Part 1 completion saves found yet. Slay Varimatras and rest to create one.';
+    ctx.fillText(msg, SCREEN_WIDTH / 2, listY + 40);
+  } else {
+    const totalH = saves.length * (rowH + rowGap) - rowGap;
+    const maxScroll = Math.max(0, totalH - listH);
+    if (_part2SavesScrollY > maxScroll) _part2SavesScrollY = maxScroll;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(listX, listY, listW, listH);
+    ctx.clip();
+    for (let i = 0; i < saves.length; i++) {
+      const s = saves[i];
+      const ry = listY + i * (rowH + rowGap) - _part2SavesScrollY;
+      if (ry + rowH < listY || ry > listY + listH) continue;
+      drawStyledButton(listX, ry, listW, rowH, '', () => {
+        startPart2FromSave(s.slot);
+      }, 'banner', 16);
+      ctx.save();
+      ctx.fillStyle = '#3a2818';
+      ctx.font = 'bold 19px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lvl = (s.info && s.info.level) || 1;
+      const dt = formatSaveShortDate(s.info && s.info.timestamp);
+      const label = dt
+        ? `End of Part 1 — ${s.displayClass}, Lv ${lvl} — ${dt}`
+        : `End of Part 1 — ${s.displayClass}, Lv ${lvl}`;
+      ctx.fillText(label, listX + listW / 2, ry + rowH / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
+    ctx.restore();
+
+    if (maxScroll > 0) {
+      const sbW = 8;
+      const sbX = listX + listW + 6;
+      ctx.fillStyle = 'rgba(30,22,16,0.85)';
+      ctx.fillRect(sbX, listY, sbW, listH);
+      const thumbRatio = listH / totalH;
+      const thumbH = Math.max(24, listH * thumbRatio);
+      const thumbY = listY + (_part2SavesScrollY / maxScroll) * (listH - thumbH);
+      ctx.fillStyle = '#a08c64';
+      ctx.fillRect(sbX, thumbY, sbW, thumbH);
+      ctx.strokeStyle = '#ffc060';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sbX + 0.5, thumbY + 0.5, sbW - 1, thumbH - 1);
+    }
+  }
+
+  // Back button → Quest Select.
+  const btnW = 220, btnH = 56;
+  const backX = panelX + (panelW - btnW) / 2;
+  drawStyledButton(backX, panelY + panelH - btnH - 24, btnW, btnH, '< Back', () => {
+    state = GameState.QUEST_SELECT;
+    _part2SavesScrollY = 0;
+  }, 'large');
+}
+
+function handlePart2SetupClick(x, y) {
+  for (const btn of menuButtons) {
+    if (hitTest(x, y, btn)) { playSound('click'); btn.action(); return; }
+  }
+}
+
+// Load a finished Part 1 run and launch the Part 2 sequence. Mirrors the
+// normal load path (loadFromSlot → restoreFromSave), then fades into the
+// epilogue montage instead of dropping to the map. The save was written
+// post-dragon, so restoreFromSave brings back dragonSlain = true and the
+// Tharnag-interior map; we assert dragonSlain just in case.
+function startPart2FromSave(slot) {
+  const data = loadFromSlot(slot);
+  if (!data) {
+    showToast('Save data missing — could not start Part 2.');
+    return;
+  }
+  restoreFromSave(data);
+  dragonSlain = true;
+  _part2SavesScrollY = 0;
+  _hasEnteredCombat = true;
+  _lastMusicArea = null;
+  _lastMusicNodeId = null;
+  trackEvent('part2_start', {
+    version: GAME_VERSION,
+    class: selectedClass,
+    level: player ? player.level : 1,
+    source_slot: slot,
+  });
+  // Homecoming theme under the epilogue, matching the post-rest entry.
+  try { crossfadeMusic('Music/music_alter_hero_01', 1500, 2500); } catch (_) {}
+  startFade(() => {
+    currentEncounter = null;
+    startPart2Epilogue();
+  }, null, 3);
 }
 
 // Pre-combat menu music + scene-driven ambience. The heroic theme
@@ -10555,6 +10768,20 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   if (dragonSlain && nodeId === 'summit_ridge' && currentMap.id === 'volcano_summit_ridge') {
     node.canRevisit = true;
   }
+  // Armorer's-son quest (WIP) — the North Crossroad fork dialog is what
+  // unlocks the north_road node (see the completion hook in
+  // advanceEncounterPhase). On a save where the crossroad was already
+  // completed BEFORE the quest started (isDone, canRevisit:false), the
+  // gate below would be false on return, so the fork dialog never
+  // re-fired and the north path could never open. When the quest is
+  // live and north_road is still locked, un-done the crossroad so the
+  // fork variant fires again; its completion opens the road. Self-
+  // limiting: once north_road is unlocked the condition fails, so the
+  // dialog goes quiet on subsequent visits.
+  if (nodeId === 'north_crossroad' && currentMap.id === 'north_qualibaf' && armorerSonQuestStarted) {
+    const nr = currentMap.getNode('north_road');
+    if (nr && nr.isLocked) node.isDone = false;
+  }
   let canRunEncounter = !skipEncounter && node.encounterId && (!node.isDone || node.canRevisit);
   if (canRunEncounter && node.repeatableUntil) {
     const stop = currentMap.getNode(node.repeatableUntil);
@@ -11469,6 +11696,9 @@ const ENCOUNTER_BG_MAP = {
   general_store: 'bg_general_store', inn: 'bg_inn', church: 'bg_church',
   arcane_emporium: 'bg_arcane_emporium', city_north_gate: 'bg_qualibaf',
   guild_hall: 'bg_guild_hall',
+  // Part 2 (WIP) — montage + Chapter 1 fall back to these when no map
+  // node is active; individual beats still swap via per-text bgOverride.
+  part2_epilogue: 'bg_throne_room', part2_ch1_qualibaf: 'bg_qualibaf',
   // North / Forest
   north_crossroad: 'bg_north_crossroad', filibaf_entrance: 'bg_filibaf_entrance',
   forest_shadows: 'bg_filibaf_entrance', forest_ambush_left: 'bg_filibaf_entrance',
@@ -12519,6 +12749,70 @@ function transitionToTharnagPart1Ending(fromNodeId) {
   autosaveNow();
 }
 
+// ============================================================
+// PART 2 — work in progress, debug-gated.
+//
+// Entered from the post-dragon quarters_rest sleep when debugMode is on
+// (see the quarters_rest case). Instead of rolling the end credits we
+// play a quiet epilogue montage, then a long fade into the "Part 2: The
+// Blacks" title, then "Chapter 1: Tharnag", then the Qualibaf opening
+// scene. Non-debug players still get the normal end credits.
+//
+// All three encounters are TEXT-only; their completion is caught in
+// advanceEncounterPhase (search for 'part2_epilogue' / 'part2_ch1').
+// We reuse the transitionToTharnagPart1Ending pattern — set
+// currentEncounter directly and route through advanceEncounterPhase —
+// so no map node is required.
+// ============================================================
+function startPart2Epilogue() {
+  const factory = ENCOUNTER_REGISTRY['part2_epilogue'];
+  if (!factory) { startEndCredits(); return; }
+  currentEncounter = factory();
+  encounterTextIndex = 0;
+  encounterTextScrollY = 0;
+  encounterChoiceResult = null;
+  _encounterHadCombat = false;
+  advanceEncounterPhase(); // sets state = ENCOUNTER_TEXT
+}
+
+function startPart2Chapter1() {
+  // Fade out the homecoming theme and bring up the Qualibaf town music
+  // (same track the city plays normally) for the envoy scene.
+  try { crossfadeMusic('Music/music_castle_festivities_01', 1500, 2500); _lastMusicArea = 'qualibaf'; _lastMusicNodeId = null; } catch (_) {}
+  // Put the party in Qualibaf — load the city map and stand them in the
+  // square so the chapter opens in town (the dialog plays over the
+  // Qualibaf backdrop). We set the node directly rather than
+  // arriveAtNode so the city_square encounter doesn't fire underneath.
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('ruins_basin', createRuinsBasinMap);
+  visitedNodes = new Set();
+  visitedNodes.add('city_square');
+  currentMap.currentNodeId = 'city_square';
+  const factory = ENCOUNTER_REGISTRY['part2_ch1_qualibaf'];
+  if (!factory) { state = GameState.MAP; return; }
+  currentEncounter = factory();
+  encounterTextIndex = 0;
+  encounterTextScrollY = 0;
+  encounterChoiceResult = null;
+  _encounterHadCombat = false;
+  advanceEncounterPhase();
+}
+
+// WIP terminator — Part 2 has no playable content past Chapter 1's
+// opening yet, so we tear the run down to the menu the same way the
+// Necromancer-unlock splash does.
+function endPart2Wip() {
+  state = GameState.MENU;
+  player = null;
+  currentMap = null;
+  currentEncounter = null;
+  _encounterBgOverride = null;
+  _hasEnteredCombat = false;
+  _lastMusicArea = null;
+  _lastMusicNodeId = null;
+  startMenuMusicIfNeeded();
+}
+
 // Tharnag siege map → interior (Grand Hall side entry). Reuses the
 // cached interior map so the player keeps prior node state.
 function transitionToGrandHallSideEntry(fromNodeId) {
@@ -12921,7 +13215,7 @@ function startNodeEncounter(nodeId) {
     if (armorerQuestRewardClaimed()) shopVariant = 'quest_complete';
     else if (completedEncounters.has('kellen_rescued_crossroad')) shopVariant = 'quest_reward';
     else if (armorerSonQuestStarted) shopVariant = 'quest_active';
-    else if (isArmorer && debugMode) shopVariant = 'quest_start';
+    else if (isArmorer) shopVariant = 'quest_start';
     else shopVariant = 'normal';
     currentEncounter = factory(shopVariant);
   } else if (node.encounterId === 'north_crossroad') {
@@ -13506,12 +13800,12 @@ function advanceEncounterPhase() {
         hydrateMapFromGlobalState(cached);
       }
     }
-    // Armorer's-son side quest (WIP) — starts the first time a DEBUG run
-    // finishes the armorsmith's worried-parents hook. Latch before the
-    // shop opens. Gated on debugMode so production runs never start it;
-    // once latched it persists (saved) and drives the North Crossroad
-    // fork + north_road unlock regardless of debug.
-    if (completedEncounterId === 'armorsmith' && debugMode && !armorerSonQuestStarted) {
+    // Armorer's-son side quest — starts the first time the player
+    // finishes the armorsmith's worried-parents hook (Doran asking the
+    // party to look for Kellen on the road north). Latch before the shop
+    // opens; once latched it persists (saved) and drives the North
+    // Crossroad fork + north_road unlock.
+    if (completedEncounterId === 'armorsmith' && !armorerSonQuestStarted) {
       armorerSonQuestStarted = true;
     }
     // Armorer's-son reward — fires when the player finishes the rescue reward
@@ -13657,6 +13951,35 @@ function advanceEncounterPhase() {
       currentMap.completeCurrentNode();
       showTitleCard('End of Part 1', 'Thanks for playing!', () => {
         state = GameState.MAP;
+      });
+      return;
+    }
+    // Part 2 (WIP) — the epilogue montage ends with a long, slow fade
+    // to black, then the Part 2 title card, then the Chapter 1 title
+    // card, then the Qualibaf opening scene. The slow fade speed (1.4
+    // vs the default 8) is the "long fade out" beat.
+    if (completedEncounterId === 'part2_epilogue') {
+      startFade(() => {
+        currentEncounter = null;
+        // Cancel the fade overlay's auto fade-IN the instant we hit full
+        // black — otherwise the slow (1.4) overlay sits on top of and
+        // obscures the title cards as they fade in. The title cards draw
+        // their own black background and fade in from black on their own.
+        fadePhase = '';
+        fadeAlpha = 0;
+        showTitleCard('Part 2: The Blacks', '', () => {
+          showTitleCard('Chapter 1: Tharnag', '', () => {
+            startPart2Chapter1();
+          });
+        });
+      }, null, 1.4);
+      return;
+    }
+    // Part 2 (WIP) — Chapter 1's opening scene is as far as the content
+    // goes for now. Close on a "to be continued" card and drop to menu.
+    if (completedEncounterId === 'part2_ch1_qualibaf') {
+      showTitleCard('To be continued…', 'Part 2 is a work in progress.', () => {
+        endPart2Wip();
       });
       return;
     }
@@ -16747,10 +17070,15 @@ function handleEncounterChoiceClick(x, y) {
           // credits.)
           startFade(() => {
             currentEncounter = null;
-            // Kick off the slow-scrolling end credits. After the
-            // scroll finishes (or the player clicks to skip), we
-            // land on the main menu.
-            startEndCredits();
+            // Debug players see the work-in-progress Part 2 bridge
+            // (epilogue montage → title cards → Chapter 1) instead of
+            // the credits. Everyone else gets the slow-scrolling end
+            // credits, which auto-return to the main menu.
+            if (debugMode) {
+              startPart2Epilogue();
+            } else {
+              startEndCredits();
+            }
           }, null, 3);
           return;
         }
@@ -20165,6 +20493,11 @@ const PERK_TRIGGER_BADGES = [
   { re: /^Combat:\s*/,       label: 'COMBAT',       bg: 'rgba(60,110,80,0.92)',  border: '#7ec89a', fg: '#c8ffd0' },
   { re: /^Turn Start:\s*/,   label: 'TURN START',   bg: 'rgba(60,90,130,0.92)',  border: '#9ad6ff', fg: '#d6ecff' },
   { re: /^Turn End:\s*/,     label: 'TURN END',     bg: 'rgba(60,90,130,0.92)',  border: '#9ad6ff', fg: '#d6ecff' },
+  // After Enemy Turn: fires when control returns to the player (start of
+  // the player's turn, after the enemy acted). Used by Armorer's Training.
+  // Teal-blue so it reads as a turn-timing trigger, distinct from the
+  // start/end-of-turn blues.
+  { re: /^After Enemy Turn:\s*/, label: 'AFTER ENEMY TURN', bg: 'rgba(40,95,115,0.92)', border: '#86d8e0', fg: '#d6f4f8' },
   { re: /^On Attack:\s*/,    label: 'ON ATTACK',    bg: 'rgba(110,40,40,0.92)',  border: '#f08070', fg: '#ffd0c8' },
   // Vanish (and any future "after the attack lands" reaction). Distinct
   // dusky-purple palette so the badge visually pairs with shadow/dodge
@@ -26227,6 +26560,16 @@ function resolveBarrageShot(target) {
       addLog(`  (Heroism +${barrageHeroism} per shot)`, Colors.GOLD);
       player.heroism = 0;
     }
+    // Boarhide Bracers first-attack +2 — captured here on shot 0 while
+    // attacksThisTurn is still 0 (it's bumped just below), then applied
+    // to EVERY shot of the barrage. Be generous like heroism: the whole
+    // volley counts as the "first attack" for the bracer bonus.
+    barrageBracerBonus = (attacksThisTurn === 0 && player.deck
+        && Array.isArray(player.deck.hand)
+        && player.deck.hand.some(c => c && c.id === 'boarhide_bracers')) ? 2 : 0;
+    if (barrageBracerBonus > 0) {
+      addLog(`  Boarhide Bracers: +${barrageBracerBonus} per shot (First Attack)`, Colors.GOLD);
+    }
     // consumeIceForAttack applies the reduction AND burns 1 stack.
     // We just need the reduction amount to reapply per shot; the
     // dummy 100 forces consumeIceForAttack to return (100 - stacks)
@@ -26258,7 +26601,7 @@ function resolveBarrageShot(target) {
   // Heroism + ice snapshot applies to EVERY shot, not just the first.
   // Rage and shock-on-caster modifiers are passive (no consumption)
   // so they're read live each shot.
-  let dmg = shotBase + barrageHeroism + (player.rage || 0) + getDamageModifier(player);
+  let dmg = shotBase + barrageHeroism + barrageBracerBonus + (player.rage || 0) + getDamageModifier(player);
   dmg = Math.max(0, dmg - barrageIceReduction);
   dmg += getIncomingDamageModifier(target);
   dmg += applyEyeBonus(target, barrageEyeBonus);
@@ -26350,6 +26693,7 @@ function finishBarrage() {
   barrageObsBonus = 0;
   barrageIgnite = 0;
   barrageHeroism = 0;
+  barrageBracerBonus = 0;
   barrageIceReduction = 0;
   barrageCardIndex = -1;
   selectedCardIndex = -1;
@@ -26396,6 +26740,7 @@ function cancelBarrage() {
   barrageObsBonus = 0;
   barrageIgnite = 0;
   barrageHeroism = 0;
+  barrageBracerBonus = 0;
   barrageIceReduction = 0;
   barrageCardIndex = -1;
 }
@@ -34039,12 +34384,18 @@ function resolvePowerTargeting() {
     if (cvEye > 0) dmg += cvEye;
     const cvObs = consumeObsidianBuff(player, targets[0]);
     if (cvObs > 0) dmg += cvObs;
+    // Caster-side damage is now locked in. Each target's own Shock (+1
+    // incoming per stack) is added PER TARGET below — without this,
+    // Cleave on a Shocked target missed the +1 the single-target path
+    // applies via getIncomingDamageModifier.
+    const cvBaseDmg = dmg;
     let poisonApplied = false;
     const SFX_STAGGER_MS = 120;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
       const delay = i * SFX_STAGGER_MS;
       let dmgLanded = 0;
+      dmg = Math.max(0, cvBaseDmg + getIncomingDamageModifier(t));
       if (t === enemy) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(dmg);
@@ -34202,10 +34553,15 @@ function resolvePowerTargeting() {
     if (qsEye > 0) dmg += qsEye;
     const qsObs = consumeObsidianBuff(player, t0);
     if (qsObs > 0) dmg += qsObs;
+    // Lock in the caster-side damage; each pick's own Shock (+1 incoming
+    // per stack) is added per-target below so Quick Strike honors Shock
+    // the same way the single-target damage path does.
+    const qsBaseDmg = dmg;
     let dmgLanded = 0;
     for (let shotIdx = 0; shotIdx < targets.length; shotIdx++) {
       const t = targets[shotIdx];
       if (!t || !t.isAlive) continue; // skip dead picks (target killed mid-chain by an earlier shot)
+      dmg = Math.max(0, qsBaseDmg + getIncomingDamageModifier(t));
       if (t === enemy) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(dmg);
@@ -34270,16 +34626,18 @@ function executePower(power) {
       let hits = 0;
       for (const c of [...enemy.creatures]) {
         if (hits >= 2) break;
+        const cDmg = Math.max(0, dmg + getIncomingDamageModifier(c)); // +Shock per target
         const shieldBefore = c.shield || 0;
-        const actual = c.takeDamage(dmg);
-        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, c.shield || 0);
+        const actual = c.takeDamage(cDmg);
+        const absSuffix = creatureAbsorbSuffix(cDmg, actual, shieldBefore, c.shield || 0);
         addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         if (!c.isAlive) { addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
         hits++;
       }
       let totalHits = hits;
       if (hits < 2 && enemy.isAlive) {
-        const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
+        const eDmg = Math.max(0, dmg + getIncomingDamageModifier(enemy)); // +Shock
+        const [blocked, taken] = enemy.takeDamageWithDefense(eDmg);
         addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
         totalHits++;
       }
@@ -34340,6 +34698,7 @@ function executePower(power) {
         let dmg = 1 + heroismBonus;
         dmg += applyEyeBonus(enemy, qsEyeBonus);
         dmg += applyObsidianBonus(enemy, qsObsBonus);
+        dmg += getIncomingDamageModifier(enemy); // +Shock
         dmg = Math.max(0, dmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
         triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
@@ -46296,6 +46655,9 @@ function draw() {
     case GameState.GAME_PLUS_SETUP:
       drawGamePlusSetup();
       break;
+    case GameState.PART2_SETUP:
+      drawPart2Setup();
+      break;
     case GameState.CHARACTER_SELECT:
       drawCharacterSelect();
       break;
@@ -47201,8 +47563,14 @@ function updateTitleCard(dt) {
     titleCardAlpha = Math.max(0, titleCardAlpha - step);
     if (titleCardAlpha <= 0) {
       titleCardPhase = '';
-      if (titleCardCallback) titleCardCallback();
+      // Capture + clear BEFORE invoking: the callback may itself call
+      // showTitleCard (chained cards, e.g. "Part 2" → "Chapter 1"),
+      // which sets a fresh titleCardCallback. Nulling after the call
+      // would clobber that new callback and the chain would dead-end
+      // on a black screen.
+      const cb = titleCardCallback;
       titleCardCallback = null;
+      if (cb) cb();
     }
   }
 }

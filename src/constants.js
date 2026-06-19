@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.233';
+export const GAME_VERSION = '2.234';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -73,6 +73,11 @@ export const GameState = Object.freeze({
   // placeholder — gathers Game+ options (TBD) and routes into the
   // standard CHARACTER_SELECT flow with the gamePlus flag set.
   GAME_PLUS_SETUP: 'GAME_PLUS_SETUP',
+  // Part 2 (WIP, debug-only) setup screen. Reached from the debug
+  // Quest Select's "Part 2" tile. Lists finished Part 1 runs the same
+  // way ccgQuest+ does; picking one loads that run and launches the
+  // Part 2 epilogue → Chapter 1 sequence.
+  PART2_SETUP: 'PART2_SETUP',
   // Path of the Necromancer reward splash — shown after the Abbey
   // Courtyard epilogue. Big "You have unlocked the Necromancer class!"
   // title + the older necromancer portrait, then fades to MENU.

@@ -3160,7 +3160,8 @@ export function createArmorsmithEncounter(variant = 'normal') {
       }),
     ]);
   }
-  // variant === 'quest_start' — the WIP / debug-only quest hook.
+  // variant === 'quest_start' — Doran's worried-parents hook that opens
+  // the armorer's-son side quest (fires on the first armorsmith visit).
   return new Encounter('armorsmith', 'Armorsmith', 'Protection for those who can afford it.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -5355,6 +5356,71 @@ export function createTharnagPart1EndingEncounter() {
   ]);
 }
 
+// ============================================================
+// PART 2 — work in progress, debug-gated.
+//
+// Triggered from the post-dragon quarters_rest when debugMode is on
+// (see main.js startPart2Sequence). Two TEXT-only encounters drive the
+// bridge from the Part 1 finale into Part 2:
+//   1. part2_epilogue — a quiet montage: Tharnag, the valley and the
+//      volcano settle back to normal; Raena goes home to the elves;
+//      Thorb and Valdrisa court the way dwarves do. Ends with a long
+//      fade-out into the "Part 2: The Blacks" title card.
+//   2. part2_ch1_qualibaf — Chapter 1's opening scene, set a few months
+//      later in Qualibaf (bg_qualibaf / bg_guild_hall). The diplomatic
+//      envoy, the bridge-rebuild talks, Thorb & Val's courtship, and
+//      Raena bursting in with the goblin news that sends the party back
+//      up the road to the Tharnag king.
+// ============================================================
+
+// Part 2 epilogue montage — the world exhales after Varimatras.
+export function createPart2EpilogueEncounter() {
+  return new Encounter('part2_epilogue', 'After the Dragon', 'The valley exhales.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'After the Dragon',
+      texts: [
+        new EncounterText('The horns and the songs go on for three days. Then, slowly, Tharnag remembers how to be quiet again. The Great Forge burns steady now — no longer a desperate thing but a working heart, hammers keeping time from dawn to dark.', '', 'bg_throne_room'),
+        new EncounterText('High above the city, Mount Parícutin sleeps. The ash-haze thins and goes; the first clean snow in twenty years settles white and untroubled across the summit where a dragon used to coil. The mountain breathes out.', '', 'bg_qualibaf_volcano'),
+        new EncounterText('Down in the valley, Qualibaf shakes off its fear. Shutters open. The markets fill. The River Cutin runs clear again, and the talk in the square turns from monsters back to weather and prices and whose goat got into whose garden.', '', 'bg_qualibaf'),
+        new EncounterText('Raena lingers a while — then the forest calls her home. "My people will want to hear all of it," she says, shouldering her bow. "Every arrow. Especially the ones I missed." She grins, and is gone up the green trails before the week is out.', 'Raena', 'bg_qualibaf_waterfall'),
+        new EncounterText('Thorb and Valdrisa, meanwhile, do not leave.', '!', 'bg_dwarven_tavern'),
+        new EncounterText('They spend their days together — though "together" is a generous word for two dwarves who court the way mountains court: by arm-wrestling, by out-drinking, by arguing the proper forge-temper of steel until the tavern empties around them.', '', 'bg_dwarven_tavern'),
+        new EncounterText('"She cheats at the wrestling."', 'Thorb', 'bg_dwarven_tavern'),
+        new EncounterText('"He LOSES at the wrestling. Different thing entirely." They are, you note with some discomfort, grinning at each other while they say it.', 'Valdrisa', 'bg_dwarven_tavern'),
+        new EncounterText('And so the season turns. The egg sleeps cool and pale in its wrappings, and the world — for one quiet winter — lets you rest.', '', 'bg_throne_room'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2, Chapter 1 — Qualibaf, a few months later. Diplomatic envoy,
+// the bridge talks, and Raena's goblin news.
+export function createPart2Chapter1Encounter() {
+  return new Encounter('part2_ch1_qualibaf', 'Chapter 1: Tharnag', 'An envoy in Qualibaf — and unwelcome news.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Qualibaf',
+      texts: [
+        new EncounterText('Spring. Months have softened the memory of fire. Raena has been back among her people for the better part of the season — and the three of you, you and Thorb and Valdrisa, have come down to Qualibaf wearing the unfamiliar weight of the word "envoys."', '', 'bg_qualibaf'),
+        new EncounterText('The Guild has given over its long hall to the talks. Tharnag wants the trade road open again; Qualibaf wants dwarven masons. And the thing everyone keeps circling back to is the bridge.', '', 'bg_guild_hall'),
+        new EncounterText('"Dwarven stone, elven timber, human coin." The Guild Master ticks them off on thick fingers. "Rebuild the Border Road span over the River Cutin and the Frontier opens west to east again. Your King\'s masons could have it standing by autumn." Thorb nods along, important as you please.', 'Guild Master', 'bg_qualibaf_bridge'),
+        new EncounterText('Valdrisa leans over and corrects three of his figures in a whisper. Thorb corrects her correction. They argue load-bearing arches for ten solid minutes while the Guild Master waits with the patience of a man billing by the hour.', '', 'bg_guild_hall'),
+        new EncounterText('They have been like this for weeks. It would be insufferable if it weren\'t — Deeps help you — genuinely sweet. Thorb laughs more than you have ever heard him. Valdrisa has stopped pretending the betrothal was only her father\'s idea. You have learned to find somewhere else to look.', '', 'bg_guild_hall'),
+        new EncounterText('The hall doors bang open mid-sentence.', '!', 'bg_guild_hall'),
+        new EncounterText('Raena. Travel-stained, bow still strung, three months of forest still on her boots — and her face all wrong for a homecoming. "Don\'t get up," she says. "You\'ll want to be sitting for this." She plants both hands flat on the table. "I bring word from my people. It\'s the goblins."', 'Raena', 'bg_guild_hall'),
+        new EncounterText('"The warbands in the deep roads? Tharnag has been bracing for that host all winter—"', 'Guild Master', 'bg_guild_hall'),
+        new EncounterText('"That is just it. There is no host. Not anymore." She lets that land. "They came down out of the Border Mountains weeks ago — every column, every banner, the whole migration the dwarves were so afraid of. And then they stopped being anywhere."', 'Raena', 'bg_guild_hall'),
+        new EncounterText('"No raids. No tracks past the foothills. The scouts cannot find them. The elves cannot find them. Goblins are never quiet — goblins are the loudest thing in any forest. This many, gone this silent, this long..." She shakes her head. "Something is keeping them quiet. And I would very much like to know what."', 'Raena', 'bg_guild_hall'),
+        new EncounterText('The room takes that in. The Guild Master recovers first — and within the hour you have what envoys are for: a sheaf of sealed letters from Qualibaf to the King of Tharnag. Trade terms, mason-contracts, and now, folded in among them, a warning.', '', 'bg_guild_hall'),
+        new EncounterText('"Back up the road, then. Always back up the road." Thorb rolls his shoulders. "Suits me. I have missed the King\'s ale."', 'Thorb', 'bg_guild_hall'),
+        new EncounterText('"I am coming with you." Raena says it before anyone asks. "This goblin business runs under Tharnag\'s mountains. If something has pulled a whole people into the dark and made them hold their breath, the answer is that way — and I mean to be there when you find it."', 'Raena', 'bg_guild_hall'),
+        new EncounterText('Valdrisa hefts her hammer. Thorb pockets the letters. The four of you turn north — toward the Border Mountains, the long road to Tharnag, and whatever is waiting, too quiet, in the deep.', '', 'bg_qualibaf'),
+      ],
+    }),
+  ]);
+}
+
 // Grand Staircase arrival — Thorb's homecoming dialog. Mirrors PY
 // encounter.py:create_grand_staircase_arrival_encounter.
 export function createGrandStaircaseArrivalEncounter() {
@@ -6714,6 +6780,9 @@ export const ENCOUNTER_REGISTRY = {
   stair_top_arrival: createStairTopArrivalEncounter,
   overseer_gnikan: createOverseerGnikanEncounter,
   tharnag_part1_ending: createTharnagPart1EndingEncounter,
+  // Part 2 (WIP, debug-gated) — see createPart2EpilogueEncounter.
+  part2_epilogue: createPart2EpilogueEncounter,
+  part2_ch1_qualibaf: createPart2Chapter1Encounter,
   obsidian_market_arrival: createObsidianMarketArrivalEncounter,
   market_stalls: createMarketStallsEncounter,
   deep_market_rest: createDeepMarketRestEncounter,
