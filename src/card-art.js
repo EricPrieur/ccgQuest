@@ -10,6 +10,25 @@ export const CARD_ART_MAP = {
   leather_armor: 'LeatherArmor.jpg',
   scraps: 'ScrapsItem.jpg',
   wooden_axe: 'WoodenAxe.jpg',
+  jagged_chopper: 'JaggedChopper.jpg',
+  // Giant Boar (Pinewood ambush) — the boar art covers the enemy
+  // portrait, its Gore card, and the Bloodied Fury power.
+  giant_boar: 'GiantBoar.jpg',
+  gore: 'GiantBoar.jpg',
+  bloodied_fury: 'GiantBoar.jpg',
+  boar_tusk: 'BoarTusk.jpg',
+  // Giant Boar loot drops (armorer's-son quest).
+  boarhide_bracers: 'BoarhideBracers.jpg',
+  frenzy_blood_vial: 'FrenzyBloodVial.jpg',
+  boarhide_bandage: 'BoarhideBandage.jpg',
+  // Bloodied Frenzy buff (from Frenzy Blood Vial) — reuses the boar portrait.
+  buff_bloodied_frenzy: 'GiantBoar.jpg',
+  // Kellen's Rescue (Forest Ambush, armorer's-son quest WIP). The
+  // invulnerable boss portrait + the prison-cart creature that holds the
+  // boy. Boss name 'Retreating Kobold Army' → retreating_kobold_army;
+  // cart creature name 'Prison Cart' → prison_cart.
+  retreating_kobold_army: 'RetreatingKoboldArmy.jpg',
+  prison_cart: 'BoyInTheCart.jpg',
   wooden_greatsword: 'WoodenGreatsword.jpg',
   rock_mace: 'RockMace.jpg',
   cracked_buckler: 'CrackedBuckler.jpg',
@@ -613,6 +632,10 @@ export const CARD_ART_MAP = {
   ambush:          'AmbushPerk.jpg',
   first_strike:    'FirstStrikePerk.jpg',
   armored:         'ArmoredPerk.jpg',
+  // Armorer's-son quest reward perk — keyed by id so the inventory/codex
+  // pseudo-card render finds its art (the imageId 'armorer_training_perk' is
+  // a separate eager-preload entry for log/loot-reveal lookups).
+  armorer_training: 'ArmorersTraining.jpg',
   power_surge:     'PowerSurgePerk.jpg',
   balanced:        'BalanceDruidPerk.jpg',
   lucky_find:      'LuckyFindPerk.jpg',
@@ -624,6 +647,7 @@ export const CARD_ART_MAP = {
 
   // === Enemy Encounter Portraits ===
   kobold_patrol:   'KoboldPatrolEncounter.jpg',
+  elite_kobold_patrol: 'KoboldPatrolEncounter.jpg',
 };
 
 export const POWER_ART_MAP = {
@@ -687,6 +711,11 @@ export const POWER_ART_MAP = {
   // on the dragon flips to +1 Shield instead. Uses his own backdrop
   // art so the power card reads as "the dragon himself".
   ancient_white: 'VarimatrasBG.jpg',
+  // Giant Boar's Bloodied Fury passive — shares the boar portrait the
+  // enemy + Gore card use. MUST live here (not just CARD_ART_MAP) or the
+  // in-combat power card renders a brown placeholder, since power art is
+  // preloaded from POWER_ART_MAP via the `power_<id>` image keys.
+  bloodied_fury: 'GiantBoar.jpg',
 };
 
 // Lazy-loading image cache

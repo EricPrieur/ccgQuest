@@ -123,6 +123,19 @@ case of `handleCodexClick`.
 5. If it's a deck or loot member, follow the blue link in Sources to
    confirm the navigation lands on the right section.
 
+### Lore tab — hand-authored, NOT auto-discovered
+
+The codex **Lore** tab (`drawCodexLoreGrid` in `src/main.js`) is the one
+codex section that is *not* generated from runtime data. Its entries live
+in **`src/lore.js`** as the `LORE_ENTRIES` array — each is
+`{ name, type, description }` where `type` is one of `LORE_TYPES`
+(`Person` / `Place` / `Faction` / `Creature` / `Artifact` / `Event` /
+`Deity`). To add lore, just append an object; the tab filters by type
+pill and searches across name + type + description automatically. New
+category? Add it to `LORE_TYPES` and give it a tint in
+`LORE_TYPE_COLORS`. Descriptions should stay ~140 chars (wraps to 2
+lines) and only state what the narrative text actually establishes.
+
 ## Image assets — JPG by default, PNG only for transparency
 
 Card art, backgrounds, and map art are stored as **JPG** (quality 4 via
@@ -197,6 +210,45 @@ Symptom of skipping step 2: the map background is broken but
 encounter dialog backgrounds (which go through
 `ENCOUNTER_BG_MAP` + the `bg_<name>` preload) still render fine on
 the same art.
+
+## Fog of war — the default for new maps
+
+New maps use **standard fog of war** by default — do NOT add them to
+`NO_FOG_MAPS` (that set is only for small/open layouts the player
+should see whole at a glance, e.g. the Summit Ridge, a 2-node temple).
+
+The standard pattern is the **`discoverable`** node flag (see
+`createSouthOfQualibafMap` / `createRiverCaveMouthMap` /
+`createQualibafBridgeMap` for live examples). Give every node past the
+entry:
+
+```js
+{ ..., discoverable: true, hiddenName: '???', hiddenDescription: '…' }
+```
+
+Behavior, node by node:
+
+1. **Invisible until one hop away.** A `discoverable` node isn't drawn
+   at all until the party stands on one of its direct neighbors.
+2. **`???` once one hop away.** It then draws as `???` (the
+   `hiddenName`).
+3. **Real name once walked on.** `arriveAtNode` clears a discoverable
+   node's `hiddenName`/`hiddenDescription` on arrival (the
+   `node.discoverable && !visitedNodes.has(...)` block), so visiting it
+   reveals the real name. No extra wiring.
+
+`discoverable` nodes are NOT locked — adjacency (the `connections`
+graph) is what gates movement, so a linear chain of discoverable nodes
+walks naturally with each one revealing as the party approaches. (The
+older `isLocked` + `unlocks` style — used by dungeon maps like Filibaf
+Forest — gates on *completing* the previous node instead of proximity;
+prefer `discoverable` for overland/trail maps.)
+
+**Revealing a name early (special case).** If a dialog names a node
+outright (e.g. the North Crossroad says "Filibaf"), clear that node's
+`hiddenName`/`hiddenDescription` in the post-encounter handler when the
+dialog completes — an `unlocks`/proximity reveal would otherwise leave
+it at `???` until the player physically walks onto it.
 
 ## Teleporter nodes — wire both directions by default
 

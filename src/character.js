@@ -222,7 +222,18 @@ export class Character {
     if (!this.deck.drawPile.length && !this.deck.hand.length && !this.deck.rechargePile.length) {
       this.deck.initializeForAdventure();
     }
+    // Flag the whole deck-damage pass: every on_discard_regen card discarded
+    // in here applies its Regen DIRECTLY below, so the player-deck onCardDiscarded
+    // hook (triggerOnDiscard) must NOT re-apply it. Pure hand-discards (a discard
+    // effect outside this method) leave the flag unset, so the hook handles them.
+    this._inDeckDamage = true;
     let taken = 0;
+    // On Discard: Regen (Boar Tusk) — each discarded relic stacks Regen on
+    // the character (a status that heals at the start of the next turns and
+    // decays by 1). No card-move heal here, so spent relics don't cycle
+    // back and heal forever — the heal is naturally bounded by Regen decay.
+    let regenGained = 0;
+    let regenSource = '';
     // Use a while-loop so token discards don't consume the damage
     // counter — Web tokens (and any other isToken card sitting in the
     // draw pile) get dragged out without counting as HP, and the loop
@@ -246,7 +257,12 @@ export class Character {
               this.deck.discardCard(dragged);
             }
           }
+          if (e && e.effectType === 'on_discard_regen') { const rv = Math.max(0, e.value || 0); if (rv > 0) { regenGained += this.applyRegen(rv); regenSource = card.name; } }
         }
+        // damageFromDrawPile bypassed discardCard, so fire the generic
+        // on-discard hook here too (Harpy Feather's `on_discard` draw,
+        // the meal hook). Player deck only.
+        if (typeof this.deck.onCardDiscarded === 'function') this.deck.onCardDiscarded(card);
         // Tokens (Web token most importantly) are clog, not lifeforce —
         // they discard without absorbing the swing.
         if (!card.isToken) taken++;
@@ -258,6 +274,9 @@ export class Character {
         const idx = Math.floor(Math.random() * this.deck.hand.length);
         const handCard = this.deck.hand.splice(idx, 1)[0];
         handCard.exhausted = false;
+        for (const e of (handCard.effects || [])) {
+          if (e && e.effectType === 'on_discard_regen') { const rv = Math.max(0, e.value || 0); if (rv > 0) { regenGained += this.applyRegen(rv); regenSource = handCard.name; } }
+        }
         this.deck.discardCard(handCard);
         if (!handCard.isToken) taken++;
         continue;
@@ -265,6 +284,35 @@ export class Character {
       // No cards anywhere — character is dead
       break;
     }
+    // Shed any Regen-relics (Boar Tusk) sitting dead in hand when real
+    // damage lands — discarding frees the hand slot AND applies their Regen.
+    if (taken > 0 && this.deck && Array.isArray(this.deck.hand) && this.deck.hand.length > 0) {
+      for (let h = this.deck.hand.length - 1; h >= 0; h--) {
+        const hc = this.deck.hand[h];
+        const re = (hc.effects || []).find(e => e && e.effectType === 'on_discard_regen');
+        if (!re) continue;
+        this.deck.hand.splice(h, 1);
+        const rv = Math.max(0, re.value || 0);
+        if (rv > 0) { regenGained += this.applyRegen(rv); regenSource = hc.name; }
+        this.deck.discardCard(hc);
+      }
+    }
+    // Feedback (main.js installs the hook): log the Regen gained + float a
+    // token. The actual healing happens at this character's turn start when
+    // processStatusEffects ticks the Regen status.
+    if (regenGained > 0 && typeof globalThis !== 'undefined'
+        && typeof globalThis.__onDiscardRegen === 'function') {
+      globalThis.__onDiscardRegen(this, regenGained, regenSource);
+    }
+    // True Damage (unpreventable) burns Regen 1:1. A DIRECT
+    // takeDamageFromDeck call IS True Damage — the defense wrappers
+    // (takeDamageWithDefense / takeDamageNoBlock) set _suppressRegenBurn so
+    // ordinary / Ice-Shatter damage leaves Regen alone.
+    if (!this._suppressRegenBurn && taken > 0) {
+      const rg = this.getStatus('REGEN');
+      if (rg > 0) this.removeStatus('REGEN', Math.min(rg, taken));
+    }
+    this._inDeckDamage = false;
     return taken;
   }
 
@@ -295,7 +343,10 @@ export class Character {
       this.shield -= shieldAbsorb;
       remaining -= shieldAbsorb;
     }
+    // Not True Damage — shield/armor mitigated it, so it doesn't burn Regen.
+    this._suppressRegenBurn = true;
     const taken = this.takeDamageFromDeck(remaining);
+    this._suppressRegenBurn = false;
     return [amount - remaining, taken];
   }
 
@@ -341,14 +392,65 @@ export class Character {
       this.shield -= shieldAbsorb;
       remaining -= shieldAbsorb;
     }
+    // Block/Shield/Armor absorbed — this is a mitigated hit, not True
+    // Damage, so it doesn't burn Regen.
+    this._suppressRegenBurn = true;
     const taken = this.takeDamageFromDeck(remaining);
+    this._suppressRegenBurn = false;
     return [amount - remaining, taken];
   }
 
   // --- Status Effects ---
 
+  // Opposing damage-over-time stacks cancel 1-for-1 on application, exactly
+  // like Fire/Ice. Regen is the "positive DoT" and opposes Fire, Poison, and
+  // Bleed; each of those opposes Regen back. Centralising this here means
+  // EVERY application site (all the apply_poison / apply_bleed / fire paths)
+  // gets the cancellation for free and Regen can never coexist with a
+  // negative DoT. The manual Ice/Regen cancel still living in the apply_fire
+  // / apply_ice cases is harmless: it fully consumes the opposite before its
+  // leftover applyStatus() call, so the check below just no-ops there.
+  // _lastStatusCancel records what got eaten so callers can log/float it.
+  static STATUS_OPPOSITES = {
+    REGEN: ['FIRE', 'POISON', 'BLEED'],
+    FIRE: ['REGEN'],
+    POISON: ['REGEN'],
+    BLEED: ['REGEN'],
+  };
   applyStatus(status, stacks) {
-    this.statusEffects[status] = (this.statusEffects[status] || 0) + stacks;
+    let n = stacks;
+    this._lastStatusCancel = null;
+    if (n > 0) {
+      const opposites = Character.STATUS_OPPOSITES[status];
+      if (opposites) {
+        for (const opp of opposites) {
+          if (n <= 0) break;
+          const have = this.getStatus(opp);
+          if (have > 0) {
+            const cancel = Math.min(have, n);
+            this.removeStatus(opp, cancel);
+            n -= cancel;
+            (this._lastStatusCancel || (this._lastStatusCancel = {}))[opp] = cancel;
+          }
+        }
+      }
+    }
+    if (n > 0) this.statusEffects[status] = (this.statusEffects[status] || 0) + n;
+  }
+
+  // Regen is applied through applyStatus (single source of truth for the
+  // Fire/Poison/Bleed cancellation). This wrapper just stamps the per-type
+  // _lastRegen*Cancel fields the apply_regen effect case reads for its log
+  // lines, and returns the Regen stacks actually added (post-cancellation).
+  applyRegen(amount) {
+    const n = Math.max(0, amount || 0);
+    const before = this.getStatus('REGEN');
+    this.applyStatus('REGEN', n);
+    const eaten = this._lastStatusCancel || {};
+    this._lastRegenFireCancel = eaten.FIRE || 0;
+    this._lastRegenPoisonCancel = eaten.POISON || 0;
+    this._lastRegenBleedCancel = eaten.BLEED || 0;
+    return this.getStatus('REGEN') - before;
   }
 
   removeStatus(status, stacks = null) {
@@ -503,6 +605,11 @@ export class Character {
       return;
     }
     switch (effectType) {
+      // Frenzy Blood Vial's Bloodied Frenzy is a marker buff — its Rage is
+      // applied in startPlayerTurn (which needs the main.js isBloodied check),
+      // so the per-tick effect here is a deliberate no-op.
+      case 'bloodied_rage':
+        break;
       case 'gain_heroism': {
         this.heroism += effectValue;
         const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'buff_angelic_03';
@@ -1145,6 +1252,19 @@ export function createArmoredPerk() {
   });
 }
 
+// Armorer's Training — granted by Doran & Mira when Kellen is rescued (not a
+// level-up roll; kept out of CLASS_PERK_WEIGHTS). At the end of your turn you
+// MAY recharge an Armor card from hand to draw 1 (interactive prompt, handled
+// in main.js endPlayerTurn). Reuses the Armored perk art.
+export function createArmorerTrainingPerk() {
+  return new Perk({
+    id: 'armorer_training', name: "Armorer's Training",
+    description: 'After Enemy Turn: You may recharge an Armor card to Draw.',
+    imageId: 'armorer_training_perk', effectType: 'turn_end_armor_recharge_draw', effectValue: 1,
+    unique: true,
+  });
+}
+
 export function createPowerSurgePerk() {
   return new Perk({
     id: 'power_surge', name: 'Power Surge',
@@ -1226,6 +1346,7 @@ export const PERK_REGISTRY = {
   ambush:          createAmbushPerk,
   first_strike:    createFirstStrikePerk,
   armored:         createArmoredPerk,
+  armorer_training: createArmorerTrainingPerk,
   power_surge:     createPowerSurgePerk,
   balanced:        createBalancedPerk,
   harvest:         createHarvestPerk,

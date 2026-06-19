@@ -7,7 +7,7 @@ import {
   recreatePerkFromId,
   createToughPerk, createPreparedPerk, createGritPerk, createArsenalPerk,
   createTalentedPerk, createFirstStrikePerk, createFlashOfGeniusPerk,
-  createSecondWindPerk, createAmbushPerk, createArmoredPerk,
+  createSecondWindPerk, createAmbushPerk, createArmoredPerk, createArmorerTrainingPerk,
   createPowerSurgePerk, createBalancedPerk,
   createLuckyFindPerk, createHarvestPerk, createSkeletalStrengthPerk,
 } from './character.js';
@@ -43,11 +43,11 @@ import {
   createBuffVialOfPoison, createBuffSlimeJar, createBuffScrollOfPotency,
   createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffRegrowthLegacy, createBuffElfReinforcements,
   createBuffBlizzard, createBuffSahuaginEye, createBuffOldGodBlessing, createBuffObsidianCore,
-  createBuffMagmaTablet, createBuffVolcanoBlessing, createBuffMapKnowledge,
+  createBuffMagmaTablet, createBuffVolcanoBlessing, createBuffMapKnowledge, createBuffBloodiedFrenzy,
   createBadRations, createSturdyBoots,
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
-  createWoodenAxe, createWoodenGreatsword, createRockMace,
+  createWoodenAxe, createJaggedChopper, createGore, createBoarTusk, createBoarhideBracers, createFrenzyBloodVial, createBoarhideBandage, createWoodenGreatsword, createRockMace,
   createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createShadowBolt, createTheButcher, createPlague, createBookOfTheDead, createBoneBuckler, createCorpseExplosion, createBoneStormNecromancer, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
@@ -122,7 +122,7 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -131,7 +131,7 @@ import {
   createQuickStrike, createBattleFury, createFeralForm,
   createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower, createFeralWrathPower,
   createMassiveOgreRam, createGoblinSapperSquad,
-  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
+  createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
@@ -139,6 +139,7 @@ import {
 import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, markSlotConsumedForGamePlus, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
 import { initAnalytics, track as trackEvent } from './analytics.js';
+import { LORE_ENTRIES, LORE_TYPES, LORE_TYPE_COLORS } from './lore.js';
 
 initAnalytics();
 
@@ -785,6 +786,10 @@ function applyGamePlusOffsetInPlace(c, offset) {
           // Secondary: "and N Damage to" or "+N Dmg" tail.
           out = out.replace(/and\s+(\d+)\s+Damage/i, (m, n) => parseInt(n, 10) === secondaryOld ? `and ${secondaryNew} Damage` : m);
           out = out.replace(/\+(\d+)\s+Dmg\s+x(\d+)/i, (m, n, x) => parseInt(n, 10) === secondaryOld ? `+${secondaryNew} Dmg x${x}` : m);
+          // Uniform "Deal N to M targets" format (no "Damage" word) — the
+          // single per-target number scales; shortDesc carries "->N Dmg".
+          out = out.replace(/Deal\s+(\d+)\s+to\b/i, (m, n) => parseInt(n, 10) === primaryOld ? `Deal ${primaryNew} to` : m);
+          out = out.replace(/->\s*(\d+)\s+Dmg/i, (m, n) => parseInt(n, 10) === primaryOld ? m.replace(String(n), String(primaryNew)) : m);
           return out;
         };
         c.description = swapSplit(c.description);
@@ -1010,7 +1015,7 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const cHp = 4 + offset;
       const cArmor = 1 + Math.floor(offset / 3 + 1e-9);
       const cBonus = 2 + offset;
-      c.description = `Recharge +1 -> Deal ${hitBase} Damage (+${hitBonus} vs Armor/Shield). Summon a ${cAtk}/${cHp} Obsidian Construct (Sentinel, ${cArmor} Armor, +${cBonus} vs Armor/Shield).`;
+      c.description = `Recharge a Card -> Deal ${hitBase} (+${hitBonus} vs Armor/Shield). Summon a ${cAtk}/${cHp} Obsidian Construct (Sentinel, ${cArmor} Armor, +${cBonus} vs Armor/Shield).`;
     }
     // Drain Essence — only the UPPER end of the 1-N random roll bumps
     // (+1 per offset via necrotic_drain); the floor stays at 1, so the
@@ -1971,6 +1976,23 @@ let volcanoChoiceCompleted = false;
 // free rests at every inn in the city for life (resolveInnRest waives
 // the gold cost). Reset on startNewGame; persisted via save.js.
 let heroesOfQualibaf = false;
+// Armorer's-son side quest. Latched the first time the player finishes
+// the armorsmith (Doran) worried-parents dialog. While true, the North
+// Crossroad swaps to its fork-choice variant and the 'north_road' node
+// opens on completion. Reset on startNewGame / resetStoryFlags; persisted
+// via save.js below.
+let armorerSonQuestStarted = false;
+// Armorer's-son quest reward is tracked by the Armorer's Training perk
+// itself (perks persist in the save), so no separate flag is needed. True
+// once the player has been thanked + rewarded by Doran & Mira. Drives the
+// post-quest shop variants AND the permanent 25% rebate at both their shops.
+function armorerQuestRewardClaimed() {
+  return !!(player && Array.isArray(player.perks)
+    && player.perks.some(p => p && p.id === 'armorer_training'));
+}
+// Which smith (armorsmith / weaponsmith) granted the reward — set when the
+// perk loot-reveal page opens, read when it's dismissed to re-open that shop.
+let _armorerRewardShopId = null;
 // Lifetime damage dealt to the White Dragon Egg across all combats
 // since it was picked up — tracked BEFORE shield/armor mitigation
 // (the raw hit). At threshold (10 for testing, 100 in shipping),
@@ -2073,6 +2095,15 @@ let lastWatchSupplyTaken = false;
 // the active ambush so the post-encounter dispatch can prune it.
 let _lakeFrogRocks = null;
 let _currentFrogRockId = null;
+// Armorer's-son quest (WIP) — Elite Kobold Patrol placement on the
+// qualibaf_bridge map. Mirrors _lakeFrogRocks: holds the bridge node ids
+// (river_climb / treeline) that still carry an unfought patrol. null =
+// not yet picked (re-rolls one node on next arrival). Cleared on rest
+// (setWellRested) so the patrol respawns. _currentBridgePatrolNode tracks
+// which node fired the active fight so the post-encounter dispatch can
+// prune it and unlock the climb forward.
+let _bridgePatrolNodes = null;
+let _currentBridgePatrolNode = null;
 // Harpy / Kraken boss-flight bookkeeping. harpiesDefeated latches
 // when the wreckage harpy fight is won and clears on rest, so
 // walking back onto the cog after resting refires the (short)
@@ -2097,6 +2128,10 @@ let lastWatchPostRocClaimed = false;
 // nest again for fresh loot. Independent of rocRescued (which is a
 // one-shot story latch).
 let babyRocDefeated = false;
+// Giant Boar ambush (Pinewood, armorer's-son quest WIP). Latches when the
+// boar is beaten and clears on rest (setWellRested), so the fight repeats
+// each time the party climbs back through the pines after resting.
+let giantBoarDefeated = false;
 // Stormwatcher's Shrine — Marthammor's reactivation arc. shrineReactivated
 // latches when Olbrim makes it back up to the shrine and lights the
 // brazier with the Frostbloom. After that the active-shrine dialog
@@ -2339,10 +2374,16 @@ const DECK_LIMIT_CATEGORIES = [
 // → 5 (G+++) total, vs the old code that clamped them at +1 forever.
 function getDeckLimitCap(catId) {
   const capBonus = (player && player.deckLimitCapBonus) || 0;
+  // Use the GREATER of the accumulated restart bonus and the run's Game+
+  // offset (×2). deckLimitCapBonus only bumps +2 per Game+ *restart*, so a
+  // direct "+++" pick (playerTierOffset 3, one restart) would otherwise sit
+  // at the +1 cap — capping relics at 3 instead of 5. Reading the offset
+  // makes the cap follow the +/++/+++ level regardless of restart path.
+  const effBonus = Math.max(capBonus, 2 * (playerTierOffset || 0));
   if (catId === 'relic') {
-    return 1 + Math.floor(capBonus / 2);
+    return 1 + Math.floor(effBonus / 2);
   }
-  return 3 + capBonus;
+  return 3 + effBonus;
 }
 
 // Friendly names for weapon/armor subtypes (displayed in the "can equip"
@@ -3417,6 +3458,12 @@ let flashOfGeniusRechargesLeft = 0;
 // and open it on the player's first ACTUAL turn (in finishEnemyTurn).
 let _flashOfGeniusPending = 0;
 let _flashSkipRect = null;
+// Armorer's Training perk — a Flash-of-Genius-style interactive recharge,
+// fired at the END of the enemy turn / start of the player's turn (after the
+// defensive window): one chance to recharge an Armor card for +1 Draw, or
+// Skip. Opened in startPlayerTurn, so it's naturally once per turn.
+let armorerTrainingMode = false;
+let _armorerTrainingSkipRect = null;
 let cardRechargeNeeded = 0;
 let cardRechargedCards = []; // cards already paid as recharge cost
 let pendingRechargeNames = []; // names to log after the card resolves
@@ -3521,7 +3568,10 @@ let healTargetMode = false;
 const CARD_REGISTRY = {
   // Starter cards
   wooden_sword: createWoodenSword, leather_armor: createLeatherArmor,
-  scraps: createScraps, wooden_axe: createWoodenAxe,
+  scraps: createScraps, wooden_axe: createWoodenAxe, jagged_chopper: createJaggedChopper,
+  boar_tusk: createBoarTusk,
+  boarhide_bracers: createBoarhideBracers, frenzy_blood_vial: createFrenzyBloodVial,
+  boarhide_bandage: createBoarhideBandage,
   wooden_greatsword: createWoodenGreatsword, rock_mace: createRockMace,
   cracked_buckler: createCrackedBuckler, buckler: createBuckler, short_bow: createShortBow,
   // Path of the Necromancer — dining-room cockroach loot.
@@ -3801,7 +3851,18 @@ const LOOT_TABLES = {
     { creator: createKoboldSpear,   weight: 1.0 },
     { creator: createKoboldShield,  weight: 1.0 },
     { creator: createChainShirt,    weight: 0.5 },
+    { creator: createJaggedChopper, weight: 0.5 },
   ],
+  // Giant Boar loot (armorer's-son quest, Pinewood ambush) — boar-themed
+  // gear. Drops 2 DISTINCT picks per fight: Rare Boarhide Bracers (first-attack
+  // rider) and the two consumables are the common pulls; the Epic Boar Tusk
+  // relic is the rare prize.
+  giant_boar_loot: Object.assign([
+    { creator: createBoarTusk,        weight: 0.25 },
+    { creator: createBoarhideBracers, weight: 0.5 },
+    { creator: createFrenzyBloodVial, weight: 1.0 },
+    { creator: createBoarhideBandage, weight: 1.0 },
+  ], { pickCount: 2, distinct: true }),
   // Stone Giant loot — Sharp Rock with a 25 % chance of a Lucky Pebble.
   // Mirrors Python's get_stone_giant_loot (pick one).
   stone_giant_loot: [
@@ -4050,6 +4111,7 @@ const LOOT_TABLE_LABELS = {
   abandoned_camp_loot: 'Abandoned Camp',
   gear_barrel_loot:    'Prison Gear Barrel',
   kobold_base_loot:    'Kobold Base Loot',
+  giant_boar_loot:     'Giant Boar',
   stone_giant_loot:    'Stone Giant',
   giant_frog_loot:     'Giant Frog',
   harpies_loot:        'Harpies',
@@ -4087,6 +4149,7 @@ const LOOT_TABLE_NOTES = {
   abandoned_camp_loot: 'Camp search picks 2 distinct items without replacement.',
   gear_barrel_loot:    'Snatched from the prison warden\'s barrel of confiscated gear.',
   kobold_base_loot:    'Shared loot pool for kobold encounters — Prison Warden body, mountain Kobold Patrols, etc.',
+  giant_boar_loot:     'Dropped by the Giant Boar (Pinewood ambush). Pick-one, weighted: Boarhide Bracers or a consumable usually; the Epic Boar Tusk relic is the rare prize.',
   stone_giant_loot:    'Survived after the Stone Giant fight. Pick-one: Sharp Rock or (rarely) Lucky Pebble.',
   giant_frog_loot:     'Dropped after defeating the Giant Frog reef ambush. Pick-one — Toxic Frog Extract common, Frog Skin Boots uncommon, Frog Nursery rare.',
   harpies_loot:        'Dropped after every Harpy fight on the wrecked cog (resets on rest). Pick TWO distinct — Egg Omelette uncommon meal, Feather Cloak/Talon Blade/Screaming Charm rare, Harpy Feather epic relic.',
@@ -4253,6 +4316,8 @@ async function loadAssets() {
     loadImage('map_shipwreck_deck', `${BASE}assets/Maps/ShipwreckDeckMap.jpg`),
     loadImage('map_qualibaf', `${BASE}assets/Maps/QualibafMap.jpg`),
     loadImage('map_north_qualibaf', `${BASE}assets/Maps/NorthGateQualibafExternalMap.jpg`),
+    loadImage('map_qualibaf_bridge', `${BASE}assets/Maps/QualibafBridgeMap.jpg`),
+    loadImage('map_qualibaf_waterfall', `${BASE}assets/Maps/QualibafWaterFallMap.jpg`),
     loadImage('map_filibaf_forest', `${BASE}assets/Maps/FilibafForestMap.jpg`),
     loadImage('map_tharnag', `${BASE}assets/Maps/TharnagMap.jpg`),
     loadImage('map_volcano', `${BASE}assets/Maps/QualibafVolcano.jpg`),
@@ -4335,6 +4400,8 @@ async function loadAssets() {
     loadImage('icon_fire', `${BASE}assets/Icons/FireElementIcon.png`),
     loadImage('icon_ice', `${BASE}assets/Icons/IceElementIcon.png`),
     loadImage('icon_poison', `${BASE}assets/Icons/PoisonIcon.png`),
+    // Regen — inverse of Fire. Troll-themed status icon.
+    loadImage('icon_regen', `${BASE}assets/Cards/TrollRegen.jpg`),
     loadImage('icon_shock', `${BASE}assets/Icons/LightningIcon.png`),
     loadImage('icon_bleed', `${BASE}assets/Icons/BleedIcon.png`),
     loadImage('icon_ink_cloud', `${BASE}assets/Icons/InkCloudIcon.png`),
@@ -4408,6 +4475,11 @@ async function loadAssets() {
     loadImage('creature_obsidian_slime',     `${BASE}assets/Cards/ObsidianSlime.jpg`),
     loadImage('creature_valdrisa',           `${BASE}assets/Cards/ValdrisaEmberforge.jpg`),
     loadImage('creature_magma_mephit',       `${BASE}assets/Cards/MagmaMephit.jpg`),
+    // Kellen's Rescue (Forest Ambush, armorer's-son quest WIP). Invulnerable
+    // boss portrait (name 'Retreating Kobold Army') + the 2x2 prison-cart
+    // creature (name 'Prison Cart') that holds the boy.
+    loadImage('retreating_kobold_army',      `${BASE}assets/Cards/RetreatingKoboldArmy.jpg`),
+    loadImage('creature_prison_cart',        `${BASE}assets/Cards/BoyInTheCart.jpg`),
     // Enemy boss portrait (the invulnerable shell behind the mephit
     // kill-count fight). drawCharacterCard keys off character.name
     // lowercased + underscored — "Magma Mephits" → 'magma_mephits'.
@@ -4441,6 +4513,7 @@ async function loadAssets() {
     loadImage('ambush_perk',          `${BASE}assets/Cards/AmbushPerk.jpg`),
     loadImage('first_strike_perk',    `${BASE}assets/Cards/FirstStrikePerk.jpg`),
     loadImage('armored_perk',         `${BASE}assets/Cards/ArmoredPerk.jpg`),
+    loadImage('armorer_training_perk', `${BASE}assets/Cards/ArmorersTraining.jpg`),
     loadImage('power_surge_perk',     `${BASE}assets/Cards/PowerSurgePerk.jpg`),
     loadImage('balanced_perk',        `${BASE}assets/Cards/BalanceDruidPerk.jpg`),
     loadImage('lucky_find_perk',      `${BASE}assets/Cards/LuckyFindPerk.jpg`),
@@ -6023,6 +6096,10 @@ const MUSIC_FOR_AREA = {
   arriving_city: 'Music/music_castle_festivities_01',
   qualibaf:      'Music/music_castle_festivities_01',
   north_qualibaf: 'Music/music_castle_festivities_01',
+  // Frontier Road bridge (armorer's-son quest) — wooded mountain river
+  // approach, same forest bed as the south arm / Filibaf.
+  qualibaf_bridge: 'Music/ambience_forest_01',
+  qualibaf_waterfall: 'Music/ambience_forest_01',
   // South of Qualibaf + the outpost grounds share the same forest
   // ambience — the river path leaves cultivated land behind and the
   // outpost itself sits in scrub-and-trees country.
@@ -6153,6 +6230,7 @@ const MUSIC_TAGS = {
     'boss: Magma Drake',
     'boss: Roc (chick swarm)',
     'boss: Overseer Gnikan (Phase 2 — awakened master)',
+    'boss: Retreating Kobold Army (Kellen rescue)',
   ],
   // Path of the Necromancer — the Plague Gravekeeper fight's dirge.
   'Music/music_shadow_of_mortus_01': ['boss: Plague Gravekeeper'],
@@ -6291,6 +6369,15 @@ function updateMusicForCurrentScene() {
   const [fadeOut, fadeIn] = FADE_OVERRIDES[area] || [1500, 2500];
   if (track) crossfadeMusic(track, fadeOut, fadeIn);
   else stopMusic();
+  // Per-area ambience LAYER, played on top of the main area bed. The
+  // waterfall valley lays a fast-flowing-water loop over the forest
+  // ambience; leaving the area (any other map) stops the layer.
+  const AREA_AMBIENCE_LAYER = {
+    qualibaf_waterfall: ['Music/water_fast_flowing_01', 0.35],
+  };
+  const layer = AREA_AMBIENCE_LAYER[area];
+  if (layer) playAmbienceLayer(layer[0], layer[1]);
+  else stopAmbienceLayer();
 }
 
 // Title-screen Play handler. Routes through GAME_PLUS_SETUP when the
@@ -6593,6 +6680,7 @@ function resetStoryFlags() {
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
+  armorerSonQuestStarted = false;
   _encounterBgOverride = null;
   valdrisaJoined = false;
   studyVisited = false;
@@ -6623,11 +6711,14 @@ function resetStoryFlags() {
   lastWatchSupplyTaken = false;
   _lakeFrogRocks = null;
   _currentFrogRockId = null;
+  _bridgePatrolNodes = null;
+  _currentBridgePatrolNode = null;
   harpiesDefeated = false;
   direBearDefeated = false;
   rocRescued = false;
   lastWatchPostRocClaimed = false;
   babyRocDefeated = false;
+  giantBoarDefeated = false;
   shrineReactivated = false;
   stormwatchersShrineActiveSeen = false;
   mithrilRemediesOlbrimGreeted = false;
@@ -6704,6 +6795,7 @@ function startNewGame() {
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
   volcanoChoiceCompleted = false;
+  armorerSonQuestStarted = false;
   // Runtime-only backdrop overrides (Varimatras, volcano-awakening,
   // bridge-exploding, dwarven-city per-map) can leak across a New
   // Game from a previous Varimatras run since they're not saved.
@@ -6738,11 +6830,14 @@ function startNewGame() {
   lastWatchSupplyTaken = false;
   _lakeFrogRocks = null;
   _currentFrogRockId = null;
+  _bridgePatrolNodes = null;
+  _currentBridgePatrolNode = null;
   harpiesDefeated = false;
   direBearDefeated = false;
   rocRescued = false;
   lastWatchPostRocClaimed = false;
   babyRocDefeated = false;
+  giantBoarDefeated = false;
   shrineReactivated = false;
   stormwatchersShrineActiveSeen = false;
   mithrilRemediesOlbrimGreeted = false;
@@ -8079,6 +8174,9 @@ function getReachableNodeIds() {
 // growth since the rest snapshot means a card was added). Banishes
 // don't break the buff.
 let _wellRestedDeckSize = -1;
+// Only FULL rests call this (inn, level-up, outpost full rest). Short rests
+// are a pure heal and deliberately do NOT funnel through here, so they leave
+// Well-Rested, monster respawns, ambush re-arms, and Provisions untouched.
 function setWellRested() {
   if (player && player.deck) _wellRestedDeckSize = player.deck.masterDeck.length;
   // Dire Bear (Circular Ruins) is the chapter 5/6 Mountain repeatable.
@@ -8094,9 +8192,19 @@ function setWellRested() {
   // rocRescued at the dispatch site, so a pre-rescue rest doesn't
   // ambush a confused player.
   babyRocDefeated = false;
-  // Rest also clears any active Provisions (Ale, future food/drink
-  // buffs). The buff was "until next rest" so this is the trigger.
+  // Elite Kobold Patrol (Frontier Road bridge) — re-arm so the patrol
+  // respawns on the next climb. null re-rolls which node carries it.
+  _bridgePatrolNodes = null;
+  _currentBridgePatrolNode = null;
+  // Giant Boar (Pinewood) — re-arm the ambush on rest.
+  giantBoarDefeated = false;
+  // Full rest clears active Provisions (Ale, food/drink buffs) + the Frenzy
+  // Blood Vial's Bloodied Frenzy — these are "until next full rest".
   clearActiveProvisions();
+  if (player && Array.isArray(player.persistentBuffs)) {
+    player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== 'bloodied_frenzy');
+  }
+  if (player) player._frenzyRageApplied = 0;
 }
 
 // Respawn the southern monsters (Giant Frog reef ambush, Harpy
@@ -8109,6 +8217,8 @@ function setWellRested() {
 function respawnSouthernMonsters() {
   _lakeFrogRocks = null;
   _currentFrogRockId = null;
+  _bridgePatrolNodes = null;
+  _currentBridgePatrolNode = null;
   harpiesDefeated = false;
   cozySpotFishingCaught = false;
   _cozySpotFishAttempts = 0;
@@ -8223,6 +8333,35 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   }
   if (!skipEncounter && nodeId === 'north_gate_return' && currentMap.id === 'north_qualibaf') {
     transitionToQualibafCity(nodeId);
+    return;
+  }
+  // Armorer's-son quest (WIP) — walking the unlocked north_road node off
+  // the North Crossroad climbs the party north to the Frontier Road
+  // bridge map.
+  if (!skipEncounter && nodeId === 'north_road' && currentMap.id === 'north_qualibaf') {
+    transitionToQualibafBridge();
+    return;
+  }
+  // Back half of the bridge teleport — walking back onto (or click-on-
+  // self at) the entry leaves the bridge area. The fromNodeId !==
+  // 'north_road' guard lets the forward transition's own arrive call
+  // (which passes 'north_road') fall through to the approach dialog.
+  if (!skipEncounter && nodeId === 'frontier_road' && currentMap.id === 'qualibaf_bridge'
+      && fromNodeId !== 'north_road') {
+    transitionFromQualibafBridgeBack(nodeId);
+    return;
+  }
+  // 'To The Waterfall' node ↔ Waterfall map entry — bidirectional
+  // teleport. The 'waterfall' forward fires unless we just landed here
+  // from the back-teleport (fromNodeId 'waterfall_entry').
+  if (!skipEncounter && nodeId === 'waterfall' && currentMap.id === 'qualibaf_bridge'
+      && fromNodeId !== 'waterfall_entry') {
+    transitionToQualibafWaterfall();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'waterfall_entry' && currentMap.id === 'qualibaf_waterfall'
+      && fromNodeId !== 'waterfall') {
+    transitionFromQualibafWaterfallBack(nodeId);
     return;
   }
   // South of Qualibaf WIP back-teleport — click-on-self on the lone
@@ -10643,6 +10782,101 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       }
     }
   }
+  // Armorer's-son quest (WIP) — Elite Kobold Patrol on the bridge
+  // climb. TWO zones each host one patrol on a randomly chosen node:
+  // {river_climb, treeline} on the lower climb and {bridge, trail_north}
+  // past the overlook. Picks (persisted in _bridgePatrolNodes, respawned
+  // on rest) mirror the frog-rocks ambush; the fight does NOT gate on
+  // node.isDone so it can respawn after a rest re-arms _bridgePatrolNodes.
+  // Giant Boar ambush — fires once at the Pinewood node until the next
+  // rest re-arms it (giantBoarDefeated cleared in setWellRested).
+  if (!skipEncounter && nodeId === 'ambush_pines' && currentMap.id === 'qualibaf_waterfall'
+      && !giantBoarDefeated) {
+    const factory = ENCOUNTER_REGISTRY.giant_boar_ambush;
+    if (factory) {
+      currentMap.currentNodeId = nodeId;
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      visitedNodes.add(nodeId);
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // The Spray Ledge breather — one-time-ever (armorer's-son quest, WIP).
+  // Unlike the boar this does NOT re-arm on rest: gated on the persistent
+  // completedEncounters set so it fires exactly once per run.
+  if (!skipEncounter && nodeId === 'ambush_ledge' && currentMap.id === 'qualibaf_waterfall'
+      && !completedEncounters.has('spray_ledge_rest')) {
+    const factory = ENCOUNTER_REGISTRY.spray_ledge_rest;
+    if (factory) {
+      currentMap.currentNodeId = nodeId;
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      visitedNodes.add(nodeId);
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // Forest Ambush — the strike on the column (armorer's-son quest, WIP).
+  // Dialog → PLACEHOLDER Elite Kobold fight. One-time-ever via
+  // completedEncounters (the real rescue fight replaces it later).
+  if (!skipEncounter && nodeId === 'ambush_overlook' && currentMap.id === 'qualibaf_waterfall'
+      && !completedEncounters.has('forest_ambush_attack')) {
+    const factory = ENCOUNTER_REGISTRY.forest_ambush_attack;
+    if (factory) {
+      currentMap.currentNodeId = nodeId;
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      visitedNodes.add(nodeId);
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  // The North Trail breather (armorer's-son quest, WIP) — one-time-ever
+  // dialog + short rest where the party watches the column file north.
+  // Fires BEFORE the bridge patrol check so it takes priority on the first
+  // visit to trail_north; the patrol can still roll there on later visits.
+  if (!skipEncounter && nodeId === 'trail_north' && currentMap.id === 'qualibaf_bridge'
+      && !completedEncounters.has('north_trail_rest')) {
+    const factory = ENCOUNTER_REGISTRY.north_trail_rest;
+    if (factory) {
+      currentMap.currentNodeId = nodeId;
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      visitedNodes.add(nodeId);
+      advanceEncounterPhase();
+      return;
+    }
+  }
+  const BRIDGE_PATROL_ZONES = [['river_climb', 'treeline'], ['bridge', 'trail_north']];
+  const BRIDGE_PATROL_CANDIDATES = BRIDGE_PATROL_ZONES.flat();
+  if (!skipEncounter && currentMap.id === 'qualibaf_bridge' && BRIDGE_PATROL_CANDIDATES.includes(nodeId)) {
+    if (_bridgePatrolNodes === null) {
+      _bridgePatrolNodes = BRIDGE_PATROL_ZONES.map(z => z[Math.floor(Math.random() * z.length)]);
+    }
+    if (_bridgePatrolNodes.includes(nodeId)) {
+      _currentBridgePatrolNode = nodeId;
+      currentMap.currentNodeId = nodeId;
+      const factory = ENCOUNTER_REGISTRY.elite_kobold_patrol;
+      if (factory) {
+        currentEncounter = factory();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        visitedNodes.add(nodeId);
+        advanceEncounterPhase();
+        return;
+      }
+    }
+  }
   // Post-dragon staircase chatter — staircase_top has no real
   // encounterId, so the standard `if (canRunEncounter)` gate below
   // skips startNodeEncounter (and the intercept inside it) on
@@ -10911,6 +11145,14 @@ function handleMapClick(x, y) {
       const isCrossMapGate =
         (r.nodeId === 'city_north_gate' && node.isDone && node.encounterId) ||
         (r.nodeId === 'north_gate_return' && currentMap.id === 'north_qualibaf') ||
+        // Armorer's-son quest (WIP) teleporter pairs — north_road ↔
+        // frontier_road (Frontier Road bridge map) and waterfall ↔
+        // waterfall_entry (Waterfall map). Click-on-self dispatches
+        // through arriveAtNode, which runs the transition intercepts.
+        (r.nodeId === 'north_road' && currentMap.id === 'north_qualibaf') ||
+        (r.nodeId === 'frontier_road' && currentMap.id === 'qualibaf_bridge') ||
+        (r.nodeId === 'waterfall' && currentMap.id === 'qualibaf_bridge') ||
+        (r.nodeId === 'waterfall_entry' && currentMap.id === 'qualibaf_waterfall') ||
         // South of Qualibaf WIP back-teleport — single click on the
         // entry node hops back to south_trail on arriving_city.
         (r.nodeId === 'outpost_approach' && currentMap.id === 'south_of_qualibaf') ||
@@ -11231,6 +11473,15 @@ const ENCOUNTER_BG_MAP = {
   north_crossroad: 'bg_north_crossroad', filibaf_entrance: 'bg_filibaf_entrance',
   forest_shadows: 'bg_filibaf_entrance', forest_ambush_left: 'bg_filibaf_entrance',
   forest_ambush_right: 'bg_filibaf_entrance',
+  qualibaf_bridge_approach: 'bg_qualibaf_bridge', qualibaf_bridge_overlook: 'bg_qualibaf_bridge',
+  elite_kobold_patrol: 'bg_qualibaf_bridge',
+  north_trail_rest: 'bg_qualibaf_bridge',
+  qualibaf_waterfall_arrival: 'bg_qualibaf_waterfall',
+  giant_boar_ambush: 'bg_qualibaf_waterfall',
+  spray_ledge_rest: 'bg_qualibaf_waterfall',
+  forest_ambush_attack: 'bg_qualibaf_waterfall',
+  // Rescue aftermath plays back at the North Crossroad (the party fled there).
+  kellen_rescued_crossroad: 'bg_north_crossroad',
   // Tharnag
   tharnag_arrival: 'bg_tharnag_siege', siege_gauntlet_1: 'bg_tharnag_siege',
   siege_gauntlet_2: 'bg_tharnag_siege', siege_gauntlet_3: 'bg_tharnag_siege',
@@ -11404,6 +11655,11 @@ const ENCOUNTER_BG_FILES = {
   bg_antiquity_shop: 'AntiquityShopBackground.jpg',
   bg_guild_hall: 'GuildHallBackground.jpg', bg_north_crossroad: 'NorthCrossRoadBG.jpg',
   bg_filibaf_entrance: 'FilibafEntranceBackground.jpg',
+  // Frontier Road bridge — the dialog backdrop shares the map art
+  // (Maps/ prefix), like bg_grand_hall, so the approach beats render
+  // over the same bridge view the map shows.
+  bg_qualibaf_bridge: 'Maps/QualibafBridgeMap.jpg',
+  bg_qualibaf_waterfall: 'Maps/QualibafWaterFallMap.jpg',
   bg_tharnag_siege: 'TharnagSiegeBackground.jpg', bg_tharnag_quarters: 'TharnagPersonalQuartersBG.jpg',
   // Post-siege exterior — same art the tharnag map shows once the siege
   // is broken. Used for the Leaving Tharnag dialog so the backdrop matches
@@ -11961,6 +12217,63 @@ function transitionFromSouthOfQualibafBack(fromNodeId) {
   const target = currentMap.getNode('south_trail');
   if (target) target.isDone = true;
   arriveAtNode('south_trail', fromNodeId, true);
+  autosaveNow();
+}
+
+// Qualibaf Bridge forward + back-teleport pair (armorer's-son quest, WIP).
+// Forward: walking the unlocked north_road node off the North Crossroad
+// drops the party onto frontier_road inside the qualibaf_bridge map and
+// fires the approach dialog. fromNodeId is hard-set to 'north_road' so the
+// back-teleport guard below doesn't bounce the player straight out.
+function transitionToQualibafBridge() {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('qualibaf_bridge', createQualibafBridgeMap);
+  visitedNodes = new Set(['frontier_road']);
+  currentMap.currentNodeId = 'frontier_road';
+  arriveAtNode('frontier_road', 'north_road', false);
+  autosaveNow();
+}
+
+// Back: walking back onto (or click-on-self at) the entry returns the
+// party to the North Qualibaf map, landing on the already-unlocked
+// north_road node. skipEncounter=true so we don't immediately re-fire the
+// forward transition.
+function transitionFromQualibafBridgeBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('north_qualibaf', createNorthQualibafMap);
+  visitedNodes = new Set(['north_road']);
+  const target = currentMap.getNode('north_road');
+  if (target) { target.isLocked = false; target.isDone = true; }
+  currentMap.currentNodeId = 'north_road';
+  arriveAtNode('north_road', fromNodeId, true);
+  autosaveNow();
+}
+
+// Qualibaf Waterfall forward + back-teleport pair (armorer's-son quest,
+// WIP). Forward: walking onto / click-on-self at the 'waterfall' node on
+// the bridge map hops to the Waterfall map's lone entry node. Back: the
+// same on waterfall_entry returns to the bridge's 'waterfall' node. Both
+// use skipEncounter=true so neither side re-fires the other's transition.
+function transitionToQualibafWaterfall() {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('qualibaf_waterfall', createQualibafWaterfallMap);
+  visitedNodes = new Set(['waterfall_entry']);
+  currentMap.currentNodeId = 'waterfall_entry';
+  // skipEncounter=false so the one-shot arrival dialog fires on the first
+  // teleport in. The back-teleport guard (fromNodeId 'waterfall') keeps
+  // this arrival from bouncing straight back to the bridge.
+  arriveAtNode('waterfall_entry', 'waterfall', false);
+  autosaveNow();
+}
+
+function transitionFromQualibafWaterfallBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('qualibaf_bridge', createQualibafBridgeMap);
+  visitedNodes = new Set(['waterfall']);
+  const target = currentMap.getNode('waterfall');
+  if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+  currentMap.currentNodeId = 'waterfall';
+  arriveAtNode('waterfall', fromNodeId, true);
   autosaveNow();
 }
 
@@ -12595,6 +12908,28 @@ function startNodeEncounter(nodeId) {
     } else {
       currentEncounter = factory();
     }
+  } else if (node.encounterId === 'armorsmith' || node.encounterId === 'weaponsmith') {
+    // Armorer's-son side quest (WIP). Doran (armorsmith) + Mira (weaponsmith)
+    // share the post-quest arc — the rescue reward fires at whichever of their
+    // two shops the player visits FIRST after bringing Kellen home, and both
+    // revert to a short thank-you afterward. Order of checks (most → least
+    // progressed): rewarded → rescued-but-not-yet-thanked → quest running →
+    // (armorsmith-only debug quest start) → plain. Every variant keeps the
+    // shop id so the auto-shop hook still opens the storefront.
+    const isArmorer = node.encounterId === 'armorsmith';
+    let shopVariant;
+    if (armorerQuestRewardClaimed()) shopVariant = 'quest_complete';
+    else if (completedEncounters.has('kellen_rescued_crossroad')) shopVariant = 'quest_reward';
+    else if (armorerSonQuestStarted) shopVariant = 'quest_active';
+    else if (isArmorer && debugMode) shopVariant = 'quest_start';
+    else shopVariant = 'normal';
+    currentEncounter = factory(shopVariant);
+  } else if (node.encounterId === 'north_crossroad') {
+    // Once the armorer's-son quest is live, the crossroad swaps to the
+    // fork-in-the-road variant (choice to search north / take the
+    // forest) whose choice opens the north road. Pre-quest keeps the
+    // plain arrival beat.
+    currentEncounter = factory(armorerSonQuestStarted);
   } else if (node.encounterId === 'dwarven_smithy') {
     // Post-dragon, the smith acknowledges the player as a hero and
     // pulls out his reserved stock — the encounter factory branches
@@ -12929,6 +13264,44 @@ function advanceEncounterPhase() {
       _lakeFrogRocks = _lakeFrogRocks.filter(r => r !== _currentFrogRockId);
       _currentFrogRockId = null;
     }
+    // Elite Kobold Patrol cleared (armorer's-son quest, WIP) — mark the
+    // node done and prune it so it won't re-fire until the next rest
+    // re-arms _bridgePatrolNodes. The next node's visibility is handled by
+    // `discoverable` proximity, not an unlock.
+    // Giant Boar beaten — latch so the Pinewood ambush won't re-fire until
+    // the next rest clears giantBoarDefeated.
+    if (completedEncounterId === 'giant_boar_ambush') {
+      giantBoarDefeated = true;
+    }
+    // Kellen rescued (Forest Ambush cleared) — flee the valley and regroup at
+    // the North Crossroad, where the aftermath dialog ("safe at last, take him
+    // home to his parents") plays. Land directly on the crossroad node and
+    // fire the rescue dialog rather than the crossroad's own quest-intro
+    // encounter (long since done). Mirrors the intercept pattern; one-time via
+    // completedEncounters on kellen_rescued_crossroad.
+    if (completedEncounterId === 'forest_ambush_attack') {
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('north_qualibaf', createNorthQualibafMap);
+      visitedNodes = new Set(['north_crossroad']);
+      currentMap.currentNodeId = 'north_crossroad';
+      currentEncounter = ENCOUNTER_REGISTRY.kellen_rescued_crossroad();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      autosaveNow();
+      return;
+    }
+    if (completedEncounterId === 'elite_kobold_patrol' && _currentBridgePatrolNode) {
+      if (currentMap) {
+        const pn = currentMap.getNode(_currentBridgePatrolNode);
+        if (pn) pn.isDone = true;
+      }
+      if (Array.isArray(_bridgePatrolNodes)) {
+        _bridgePatrolNodes = _bridgePatrolNodes.filter(n => n !== _currentBridgePatrolNode);
+      }
+      _currentBridgePatrolNode = null;
+    }
     // Harpies (first fight or revisit) — latch the per-run flag so
     // walking back onto the cog skips the encounter until the next
     // rest clears the flag again.
@@ -13133,6 +13506,57 @@ function advanceEncounterPhase() {
         hydrateMapFromGlobalState(cached);
       }
     }
+    // Armorer's-son side quest (WIP) — starts the first time a DEBUG run
+    // finishes the armorsmith's worried-parents hook. Latch before the
+    // shop opens. Gated on debugMode so production runs never start it;
+    // once latched it persists (saved) and drives the North Crossroad
+    // fork + north_road unlock regardless of debug.
+    if (completedEncounterId === 'armorsmith' && debugMode && !armorerSonQuestStarted) {
+      armorerSonQuestStarted = true;
+    }
+    // Armorer's-son reward — fires when the player finishes the rescue reward
+    // dialog at EITHER shop (the first one visited after bringing Kellen home).
+    // Grant Armorer's Training, which also flips on the permanent 25% rebate
+    // at both smiths (both key off the perk). One-time: once the perk is in
+    // hand, armorerQuestRewardClaimed() is true, so the reward variant and
+    // this grant never repeat — later visits get the short thank-you instead.
+    if ((completedEncounterId === 'armorsmith' || completedEncounterId === 'weaponsmith')
+        && completedEncounters.has('kellen_rescued_crossroad')
+        && !armorerQuestRewardClaimed()) {
+      if (!Array.isArray(player.perks)) player.perks = [];
+      player.perks.push(createArmorerTrainingPerk());
+      addLog(`  Reward: Armorer's Training learned — 25% off both smiths, always.`, Colors.GOLD, perkToCardLike(createArmorerTrainingPerk()));
+      // Reveal the perk on a one-card loot page (mirrors the Old God's
+      // Blessing reveal — a PERK pseudo-card, NOT a real deck card; it's never
+      // added to the deck). Then re-open whichever smith granted it once it's
+      // dismissed. 'perk_pick' is the buff_powerup_01 perk-grant sting (the
+      // bare 'buff_powerup_01' alias isn't in SOUND_MAP, so it wouldn't play).
+      _armorerRewardShopId = completedEncounterId;
+      const perkLootPhase = new EncounterPhaseData({
+        phaseType: EncounterPhase.LOOT,
+        lootTitle: "Armorer's Training",
+      });
+      perkLootPhase._lootedCards = [perkToCardLike(createArmorerTrainingPerk())];
+      perkLootPhase._lootGoldAmount = 0;
+      perkLootPhase._lootLuckyFindBonus = 0;
+      currentEncounter = new Encounter(
+        'armorer_reward_loot',
+        "A Trick of the Trade",
+        "Doran teaches you a smith's eye for worn armor.",
+        [perkLootPhase],
+      );
+      playSound('perk_pick', 0.85);
+      state = GameState.ENCOUNTER_LOOT;
+      autosaveNow();
+      return;
+    }
+    // Perk reveal dismissed — re-open the smith that granted it.
+    if (completedEncounterId === 'armorer_reward_loot') {
+      const shopId = _armorerRewardShopId || 'armorsmith';
+      _armorerRewardShopId = null;
+      openShop(shopId, SHOP_LABELS[shopId] || _titleCase(shopId));
+      return;
+    }
     // Qualibaf shop encounters: dialog → straight into the 3-column shop UI.
     // The shop's Leave Shop button drops the player back to the map.
     const QUALIBAF_SHOP_IDS = new Set([
@@ -13185,6 +13609,26 @@ function advanceEncounterPhase() {
         ng.hiddenName = '';
         ng.hiddenDescription = '';
         addLog('  The North Gate is now open.', Colors.GOLD);
+      }
+    }
+    // North Crossroad — the dialog names Filibaf outright, so reveal the
+    // entrance's real name the moment it unlocks instead of leaving it
+    // '???' until the player physically walks onto it (the node's own
+    // `unlocks` only clears isLocked, not the hidden name).
+    if (completedEncounterId === 'north_crossroad' && currentMap) {
+      const fe = currentMap.getNode('filibaf_entrance');
+      if (fe) { fe.hiddenName = ''; fe.hiddenDescription = ''; }
+    }
+    // Armorer's-son quest (WIP) — finishing the crossroad also opens the
+    // north_road node (the Frontier Road north). Gated on the quest flag
+    // so the plain (non-quest) crossroad never reveals it.
+    if (completedEncounterId === 'north_crossroad' && armorerSonQuestStarted && currentMap) {
+      const nr = currentMap.getNode('north_road');
+      if (nr && nr.isLocked) {
+        nr.isLocked = false;
+        nr.hiddenName = '';
+        nr.hiddenDescription = '';
+        addLog('  The Frontier Road north lies open.', Colors.GOLD);
       }
     }
     // North Gate — once the player walks through and the dialog ends,
@@ -14208,12 +14652,15 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.kobold_patrol = () => {
     enemy = new Character('Kobold Patrol');
     enemy.deck = new Deck();
+    // 16-card deck: 5 Spear Throw, 5 Icy Breath, 4 Kobold Shield, and 2
+    // Jagged Choppers (the Bleed-leaning martial weapon).
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createSpearThrow());
     for (let i = 0; i < 5; i++) enemy.deck.addCard(createIcyBreath());
     // Shield Bash and Kobold Shield are mechanically identical (1 dmg
     // + 1 shield in PY). Use the player-facing Kobold Shield card so
     // it's the single canonical version.
-    for (let i = 0; i < 5; i++) enemy.deck.addCard(createKoboldShield());
+    for (let i = 0; i < 4; i++) enemy.deck.addCard(createKoboldShield());
+    for (let i = 0; i < 2; i++) enemy.deck.addCard(createJaggedChopper());
     // Kobold Backup: passive, summons 1 Kobold Guard at start of each
     // enemy turn. Matches PY's create_kobold_backup() power.
     enemy.addPower(createKoboldBackup());
@@ -14236,7 +14683,92 @@ function setupEnemyForCombat(enemyId) {
       setTimeout(() => addLog(`  Kobold Guard is already in position!`, Colors.RED), 50);
     }
   };
-  ENEMY_HAND_SIZE.kobold_patrol = 3;
+  ENEMY_HAND_SIZE.kobold_patrol = 2;
+  // Elite Kobold Patrol — the Frontier Road bridge fight (armorer's-son
+  // quest, WIP). Same kit as the Kobold Patrol plus 5 Wooden Axes, and a
+  // wider 4-card hand (ENEMY_HAND_SIZE below).
+  ENEMY_DECKS.elite_kobold_patrol = () => {
+    enemy = new Character('Elite Kobold Patrol');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createSpearThrow());
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createIcyBreath());
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createKoboldShield());
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createJaggedChopper());
+    enemy.addPower(createKoboldBackup());
+    // Elite patrol opens with 1 more guard than the standard patrol.
+    const baseGuards = 2 + (monsterTierOffset || 0);
+    for (let g = 0; g < baseGuards; g++) {
+      const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
+      guard.exhausted = false;
+      guard.justSummoned = false;
+      enemy.addCreature(guard);
+    }
+    if (!_codexSandboxRunning) {
+      setTimeout(() => addLog(`  Kobold Guard is already in position!`, Colors.RED), 50);
+    }
+  };
+  ENEMY_HAND_SIZE.elite_kobold_patrol = 3;
+  // Giant Boar — the Pinewood ambush (armorer's-son quest, WIP). A 30-HP
+  // bruiser: 15 Gore (charge attack, +damage on its first swing) and 12
+  // Dire Hide (tough-skin block). Bloodied Fury fuels its Rage once it
+  // drops to half HP. Narrow 2-card hand.
+  ENEMY_DECKS.giant_boar = () => {
+    enemy = new Character('Giant Boar');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 15; i++) enemy.deck.addCard(createGore());
+    for (let i = 0; i < 13; i++) enemy.deck.addCard(createDireHide());
+    // 2 Boar Tusks in its OWN deck — each discarded by player damage stacks
+    // Regen 2 on the boar. Dropped from 3 → 2 (deck still 30): with 3, an
+    // early Tusk cluster started the regen cycle too soon and made him far
+    // too tough. The Regen decay self-limits the heal either way.
+    for (let i = 0; i < 2; i++) enemy.deck.addCard(createBoarTusk());
+    enemy.addPower(createBloodiedFury());
+  };
+  ENEMY_HAND_SIZE.giant_boar = 2;
+
+  // Kellen's Rescue — the Forest Ambush payoff (armorer's-son quest, WIP).
+  // The retreating White Claw rearguard is an INVULNERABLE boss-shell (you
+  // can't cut down the whole column); the win is _clearFieldToWin — break
+  // open the prison cart and kill its 4 Kobold Guards. The Cart is a 0-atk /
+  // 20-hp 2x2 hulk (reuses the Butcher footprint + centre placement) holding
+  // Kellen in the middle of the field, the guards ringing it. The boss carries
+  // no deck (hand size 0) — only the guards act.
+  ENEMY_DECKS.kellen_rescue = () => {
+    enemy = new Character('Retreating Kobold Army');
+    enemy.deck = new Deck();
+    enemy._invulnerable = true;
+    enemy._clearFieldToWin = true;
+    // Kobold Army — the swarm power: each enemy turn tops the guard count
+    // back up (4-6) and feeds in slingers / the odd Dragonshield, so the
+    // rearguard keeps throwing bodies between you and the cart.
+    enemy.addPower(createKoboldArmy());
+    // Seed Raena's companion card into the player's opening hand (startCombat
+    // honors this flag) so the scripted "Raena looses first" beat is actually
+    // playable on turn 1.
+    enemy._seedRaenaInHand = true;
+    // 4 Kobold Guards FIRST, so placeButcherCentered shuffles them out to the
+    // flank cells when it seats the 2x2 cart in the centre block {2,3,8,9}.
+    for (let i = 0; i < 4; i++) {
+      const guard = new Creature({ name: 'Kobold Guard', attack: 2, maxHp: 1, shield: 1 });
+      guard.ready();
+      enemy.addCreature(guard);
+    }
+    // The prison cart — 2x2, 0 attack, 30 HP. _cantAttack keeps it out of the
+    // enemy swing planner entirely (same as the Roc Egg) so it never lunges;
+    // the objective is to batter it open and free the boy. Seated centre-field
+    // via the Butcher helper (falls back to a normal add if somehow no room).
+    const cart = new Creature({
+      name: 'Prison Cart', attack: 0, maxHp: 30,
+      slotW: 2, slotH: 2,
+      description: 'Kellen is bound inside. Break it open to free him. Cannot attack.',
+    });
+    cart.ready();
+    cart._cantAttack = true;
+    cart._sourceRarity = 'rare';
+    cart._sourceSubtype = 'allies';
+    if (!placeButcherCentered(enemy, cart)) enemy.addCreature(cart);
+  };
+  ENEMY_HAND_SIZE.kellen_rescue = 0;
 
   ENEMY_DECKS.bone_amalgam = () => {
     enemy = new Character('Bone Amalgam');
@@ -15333,7 +15865,7 @@ function drawMap() {
     // visibility gate when the player isn't standing on its neighbor.
     const isVisible = visitedNodes.has(id) || node.isDone || isAccessible || isCurrent || node._stateRevealed;
     // In fog areas (non-outdoor), only show visible nodes
-    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+    const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'qualibaf_bridge', 'qualibaf_waterfall', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
     if (!outdoorAreas.has(currentArea) && !isVisible && !noFog) continue;
 
     const hovered = hitTest(mouseX, mouseY, { x: nx - 18, y: ny - 18, w: 36, h: 36 });
@@ -16186,6 +16718,7 @@ function handleEncounterChoiceClick(x, y) {
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
               dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              armorerSonQuestStarted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, seenDialogs, journalChoices, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
@@ -17050,7 +17583,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -17065,10 +17598,10 @@ function autosaveNow() {
 }
 
 function resolveOutpostTentRest(choice) {
-  const healAmt = Math.max(1, choice.value || 5);
-  healPlayer(healAmt);
+  // Shared short-rest heal; latch the one-time pre-Kraken offer so it doesn't
+  // refire (the post-Kraken tent re-arms as a FULL rest instead).
+  resolveShortRest(choice);
   outpostTentRested = true;
-  showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
   autosaveNow();
 }
 
@@ -17116,9 +17649,8 @@ function resolveLastWatchLeave(_choice) {
 }
 
 function resolveSouthHillRest(choice) {
-  const healAmt = Math.max(1, choice.value || 5);
-  healPlayer(healAmt);
-  showStyledToast(`Short rest: +${healAmt} HP`, 'heal', 2400);
+  // Shared short-rest heal — pure heal, no Well-Rested / respawn / buff clear.
+  resolveShortRest(choice);
 }
 
 // Post-Dire-Bear Olbrim investigation choice. Both options drop 1-2
@@ -18097,26 +18629,21 @@ function applyDwarvenWorkbench(card) {
 }
 
 function resolveShortRest(choice) {
-  // Out of combat: just reduce discard pile (simulates healing for next combat)
-  const amount = choice.effectValue || 5;
-  const healed = [];
-  for (let i = 0; i < amount && player.deck.discardPile.length > 0; i++) {
-    const card = player.deck.discardPile.pop();
-    healed.push(card.name);
-  }
-  if (healed.length > 0) {
-    choice.resultText = `You rest and feel strength returning. Heal ${healed.length}.`;
-    spawnHealOnTarget(player, healed.length);
-    showStyledToast(`+${healed.length} Healed`, 'heal', 2500);
+  // Short rest = a simple heal, routed through the shared healPlayer path
+  // (the same one the South Hill / Outpost-tent rests use): clears Poison
+  // then Bleed, then restores HP cards from the discard pile, with its own
+  // heal sound + toast. A short rest is JUST a heal — it does NOT mark the
+  // player Well Rested, does NOT respawn monsters, and does NOT clear
+  // Provisions / buffs. Those are full-rest-only effects.
+  const amount = Math.max(1, choice.effectValue || 5);
+  const overheal = healPlayer(amount);
+  if (overheal < amount) {
+    // Something landed (HP and/or a scrubbed ailment) — keep the choice's
+    // own flavor line; only fall back to a generic one if it didn't supply.
+    if (!choice.resultText) choice.resultText = 'You rest and feel strength returning.';
   } else {
     choice.resultText = 'You rest, but you weren\'t hurt to begin with.';
   }
-  // Inn rest also marks the player Well Rested — required to leave
-  // the city via the south gate. Even a healing-no-op rest counts:
-  // PY treats the rest action itself as the trigger. Southern
-  // monsters respawn on any explicit rest beat.
-  setWellRested();
-  respawnSouthernMonsters();
 }
 
 // Inn rest (Qualibaf): pay 5 GP if affordable (free if too poor), heal
@@ -18633,7 +19160,10 @@ function drawEncounterLoot() {
     // grant a persistent buff with no card pickup) get a different
     // banner — the player isn't adding anything to their deck.
     const allBuffs = lootedCards.every(c => (c.subtype || '').toLowerCase() === 'buff');
-    const banner = allBuffs ? 'You gain a special buff:' : 'Cards added to your deck:';
+    const allPerks = lootedCards.every(c => c && c._isPerk);
+    const banner = allPerks ? 'You gain a new perk:'
+      : allBuffs ? 'You gain a special buff:'
+      : 'Cards added to your deck:';
     ctx.fillText(banner, SCREEN_WIDTH / 2, y);
     y += 24;
     const cardW = 240;
@@ -18719,6 +19249,8 @@ const COMBAT_MUSIC_ONE_LAST_BATTLE = new Set([
   'ruga_slave_master',
   'magma_drake',
   'baby_roc',
+  // Armorer's-son quest — the Retreating Kobold Army rescue fight.
+  'kellen_rescue',
 ]);
 
 // Pick the music track for the current fight. Every fight gets
@@ -18769,6 +19301,8 @@ function startCombat() {
   flashOfGeniusRechargesLeft = 0;
   _flashOfGeniusPending = 0;
   _flashSkipRect = null;
+  armorerTrainingMode = false;
+  _armorerTrainingSkipRect = null;
   cardDiscardPickMode = false;
   cardDiscardPickNeeded = 0;
   pendingDiscardNames = [];
@@ -18834,6 +19368,25 @@ function startCombat() {
   // into playPile here, AFTER deck.startCombat has rebuilt drawPile
   // from masterDeck (so the card is actually findable).
   linkEncounterCompanionsToPlayPile();
+  // Kellen's Rescue scripts Raena's opening arrow — guarantee her companion
+  // card is in the opening hand so the player can actually summon her on
+  // turn 1. Pull the first raena_card found (any tier) out of draw / recharge
+  // / discard into hand. No-op if she's already in hand or the player never
+  // recruited her.
+  if (enemy._seedRaenaInHand) {
+    const isRaena = c => c && typeof c.id === 'string' && c.id.startsWith('raena_card');
+    if (!player.deck.hand.some(isRaena)) {
+      for (const pile of [player.deck.drawPile, player.deck.rechargePile, player.deck.discardPile]) {
+        const idx = pile.findIndex(isRaena);
+        if (idx >= 0) {
+          const [raena] = pile.splice(idx, 1);
+          player.deck.hand.push(raena);
+          addLog(`  Raena readies her bow at your side.`, Colors.GOLD, raena);
+          break;
+        }
+      }
+    }
+  }
   const enemyStartHand = enemy._handSize || 2;
   enemy.deck.startCombat(enemyStartHand, 10);
 
@@ -19539,12 +20092,18 @@ const KEYWORD_ICONS = {
   ignite: { iconKey: 'icon_ignite', label: 'Ignite', desc: 'Your next damaging attack also applies Fire equal to stacks. Consumed on attack.' },
   ice: { iconKey: 'icon_ice', label: 'Ice', desc: 'Reduces damage dealt by stacks, decays by 1' },
   poison: { iconKey: 'icon_poison', label: 'Poison', desc: 'Deals damage equal to stacks each turn. Only removed by healing.' },
+  regen: { iconKey: 'icon_regen', label: 'Regen', desc: 'Start of your turn: heal equal to stacks, then -1. Cancels 1-for-1 with Fire, Poison and Bleed (and they cancel it). True Damage burns it too.' },
   shock: { iconKey: 'icon_shock', label: 'Shock', desc: '-1 dmg dealt and +1 dmg taken per stack' },
   bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing). Decays by 1 at end of turn. Cleared 1-to-1 by healing.' },
   ink_cloud: { iconKey: 'icon_ink_cloud', label: 'Ink Cloud', desc: 'Each attack the afflicted character makes has a 50% chance to miss entirely (no damage, no riders). Every attack consumes 1 stack of Ink Cloud whether or not the swing connected.' },
   mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Each stack is a charge: the next attack on the target consumes 1 stack and deals double damage (before armor / shield). Stacks persist until used up or the target dies.' },
   rage: { iconKey: 'icon_rage', label: 'Rage', desc: 'Permanent bonus damage to all attacks' },
   scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards of your draw pile. Pick 1 to draw, recharge the rest. Variant: Scry N from your discard pile — pick 1 to draw, the unpicked cards stay in the discard pile.' },
+  // "First Attack" — the opening swing of the turn. Tagged bonuses only
+  // fire on that first attack (tracked via attacksThisTurn === 0).
+  first: { isTextKeyword: true, color: '#ffd070', label: 'First Attack', desc: 'The first attack the character makes this turn. A "First Attack:" bonus only triggers on that opening swing.' },
+  // "Bloodied" — at half max HP or less. Replaces the old "Half-HP" wording.
+  bloodied: { isTextKeyword: true, color: '#ff6b6b', label: 'Bloodied', desc: 'A character at half its maximum HP or less is Bloodied.' },
   // "Ailments" — the negative-status family that "Heal N Ailments" /
   // "Heal all Ailments" strips. Matches the priority order the engine
   // walks in healOneNegativeEffectOnPlayer: Bleed → Poison → Fire →
@@ -19567,6 +20126,9 @@ const KEYWORD_ICONS = {
   // the deck. Status effects like Fire / Poison ticks also count as
   // True for damage flow.
   true: { isTextKeyword: true, color: '#ff9a70', label: 'True', desc: 'Unpreventable damage. Bypasses Shield, Armor, Block, and the defense phase — pulls straight from the deck.' },
+  // Ambush / Slime Jar buff badge — shown on the status row while a
+  // character holds a charged Unpreventable attack.
+  ambush: { iconKey: 'ambush_perk', label: 'Ambush', desc: 'Your next attack is Unpreventable — it bypasses Shield, Armor, and Block and lands as True damage. One charge, consumed by your next attack.' },
   // Card-destination keywords. Where a card lands after you cast it is
   // its own dimension alongside Recharge / Discard / Banish:
   //   Play   — the card sits in the Play area while the linked
@@ -19878,9 +20440,9 @@ function tokenizeKeywordText(text, opts = {}) {
   // 'True' picks up "True Damage" / "True Dmg" — flagged as the
   // True keyword (KEYWORD_ICONS.true) so hover shows the
   // "unpreventable damage, bypasses Shield/Armor/Block" explainer.
-  const keywordList = ['Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
+  const keywordList = ['First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
-    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Ignite', 'Sentinel', 'Haste',
+    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste',
     'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
@@ -20745,9 +21307,9 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     const descFontSize = Math.max(11, Math.floor(w * 0.058));
     let descText = card.description || card.shortDesc || '';
     if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
-      // X = attacks this turn (does NOT count this swing) — match the
+      // X = attacks this turn, counting this swing (+1) — match the
       // resolve-time reading in case 'sneak_attack'.
-      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : attacksThisTurn;
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
       descText = descText.replace(/X/g, String(sneakX));
     }
     const tokenizeOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
@@ -20776,7 +21338,7 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     // bottom edge — no visible gap between the box and the frame border.
     let descText = card.shortDesc || card.description;
     if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
-      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : attacksThisTurn;
+      const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
       descText = descText.replace(/X/g, String(sneakX));
     }
     const smallOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
@@ -22638,6 +23200,14 @@ function drawCharacterPanel(character, side) {
     ctx.rect(rect.x, rect.y, rect.w, rect.h);
     ctx.clip();
     ctx.drawImage(portrait, sx, sy, sw, sh, rect.x, rect.y + 10, rect.w, rect.h);
+    // Bloodied cue — a red wash over the portrait while a Bloodied-Fury
+    // enemy (Giant Boar) sits at half HP or less and its rage is up.
+    if (side === 'enemy' && Array.isArray(character.powers)
+        && character.powers.some(p => p && p.id === 'bloodied_fury')
+        && isBloodied(character)) {
+      ctx.fillStyle = 'rgba(190, 22, 22, 0.28)';
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    }
     ctx.restore();
   } else {
     ctx.fillStyle = isPlayer ? '#1a3a4e' : '#3a1a1a';
@@ -22835,10 +23405,16 @@ function drawCharacterPanel(character, side) {
   drawStatusIcon('icon_fire', character.getStatus('FIRE') || 0, Colors.ORANGE, 'fire');
   drawStatusIcon('icon_ice', character.getStatus('ICE') || 0, Colors.ICE_BLUE, 'ice');
   drawStatusIcon('icon_poison', character.getStatus('POISON') || 0, Colors.GREEN, 'poison');
+  drawStatusIcon('icon_regen', character.getStatus('REGEN') || 0, '#7cff9c', 'regen');
   drawStatusIcon('icon_shock', character.getStatus('SHOCK') || 0, Colors.SHOCK_YELLOW, 'shock');
   drawStatusIcon('icon_bleed', character.getStatus('BLEED') || 0, Colors.RED, 'bleed');
   drawStatusIcon('icon_ink_cloud', character.getStatus('INK_CLOUD') || 0, '#202040', 'ink_cloud');
   drawStatusIcon('icon_mark', character.getStatus('MARK') || 0, Colors.RED, 'mark');
+  // Ambush / Slime Jar — "next attack is Unpreventable" charge. Reuses the
+  // Ambush perk art as the badge; the value is the number of charged
+  // unpreventable swings (1 for Ambush). Shows on whichever side holds it
+  // (player Ambush/Slime Jar, or an enemy primed for a free true hit).
+  drawStatusIcon('ambush_perk', character.unpreventableBuff || 0, Colors.ORANGE, 'ambush');
 
   // Combat buff badges (continue on same row as status icons, using iconX)
   if (character.combatBuffs && character.combatBuffs.length > 0) {
@@ -23632,7 +24208,7 @@ function drawCombatMenuButton(rect, action) {
 
 function drawCombatButtons() {
   const rects = getCombatButtonRects();
-  const enabled = isPlayerTurn && !powerRechargeMode && !flashOfGeniusMode && combatIntroTimer <= 0;
+  const enabled = isPlayerTurn && !powerRechargeMode && !flashOfGeniusMode && !armorerTrainingMode && combatIntroTimer <= 0;
 
   // End Turn button (LEFT, large) — replaced by a "Skip" button
   // while the Flash of Genius picker is active, so the player has
@@ -23659,6 +24235,17 @@ function drawCombatButtons() {
         'recharge'
       );
     }
+  } else if (armorerTrainingMode) {
+    // Armorer's Training turn-end recharge — Skip button replaces End Turn.
+    drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'Skip Training', () => {
+      armorerTrainingMode = false;
+      _armorerTrainingSkipRect = null;
+      hideToast();
+      addLog(`  Armorer's Training: skipped.`, Colors.GRAY);
+      playSound('click');
+    }, 'large', 16);
+    _armorerTrainingSkipRect = { x: rects.endTurn.x, y: rects.endTurn.y, w: rects.endTurn.w, h: rects.endTurn.h };
+    showStyledToast("Armorer's Training: click an Armor card to recharge for +1 Draw, or Skip", 'recharge');
   } else if (enabled) {
     drawStyledButton(rects.endTurn.x, rects.endTurn.y, rects.endTurn.w, rects.endTurn.h, 'End Turn', tryEndPlayerTurn, 'large', 20);
   } else {
@@ -24107,6 +24694,10 @@ function handleCombatClick(x, y) {
     handleFlashOfGeniusClick(x, y);
     return;
   }
+  if (armorerTrainingMode) {
+    handleArmorerTrainingClick(x, y);
+    return;
+  }
 
   // Card recharge mode: clicking hand cards to pay recharge_extra cost
   if (cardRechargeMode) {
@@ -24229,11 +24820,12 @@ function handleCombatClick(x, y) {
         showToast(`${uniqueCompanionName} is already in the fight!`);
         return;
       }
-      // Lucky Pebble (and any other on-discard relic) can't be played from
-      // hand directly — it only triggers when discarded as a recharge cost
-      // for another card or as deck damage. The passive draw fires from
-      // Character.takeDamageFromDeck.
-      if ((card.effects || []).some(e => e && e.effectType === 'on_discard_draw')) {
+      // Lucky Pebble / Boar Tusk (and any other on-discard relic) can't be
+      // played from hand directly — they only trigger when discarded as a
+      // recharge cost for another card or as deck damage. The passive draw /
+      // Regen fires from Character.takeDamageFromDeck.
+      if ((card.effects || []).some(e => e && (
+            e.effectType === 'on_discard_draw' || e.effectType === 'on_discard_regen'))) {
         showToast(`${card.name} only triggers when discarded.`);
         return;
       }
@@ -24738,6 +25330,63 @@ function handleFlashOfGeniusClick(x, y) {
   playSound('click');
 }
 
+// An eligible card for Armorer's Training — an ARMOR card: a Defense-type
+// card (played reactively in the defensive window), excluding shields. We do
+// NOT require a Block effect — an armor-type Defense card may carry only riders
+// (Heroism / Draw / Ice) and still qualifies. Shields are EXCLUDED because
+// they're ABILITY-type "Gain Shield" cards played proactively in the attack
+// phase (Cracked Buckler etc.), so cardType already filters them out; the
+// subtype guard is belt-and-suspenders for any Defense-typed shield.
+function isArmorCard(c) {
+  return !!(c && c.cardType === CardType.DEFENSE
+    && !(typeof c.subtype === 'string' && c.subtype.includes('shield')));
+}
+
+// Armorer's Training recharge prompt (start of the player's turn). Mirrors
+// handleFlashOfGeniusClick but only eligible Armor cards are valid picks;
+// the Skip button or a click in open space closes the prompt. Closing just
+// hands control back to the player — the turn has already begun.
+function handleArmorerTrainingClick(x, y) {
+  const finish = () => {
+    armorerTrainingMode = false;
+    _armorerTrainingSkipRect = null;
+    hideToast();
+    // The prompt fires at the START of the player's turn, so closing it just
+    // hands control back to the player — no endPlayerTurn here.
+  };
+  if (_armorerTrainingSkipRect && hitTest(x, y, _armorerTrainingSkipRect)) {
+    addLog(`  Armorer's Training: skipped.`, Colors.GRAY);
+    playSound('click');
+    finish();
+    return;
+  }
+  const handRects = getHandCardRects(player.deck.hand);
+  for (let i = handRects.length - 1; i >= 0; i--) {
+    if (!hitTest(x, y, getHandCardHoverRect(handRects, i))) continue;
+    const card = player.deck.hand[i];
+    if (!isArmorCard(card)) {
+      // Clicked a non-armor card — only Armor is valid here. Ignore it (stay
+      // in the prompt) rather than bailing, so a stray click costs nothing.
+      return;
+    }
+    card._preRechargeExhausted = !!card.exhausted;
+    player.deck.hand.splice(i, 1);
+    player.deck.addToRechargePile(card);
+    applyOnRechargeShield(card);
+    addLog(`  Armorer's Training recharges ${card.name}`, Colors.GRAY, card);
+    const drawn = player.deck.draw(1, MAX_HAND_SIZE);
+    for (const d of drawn) addLog(`  Armorer's Training: Draw ${d.name}`, Colors.BLUE, d);
+    if (drawn.length === 0) addLog(`  Armorer's Training: (no cards to draw)`, Colors.GRAY);
+    playSound('click');
+    finish();
+    return;
+  }
+  // Clicked open space — skip.
+  addLog(`  Armorer's Training: skipped.`, Colors.GRAY);
+  playSound('click');
+  finish();
+}
+
 // === DEFENDING phase: prompt player to play defense cards reactively ===
 function handleDefendingClick(x, y) {
   // Click defense cards in hand to play them (topmost first)
@@ -24800,6 +25449,17 @@ function handleDefendingClick(x, y) {
       } else if (eff.effectType === 'draw') {
         const drawn = player.deck.draw(eff.value, MAX_HAND_SIZE);
         for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+      } else if (eff.effectType === 'gain_heroism') {
+        // Leather Armor etc. — the reactive defending path hand-rolls each
+        // effect, so SELF buffs like Heroism have to be wired here too or
+        // they silently no-op when the card is played to block.
+        player.heroism = (player.heroism || 0) + eff.value;
+        addLog(`  +${eff.value} Heroism (H:${player.heroism})`, Colors.GOLD);
+        spawnTokenOnTarget(player, eff.value, 'Heroism', Colors.GOLD);
+      } else if (eff.effectType === 'apply_ice_self' || eff.effectType === 'transform_ice_to_heroism_self') {
+        // Winterborn Robes — let its Ice-gain and Ice→Heroism finisher
+        // resolve through the shared handler when the robe is used to block.
+        resolveEffect(eff, player, enemy);
       } else if (eff.effectType === 'clear_ice') {
         // Defense effect (e.g. White Wolf Cloak): remove up to N stacks of Ice
         // when this card blocks.
@@ -25068,6 +25728,41 @@ function drawDefendingOverlay() {
 function getDefendingPassBtnRect() {
   // Centered within the left card area (excluding the right log column)
   return { x: COMBAT_LEFT_W / 2 - 110, y: COMBAT_DIVIDER_Y + 35, w: 220, h: 44 };
+}
+
+function drawArmorerTrainingOverlay() {
+  // Armorer's Training recharge prompt — flash every eligible Armor card
+  // with a pulsing PURPLE glow. Mirrors drawDefendingOverlay's blue motif
+  // (clipped horizontally so overlapping cards don't bleed, padded
+  // vertically so the glow reads as a flash) but tints purple to match the
+  // perk's recharge theme and filters to armor only.
+  const pulse = (Math.sin(performance.now() / 150) + 1) / 2;
+  const glowAlpha = 0.7 + 0.3 * pulse;
+  const handRects = getHandCardRects(player.deck.hand);
+  for (let i = 0; i < handRects.length; i++) {
+    const card = player.deck.hand[i];
+    if (!isArmorCard(card)) continue;
+    const hr = handRects[i];
+    const visR = getHandCardHoverRect(handRects, i);
+    const padLeft = (i === 0) ? 20 : 0;
+    const padRight = (i === handRects.length - 1) ? 20 : 0;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(visR.x - padLeft, visR.y - 16, visR.w + padLeft + padRight, visR.h + 32);
+    ctx.clip();
+    // Outer soft glow — wide, purple
+    ctx.shadowColor = `rgba(180, 110, 255, ${glowAlpha})`;
+    ctx.shadowBlur = 32;
+    ctx.strokeStyle = `rgba(180, 110, 255, ${glowAlpha * 0.9})`;
+    ctx.lineWidth = 7;
+    ctx.strokeRect(hr.x - 3, hr.y - 3, hr.w + 6, hr.h + 6);
+    // Bright inner line: near-white violet, no shadow so it pops sharply
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(228, 200, 255, ${Math.min(1, glowAlpha + 0.15)})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hr.x, hr.y, hr.w, hr.h);
+    ctx.restore();
+  }
 }
 
 function cancelCardRecharge() {
@@ -25479,6 +26174,26 @@ function isBelowHalfHp(target) {
   }
   return false;
 }
+// "Bloodied" — at half max HP or LESS (<=), the threshold the Bloodied
+// pill / Bloodied Fury power read. Same alive-pile accounting as
+// isBelowHalfHp, just inclusive of the exact half mark.
+function isBloodied(target) {
+  if (!target) return false;
+  if (target instanceof Creature) {
+    return (target.currentHp || 0) <= (target.maxHp || 0) / 2;
+  }
+  // Use the SAME current/max HP the health bar shows (getHP/getMaxHP) so
+  // "Bloodied" can never disagree with the displayed X/Y. The older inline
+  // count omitted the play pile and used masterDeck.length, which made a
+  // boar at 25/40 (cards played this turn sitting in playPile) read as
+  // bloodied even though its bar was above half.
+  if (target.deck) {
+    const max = getMaxHP(target);
+    if (max <= 0) return false;
+    return getHP(target) <= max / 2;
+  }
+  return false;
+}
 function executeHasValidTarget() {
   if (!enemy) return false;
   const aliveCreatures = (enemy.creatures || []).filter(c => c.isAlive);
@@ -25827,6 +26542,7 @@ function cancelBeamMode() {
 }
 
 let attacksThisTurn = 0; // for sneak_attack scaling
+let _bracerBonusLogged = false; // Boarhide Bracers +2-first-attack log guard (per player turn)
 // Tracks how much damage the most recent damage effect actually
 // landed on its target. Stamped inside every damage path (creature
 // vs character, unpreventable vs normal) and read by on-damage
@@ -26340,6 +27056,7 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           target.takeUnpreventableDamage(dmg);
           if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          playAttackHitSfx(dmg, dmg); // true damage still rings the weapon
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
           _lastEffectDamageLanded = dmg;
@@ -26358,6 +27075,7 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
           triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          playAttackHitSfx(dmg, dmg); // true damage still rings the weapon
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
           _lastEffectDamageLanded = dmg;
@@ -26507,6 +27225,58 @@ function resolveEffect(eff, caster, target) {
       } else {
         addLog(`  (not first attack — no draw)`, Colors.GRAY);
       }
+      break;
+    }
+    case 'gore_attack': {
+      // Giant Boar Gore: Deal N. First Attack: +N (the opening swing of the
+      // turn lands for double). Same damage pipeline as charge_attack but
+      // the first-attack kicker is bonus damage folded in before mitigation.
+      const goreFirst = (attacksThisTurn === 0);
+      const goreBonus = goreFirst ? eff.value : 0;
+      if (goreBonus > 0) addLog(`  First Attack! +${goreBonus}`, Colors.GOLD);
+      const gHeroism = caster.heroism;
+      if (gHeroism > 0) { addLog(`  (Heroism +${gHeroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + goreBonus + gHeroism + caster.rage + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      const gObs = consumeObsidianBuff(caster, target);
+      if (gObs > 0) dmg += gObs;
+      const gIncoming = getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg + gIncoming);
+      dmg = applyMarkBonus(target, dmg);
+      const gUnpreventable = consumeUnpreventableBuff(caster);
+      if (!gUnpreventable && !(target instanceof Creature) && target === enemy) {
+        enemyAutoPlayDefenses(dmg);
+      }
+      if (target instanceof Creature) {
+        if (gUnpreventable) {
+          target.takeUnpreventableDamage(dmg);
+          if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+        } else {
+          const shieldBefore = target.shield || 0;
+          const actual = target.takeDamage(dmg);
+          if (actual > 0) spawnDamageOnTarget(target, actual);
+          playAttackHitSfx(dmg, actual);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+        }
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (gUnpreventable) {
+          target.takeDamageFromDeck(dmg);
+          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+        } else {
+          const [blocked, taken] = target.takeDamageWithDefense(dmg);
+          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          playAttackHitSfx(dmg, taken);
+          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  ${target.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
+        }
+      }
+      consumeIgniteOnAttack(caster, target, dmg);
+      attacksThisTurn++;
       break;
     }
     case 'careful_strike': {
@@ -26690,12 +27460,13 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'sneak_attack': {
-      // Sneak Attack / Ruga's Spiked Gauntlets — X = attacks this
-      // turn, NOT counting this swing. attacksThisTurn is incremented
-      // after the swing resolves (see the bump at the bottom of this
-      // case) so the first cast in a turn reads X = 0, the second
-      // reads X = 1, etc.
-      const xCount = attacksThisTurn;
+      // Sneak Attack / Ruga's Spiked Gauntlets — X = attacks this turn,
+      // COUNTING this swing. attacksThisTurn is incremented after the swing
+      // resolves (the bump at the bottom of this case), so we add 1 here to
+      // include this attack: first cast reads X = 1, second X = 2, etc.
+      // This guarantees a +1 minimum (X is never 0) and matches the card's
+      // "(counts itself)" text.
+      const xCount = attacksThisTurn + 1;
       // eff.value carries the flat damage bonus baked in by
       // gamePlusOffset (sneak_attack: 2 per offset point). Base
       // value is 0, so non-Game+ runs add nothing on top.
@@ -27230,13 +28001,38 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'apply_bleed': {
-      if (target instanceof Creature) {
-        target.bleedStacks += eff.value;
-      } else {
-        target.applyStatus('BLEED', eff.value);
+      // Multi-target support (Jagged Chopper): with maxTargets > 1 the
+      // Bleed lands on the primary target PLUS same-side targets up to
+      // maxTargets, so it tracks a multi_damage swing. Side is read off
+      // the primary target, so it works whether the player or an enemy
+      // cast it. maxTargets default (1) keeps every existing single-
+      // target Bleed card unchanged.
+      const bleedMax = eff.maxTargets || 1;
+      const bleedTargets = [target];
+      if (bleedMax > 1) {
+        const onPlayerSide = (target === player)
+          || !!(player && Array.isArray(player.creatures) && player.creatures.includes(target));
+        // Match multi_damage's target order — CREATURES first, then the
+        // character — so the Bleed lands on the same enemies the swing hit.
+        // (Old [character, ...creatures] order wasted the rider on an
+        // invulnerable boss-shell instead of the 2nd damaged creature.)
+        const pool = onPlayerSide
+          ? [...((player && player.creatures) || []), player]
+          : [...((enemy && enemy.creatures) || []), enemy];
+        for (const t of pool) {
+          if (bleedTargets.length >= bleedMax) break;
+          if (t && t !== target && t.isAlive) bleedTargets.push(t);
+        }
       }
-      addLog(`  +${eff.value} Bleed on ${target.name}`, Colors.RED);
-      spawnTokenOnTarget(target, eff.value, 'Bleed', Colors.RED);
+      for (const t of bleedTargets) {
+        if (t instanceof Creature) {
+          t.bleedStacks += eff.value;
+        } else {
+          t.applyStatus('BLEED', eff.value);
+        }
+        addLog(`  +${eff.value} Bleed on ${t.name}`, Colors.RED);
+        spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
+      }
       break;
     }
     case 'apply_shock': {
@@ -27631,12 +28427,18 @@ function resolveEffect(eff, caster, target) {
       // Heroism, rounded UP (5 Ice -> 3 Heroism). Consumes the Ice.
       // Resolves last on the robe so it sweeps the 4 Ice the same play
       // granted PLUS any Ice already stacked from earlier this combat.
-      const iceH = (caster.getStatus && caster.getStatus('ICE')) || 0;
+      // Read Ice from the status pool (Characters) with an iceStacks
+      // fallback (Creatures), strip ALL of it, and bank ceil(ice/2)
+      // Heroism. Defensive on both stores so the conversion can't silently
+      // no-op.
+      let iceH = (caster.getStatus && caster.getStatus('ICE')) || 0;
+      if (!iceH && typeof caster.iceStacks === 'number') iceH = caster.iceStacks;
       if (iceH > 0) {
         const gained = Math.ceil(iceH / 2);
         if (caster.removeStatus) caster.removeStatus('ICE', iceH);
+        if (typeof caster.iceStacks === 'number') caster.iceStacks = 0;
         caster.heroism = (caster.heroism || 0) + gained;
-        addLog(`  ${iceH} Ice -> +${gained} Heroism`, Colors.GOLD);
+        addLog(`  ${iceH} Ice -> +${gained} Heroism (H:${caster.heroism})`, Colors.GOLD);
         spawnTokenOnTarget(caster, gained, 'Heroism', Colors.GOLD);
       } else {
         addLog(`  No Ice to convert.`, Colors.GRAY);
@@ -27727,13 +28529,22 @@ function resolveEffect(eff, caster, target) {
           appliedFire = remaining;
         }
       } else {
+        let remaining = eff.value;
+        // Fire cancels Ice first, then Regen (its other opposite), 1-for-1.
         const ice = target.getStatus('ICE') || 0;
-        const cancel = Math.min(ice, eff.value);
-        if (cancel > 0) {
-          target.removeStatus('ICE', cancel);
-          addLog(`  Fire cancels ${cancel} Ice on ${target.name}`, Colors.ORANGE);
+        const iceCancel = Math.min(ice, remaining);
+        if (iceCancel > 0) {
+          target.removeStatus('ICE', iceCancel);
+          addLog(`  Fire cancels ${iceCancel} Ice on ${target.name}`, Colors.ORANGE);
+          remaining -= iceCancel;
         }
-        const remaining = eff.value - cancel;
+        const regen = target.getStatus('REGEN') || 0;
+        const regenCancel = Math.min(regen, remaining);
+        if (regenCancel > 0) {
+          target.removeStatus('REGEN', regenCancel);
+          addLog(`  Fire cancels ${regenCancel} Regen on ${target.name}`, Colors.ORANGE);
+          remaining -= regenCancel;
+        }
         if (remaining > 0) {
           target.applyStatus('FIRE', remaining);
           addLog(`  +${remaining} Fire on ${target.name}`, Colors.RED);
@@ -29052,6 +29863,82 @@ function resolveEffect(eff, caster, target) {
       // discard effects, etc.). Playing the card does nothing.
       break;
     }
+    case 'on_discard_regen': {
+      // Marker effect (Boar Tusk) — the Regen is applied by
+      // Character.takeDamageFromDeck when the relic is discarded. Playing
+      // the relic itself does nothing.
+      break;
+    }
+    case 'apply_regen': {
+      // Generic Regen application (self / target). applyRegen cancels the
+      // negative DoTs 1:1 first (Fire, then Poison, then Bleed); the
+      // heal-per-turn is processed in processStatusEffects.
+      const rt = (eff.target === TargetType.SELF) ? caster : (target || caster);
+      if (rt && typeof rt.applyRegen === 'function') {
+        const applied = rt.applyRegen(eff.value);
+        const rtName = (rt === player ? 'You' : rt.name);
+        const doused = rt._lastRegenFireCancel || 0;
+        const purged = rt._lastRegenPoisonCancel || 0;
+        const staunched = rt._lastRegenBleedCancel || 0;
+        if (doused > 0) addLog(`  Regen douses ${doused} Fire on ${rtName}`, Colors.ORANGE);
+        if (purged > 0) addLog(`  Regen purges ${purged} Poison on ${rtName}`, Colors.GREEN);
+        if (staunched > 0) addLog(`  Regen staunches ${staunched} Bleed on ${rtName}`, Colors.RED);
+        if (applied > 0) {
+          addLog(`  +${applied} Regen on ${rt === player ? 'You' : rt.name}`, Colors.GREEN);
+          spawnTokenOnTarget(rt, applied, 'Regen', '#7cff9c');
+        }
+      } else if (rt && rt.isAlive !== undefined && eff.value > 0) {
+        // Ally CREATURE target (Boarhide Bandage on a summon, etc.). Creatures
+        // don't carry the REGEN status, so route the regen through the
+        // lightweight regenBuffs channel ticked by tickAllyRegen. Use a
+        // DECAYING buff so it mirrors the player's Regen exactly: heal N, then
+        // N-1, ... 1 (total N(N+1)/2 over N turns). The source card art is the
+        // badge icon, matching the Regrowth-on-ally treatment.
+        if (!Array.isArray(rt.regenBuffs)) rt.regenBuffs = [];
+        rt.regenBuffs.push({
+          healPerTurn: eff.value,
+          turnsRemaining: eff.value,
+          decaying: true,
+          imageId: (_activePlayCard && _activePlayCard.id) || 'regrowth',
+        });
+        addLog(`  +${eff.value} Regen on ${rt.name}`, Colors.GREEN);
+        spawnTokenOnTarget(rt, eff.value, 'Regen', '#7cff9c');
+      }
+      break;
+    }
+    case 'grant_bloodied_frenzy': {
+      // Frenzy Blood Vial — grant the player the Bloodied Fury buff (same as
+      // the Giant Boar): while Bloodied (half HP or less), +2 Rage each turn.
+      // Stored as a PersistentBuff so it survives save/load and re-projects
+      // every combat (until rest, when setWellRested strips it). The actual
+      // per-turn Rage is applied in startPlayerTurn; the buff is a marker
+      // (its 'bloodied_rage' tick is a no-op in processCombatBuffs). imageId
+      // 'giant_boar' renders the badge with the boar art.
+      const FRENZY_ID = 'bloodied_frenzy';
+      const frenzyFields = {
+        id: FRENZY_ID, name: 'Bloodied Frenzy',
+        description: 'While Bloodied: +2 Rage.',
+        imageId: 'giant_boar',
+        effectType: 'bloodied_rage', effectValue: 2,
+        trigger: 'start_of_turn',
+      };
+      if (!Array.isArray(player.persistentBuffs)) player.persistentBuffs = [];
+      if (!player.persistentBuffs.some(b => b.id === FRENZY_ID)) {
+        const fpb = new PersistentBuff(frenzyFields);
+        // Show it in the Beverage slot — the vial is just another drink.
+        fpb._provisionSlot = 'beverage';
+        player.persistentBuffs.push(fpb);
+      }
+      // Project into THIS combat too — the combat-start projection already
+      // ran, so a mid-fight consume needs its own immediate copy.
+      if (Array.isArray(player.combatBuffs) && !player.combatBuffs.some(b => b.id === FRENZY_ID)) {
+        const pb = new CombatBuff({ ...frenzyFields, combatsRemaining: 1, turnsRemaining: 0 });
+        pb._persistent = true;
+        player.addCombatBuff(pb);
+      }
+      addLog(`  Bloodied Frenzy! While Bloodied, gain +2 Rage (until rest).`, Colors.RED);
+      break;
+    }
     case 'half_hp_draw': {
       // Execute — Half-HP rider. Draws eff.value cards iff the target
       // is at or below half its max HP at resolution time. For
@@ -29073,7 +29960,7 @@ function resolveEffect(eff, caster, target) {
       })();
       if (halfHp) {
         const drawn = caster.deck.draw(eff.value, MAX_HAND_SIZE);
-        for (const d of drawn) addLog(`  Half-HP! Draw: ${d.name}`, Colors.BLUE, d);
+        for (const d of drawn) addLog(`  Bloodied! Draw: ${d.name}`, Colors.BLUE, d);
         if (caster === player && drawn.length > 0) playDrawSounds(drawn.length);
       }
       break;
@@ -31377,7 +32264,15 @@ function tickAllyRegen() {
     for (const rb of ally.regenBuffs) {
       const overheal = healCreature(ally, rb.healPerTurn || 1) || 0;
       if (overheal > 0 && rb.summonsTreant) summonRegrowthTreants(overheal);
-      if (rb.turnsRemaining > 0) rb.turnsRemaining--;
+      if (rb.decaying) {
+        // Decaying Regen (Boarhide Bandage on an ally) — heal N, then N-1, ...
+        // Self-removes when healPerTurn decays to 0 (turnsRemaining tracks it
+        // so the trailing filter prunes the spent buff).
+        rb.healPerTurn = Math.max(0, (rb.healPerTurn || 0) - 1);
+        rb.turnsRemaining = rb.healPerTurn;
+      } else if (rb.turnsRemaining > 0) {
+        rb.turnsRemaining--;
+      }
     }
     ally.regenBuffs = ally.regenBuffs.filter(rb => (rb.turnsRemaining || 0) > 0);
   }
@@ -31535,6 +32430,45 @@ function triggerOnDiscard(card) {
     for (const d of drawn) addLog(`  ${meal.name}: Discard → Draw ${d.name}`, Colors.PURPLE, d);
     if (drawn.length > 0 && typeof playDrawSounds === 'function') playDrawSounds(drawn.length);
   }
+  // On Discard: Regen (Boar Tusk) on a PURE hand-discard (a discard effect or
+  // cost). Deck-damage / hand-shed discards already applied it directly in
+  // Character.takeDamageFromDeck (which sets player._inDeckDamage), so skip
+  // those to avoid double-applying.
+  if (!player._inDeckDamage && card && Array.isArray(card.effects)) {
+    let regenGained = 0;
+    for (const e of card.effects) {
+      if (e && e.effectType === 'on_discard_regen') {
+        const rv = Math.max(0, e.value || 0);
+        if (rv > 0) regenGained += player.applyRegen(rv);
+      }
+    }
+    if (regenGained > 0 && typeof globalThis.__onDiscardRegen === 'function') {
+      globalThis.__onDiscardRegen(player, regenGained, card.name);
+    }
+  }
+}
+
+// Frenzy Blood Vial (Bloodied Frenzy) — set the player's Rage to +2 while
+// Bloodied (half HP or less), 0 otherwise. Delta-tracked via _frenzyRageApplied
+// so it never stacks or clobbers Rage from other sources. Called at the start
+// of the player's turn AND after any player heal, so healing back above half
+// drops the bonus immediately (instead of lingering for the turn). `log` gates
+// the announce so mid-turn re-evals stay quiet.
+function updateFrenzyRage(log = false) {
+  if (!player) return;
+  const hasFrenzy = Array.isArray(player.combatBuffs)
+    && player.combatBuffs.some(b => b && b.id === 'bloodied_frenzy');
+  if (!hasFrenzy) return;
+  player.rage = Math.max(0, (player.rage || 0) - (player._frenzyRageApplied || 0));
+  player._frenzyRageApplied = 0;
+  if (isBloodied(player)) {
+    player.rage = (player.rage || 0) + 2;
+    player._frenzyRageApplied = 2;
+    if (log) {
+      addLog(`  Bloodied Frenzy! +2 Rage (R:${player.rage})`, Colors.RED);
+      spawnTokenOnTarget(player, 2, 'Rage', Colors.RED);
+    }
+  }
 }
 
 function healPlayer(amount) {
@@ -31584,6 +32518,9 @@ function healPlayer(amount) {
     // Nothing to heal
     addLog(`  Nothing to heal.`, Colors.GRAY);
   }
+  // A heal can lift the player back above half HP — re-evaluate the Bloodied
+  // Frenzy Rage so the +2 drops immediately instead of lingering for the turn.
+  updateFrenzyRage(false);
   // Return the OVERHEAL — heal that couldn't land because the deck was
   // already full (discard empty) with no ailments left to scrub. Heroic
   // Heal reads this to convert the overflow into Heroism.
@@ -33076,11 +34013,15 @@ function resolvePowerTargeting() {
   playCardAmbient(power);
 
   if (power.id === 'cleave') {
+    // Rage + damage modifier (Boarhide Bracers first-attack +2, Shock)
+    // captured BEFORE the attacksThisTurn bump so the bracer's first-attack
+    // check still reads 0.
+    const cvMod = (player.rage || 0) + getDamageModifier(player);
     attacksThisTurn++;
     // Cleave base damage scales with the ccgQuest+ player tier
     // offset (+1 per offset point). Base 1 → 2 at offset 1, 3 at
     // offset 2, etc. Heroism stacks on top as usual.
-    let dmg = 1 + (playerTierOffset || 0) + player.heroism;
+    let dmg = 1 + (playerTierOffset || 0) + player.heroism + cvMod;
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
     const unpreventable = consumeUnpreventableBuff(player);
@@ -33243,8 +34184,12 @@ function resolvePowerTargeting() {
     // in `targets` is one swing on its own target (player chose
     // per-shot via the multi-target picker). Heroism / ice / eye /
     // obs buffs are consumed ONCE up front so they don't multi-apply.
+    // Rage + the damage modifier (Boarhide Bracers first-attack +2, Shock)
+    // are captured BEFORE the attacksThisTurn bump so the bracer's
+    // first-attack check still reads 0.
+    const qsMod = (player.rage || 0) + getDamageModifier(player);
     attacksThisTurn += targets.length;
-    let dmg = 1 + player.heroism;
+    let dmg = 1 + player.heroism + qsMod;
     if (player.heroism > 0) { addLog(`  (Heroism +${player.heroism})`, Colors.GOLD); player.heroism = 0; }
     dmg = consumeIceForAttack(player, dmg);
     const unpreventable = consumeUnpreventableBuff(player);
@@ -33916,6 +34861,7 @@ function drawEndTurnConfirm() {
 function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   if (!isPlayerTurn) return;
   if (powerRechargeMode) return;
+  if (armorerTrainingMode) return; // resolve the Armorer's Training prompt first
   playSound('click');
   addLog('--- End of Your Turn ---', Colors.GRAY);
 
@@ -34140,6 +35086,28 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
 
 // --- Status Effects ---
 function processStatusEffects(character, label) {
+  // Regen: heal equal to stacks at the start of the turn, then decay by 1.
+  // Regen and the negative DoTs (Fire/Poison/Bleed) cancel on application
+  // (see Character.applyStatus), so a Regen-holder never also carries one —
+  // no scrub-vs-tick ordering to worry about here. Player heals via
+  // healPlayer; other characters restore cards discard → recharge.
+  const regen = character.getStatus('REGEN');
+  if (regen > 0) {
+    addLog(`  ${label} regenerates ${regen} (Regen ${regen})`, Colors.GREEN);
+    if (character === player) {
+      healPlayer(regen);
+    } else if (character.deck && Array.isArray(character.deck.discardPile)) {
+      let healed = 0;
+      for (let i = 0; i < regen && character.deck.discardPile.length > 0; i++) {
+        const cc = character.deck.discardPile.pop();
+        if (typeof character.deck.addToRechargePile === 'function') character.deck.addToRechargePile(cc);
+        else character.deck.rechargePile.push(cc);
+        healed++;
+      }
+      if (healed > 0) spawnHealOnTarget(character, healed);
+    }
+    character.removeStatus('REGEN', 1);
+  }
   // Fire: deal damage equal to stacks (reduced by armor/shield), then reduce by 1.
   // fire_immune characters no-sell the damage but the stack still
   // decays — keeps Ice cancellation symmetric.
@@ -34429,7 +35397,23 @@ function getDamageModifier(character) {
   } else {
     shock = character.shockStacks || 0;
   }
-  return -shock;
+  let mod = -shock;
+  // Boarhide Bracers — passive while it sits in the player's hand: the FIRST
+  // attack of the turn hits for +2. attacksThisTurn is still 0 on that first
+  // swing (it's bumped after the attack resolves), so this fires exactly once
+  // per turn with no extra bookkeeping.
+  if (character === player && attacksThisTurn === 0 && player.deck
+      && Array.isArray(player.deck.hand)
+      && player.deck.hand.some(c => c && c.id === 'boarhide_bracers')) {
+    mod += 2;
+    // Log it once per first-attack so the +2 source is clear (guarded so a
+    // multi-call attack like Steel Greataxe doesn't spam it).
+    if (!_bracerBonusLogged) {
+      _bracerBonusLogged = true;
+      addLog(`  Boarhide Bracers: +2 First Attack`, Colors.GOLD);
+    }
+  }
+  return mod;
 }
 
 // Apply Ice's per-attack reduction to a raw damage value. Mirrors PY:
@@ -34813,10 +35797,9 @@ function showcasePlayerCard(card, durationMs) {
 function stampShowcaseDynamicValues(card, sourceCount) {
   if (!card) return;
   if (card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') {
-    // X = attacks this turn (does NOT count itself). Match the
-    // resolve-time reading so the showcased number doesn't drift
-    // off the actual damage by 1.
-    card._showcaseSneakX = sourceCount || 0;
+    // X = attacks this turn, counting itself (+1). Match the resolve-time
+    // reading so the showcased number doesn't drift off the actual damage.
+    card._showcaseSneakX = (sourceCount || 0) + 1;
   }
 }
 
@@ -35469,6 +36452,11 @@ function raiseEnemyButcher() {
 function startEnemyTurn() {
   enemyTurnNumber++;
   _enemyCardsThisTurn = 0;
+  // Reset the shared "attacks this turn" counter for the enemy's turn.
+  // The player's attacks bumped it during their turn; without this reset
+  // the enemy's first swing never sees attacksThisTurn === 0, so First
+  // Attack riders (Giant Boar Gore +N) never trigger on the enemy side.
+  attacksThisTurn = 0;
   addLog('--- Enemy Turn ---', Colors.RED);
   if (survivalRounds > 0) addLog(`  Round ${enemyTurnNumber}/${survivalRounds}`, Colors.GRAY);
   // Clear Vanish invulnerability at the start of the slyblade's turn.
@@ -35555,6 +36543,11 @@ function startEnemyTurn() {
           addLog(`  Kobold Backup! ${summoned} new guard${summoned > 1 ? 's join' : ' joins'} the fight.`, Colors.RED);
           playSound('kobold_attack', 0.6);
         }
+      } else if (power.id === 'bloodied_fury') {
+        // Bloodied Fury is evaluated AFTER the Regen tick (below, post
+        // processStatusEffects) so the Rage reflects the boar's post-heal HP
+        // — a Regen heal that lifts it back above half must drop the Rage.
+        // No-op here.
       } else if (power.id === 'plague_spawn') {
         // Plague Cockroach turn-start summon. Single 1/1 Cockroach with
         // poisonAttack — gated on damage landing (per
@@ -36004,6 +36997,24 @@ function startEnemyTurn() {
   // Process status effects on enemy at start of their turn
   processStatusEffects(enemy, enemy.name);
   if (checkCombatEnd()) return;
+
+  // Bloodied Fury (Giant Boar) — evaluated AFTER the Regen tick so the boar's
+  // Rage reflects its POST-heal HP. While Bloodied (half max HP or less) Rage
+  // is SET to 2; if the Regen heal lifted it back above half, Rage drops to 0.
+  // Binary / non-stacking; the boar's only Rage source is this power.
+  if (enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p && p.id === 'bloodied_fury')) {
+    const wasRaging = (enemy.rage || 0) > 0;
+    if (isBloodied(enemy)) {
+      enemy.rage = 2;
+      if (!wasRaging) {
+        addLog(`  Bloodied Fury! ${enemy.name} enrages (+2 Rage).`, Colors.RED);
+        spawnTokenOnTarget(enemy, 2, 'Rage', Colors.RED);
+      }
+    } else if (wasRaging) {
+      enemy.rage = 0;
+      addLog(`  ${enemy.name}'s Bloodied Fury subsides (no Rage).`, Colors.GRAY);
+    }
+  }
 
   // Plan enemy actions — respect recharge_extra costs
   enemyActions = [];
@@ -36893,6 +37904,22 @@ function updateEnemyTurn(dt) {
         // maybeFireDrawOnKill reads draw_on_kill off _activePlayCard
         // (set to this card above) and only acts on creature kills.
         maybeFireDrawOnKill(enemy, cardTarget);
+      } else if (eff.effectType === 'gore_attack') {
+        // Giant Boar Gore — Deal N. First Attack: +N (its opening swing of
+        // the turn). The enemy attack path hand-rolls each effect, so the
+        // player-side gore_attack handler in resolveEffect never runs here;
+        // route the damage through routeEnemyDamageToTarget so the gore
+        // arrow + on-hit fire like any other enemy attack.
+        const goreFirst = (attacksThisTurn === 0);
+        const goreBonus = goreFirst ? eff.value : 0;
+        if (goreBonus > 0) addLog(`  First Attack! +${goreBonus}`, Colors.GOLD);
+        let dmg = Math.max(0, eff.value + goreBonus + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        attacksThisTurn++;
       } else if (eff.effectType === 'mark_deathly_strike') {
         // Death Sickle's "Hit: Death" rider. Stamps a module flag the
         // damage flow checks once the player's DEFENDING phase
@@ -37724,7 +38751,9 @@ function updateEnemyTurn(dt) {
         if (player.deck.hand.length > 0) {
           const idx = Math.floor(Math.random() * player.deck.hand.length);
           const lost = player.deck.hand.splice(idx, 1)[0];
-          player.deck.discardPile.push(lost);
+          // Route through discardCard so on-discard passives (Harpy
+          // Feather draw, meal hook) fire from this monster-forced discard.
+          player.deck.discardCard(lost);
           addLog(`  Luring Song: ${lost.name} → discard`, Colors.PURPLE, lost);
         } else {
           const [, taken] = player.takeDamageWithDefense(dmg);
@@ -38532,6 +39561,9 @@ function completePlayerTurnTransition() {
   // Ready exhausted stay-in-hand cards
   for (const c of player.deck.hand) c.exhausted = false;
   attacksThisTurn = 0;
+  _bracerBonusLogged = false; // re-arm the Boarhide Bracers first-attack log
+  // Frenzy Blood Vial — apply the Bloodied Frenzy Rage for the turn (announce).
+  updateFrenzyRage(true);
 
   // Second Wind: snapshot last turn's damage and heal if it crossed
   // the threshold. Runs BEFORE the meal / DoT pass so today's Fire +
@@ -38613,6 +39645,19 @@ function completePlayerTurnTransition() {
   // Turn-start perk effects
   applyPerksStartOfTurn();
   if (checkCombatEnd()) return;
+
+  // Armorer's Training — ONE chance per turn, fired here at the end of the
+  // enemy turn (after any defensive window), before you act. You MAY recharge
+  // one eligible Armor card (Defense-type with a Block component — not
+  // proactive shields) for +1 Draw, or Skip. Deferred while a Flash picker or
+  // a forced swim is up; only opens if you actually hold an eligible card.
+  if (!flashOfGeniusMode && swimTarget <= 0
+      && player.hasPerk('armorer_training')
+      && player.deck.hand.some(isArmorCard)) {
+    armorerTrainingMode = true;
+    _armorerTrainingSkipRect = null;
+    addLog(`  Armorer's Training: recharge an Armor card for +1 Draw, or Skip.`, Colors.GOLD, perkToCardLike(createArmorerTrainingPerk()));
+  }
 
   // Swim phase: every player turn opens with a SWIMMING state when
   // a swim_target is active. Mirrors PY's start_swimming_phase call
@@ -39615,7 +40660,7 @@ function getCreaturePlaySfxKey(c) {
   if (name === 'valdrisa') return 'valdrisa_summon';
   if (name === 'dwarven scout') return 'dwarven_scout_shout';
   if (name === 'misha') return 'bear_growl';
-  if (name === 'huffer') return 'pig_grunt';
+  if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   if (name === 'pet spider') return 'spider_scuttle';
   // Baby Giant Frog — splash on summon AND on death (matches the
   // attack splash wired through getWeaponSfxKeys below). The frog
@@ -39682,7 +40727,7 @@ function getDeathSfxKey(c) {
   // Animal Companion summons — same growl/grunt sample as their
   // attack so the family is sonically consistent across the fight.
   if (name === 'misha') return 'bear_growl';
-  if (name === 'huffer') return 'pig_grunt';
+  if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   // Bone-family death rattle (Bone Pile boss, Bone Amalgam boss + the
   // 3/3 amalgam creatures it summons, Restless Bone summons).
   if (name === 'bone pile' || name === 'bone amalgam' ||
@@ -39703,8 +40748,16 @@ function getDeathSfxKey(c) {
   // splash.
   if (name === 'kraken spawn') return 'monster_alien_scream_01';
   if (name === 'tentacle') return 'splash_dive';
-  // Kobold Patrol death — generic kobold hiss.
-  if (name === 'kobold patrol') return 'kobold_attack';
+  // Kobold Patrol death — generic kobold hiss. The Elite Kobold
+  // Patrol (bridge fight) shares it, and so do every kobold creature it
+  // (or any kobold fight) fields — Guards, Slingers, Dragonshields — so
+  // each one hisses as it drops instead of dying silently.
+  if (name === 'kobold patrol' || name === 'elite kobold patrol'
+      || name === 'kobold guard' || name === 'kobold slinger'
+      || name === 'kobold dragonshield'
+      || name === 'retreating kobold army') {
+    return 'kobold_attack';
+  }
   // Plague Cockroach death — leg-rustle scuttle as the bug stops
   // twitching (same sample the fight starts on).
   if (name === 'plague cockroach') return 'spider_scuttle';
@@ -39825,7 +40878,8 @@ function getFightStartSfxKey(rawName) {
   if (name === 'giant rat' || name === 'dire rat') return 'rat_screech';
   if (name === 'bone pile' || name === 'bone amalgam') return 'bones_clatter';
   if (name === 'kobold warden') return 'warden_hiss';
-  if (name === 'kobold patrol') return 'kobold_attack';
+  if (name === 'kobold patrol' || name === 'elite kobold patrol'
+      || name === 'retreating kobold army') return 'kobold_attack';
   // Plague Cockroach — Path of the Necromancer dining-room fight.
   // Leg-rustle scuttle on the cockroach surge into combat.
   if (name === 'plague cockroach') return 'spider_scuttle';
@@ -39888,6 +40942,9 @@ function getFightStartSfxKey(rawName) {
   // Bear Form growl as the fight-start sting (same family the codex
   // already plays for Misha / bear-form moves).
   if (name === 'dire bear') return 'bear_growl';
+  // Giant Boar — Pinewood ambush (armorer's-son quest). The same pig
+  // grunt that fires on its Gore swing and on death bookends the fight.
+  if (name === 'giant boar') return 'pig_grunt';
   // Roc — boss-start scream is the freshly-hatched Roc Chick. The
   // boss panel itself never swings (invulnerable boss), so this is
   // really the chick's signature cue carried into the splash beat.
@@ -41800,6 +42857,10 @@ function openShop(shopId, name) {
     : shopId === 'arcane_emporium'
     ? buildArcaneEmporiumInventory()
     : (SHOP_INVENTORIES[shopId] || []);
+  // Set shopMode BEFORE pricing — getCardBuyPrice reads shopMode.id for the
+  // armorer's-son 25% rebate at the smiths, so the prices must be computed
+  // with the current shop already active.
+  shopMode = { id: shopId, name };
   shopCards = inventory.map(entry => {
     const { creator, priceOverride } = resolveShopEntry(entry);
     const card = creator();
@@ -41811,7 +42872,6 @@ function openShop(shopId, name) {
   // Shop section filter: reset to everything-selected each visit so
   // entering a new shop never carries stale narrowing from the last one.
   invShopFilters = new Set(INV_FILTER_TYPES);
-  shopMode = { id: shopId, name };
   state = GameState.INVENTORY;
 }
 
@@ -41991,6 +43051,13 @@ function getCardBuyPrice(card) {
   const ct = (card.cardType || '').toUpperCase();
   const cost = (card.costType || '').toUpperCase();
   if (ct === 'ITEM' && cost === 'BANISH') price = Math.floor(price / 5);
+  // Armorer's-son reward — a permanent 25% rebate at Doran's (armorsmith)
+  // and Mira's (weaponsmith) shops once the player has earned Armorer's
+  // Training. Only those two storefronts; other shops are unaffected.
+  if (shopMode && (shopMode.id === 'armorsmith' || shopMode.id === 'weaponsmith')
+      && armorerQuestRewardClaimed()) {
+    price = Math.floor(price * 0.75);
+  }
   return price;
 }
 
@@ -44199,6 +45266,7 @@ function commitSaveEditing() {
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
     throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    armorerSonQuestStarted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     // Path of the Necromancer story flag — required so the bedroom
     // trap-door dispatch fires after a save/load mid-quest. Without
@@ -44226,8 +45294,9 @@ function commitSaveEditing() {
     corridorEntranceDoubledBack,
     cozySpotFishingCaught, outpostTentRested, supplyPileTaken, lastWatchSupplyTaken,
     krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, direBearDefeated,
-    rocRescued, lastWatchPostRocClaimed, shrineReactivated, stormwatchersShrineActiveSeen, mithrilRemediesOlbrimGreeted, babyRocDefeated,
+    rocRescued, lastWatchPostRocClaimed, shrineReactivated, stormwatchersShrineActiveSeen, mithrilRemediesOlbrimGreeted, babyRocDefeated, giantBoarDefeated,
     lakeFrogRocks: _lakeFrogRocks,
+    bridgePatrolNodes: _bridgePatrolNodes,
     backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
@@ -44900,6 +45969,7 @@ function restoreFromSave(data) {
   dwarvenTavernFreebieGiven = !!data.dwarvenTavernFreebieGiven;
   dragonEggDamage = typeof data.dragonEggDamage === 'number' ? data.dragonEggDamage : 0;
   heroesOfQualibaf = !!data.heroesOfQualibaf;
+  armorerSonQuestStarted = !!data.armorerSonQuestStarted;
   // Back-compat: pre-fix saves don't have volcanoChoiceCompleted.
   // Derive from completedEncounters (the encounter is always added
   // there on first completion) so an existing save that's already past
@@ -44970,8 +46040,11 @@ function restoreFromSave(data) {
   shrineReactivated = !!data.shrineReactivated;
   stormwatchersShrineActiveSeen = !!data.stormwatchersShrineActiveSeen;
   babyRocDefeated = !!data.babyRocDefeated;
+  giantBoarDefeated = !!data.giantBoarDefeated;
   mithrilRemediesOlbrimGreeted = !!data.mithrilRemediesOlbrimGreeted;
   _lakeFrogRocks = Array.isArray(data.lakeFrogRocks) ? data.lakeFrogRocks.slice() : null;
+  _bridgePatrolNodes = Array.isArray(data.bridgePatrolNodes) ? data.bridgePatrolNodes.slice() : null;
+  _currentBridgePatrolNode = null;
   krakenDefeated = !!data.krakenDefeated;
   krakenLevelUpClaimed = !!data.krakenLevelUpClaimed;
   ancestorSpiritsDefeated = !!data.ancestorSpiritsDefeated;
@@ -45056,6 +46129,8 @@ function restoreFromSave(data) {
     cave: createCaveMap,
     ruins_basin: createRuinsBasinMap,
     north_qualibaf: createNorthQualibafMap,
+    qualibaf_bridge: createQualibafBridgeMap,
+    qualibaf_waterfall: createQualibafWaterfallMap,
     // South arm (post-launch additions). Without these entries the
     // map-id lookup on load fell back to createPrisonCellMap and the
     // player landed on a blank/wrong map after autosave reload while
@@ -45260,6 +46335,7 @@ function draw() {
     case GameState.MULTI_TARGETING:
     case GameState.SCRY_SELECT:
       drawCombat();
+      if (armorerTrainingMode) drawArmorerTrainingOverlay();
       if (state === GameState.MODAL_SELECT) drawModalOverlay();
       if (state === GameState.REVIVE_SELECT) drawReviveSelectOverlay();
       if (state === GameState.DEFENDING) drawDefendingOverlay();
@@ -45438,6 +46514,7 @@ const HELP_CONTENT = [
   ]},
   { title: 'Status Effects', items: [
     { text: 'Fire: deals damage equal to stacks at start of turn, decays by 1. Applying Fire to a target with Ice cancels the Ice instead (1-for-1).', color: '#dc8c28' },
+    { text: 'Regen: the INVERSE of every damage-over-time. Heal equal to stacks at the start of your turn, then decays by 1. Fire, Poison, and Bleed each cancel Regen 1-for-1 on contact (and Regen cancels them back) — like Fire/Ice — so a Regen-holder is never also Poisoned/Bleeding/Burning. Instant True Damage also burns Regen 1-for-1.', color: '#7cff9c' },
     { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn. Applying Ice to a target with Fire cancels the Fire instead (1-for-1).', color: '#78c8ff' },
     { text: 'Poison: deals damage equal to stacks each turn. Removed by healing — each point of Heal cancels 1 Poison stack before any actual healing lands (1-for-1).', color: '#3cc83c' },
     { text: 'Shock: -1 damage dealt and +1 damage taken per stack, decays by 1.', color: '#ffe650' },
@@ -46892,7 +47969,12 @@ const CARD_SFX_OVERRIDES = {
   consecration:             { flesh: 'fire_blast', blocked: 'fire_blast' },
   heroic_strike:            { play: 'heroic_strike_cast' },
   defensive_formation:      { play: 'arcane_shield' },
-  icy_breath:               { flesh: 'ice_flesh', blocked: 'ice_flesh' },
+  icy_breath:               { play: 'ice_elemental', flesh: 'ice_flesh', blocked: 'ice_flesh' },
+  // Jagged Chopper — heavy single-hand blade. Steel-sword swing on cast
+  // and on landed flesh, sword-on-stone clang when blocked.
+  jagged_chopper:           { play: 'sword_1h_flesh', flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  // Gore — Giant Boar's charge. Pig grunt on the swing and on the hit.
+  gore:                     { play: 'pig_grunt', flesh: 'pig_grunt', blocked: 'pig_grunt' },
   bear_form_token:          { flesh: 'bear_form_attack', blocked: 'bear_form_attack' },
   cat_form_token:           { flesh: 'cat_form_attack',  blocked: 'cat_form_attack' },
   fire_token:               { play: 'fire_flesh' },
@@ -47025,6 +48107,8 @@ const CARD_SFX_OVERRIDES = {
   travel_rations:           { play: 'eat' },
   fresh_fish:               { play: 'eat' },
   bandages:                 { play: 'cloth_use' },
+  cured_bandage:            { play: 'cloth_use' },
+  boarhide_bandage:         { play: 'cloth_use' },
   scraps:                   { play: 'cloth_use' },
   sack:                     { play: 'bag_use' },
   small_pouch:              { play: 'bag_use' },
@@ -47548,7 +48632,7 @@ function getAllyShoutSfxKey(ally) {
   if (name === 'raena') return 'raena_summon';
   if (name === 'valdrisa') return 'valdrisa_summon';
   if (name === 'misha') return 'bear_growl';
-  if (name === 'huffer') return 'pig_grunt';
+  if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   if (name === 'dwarven scout') return 'dwarven_scout_shout';
   if (name === 'shark') return 'shark_chew';
   if (name === 'piranha') return 'piranha_attack';
@@ -47722,6 +48806,16 @@ function spawnHealOnTarget(target, amount) {
   }
 }
 
+// On Discard: Heal feedback (Boar Tusk). Character.takeDamageFromDeck calls
+// this from globalThis after the loop-safe heal resolves, so the restore
+// floats a green "+N" over the healed character and writes a log line.
+globalThis.__onDiscardRegen = (char, amount, source) => {
+  if (!char || !(amount > 0)) return;
+  const src = source ? ` (${source})` : ' (On Discard)';
+  addLog(`  ${char.name}: +${amount} Regen${src}`, Colors.GREEN);
+  spawnTokenOnTarget(char, amount, 'Regen', '#7cff9c');
+};
+
 // Death animation for creatures
 let dyingCreatures = []; // { rect, timer, name }
 const DEATH_ANIM_DURATION = 900;
@@ -47892,7 +48986,7 @@ function drawFogOfWar(currentArea) {
   if (!currentNode) return;
 
   // Fog applies to all non-outdoor areas (matching Python game)
-  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
+  const outdoorAreas = new Set(['mountain_path', 'plains', 'arriving_city', 'qualibaf', 'north_qualibaf', 'qualibaf_bridge', 'qualibaf_waterfall', 'south_of_qualibaf', 'south_outpost', 'river_cave_mouth', 'shipwreck_deck', 'tharnag', 'grand_hall', 'grand_staircase', 'throne_room', 'artisan_hall', 'personal_quarters', 'volcano']);
   if (outdoorAreas.has(currentArea)) return;
 
   // Create offscreen fog canvas if needed
@@ -48178,7 +49272,7 @@ const ALL_POWER_CREATORS = [
   createQuickStrike, createBattleFury, createFeralForm,
   createChunkyBite, createDireFury, createOverwhelm, createSplit,
   () => createArmorPower(1),
-  createKoboldBackup, createKoboldArmy, createKoboldArmySwarm, createAmalgam,
+  createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam,
   createPiranhasSwarm, createFromTheDeep, createWolfPack,
   createMassiveOgreRam, createGoblinSapperSquad,
   createLavaFloor, createBlizzard, createAncientWhite,
@@ -48214,6 +49308,7 @@ const ALL_EXTRA_CARD_CREATORS = [
   createBuffAle, createBuffDwarvenBrew, createBuffRegrowth, createBuffRegrowthLegacy, createBuffElfReinforcements,
   createBuffBlizzard, createBuffSahuaginEye, createBuffOldGodBlessing, createBuffObsidianCore,
   createBuffMagmaTablet, createBuffVolcanoBlessing, createBuffMapKnowledge,
+  createBuffBloodiedFrenzy,
 ];
 
 // Class powers (player-side). Anything in ALL_POWER_CREATORS not in this set
@@ -48465,6 +49560,9 @@ function drawCodex() {
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   const L = getCodexLayout();
+  // Lore is a read-only text list with no selectable card, so it drops the
+  // right-side stats panel and reclaims that space for the full-width list.
+  if (codexTab === 'lore') L.gridW = SCREEN_WIDTH - CODEX_PADDING * 2;
 
   // Title bar
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -48495,10 +49593,11 @@ function drawCodex() {
   else if (codexTab === 'decks')      drawCodexDecksGrid(L);
   else if (codexTab === 'perks')      drawCodexPerkGrid(L);
   else if (codexTab === 'sounds')     drawCodexSoundGrid(L);
+  else if (codexTab === 'lore')       drawCodexLoreGrid(L);
   else                                drawCodexCardGrid(L);
 
-  // Right-side stats panel
-  drawCodexStatsPanel(L);
+  // Right-side stats panel (suppressed on the lore tab — full-width list)
+  if (codexTab !== 'lore') drawCodexStatsPanel(L);
 
   // Hover preview piggybacks on the existing system
   maintainSideHoverExpansion();
@@ -48517,6 +49616,7 @@ function drawCodexTabs(L) {
     { id: 'decks',      label: 'Decks' },
     { id: 'perks',      label: 'Perks' },
     { id: 'sounds',     label: 'Sounds' },
+    { id: 'lore',       label: 'Lore' },
   ];
   // Dynamic tab width — fit all tabs across the full width. Added a 6th
   // tab (Perks), so the fixed 220 px width no longer fits; computes the
@@ -48590,6 +49690,10 @@ function drawCodexFilters(L) {
       { id: 'Music',       label: 'Music' },
     ];
     activeId = codexFilter; clickKind = 'filter';
+  } else if (codexTab === 'lore') {
+    // Lore tab — filter the entry list by category (All + each lore type).
+    filters = [{ id: 'all', label: 'All' }, ...LORE_TYPES.map(t => ({ id: t, label: t }))];
+    activeId = codexFilter; clickKind = 'filter';
   } else {
     filters = getCodexCardFilters(); activeId = codexFilter; clickKind = 'filter';
   }
@@ -48631,6 +49735,7 @@ function drawCodexFilters(L) {
     codexTab === 'characters' ? 'Search heroes / monsters…' :
     codexTab === 'perks'      ? 'Search perks…'          :
     codexTab === 'sounds'     ? 'Search sounds…'         :
+    codexTab === 'lore'       ? 'Search lore (name / type / text)…' :
     'Search cards (try "common meal", "rare tier2")…';
   ctx.font = '13px sans-serif';
   ctx.textAlign = 'left';
@@ -48662,7 +49767,7 @@ function drawCodexFilters(L) {
   // tabs that have one, OR directly right of the search box on the
   // characters tab where Small/Full don't apply.
   let trOffAnchorX;
-  if (codexTab !== 'characters' && codexTab !== 'perks' && codexTab !== 'sounds') {
+  if (codexTab !== 'characters' && codexTab !== 'perks' && codexTab !== 'sounds' && codexTab !== 'lore') {
     const tw = 70;
     const trX = sr.x + sr.w + 8;
     const trSmall = { x: trX, y: L.filterY + 4, w: tw, h: CODEX_FILTER_H - 8 };
@@ -50107,6 +51212,121 @@ function drawCodexSoundGrid(L) {
   ctx.fillText(`${entries.length} sound${entries.length === 1 ? '' : 's'}`, L.gridX, L.gridY + L.gridH - 4);
 }
 
+function drawCodexLoreGrid(L) {
+  // Lore tab — a scrollable list of world-reference entries authored in
+  // src/lore.js. Each entry is ONE line by default: name (left) · type tag ·
+  // description, all inline. The description only wraps onto extra lines (with
+  // a hanging indent) when it can't fit the row width. Filter by the type
+  // pill, search across name + type + description. Read-only rows.
+  const typeOrder = {};
+  LORE_TYPES.forEach((t, i) => { typeOrder[t] = i; });
+  const ord = (t) => (typeOrder[t] === undefined ? 99 : typeOrder[t]);
+
+  const entries = LORE_ENTRIES.filter(e => {
+    if (codexFilter !== 'all' && e.type !== codexFilter) return false;
+    if (codexSearchText && !_codexSearchMatches(`${e.name} ${e.type} ${e.description}`)) return false;
+    return true;
+  }).slice().sort((a, b) => {
+    const d = ord(a.type) - ord(b.type);
+    return d !== 0 ? d : a.name.localeCompare(b.name);
+  });
+
+  // Pre-measure each row: name width, tag width, where the description starts,
+  // and how many lines it wraps to at the available width → variable row height.
+  const lineH = 15;
+  const padX = 12;
+  const rightEdge = L.gridX + L.gridW - padX;
+  const rows = entries.map(e => {
+    ctx.font = 'bold 15px Georgia, serif';
+    const nameW = ctx.measureText(e.name).width;
+    ctx.font = 'bold 10px sans-serif';
+    const tagText = e.type.toUpperCase();
+    const tagW = ctx.measureText(tagText).width + 12;
+    const descX = L.gridX + padX + nameW + 10 + tagW + 12;
+    const availW = Math.max(140, rightEdge - descX);
+    // Measure-based word wrap of the description into availW.
+    ctx.font = '13px sans-serif';
+    const lines = [];
+    let cur = '';
+    for (const w of e.description.split(' ')) {
+      const test = cur ? cur + ' ' + w : w;
+      if (cur && ctx.measureText(test).width > availW) { lines.push(cur); cur = w; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    if (lines.length === 0) lines.push('');
+    return { e, nameW, tagText, tagW, descX, lines, h: 30 + (lines.length - 1) * lineH };
+  });
+
+  const totalH = rows.reduce((s, r) => s + r.h, 0);
+  const FOOTER_H = 20;
+  const maxScroll = Math.max(0, totalH + FOOTER_H - L.gridH);
+  if (codexScrollY > maxScroll) codexScrollY = maxScroll;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(L.gridX, L.gridY, L.gridW, L.gridH);
+  ctx.clip();
+
+  let y = L.gridY - codexScrollY;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const rowH = r.h;
+    if (y + rowH >= L.gridY && y <= L.gridY + L.gridH) {
+      // Alternating row background + hover highlight
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(20,20,35,0.4)' : 'rgba(30,30,45,0.4)';
+      ctx.fillRect(L.gridX, y, L.gridW, rowH);
+      if (hitTest(mouseX, mouseY, { x: L.gridX, y, w: L.gridW, h: rowH })) {
+        ctx.fillStyle = 'rgba(60,60,80,0.4)';
+        ctx.fillRect(L.gridX, y, L.gridW, rowH);
+      }
+
+      const tColor = LORE_TYPE_COLORS[r.e.type] || '#cdd';
+      const cy = y + 15;
+
+      // Name (tinted by type)
+      ctx.font = 'bold 15px Georgia, serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = tColor;
+      ctx.fillText(r.e.name, L.gridX + padX, cy);
+
+      // Type tag pill, right of the name
+      ctx.font = 'bold 10px sans-serif';
+      const tagX = L.gridX + padX + r.nameW + 10;
+      const tagY = cy - 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(tagX, tagY, r.tagW, 16);
+      ctx.strokeStyle = tColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tagX, tagY, r.tagW, 16);
+      ctx.fillStyle = tColor;
+      ctx.textAlign = 'center';
+      ctx.fillText(r.tagText, tagX + r.tagW / 2, tagY + 8);
+
+      // Description — inline on the first line, hanging-indented if it wraps
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#bcc';
+      for (let li = 0; li < r.lines.length; li++) {
+        ctx.fillText(r.lines[li], r.descX, cy + li * lineH);
+      }
+    }
+    y += rowH;
+  }
+
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  drawCodexScrollbar(L, totalH + FOOTER_H);
+
+  // Footer count
+  ctx.fillStyle = Colors.GRAY;
+  ctx.font = '12px sans-serif';
+  ctx.fillText(`${entries.length} lore entr${entries.length === 1 ? 'y' : 'ies'}`, L.gridX, L.gridY + L.gridH - 4);
+}
+
 function drawCodexDecksGrid(L) {
   const cache = buildCodexSourceCache();
   const allDecks = cache.decks
@@ -50240,7 +51460,7 @@ function drawCodexDecksGrid(L) {
 function getCodexMonsterIds() {
   return [
     'giant_rat', 'bone_pile', 'slime', 'kobold_warden', 'dire_rat',
-    'kobold_patrol', 'sahuagin_sentinel', 'sahuagin_priest', 'sahuagin_baron',
+    'kobold_patrol', 'elite_kobold_patrol', 'giant_boar', 'kellen_rescue', 'sahuagin_sentinel', 'sahuagin_priest', 'sahuagin_baron',
     'forest_spiders', 'obsidian_golem', 'obsidian_slime',
     'kobold_drake_rider', 'general_zhost', 'wolf_pack',
     'piranhas_swarm', 'stone_giant', 'bone_amalgam',
@@ -50377,6 +51597,9 @@ function drawCodexCharacterPanel(entry, x, y, w, h) {
     // the enemy.name is 'Roc', not 'baby_roc'. Route to the same
     // freshly hatched chick portrait the fight-start splash uses.
     baby_roc: 'roc_chick',
+    // Kellen's Rescue — the enemy id is the fight id, but the invulnerable
+    // boss-shell's portrait art is keyed off its Character name.
+    kellen_rescue: 'retreating_kobold_army',
   };
   let portraitId, displayName;
   if (entry.kind === 'hero') {
@@ -50852,7 +52075,8 @@ function buildCodexSourceCache() {
   // its masterDeck / powers. We temporarily overwrite the module-level
   // `enemy` but restore it immediately afterward.
   const enemyIds = [
-    'giant_rat','bone_pile','slime','prison_guards','dire_rat','kobold_patrol',
+    'giant_rat','bone_pile','slime','prison_guards','dire_rat','kobold_patrol','elite_kobold_patrol','giant_boar',
+    'kellen_rescue',
     'bone_amalgam','sahuagin_sentinel','sahuagin_priest','sahuagin_baron',
     'forest_spiders','obsidian_golem','obsidian_slime','siege_gauntlet_1',
     'kobold_drake_rider','piranhas_swarm','general_zhost','general_zhost_boss',

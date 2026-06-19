@@ -3055,25 +3055,130 @@ export function createCitySquareEncounter() {
   ]);
 }
 
-export function createWeaponsmithEncounter() {
+// Shared armorer's-son reward beat (armorer's-son quest). Works at EITHER
+// shop — Doran (armorer) and Mira (weaponsmith) are Kellen's parents, so both
+// are present when the boy comes home. Fires once (the first shop visited
+// after the rescue); grants Armorer's Training + the 25% both-shops rebate.
+function armorerRewardTexts() {
+  return [
+    new EncounterText('The shop door bangs open before you can say a word — and there is Kellen, on his feet, pale and thinner but ALIVE, his mother\'s arms locked around him like she\'ll never let go again.', '!'),
+    new EncounterText('Doran reaches you in three strides and grips your hand in both of his, hard enough to hurt, his eyes wet. "You brought him back. You brought my boy home to us. There aren\'t — gods, there aren\'t words."', 'Doran'),
+    new EncounterText('Mira finally lets Kellen breathe and turns to you, scrubbing at her face. "We\'re not rich folk. We can\'t pay you what this is worth — there isn\'t coin enough in all Qualibaf for it. But what we HAVE is yours."', 'Mira'),
+    new EncounterText('"Bring me your armor — all of it," Doran says, already rolling up his sleeves. "Let me teach you a trick or two of the trade while I work. A smith\'s eye for when a worn piece still has more to give. Armorer\'s Training, my father called it."', 'Doran'),
+    new EncounterText('"And from this day," Mira adds, fierce and final, "you don\'t pay full price at either of our shops. A quarter off everything, mine and his both — for as long as we draw breath. Don\'t argue; you won\'t win." Behind her a small girl peeks out from the forge, and for the first time she is smiling. (Permanent 25% discount at the Armorsmith and Weaponsmith.)', 'Mira'),
+  ];
+}
+
+// Post-reward thank-you beat — short, plays on every later visit to either
+// shop, then drops into the storefront. Acknowledges the saved boy + rebate.
+function armorerThanksTexts() {
+  return [
+    new EncounterText('Kellen waves from the back of the shop, lugging a crate half his size, and Doran follows your eye with a grin. "Put the lad straight to work. Keeps him out of trouble — mostly."', 'Doran'),
+    new EncounterText('"Your quarter-off still stands, friend — always will," he says, nodding you toward the racks. "Now. Let\'s see what you need."', 'Doran'),
+  ];
+}
+
+// Weaponsmith — Mira, wife of the armorer Doran. Variants mirror the armorer:
+//   'normal'        — plain named greeting.
+//   'quest_active'  — short revisit while the quest is running (worried mother).
+//   'quest_reward'  — the shared rescue reward (first shop visited post-rescue).
+//   'quest_complete'— short post-reward thank-you on later visits.
+// Every variant keeps the 'weaponsmith' id so the auto-shop hook opens after.
+export function createWeaponsmithEncounter(variant = 'normal') {
+  if (variant === 'quest_reward') {
+    return new Encounter('weaponsmith', 'Weaponsmith', 'Kellen comes home.', [
+      new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: armorerRewardTexts() }),
+    ]);
+  }
+  if (variant === 'quest_complete') {
+    return new Encounter('weaponsmith', 'Weaponsmith', 'A friend of the family.', [
+      new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: armorerThanksTexts() }),
+    ]);
+  }
+  if (variant === 'quest_active') {
+    return new Encounter('weaponsmith', 'Weaponsmith', 'A master of blade and steel.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Mira looks up from the anvil the moment you enter, hope and dread warring on her soot-streaked face — then she reads your expression and the hope flickers out. "...No word yet. Of course." She swallows hard and reaches for her tongs. "Forgive me. Let me see your steel."', 'Mira'),
+        ],
+      }),
+    ]);
+  }
   return new Encounter('weaponsmith', 'Weaponsmith', 'A master of blade and steel.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
         new EncounterText('The forge radiates heat as you step inside. A broad-shouldered woman works the bellows, sending sparks cascading across the stone floor. Swords, axes, and spears hang from every wall.'),
-        new EncounterText('She glances up, appraising you with a smith\'s eye. "You look like you\'ve seen some trouble. Dull blades and bent steel, I\'d wager." She sets down her tongs. "Let\'s see what I can do for you."', 'Weaponsmith'),
+        new EncounterText('She glances up, appraising you with a smith\'s eye. "Mira. You look like you\'ve seen some trouble — dull blades and bent steel, I\'d wager." She sets down her tongs. "My husband Doran keeps the armory next door if it\'s plate you\'re after. I handle the sharp things. Let\'s see what I can do for you."', 'Mira'),
       ],
     }),
   ]);
 }
 
-export function createArmorsmithEncounter() {
+// Armorsmith — Doran, husband of the weaponsmith Mira. Three variants:
+//   'normal'       — plain named greeting (production default).
+//   'quest_start'  — the missing-son quest hook (worried parents plead
+//                    with the party to look out for their boy Kellen, who
+//                    ran off north to fight kobolds). WIP / debug-gated:
+//                    the dispatch only picks this in debugMode. Finishing
+//                    it latches armorerSonQuestStarted (in the shop-open
+//                    hook in main.js advanceEncounterPhase).
+//   'quest_active' — short revisit greeting once the quest is running.
+// Every variant keeps the 'armorsmith' id so the auto-shop hook opens the
+// storefront afterward.
+export function createArmorsmithEncounter(variant = 'normal') {
+  if (variant === 'quest_reward') {
+    return new Encounter('armorsmith', 'Armorsmith', 'Kellen comes home.', [
+      new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: armorerRewardTexts() }),
+    ]);
+  }
+  if (variant === 'quest_complete') {
+    return new Encounter('armorsmith', 'Armorsmith', 'A friend of the family.', [
+      new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: armorerThanksTexts() }),
+    ]);
+  }
+  if (variant === 'quest_active') {
+    return new Encounter('armorsmith', 'Armorsmith', 'Protection for those who can afford it.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Doran looks up from his workbench the instant you enter — hope flaring across his face before he can stop it.'),
+          new EncounterText('"...Word of Kellen? No. No, of course not." He masters himself and reaches for his tools. "Forgive me. Gods keep my boy out there. Now — let me see your armor\'s road-worthy."', 'Doran'),
+        ],
+      }),
+    ]);
+  }
+  if (variant === 'normal') {
+    return new Encounter('armorsmith', 'Armorsmith', 'Protection for those who can afford it.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The Armorsmith\'s workshop is quieter than the forge next door. Doran, a wiry man with careful hands, works leather and chain into fitted pieces. Mannequins display his finest work — gleaming breastplates and reinforced shields.'),
+          new EncounterText('"Adventurers, eh?" He looks you over with professional interest. "Doran\'s the name. That gear\'s seen better days — I can patch it up, or fit you with something new if your coin purse allows."', 'Doran'),
+        ],
+      }),
+    ]);
+  }
+  // variant === 'quest_start' — the WIP / debug-only quest hook.
   return new Encounter('armorsmith', 'Armorsmith', 'Protection for those who can afford it.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('The Armorsmith\'s workshop is quieter than the forge next door. A wiry man with careful hands works leather and chain into fitted pieces. Mannequins display his finest work - gleaming breastplates and reinforced shields.'),
-        new EncounterText('"Adventurers, eh?" He looks you over with professional interest. "That gear\'s seen better days. I can patch it up, or fit you with something new if your coin purse allows."', 'Armorsmith'),
+        new EncounterText('The Armorsmith\'s workshop should be quieter than the forge next door. Today it isn\'t calm so much as restless — a wiry man with careful hands paces between mannequins hung with gleaming breastplates and reinforced shields, barely seeing his own work.'),
+        new EncounterText('"Adventurers, eh?" He makes an effort to compose himself. "Doran\'s the name. That gear\'s seen better days — I can patch it or fit you with something new, if your coin allows. Forgive me if I\'m... not quite myself today."', 'Doran'),
+        new EncounterText('"Trouble?" Raena asks, reading his face.', 'Raena'),
+        new EncounterText('Doran\'s jaw tightens. "My son. Kellen. Fifteen years old and certain he\'s a hero already. Three days past he took his grandfather\'s old sword and slipped out the North Gate. Left a note — said he\'d go DEFEND Qualibaf. Kill some kobolds." He says it like the words taste of ash.', 'Doran'),
+        new EncounterText('"You\'ve seen the fires, surely — burning out in the northern hills, night after night. The farmers came down three days ago, whole families with their carts piled high, talking of kobold war bands flooding out of the cold. And my boy walked straight up that road toward all of it."', 'Doran'),
+        new EncounterText('A woman shoulders in from the forge next door, soot on her hands and red around the eyes. "I heard voices — Doran, are these—" She takes in your scars and travel-worn gear, and something in her face cracks open into hope.', '!'),
+        new EncounterText('"My wife, Mira — the weaponsmith." Doran hesitates, then asks as though afraid of the answer: "Forgive me, but... are you by chance heading north?"', 'Doran'),
+        new EncounterText('"Aye, that\'s the plan," Thorb says. "We\'re bound for Tharnag, up the mountain road — dwarf business. Why d\'ye ask?"', 'Thorb'),
+        new EncounterText('Doran and Mira trade a look, and the words spill out of him. "Then — if you\'re already heading north, on your way to Tharnag — could you keep an eye out for our son? Please. That\'s all I ask."', 'Doran'),
+        new EncounterText('Mira catches your sleeve before she thinks better of it. "Kellen. Dark hair, too tall for his age, hauling a sword two sizes too big. He\'s only a boy. He thinks he isn\'t. He is."', 'Mira'),
+        new EncounterText('A small girl peers around the forge door — no more than eight, a wooden toy clutched to her chest. She says nothing. She only watches the strangers who might bring her brother home.'),
+        new EncounterText('Thorb thumps a fist against his chest. "Bah — a lad with more guts than sense! Reminds me of someone." He cuts a look at Raena. "We\'ll keep our eyes peeled for the boy, ye have my word."', 'Thorb'),
+        new EncounterText('"We\'ll look for him," Raena says, gentler. "If Kellen is on the north road, we will find him. Hold on to hope."', 'Raena'),
+        new EncounterText('Doran lets out a breath he seems to have held for days. "Thank you. Gods keep you — all of you." He straightens, scrubs a hand down his face, and finally manages a smith\'s professional nod. "Now. Let me send you off in armor that won\'t get you killed. Come — see what I\'ve got."', 'Doran'),
       ],
     }),
   ]);
@@ -3327,7 +3432,24 @@ export function createCityNorthGateEncounter() {
 // North Qualibaf Encounters
 // ============================================================
 
-export function createNorthCrossroadEncounter() {
+// North Crossroad. Once the armorer's-son quest is live (questStarted),
+// the arrival beat names both paths — east through Filibaf toward Tharnag
+// (the quick way), or north up the Frontier Road to search for the boy —
+// and finishing it opens BOTH the Filibaf entrance (node `unlocks`) and
+// the new `north_road` node (unlocked in main.js advanceEncounterPhase on
+// north_crossroad completion). Pre-quest keeps the plain arrival beat.
+export function createNorthCrossroadEncounter(questStarted = false) {
+  if (questStarted) {
+    return new Encounter('north_crossroad', 'North Crossroad', 'A crossroad outside the city', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The road forks at the crossroad north of Qualibaf. East, the forest path winds through Filibaf toward Tharnag — the quick way to the dwarves. North, the road climbs into the hills, toward the smudge of smoke on the horizon where the fires burn.'),
+          new EncounterText('"If Tharnag\'s all we\'re after, east through the forest is faster," Raena says. "But north is the way the armorer\'s boy went. If we want to find Kellen, we follow the Frontier Road and the river." She looks to you. "The forest east, or the bridge north — your call."', 'Raena'),
+        ],
+      }),
+    ]);
+  }
   return new Encounter('north_crossroad', 'North Crossroad', 'A crossroad outside the city', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -3362,6 +3484,236 @@ export function createFilibafEntranceEncounter() {
           'You step away from the treeline. The forest can wait.',
           '', 0
         ),
+      ],
+    }),
+  ]);
+}
+
+// ============================================================
+// Qualibaf Bridge — Frontier Road (armorer's-son side quest, WIP)
+// ============================================================
+// Two arrival beats on the qualibaf_bridge map (reached by walking the
+// unlocked north_road node off the North Crossroad): the entry sights the
+// bridge and the evacuating kobold host, the overlook spots the prisoner
+// cart. The two middle nodes carry no dialog — one of them (chosen at
+// random) hosts the Elite Kobold Patrol fight, which respawns on rest.
+
+export function createQualibafBridgeApproachEncounter() {
+  return new Encounter('qualibaf_bridge_approach', 'The Frontier Road', 'North toward the broken bridge.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You leave the crossroad behind and follow the Frontier Road north — the river loud on your left, the cold pressing down off the hills. The broad trade road narrows to a track, climbs, and then the trees fall away and the gorge opens below you.'),
+        new EncounterText('There it is: the Frontier Road bridge, broken-backed across the chasm — and kobolds swarming thick over both banks of it. Hundreds of them.', '!'),
+        new EncounterText('"They\'re not holding the bridge — they\'re leaving it," Raena murmurs. "Look at the columns. The whole warband\'s pulling north, hauling everything they can carry. Whatever they came for, they have it."', 'Raena'),
+        new EncounterText('Thorb spits over the lip of the gorge. "Aye, an\' movin\' fast. An army that packs up that quick is an army that\'s scared o\' somethin\' — or in a hurry to be somewhere it shouldn\'t." He hefts his axe. "Either road, no good for us. Let\'s get closer afore they\'re gone."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+export function createQualibafBridgeOverlookEncounter() {
+  return new Encounter('qualibaf_bridge_overlook', 'Bridge Overlook', 'Looking down on the broken bridge.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('From the overlook you see it plain. At the east end of the bridge the kobolds press thick around a single cart — and bound in it, Raena\'s breath catches, a figure too tall and too pale to be one of them. "That\'s him. That has to be him. Kellen."', 'Raena'),
+        new EncounterText('Even as you watch, they start the cart moving — north, off the bridge, up the barely-there trail toward the waterfall. The path is steep and broken; the cart lurches and snags, fighting them every yard. "There," Thorb breathes. "That trail\'ll slow \'em to a crawl. If we mean to take the boy back — that\'s where we do it."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Elite Kobold Patrol — the bridge-climb fight. Re-uses the Kobold
+// Patrol enemy kit (elite_kobold_patrol deck adds 5 Wooden Axes + a
+// 4-card hand, set in main.js). 50% chance to drop Kobold base loot x1
+// (rolled at creation time, Cozy-Spot style). Fired from a randomly
+// pre-selected bridge node; respawns on rest.
+export function createEliteKoboldPatrolEncounter() {
+  // Always drops gold scaled to its place in the run (north of Qualibaf —
+  // between the Sahuagin Sentinel's [3,6] and the chapter-7 Obsidian
+  // Golem / Slime's [2,6]) plus one Kobold base loot card.
+  const lootCards = ['kobold_base_loot'];
+  return new Encounter('elite_kobold_patrol', 'Elite Kobold Patrol', 'A White Claw patrol blocks the trail.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Scales scrape on stone — a White Claw patrol breaks from cover ahead, spears levelled, hand-axes already swinging. They have seen you.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'elite_kobold_patrol',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [3, 6],
+      lootCards,
+    }),
+  ], true);
+}
+
+// Giant Boar ambush — fires at the Pinewood node (qualibaf_waterfall),
+// repeats on rest. The party is fixated on the column below and never
+// sees the boar break from the brush at their flank.
+export function createGiantBoarAmbushEncounter() {
+  return new Encounter('giant_boar_ambush', 'The Pinewood', 'Something else is hunting these woods.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You shadow the rear of the kobold column through the pines. Below, the prisoner cart fights the rough ground — wheels jamming on root and stone, the whole line barely crawling. "There," Raena breathes. "The small wood ahead. If we mean to take them, that\'s the moment — and it\'s coming soon."', 'Raena'),
+        new EncounterText('All eyes are on the hill below — on the cart, on the boy. None of you mark the brush shifting at your flank. By the time you turn, it is far too late to react.', '!'),
+        new EncounterText('A mountain of muscle and tusk erupts from the bushes and rams into you — a Giant Boar, maddened and enormous, goring for blood!', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'giant_boar',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [2, 6],
+      lootCards: ['giant_boar_loot'],
+    }),
+  ], true);
+}
+
+// Waterfall map arrival — one-shot opening beat (the waterfall_entry node
+// is canRevisit:false). Closing on the rear of the column at the falls,
+// spotting the kobolds filing into the mountain, and the decision to push
+// off-trail and hunt for an ambush opening on the wagon.
+export function createQualibafWaterfallArrivalEncounter() {
+  return new Encounter('qualibaf_waterfall_arrival', 'The Falls', 'Closing on the rear of the column.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The trail levels and the roar swells to fill the whole valley. You are close now — close enough to see the rear of the kobold column ahead, the prisoner wagon lurching along among them. And beyond it all, the source: a massive waterfall thundering off the mountain, feeding the headwaters of the Qualibaf river.', '!'),
+        new EncounterText('"Look — they\'re going INTO the mountain." Raena points to where a steady file of kobolds slips through a black gap in the rock behind the falls and vanishes.', 'Raena'),
+        new EncounterText('Thorb\'s face darkens. "Tunnels. There\'s old dwarf-work under near every peak in this range. If the White Claw\'s holed up in there, they\'ve made themselves a fortress — and they\'re marchin\' the boy right into it."', 'Thorb'),
+        new EncounterText('"Then we haven\'t long," Raena says. "Once that wagon\'s inside, we lose him. We hurry — and find a good place to hit them before they reach the falls."', 'Raena'),
+        new EncounterText('You press on, keeping off the trail and to the cover of rock and pine, shadowing the column — hunting for the opening. A narrow stretch, a stumble in the line, anywhere you can spring an ambush and tear the boy free.'),
+      ],
+    }),
+  ]);
+}
+
+// The North Trail — a one-time-ever breather on the bridge map (armorer's-son
+// quest, WIP). From the broken trail above the bridge the party watches the
+// kobold column file north toward the falls. Same short-rest mechanic as the
+// Spray Ledge (heal 5, amount not named up front; once-ever, no re-arm on
+// rest). Fires at the trail_north node.
+export function createNorthTrailRestEncounter() {
+  return new Encounter('north_trail_rest', 'The North Trail', 'The column files north.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The trail claws north off the broken bridge, and from its lip you can see the whole grim length of the column below — kobolds, wagons, the prisoner cart, all of it grinding north toward the falls and the black gap in the mountain beyond. They have not seen you. Not yet.', '!'),
+        new EncounterText('"They\'ll be a good while on that climb," Raena murmurs, watching the line crawl. "And we\'ve pushed hard to catch them. Take a breath while the trail\'s ours — we\'ll want our legs under us before we make our move."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Take a short rest',
+          'You sink down against the cold rock, out of the wind, and let the burn drain from your legs while the column toils on below. By the time you rise, your breathing has steadied and your hands are sure again.',
+          'short_rest', 5,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          'Press on after the column',
+          'No time to waste. You keep moving, shadowing the line north along the broken trail, closing the distance step by careful step.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// The Spray Ledge — a one-time-ever breather (armorer's-son quest, WIP).
+// The cart has bogged down in the little wood below and the whole column
+// is stalled waiting on it, buying the party a moment. Mirrors the harpy /
+// abandoned-camp short rest: the heal amount (5) is NOT named up front.
+// Gated once-ever via completedEncounters.has('spray_ledge_rest') — it
+// does NOT re-arm on rest, unlike the Pinewood boar.
+export function createSprayLedgeRestEncounter() {
+  return new Encounter('spray_ledge_rest', 'The Spray Ledge', 'A stolen moment above the falls.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The ledge is slick with spray, the falls thundering close enough now to soak your hair and drown your voices. Below, the column has stalled — the prisoner cart has wedged itself between two roots in the little wood at the trail\'s edge, and the whole line stands idle, waiting on it.', '!'),
+        new EncounterText('"They\'ll be a while at that," Raena says quietly, eyes never leaving the cart as the kobolds curse and heave at the stuck wheel. "It has to find its way through that wood before any of them move again. Catch your breath while it does — once it\'s rolling, we won\'t get another chance to."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Take a short rest',
+          'You crouch in the lee of the rocks, out of the spray, and let your muscles unknot one by one. The roar of the falls washes everything else away. By the time the cart lurches free below, you rise feeling steadier on your feet.',
+          'short_rest', 5,
+          { completesEncounter: true }
+        ),
+        new EncounterChoice(
+          'Stay sharp and watch the column',
+          'You hold your place at the edge of the rocks, eyes fixed on the cart and the small pale figure roped into it. No rest — but no surprises either. The moment that wheel comes free, you will be ready.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Forest Ambush — the strike (armorer's-son quest, WIP). The party sets on
+// the head of the column where it bunches at the mountain mouth. Thorb is
+// benched (no stealth), Raena opens with an arrow, and the fight is on.
+// Combat is Kellen's Rescue: an INVULNERABLE rearguard shell guarding the
+// 2x2 prison cart (the boy) + 4 Kobold Guards — break the cart open and
+// kill the guards to win. Once-ever via completedEncounters.
+export function createForestAmbushEncounter() {
+  return new Encounter('forest_ambush_attack', 'Forest Ambush', 'The opening, at last.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('From the rise the ground falls away to where the kobolds bunch at the black mouth of the mountain. The cart is there — and the boy, pale and bound, half a dozen paces from the dark. If you are to take him back, it is here, now, before that wood swallows them.', '!'),
+        new EncounterText('Thorb hefts his axe — and Raena\'s hand clamps down on his arm. "No. Thorb, you stay. Well back, and quiet as you can manage." He bristles, and she cuts him off flat: "You move like a rockslide through a smithy. They hear us before we\'re on them and the boy dies. Let us get close first."', 'Raena'),
+        new EncounterText('The big dwarf swallows his pride and melts back into the pines, far up the slope. You go down through the cover slow and silent, closing the gap pace by pace, until Raena rises at your shoulder, draws, sights down the line — and looses.', 'Raena'),
+        new EncounterText('The arrow takes a kobold clean through the throat. For half a heartbeat the whole column freezes — then the rearguard wheels on you, blades coming up, throwing themselves between you and the cart. Cut them down and break the boy free!', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'kellen_rescue',
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      // Double the standard kobold-fight gold (a normal patrol drops [3,6])
+      // plus one kobold-pool roll AND one abandoned-camp-pool roll.
+      lootGoldDice: [6, 6],
+      lootCards: ['kobold_base_loot', 'abandoned_camp_loot'],
+    }),
+  ], true);
+}
+
+// Kellen rescued — the aftermath (armorer's-son quest, WIP). Fired by the
+// forest_ambush_attack completion handler in main.js, which first whisks the
+// party back to the North Crossroad map node. The escape is narrated here
+// (grab the boy, run the valley) and resolves at the crossroad: safe at last,
+// time to take Kellen home to his parents. One-time via completedEncounters.
+export function createKellenRescuedCrossroadEncounter() {
+  return new Encounter('kellen_rescued_crossroad', 'Out of the Valley', 'Run. Don\'t look back.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        // First two beats are still in the valley — keep the waterfall map as
+        // the backdrop, then snap to the North Crossroad on the arrival beat.
+        new EncounterText('You wrench the splintered cart open and drag Kellen out into the light. "Can you run?" Raena snaps, loosing arrows over your shoulder at the kobolds already scrambling to regroup. The boy nods, white-faced. "Then RUN — go, go, GO!"', '!', 'bg_qualibaf_waterfall'),
+        new EncounterText('You don\'t stop. Down the valley, across the river shallows, crashing through the treeline with Thorb at the rear and the boy half-carried between you — until the war-horns thin to nothing and the broken bridge falls away behind. You run until your lungs are fire and the gray walls of Qualibaf rise ahead at last.', '', 'bg_qualibaf_waterfall'),
+        new EncounterText('You stagger to a halt at the North Crossroad, doubled over, gulping air. The road is quiet. No scales scrape the stones behind you. No pursuit. You\'re safe — you\'re actually safe.', '!'),
+        new EncounterText('Raena drops to a knee beside Kellen and looks him over, then breathes out a long, shaking laugh. "He\'s shaken half to pieces — but he\'s whole. We did it. We actually did it."', 'Raena'),
+        new EncounterText('Thorb plants his axe and grins through his beard, chest still heaving. "Aye. And his folk\'ll have worn a furrow in the floor with frettin\' by now." He claps a heavy hand on the boy\'s shoulder. "Come on, lad. Let\'s get you home — your mother and father have waited long enough."', 'Thorb'),
       ],
     }),
   ]);
@@ -6304,6 +6656,15 @@ export const ENCOUNTER_REGISTRY = {
   // North Qualibaf
   north_crossroad: createNorthCrossroadEncounter,
   filibaf_entrance: createFilibafEntranceEncounter,
+  qualibaf_bridge_approach: createQualibafBridgeApproachEncounter,
+  qualibaf_bridge_overlook: createQualibafBridgeOverlookEncounter,
+  elite_kobold_patrol: createEliteKoboldPatrolEncounter,
+  qualibaf_waterfall_arrival: createQualibafWaterfallArrivalEncounter,
+  giant_boar_ambush: createGiantBoarAmbushEncounter,
+  north_trail_rest: createNorthTrailRestEncounter,
+  spray_ledge_rest: createSprayLedgeRestEncounter,
+  forest_ambush_attack: createForestAmbushEncounter,
+  kellen_rescued_crossroad: createKellenRescuedCrossroadEncounter,
   // Forest
   forest_shadows: createForestShadowsEncounter,
   forest_shadows_revisit: createForestShadowsRevisitEncounter,

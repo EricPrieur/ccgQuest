@@ -131,6 +131,28 @@ export function createWoodenAxe() {
   });
 }
 
+// Jagged Chopper — uncommon tier-1 martial weapon. The Wooden Axe's
+// nastier cousin: 2 damage to 2 targets that also leaves them Bleeding.
+// Fields the Elite Kobold Patrol's deck and drops from kobold_base_loot.
+export function createJaggedChopper() {
+  return new Card({
+    id: 'jagged_chopper',
+    name: 'Jagged Chopper',
+    description: 'Deal 2 + Bleed on 2 targets.',
+    shortDesc: '2 +Bleed\nx2',
+    subtype: 'martial',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY, 2),
+    ],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 1.5, apply_bleed: 1 },
+  });
+}
+
 export function createWoodenGreatsword() {
   return new Card({
     id: 'wooden_greatsword',
@@ -254,19 +276,14 @@ export function createShortStaff() {
   return new Card({
     id: 'short_staff',
     name: 'Short Staff',
-    description: 'Recharge a Card -> Gain Shield, Deal 4 Damage.',
-    shortDesc: 'R-Card->Shield, 4 Dmg',
+    description: 'Recharge a Card -> Deal 4. Gain Shield.',
+    shortDesc: 'R-Card->4 Dmg\nGain Shield',
     subtype: 'staff',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
-    // Shield resolves BEFORE the damage so any reactive counter the
-    // target throws back (e.g. Plague Cockroach's Skitter Bite
-    // defense mode) hits the apprentice with a freshly raised
-    // buckler — counter damage gets absorbed and the on-damage
-    // Poison rider whiffs.
     effects: [
-      new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     gamePlusOffset: { damage: 2, gain_shield: 1 },
@@ -291,8 +308,8 @@ export function createKoboldSpear() {
   return new Card({
     id: 'kobold_spear',
     name: 'Kobold Spear',
-    description: 'Deal 3 Damage.\nOn Kill: Draw.',
-    shortDesc: '3 Dmg\nOn Kill: Draw',
+    description: 'Deal 3.\nOn Kill: Draw.',
+    shortDesc: '3\nOn Kill: Draw',
     subtype: 'martial_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -410,11 +427,14 @@ export function createWinterbornRobes() {
     shortDesc: 'Block 4, Scry 4\n+4 Ice\n2 Ice: Heroism',
     subtype: 'clothing',
     cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    // Ice + conversion resolve BEFORE the Scry pick so the Heroism is
+    // banked cleanly before the scry overlay takes over the screen
+    // (the overlay opening mid-resolution was eating the heroism gain).
     effects: [
       new CardEffect('block', 4, TargetType.SELF),
-      new CardEffect('scry_pick', 4, TargetType.SELF),
       new CardEffect('apply_ice_self', 4, TargetType.SELF),
       new CardEffect('transform_ice_to_heroism_self', 0, TargetType.SELF),
+      new CardEffect('scry_pick', 4, TargetType.SELF),
     ],
     tier: 2,
     rarity: 'epic',
@@ -750,8 +770,8 @@ export function createSneakAttack() {
   return new Card({
     id: 'sneak_attack',
     name: 'Sneak Attack',
-    description: 'Deal X Damage.\nX = Attacks this turn.',
-    shortDesc: 'X Dmg\nX=Attacks',
+    description: 'Deal X Damage.\nX = Attacks this turn (counts itself).',
+    shortDesc: 'X Dmg\nX=Attacks (counts itself)',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -834,8 +854,8 @@ export function createCharge() {
   return new Card({
     id: 'charge',
     name: 'Charge',
-    description: 'Deal 3 Damage. Draw if first attack this turn.',
-    shortDesc: '3 Dmg\nDraw if 1st atk',
+    description: 'Deal 3. First Attack: Draw.',
+    shortDesc: '3\nFirst Attack: Draw',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -1759,12 +1779,12 @@ export function createHammerOfWrath() {
 export function createHolySword() {
   return new Card({
     id: 'holy_sword', name: 'Holy Sword',
-    description: 'Recharge a Card ->\nDeal 10 Damage, Heal 2.\nOverheal: Heroism.',
-    shortDesc: 'R-Card->10 Dmg\nHeal 2, Overheal', subtype: 'martial',
+    description: 'Recharge a Card -> Deal 11, Heal 4.\nOverheal: Heroism.',
+    shortDesc: 'R-Card->11 Dmg\nHeal 4, Overheal', subtype: 'martial',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
-      new CardEffect('heal_overheal_heroism', 2, TargetType.SELF),
+      new CardEffect('damage', 11, TargetType.SINGLE_ENEMY),
+      new CardEffect('heal_overheal_heroism', 4, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
@@ -2288,8 +2308,8 @@ export function createBattleShout() {
 export function createExecute() {
   return new Card({
     id: 'execute', name: 'Execute',
-    description: 'Deal 5 Damage.\nHalf-HP: Draw.',
-    shortDesc: '5 Dmg\nHalf-HP: Draw', subtype: 'ability',
+    description: 'Deal 5. Bloodied: Draw.',
+    shortDesc: '5\nBloodied: Draw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
@@ -2497,7 +2517,7 @@ export function createMortainsStaff() {
   return new Card({
     id: 'mortains_staff',
     name: "Mortain's Staff",
-    description: 'Recharge a Card -> Deal 4 Damage. You and your skeletons gain Shield.',
+    description: 'Recharge a Card -> Deal 4. You and your skeletons gain Shield.',
     shortDesc: 'R-Card->4 Dmg\n+Shield (you + skeletons)',
     subtype: 'staff',
     cardType: CardType.ATTACK,
@@ -3208,13 +3228,13 @@ export function createBoneStaff() {
   return new Card({
     id: 'bone_staff',
     name: 'Bone Staff',
-    description: 'Recharge a Card -> Deal 3 Damage + Poison, Shield 1.',
-    shortDesc: 'R-Card->3 Dmg\n+Poison, Shield 1',
+    description: 'Recharge a Card -> Deal 4 + Poison. Gain Shield.',
+    shortDesc: 'R-Card->4 Dmg\n+Poison, Gain Shield',
     subtype: 'staff',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
@@ -4172,6 +4192,101 @@ export function createLuckyPebble() {
   });
 }
 
+// Boar Tusk — Rare tier-1 relic. Grants Regen 2 whenever it's discarded
+// (passive deck damage). On the Giant Boar's own deck, a hit that discards
+// a Tusk stacks Regen so the boar heals over its coming turns, then the
+// Regen decays (see on_discard_regen in Character.takeDamageFromDeck).
+export function createBoarTusk() {
+  return new Card({
+    id: 'boar_tusk',
+    name: 'Boar Tusk',
+    description: 'On Discard: Regen 2.',
+    shortDesc: 'On Discard:\nRegen 2',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('on_discard_regen', 2, TargetType.SELF)],
+    tier: 1,
+    rarity: 'epic',
+    gamePlusOffset: { on_discard_regen: 1 },
+  });
+}
+
+// === Giant Boar loot (armorer's-son quest) ===
+
+// Boarhide Bracers — Rare Tier-1 Light Armor. Played reactively as a Defense
+// card (Block 2 + 2 Heroism + Draw), AND a passive while it sits in hand: the
+// FIRST attack of your turn hits for +2. The passive is handled in
+// getDamageModifier (main.js), which checks the hand for this card on the
+// first swing (attacksThisTurn === 0) — so no per-card effect is needed and
+// it naturally fires once per turn.
+export function createBoarhideBracers() {
+  return new Card({
+    id: 'boarhide_bracers',
+    name: 'Boarhide Bracers',
+    description: 'First Attack: +2.\nDefense: Block 2, 2 Heroism, Draw.',
+    shortDesc: 'First Atk: +2\nDef: Blk 2, 2H, Draw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 2, TargetType.SELF),
+      new CardEffect('gain_heroism', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 1,
+    rarity: 'rare',
+    gamePlusOffset: { block: 2, gain_heroism: 1 },
+  });
+}
+
+// Frenzy Blood Vial — Uncommon Tier-1 Item / Beverage. Consume to gain the
+// Bloodied Fury buff (same as the Giant Boar): while at half HP or less, gain
+// +2 Rage each turn. Persists across combats until the next rest. Handled via
+// the grant_bloodied_frenzy effect + the player-turn-start check in main.js;
+// the Bloodied buff reuses GiantBoar art.
+export function createFrenzyBloodVial() {
+  return new Card({
+    id: 'frenzy_blood_vial',
+    name: 'Frenzy Blood Vial',
+    description: 'Consume. Beverage: Bloodied: +2 Rage.',
+    shortDesc: 'Consume\nBloodied: +2 Rage',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('grant_bloodied_frenzy', 2, TargetType.SELF),
+    ],
+    tier: 1,
+    rarity: 'uncommon',
+  });
+}
+
+// Boarhide Bandage — Uncommon Tier-1 Item. A field dressing: Heal 2 and apply
+// Regen 2 (heal-over-time), then the card is discarded.
+export function createBoarhideBandage() {
+  return new Card({
+    id: 'boarhide_bandage',
+    name: 'Boarhide Bandage',
+    description: 'Heal 2, Regen 2. Discard.',
+    shortDesc: 'Heal 2, Regen 2\nDiscard',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.DISCARD,
+    // SINGLE_ALLY — same as Bandages: the player picks self or an ally
+    // creature to patch up. On the player the Regen lands as the usual REGEN
+    // status; on an ally creature (no status system) it routes through the
+    // regenBuffs heal-over-time channel as a decaying Regen (see apply_regen).
+    effects: [
+      new CardEffect('heal', 2, TargetType.SINGLE_ALLY),
+      new CardEffect('apply_regen', 2, TargetType.SINGLE_ALLY),
+    ],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { heal: 1, apply_regen: 1 },
+  });
+}
+
 // === Buff Pseudo-Cards ===
 // Codex-only entries showing each CombatBuff granted by a source card or
 // encounter choice. Match Python's image_id (which reuses the source-card
@@ -4406,6 +4521,24 @@ export function createBuffOldGodBlessing() {
     costType: CostType.FREE,
     effects: [],
     rarity: 'rare',
+    noTierOffset: true,
+  });
+}
+// Bloodied Frenzy — granted by consuming the Frenzy Blood Vial. Permanent
+// (until rest); projects into every combat. While the player is Bloodied
+// (half HP or less) they gain +2 Rage each turn — the Giant Boar's signature
+// passive, turned on the player. Reuses the boar portrait.
+export function createBuffBloodiedFrenzy() {
+  return new Card({
+    id: 'buff_bloodied_frenzy',
+    name: 'Bloodied Frenzy',
+    description: 'While Bloodied: +2 Rage.',
+    shortDesc: 'While Bloodied\n+2 Rage',
+    subtype: 'buff',
+    cardType: CardType.ABILITY,
+    costType: CostType.FREE,
+    effects: [],
+    rarity: 'uncommon',
     noTierOffset: true,
   });
 }
@@ -4649,19 +4782,20 @@ export function createSteelGreataxe() {
   return new Card({
     id: 'steel_greataxe',
     name: 'Steel Greataxe',
-    description: 'Recharge a Card -> Deal 4 Damage and\n3 Damage to 2 other targets.',
-    shortDesc: 'R-Card->4 Dmg\n+3 Dmg x2',
+    description: 'Recharge a Card -> Deal 4 to 3 targets.',
+    shortDesc: 'R-Card->4 Dmg\nto 3 targets',
     subtype: 'martial_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      // 4 to primary, 3 to up to 2 other targets (3 total max). Encoded as 43.
-      new CardEffect('split_damage', 43, TargetType.SINGLE_ENEMY, 3),
+      // 4 to primary AND 4 to up to 2 other targets (3 total) — uniform 4 to
+      // 3 targets. Encoded as 44 (primary 4 / secondary 4).
+      new CardEffect('split_damage', 44, TargetType.SINGLE_ENEMY, 3),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
-    // +2 primary / +1 secondary per offset (4/3 → 6/4 → 8/5…).
-    gamePlusOffset: { split_damage: { primary: 2, secondary: 1 } },
+    // +2 to all targets per offset (4 → 6 → 8…), kept uniform.
+    gamePlusOffset: { split_damage: { primary: 2, secondary: 2 } },
   });
 }
 
@@ -4903,12 +5037,15 @@ export function createIcyBreath() {
   return new Card({
     id: 'icy_breath',
     name: 'Icy Breath',
-    description: 'Recharge -> Apply 1 Ice.',
-    shortDesc: 'R->+Ice',
+    description: 'Deal Ice, Draw.',
+    shortDesc: 'Ice, Draw',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
-    effects: [new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY)],
+    effects: [
+      new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
     priority: 10,
     gamePlusOffset: { apply_ice: 1 },
   });
@@ -4957,13 +5094,15 @@ export function createGreatclub() {
   return new Card({
     id: 'greatclub',
     name: 'Greatclub',
-    description: 'Recharge a Card -> Deal 4 damage (+4 vs Armor/Shield).',
-    shortDesc: 'R-Card->4 Dmg\n(+4 Armor)',
+    description: 'Recharge a Card -> Deal 5 (+4 vs Armor/Shield).',
+    shortDesc: 'R-Card->5 Dmg\n(+4 Armor)',
     subtype: 'simple_2h',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('armor_bonus_damage', 48, TargetType.SINGLE_ENEMY),
+      // armor_bonus_damage encodes base*10 + vsArmorTotal: 59 = base 5,
+      // total 9 vs Armor/Shield (5 + 4 bonus).
+      new CardEffect('armor_bonus_damage', 59, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
@@ -4976,14 +5115,14 @@ export function createQuarterstaff() {
   return new Card({
     id: 'quarterstaff',
     name: 'Quarterstaff',
-    description: 'Recharge a Card -> Deal 5 Damage, Gain Shield.',
-    shortDesc: 'R-Card->5 Dmg\n+Shield',
+    description: 'Recharge a Card -> Deal 5. Gain 2 Shields.',
+    shortDesc: 'R-Card->5 Dmg\nGain 2 Shields',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
-      new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('gain_shield', 2, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'uncommon',
@@ -5997,8 +6136,8 @@ export function createMinersPickaxe() {
   return new Card({
     id: 'miners_pickaxe',
     name: "Miner's Pickaxe",
-    description: 'Recharge a Card -> Strip 2 Shields\nand Deal 7 Damage (+2 vs Armor/Shield).',
-    shortDesc: 'R-Card->Strip 2 Shield\n7 Dmg (+2 vs Armor)',
+    description: 'Recharge a Card -> Strip 2 Shields, Deal 7 (+2 vs Armor/Shield).',
+    shortDesc: 'R-Card->Strip 2 Shield\nDeal 7 (+2 vs Armor)',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -6490,7 +6629,7 @@ export function createObsidianEdge() {
 export function createObsidianStaff() {
   return new Card({
     id: 'obsidian_staff', name: 'Obsidian Staff',
-    description: 'Recharge a Card -> Deal 2 Damage (+2 vs Armor/Shield). Summon a 2/5 Obsidian Construct (Sentinel, 1 Armor, +2 vs Armor/Shield).',
+    description: 'Recharge a Card -> Deal 2 (+2 vs Armor/Shield). Summon a 2/5 Obsidian Construct (Sentinel, 1 Armor, +2 vs Armor/Shield).',
     shortDesc: 'R-Card->2 Dmg (+2)\nSummon Construct',
     subtype: 'staff', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // armor_bonus_damage encodes base * 10 + total. 2 base + 2 vs Armor
@@ -6515,7 +6654,7 @@ export function createObsidianStaff() {
 export function createObsidianSpear() {
   return new Card({
     id: 'obsidian_spear', name: 'Obsidian Spear',
-    description: 'Recharge a Card -> Deal 8 Damage, Draw vs Armor/Shield.',
+    description: 'Recharge a Card -> Deal 8, Draw vs Armor/Shield.',
     shortDesc: 'R-Card->8 Dmg\nDraw vs Armor',
     subtype: 'martial_2h', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // draw_vs_armor sits BEFORE the damage effect so it reads pre-hit
@@ -7109,7 +7248,7 @@ export function createGnikansStaff() {
   return new Card({
     id: 'gnikans_staff',
     name: "Gnikan's Staff",
-    description: 'Recharge a Card -> Gain Ice. Allies lose all Ice -> Summon an Ice Elemental with Atk and HP equal to the Ice lost. Then Deal 3 Damage + Ice.',
+    description: 'Recharge a Card -> Gain Ice. Allies lose all Ice -> Summon an Ice Elemental with Atk and HP equal to the Ice lost. Then Deal 3 + Ice.',
     shortDesc: 'R-Card->Gain Ice\nAllies->N/N\nDeal 3 Dmg + Ice',
     subtype: 'staff',
     cardType: CardType.ATTACK,
@@ -7231,6 +7370,22 @@ export function createDireHide() {
     ],
     priority: 4,
     gamePlusOffset: { block: 2 },
+  });
+}
+
+// Gore — Giant Boar's signature charge. Deal 2, and the boar's opening
+// swing of the turn lands for double (First Attack: +2).
+export function createGore() {
+  return new Card({
+    id: 'gore',
+    name: 'Gore',
+    description: 'Deal 2. First Attack: +2.',
+    shortDesc: '2\nFirst Attack: +2',
+    subtype: 'martial',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('gore_attack', 2, TargetType.SINGLE_ENEMY)],
+    gamePlusOffset: { gore_attack: 2 },
   });
 }
 

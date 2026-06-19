@@ -487,14 +487,83 @@ export function createNorthQualibafMap() {
 
   const nodes = [
     { id: 'north_gate_return', name: 'North Gate Return', description: 'Outside the northern gate of Qualibaf.', encounterId: '', connections: ['north_crossroad'], position: [480, 947], mapArea: 'north_qualibaf', canRevisit: true },
-    { id: 'north_crossroad', name: 'North Crossroad', description: 'A crossroad north of the city.', encounterId: 'north_crossroad', connections: ['north_gate_return', 'filibaf_entrance'], position: [580, 170], mapArea: 'north_qualibaf', unlocks: ['filibaf_entrance'] },
+    { id: 'north_crossroad', name: 'North Crossroad', description: 'A crossroad north of the city.', encounterId: 'north_crossroad', connections: ['north_gate_return', 'filibaf_entrance', 'north_road'], position: [580, 170], mapArea: 'north_qualibaf', unlocks: ['filibaf_entrance'] },
     { id: 'filibaf_entrance', name: 'Filibaf Entrance', description: 'The entrance to Filibaf Forest.', encounterId: 'filibaf_entrance', connections: ['north_crossroad'], position: [825, 160], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, hiddenName: '???' },
+    // Armorer's-son side quest — opens once the crossroad quest dialog is
+    // finished (handleEncounterChoiceClick unlocks it). Goes nowhere yet:
+    // no encounter, a placeholder node for the rescue beat to come.
+    { id: 'north_road', name: 'The North Road', description: 'The road climbs north toward the smoke-hazed hills.', encounterId: '', connections: ['north_crossroad'], position: [540, 85], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'The road runs on into the northern hills.' },
   ];
 
   for (const data of nodes) {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'north_gate_return';
+  return map;
+}
+
+// === Qualibaf Bridge Map (armorer's-son side quest, WIP) ===
+// Reached by walking the unlocked north_road node off the North
+// Crossroad (see transitionToQualibafBridge in main.js). The party
+// climbs the Frontier Road from the entry, up alongside the river, into
+// the treeline, to an overlook above the partially-destroyed bridge.
+// Walking back onto the entry returns to the North Qualibaf map. The
+// overlook is the current end of content — the rescue beat comes later.
+export function createQualibafBridgeMap() {
+  const map = new GameMap('qualibaf_bridge', 'The Frontier Road');
+  map.mapImages = {
+    qualibaf_bridge: 'Maps/QualibafBridgeMap.jpg',
+  };
+  // Standard fog of war (see CLAUDE.md): every node past the entry is
+  // `discoverable` + '???' — invisible until the party is one hop away,
+  // then shown as '???', then named once walked onto. The two patrol
+  // zones — {river_climb, treeline} on the climb and {bridge,
+  // trail_north} past the overlook — each host the Elite Kobold
+  // Patrol on ONE randomly chosen node (persisted in _bridgePatrolNodes,
+  // respawns on rest), mirroring the frog-rocks pattern. The waterfall
+  // is the current end of content.
+  const nodes = [
+    { id: 'frontier_road', name: 'The Frontier Road', description: 'The narrowing trade road, climbing north toward the broken bridge.', encounterId: 'qualibaf_bridge_approach', connections: ['river_climb'], position: [840, 960], mapArea: 'qualibaf_bridge', canRevisit: false },
+    { id: 'river_climb', name: 'The River Path', description: 'A switchback track hugging the gorge as the river drops away below.', encounterId: '', connections: ['frontier_road', 'treeline'], position: [650, 800], mapArea: 'qualibaf_bridge', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The path climbs on beside the water.' },
+    { id: 'treeline', name: 'The Treeline', description: 'Wind-bent pines crowd the path, dim and close.', encounterId: '', connections: ['river_climb', 'bridge_overlook'], position: [910, 650], mapArea: 'qualibaf_bridge', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The pines thicken above you.' },
+    { id: 'bridge_overlook', name: 'Bridge Overlook', description: 'A rise above the gorge, looking down on the bridge.', encounterId: 'qualibaf_bridge_overlook', connections: ['treeline', 'bridge'], position: [750, 550], mapArea: 'qualibaf_bridge', canRevisit: false, discoverable: true, hiddenName: '???', hiddenDescription: 'The trees thin toward an overlook.' },
+    { id: 'bridge', name: 'The Broken Bridge', description: 'The near end of the shattered span, slick with spray.', encounterId: '', connections: ['bridge_overlook', 'trail_north'], position: [940, 420], mapArea: 'qualibaf_bridge', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The broken bridge lies ahead.' },
+    { id: 'trail_north', name: 'The North Trail', description: 'A steep, broken trail clawing north off the bridge toward the falls.', encounterId: '', connections: ['bridge', 'waterfall'], position: [960, 250], mapArea: 'qualibaf_bridge', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A rough trail climbs north.' },
+    // Teleporter to the Qualibaf Waterfall map (goes back and forth). The
+    // transition fires on walk-onto / click-on-self via arriveAtNode.
+    { id: 'waterfall', name: 'To The Waterfall', description: 'The trail climbs out of sight toward the falls beyond.', encounterId: '', connections: ['trail_north'], position: [940, 100], mapArea: 'qualibaf_bridge', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The roar of falling water ahead.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'frontier_road';
+  return map;
+}
+
+// === Qualibaf Waterfall Map (armorer's-son side quest, WIP) ===
+// Reached from the 'To The Waterfall' node on the bridge map — a
+// bidirectional teleport pair (transitionToQualibafWaterfall / Back in
+// main.js). One entry node for now; the rescue beat continues here later.
+export function createQualibafWaterfallMap() {
+  const map = new GameMap('qualibaf_waterfall', 'The Waterfall');
+  map.mapImages = {
+    qualibaf_waterfall: 'Maps/QualibafWaterFallMap.jpg',
+  };
+  // Entry fires the one-shot arrival dialog (canRevisit:false) and acts as
+  // the teleport-back node. From it, an off-trail ambush path of four
+  // `discoverable` nodes climbs through cover toward the falls — the
+  // "keep off the trail and find an opening" beat. Empty for now (WIP).
+  const nodes = [
+    { id: 'waterfall_entry', name: 'The Falls Trail', description: 'The trail crests into the waterfall valley, the falls thundering ahead beyond the river.', encounterId: 'qualibaf_waterfall_arrival', connections: ['ambush_rocks'], position: [840, 970], mapArea: 'qualibaf_waterfall', canRevisit: false },
+    { id: 'ambush_rocks', name: 'Off the Trail', description: 'You slip off the trail into a jumble of mossy boulders, the column just visible below.', encounterId: '', connections: ['waterfall_entry', 'ambush_pines'], position: [910, 780], mapArea: 'qualibaf_waterfall', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Boulders break the slope off the trail.' },
+    { id: 'ambush_pines', name: 'The Pinewood', description: 'Dense pines screen your approach as you shadow the wagon up the valley.', encounterId: '', connections: ['ambush_rocks', 'ambush_ledge'], position: [890, 610], mapArea: 'qualibaf_waterfall', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Dark pines climb the valley side.' },
+    { id: 'ambush_ledge', name: 'The Spray Ledge', description: 'A wet ledge above the river, the falls roaring close now, mist soaking everything.', encounterId: '', connections: ['ambush_pines', 'ambush_overlook'], position: [780, 530], mapArea: 'qualibaf_waterfall', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A misted ledge above the water.' },
+    { id: 'ambush_overlook', name: 'Forest Ambush', description: 'A vantage over the head of the column where it bunches at the mouth of the mountain — good cover, a clean line to the wagon.', encounterId: '', connections: ['ambush_ledge'], position: [620, 620], mapArea: 'qualibaf_waterfall', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A rise overlooking the falls.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'waterfall_entry';
   return map;
 }
 

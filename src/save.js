@@ -111,6 +111,7 @@ export function saveGame(state, saveName = '') {
     // which stones are mined (the frogs would otherwise visibly
     // re-appear on cleared rocks). Cleared via setWellRested on rest.
     lakeFrogRocks: Array.isArray(state.lakeFrogRocks) ? state.lakeFrogRocks.slice() : null,
+    bridgePatrolNodes: Array.isArray(state.bridgePatrolNodes) ? state.bridgePatrolNodes.slice() : null,
     // Kraken Spawn one-time boss. Latches forever (never cleared on
     // rest) so a save+reload after the kraken fight remembers the
     // post-kraken level-up was awarded.
@@ -141,6 +142,7 @@ export function saveGame(state, saveName = '') {
     // Baby Roc repeat-ambush latch — same shape as direBearDefeated.
     // Cleared on rest so the nest re-arms for another run.
     babyRocDefeated: !!state.babyRocDefeated,
+    giantBoarDefeated: !!state.giantBoarDefeated,
     // Olbrim's Mithril Remedies — one-shot greet latch. Fires the
     // first post-shrine walk-in; revisits go straight into the
     // open-revisit-then-shop flow.
@@ -218,6 +220,7 @@ export function saveGame(state, saveName = '') {
     dragonEggDamage: typeof state.dragonEggDamage === 'number' ? state.dragonEggDamage : 0,
     heroesOfQualibaf: !!state.heroesOfQualibaf,
     volcanoChoiceCompleted: !!state.volcanoChoiceCompleted,
+    armorerSonQuestStarted: !!state.armorerSonQuestStarted,
     chapter8SlybladeSeen: !!state.chapter8SlybladeSeen,
     valdrisaJoined: !!state.valdrisaJoined,
     studyVisited: !!state.studyVisited,

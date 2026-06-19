@@ -336,6 +336,23 @@ export function createKoboldBackup() {
   });
 }
 
+// Bloodied Fury — Giant Boar's passive. A binary state buff, re-checked at
+// the start of each of its turns: while the boar is Bloodied (half max HP
+// or less) its Rage is SET to +2; healed back above half, the bonus is
+// gone. It does NOT accumulate — Regen can't farm stacking Rage by bobbing
+// the boar in and out of Bloodied.
+export function createBloodiedFury() {
+  return new Power({
+    id: 'bloodied_fury',
+    name: 'Bloodied Fury',
+    costDescription: 'Passive',
+    effectDescription: 'While Bloodied: +2 Rage.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'While Bloodied: +2 Rage',
+  });
+}
+
 // Plague Spawn — Plague Cockroach's turn-start summon power. Mirrors
 // kobold_backup's shape: passive, no recharge cost, fires at start of
 // the cockroach's turn and pushes a fresh 1/1 Cockroach onto the

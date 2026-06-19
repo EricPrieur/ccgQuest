@@ -261,6 +261,11 @@ export class Deck {
     if (effects.some(e => e && e.effectType === 'on_discard_draw')) {
       this.draw(1, 10);
     }
+    // Fire the generic on-discard hook (Harpy Feather's `on_discard` draw,
+    // the Harpy Egg Omelette meal, etc.) so it triggers from EVERY discard
+    // source — hand discards, monster-forced discards, deck damage that
+    // spills into hand. Only the player's deck installs the hook.
+    if (typeof this.onCardDiscarded === 'function') this.onCardDiscarded(card);
     for (const e of effects) {
       if (e && e.effectType === 'on_discard_discard') {
         const n = Math.max(1, e.value || 1);
