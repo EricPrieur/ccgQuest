@@ -9,11 +9,14 @@ function generateUid() {
  * A single effect on a card.
  */
 export class CardEffect {
-  constructor(effectType, value, target = TargetType.SINGLE_ENEMY, maxTargets = 0) {
+  constructor(effectType, value, target = TargetType.SINGLE_ENEMY, maxTargets = 0, bleed = 0) {
     this.effectType = effectType;
     this.value = value;
     this.target = target;
     this.maxTargets = maxTargets;
+    // optional Bleed rider applied to each target this effect hits.
+    // Used by the Rampaging Troll's Rend (damage_random_split + Bleed).
+    this.bleed = bleed;
     // optional: the play flow will skip this effect entirely when no
     // valid target exists (e.g. Raena's Called arrow vs an invulnerable-
     // only-enemy fight). Lets the card still resolve as a pure summon
@@ -27,7 +30,7 @@ export class CardEffect {
   }
 
   copy() {
-    const c = new CardEffect(this.effectType, this.value, this.target, this.maxTargets);
+    const c = new CardEffect(this.effectType, this.value, this.target, this.maxTargets, this.bleed);
     c.optional = this.optional;
     c.noAttackCount = this.noAttackCount;
     return c;

@@ -548,7 +548,7 @@ export function createWhiteDragonEgg() {
 export function createWhiteDragonWyrmling() {
   return new Card({
     id: 'white_dragon_wyrmling', name: 'White Dragon Wyrmling',
-    description: 'Recharge a card ->\nCall the White Dragon Wyrmling to the battle!\nDraw.',
+    description: 'Recharge a card ->\nCall the White Dragon Wyrmling\nto the battle!\nDraw.',
     shortDesc: 'R+1->Call\nthe Wyrmling\nDraw',
     // 'allies' subtype (matches Thorb / Raena / Valdrisa companion
     // cards) — the wyrmling fights alongside the party as a
@@ -637,13 +637,13 @@ export function createFireBurst() {
   return new Card({
     id: 'fire_burst',
     name: 'Fire Burst',
-    description: 'Deal 2 Damage and 2 Fire.',
-    shortDesc: '2 Dmg+2 Fire',
+    description: 'Deal 1 Damage and 2 Fire.',
+    shortDesc: '1 Dmg+2 Fire',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_fire', 2, TargetType.SINGLE_ENEMY),
     ],
     gamePlusOffset: { damage: 2, apply_fire: 1 },
@@ -1123,9 +1123,13 @@ export function createRaenaCard() {
       const arrow = new CardEffect('damage', 2, TargetType.SINGLE_ENEMY);
       arrow.optional = true;
       arrow.noAttackCount = true;
+      // fromAlly — the arrow is Raena's shot, so a Riposte lashes back at
+      // HER, not the player. Summon resolves FIRST so she's on the field
+      // to take it (see the `damage` handler + triggerSplitPower).
+      arrow.fromAlly = true;
       return [
-        arrow,
         new CardEffect('summon_raena', 1, TargetType.SUMMON),
+        arrow,
         new CardEffect('recharge_extra', 1, TargetType.SELF),
         new CardEffect('draw', 1, TargetType.SELF),
       ];
@@ -1154,9 +1158,10 @@ export function createRaenaCard2() {
       const arrow = new CardEffect('damage', 3, TargetType.SINGLE_ENEMY);
       arrow.optional = true;
       arrow.noAttackCount = true;
+      arrow.fromAlly = true; // Riposte hits Raena, not the player (summon first)
       return [
-        arrow,
         new CardEffect('summon_raena_upgraded', 1, TargetType.SUMMON),
+        arrow,
         new CardEffect('recharge_extra', 1, TargetType.SELF),
         new CardEffect('draw', 1, TargetType.SELF),
       ];
@@ -1186,9 +1191,10 @@ export function createRaenaCardTier3() {
       const arrow = new CardEffect('damage', 4, TargetType.SINGLE_ENEMY);
       arrow.optional = true;
       arrow.noAttackCount = true;
+      arrow.fromAlly = true; // Riposte hits Raena, not the player (summon first)
       return [
-        arrow,
         new CardEffect('summon_raena_tier3', 1, TargetType.SUMMON),
+        arrow,
         new CardEffect('recharge_extra', 1, TargetType.SELF),
         new CardEffect('draw', 1, TargetType.SELF),
       ];
@@ -1284,7 +1290,7 @@ export function createFreshFish() {
 // consumables and adds them to the hand. Awarded once at the Cold
 // Spring encounter alongside the find of his trail.
 export function createBagOfHerbs() {
-  return new Card({
+  const card = new Card({
     id: 'bag_of_herbs',
     name: "Olbrim's Bag of Herbs",
     description: 'Recharge -> Gain 2 Herbs:\nGoodberry, Cave Shroom, or Frostbloom.',
@@ -1298,6 +1304,9 @@ export function createBagOfHerbs() {
     rarity: 'uncommon',
     tier: 2,
   });
+  // Side preview — show the three herbs it can draw from.
+  card.previewCards = [createGoodberry(), createCaveShroom(), createFrostbloom()];
+  return card;
 }
 
 export function createFrostbloom() {
@@ -2916,13 +2925,14 @@ export function createToughHide() {
   return new Card({
     id: 'tough_hide',
     name: 'Tough Hide',
-    description: 'Recharge -> Block 1, Draw.',
-    shortDesc: 'R->Block 1, Draw',
+    description: 'Recharge -> Block 1,\nHeal 1 Ailment, Draw.',
+    shortDesc: 'R->Block 1\nHeal Ailment, Draw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('heal_n_negative_effects', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     gamePlusOffset: { block: 2 },
@@ -2950,13 +2960,14 @@ export function createLooseBone() {
   return new Card({
     id: 'loose_bone',
     name: 'Loose Bone',
-    description: 'Recharge -> Block 1, Draw.\nSummon a Restless Bone.',
-    shortDesc: 'R->Block 1, Draw\n+Restless Bone',
+    description: 'Recharge -> Block 1, Heal 1 Poison,\nDraw. Summon a Restless Bone.',
+    shortDesc: 'R->Block 1, Heal Poison\nDraw, +Restless Bone',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 1, TargetType.SELF),
+      new CardEffect('heal_poison', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     // Offset: +2 Block AND each +1 bumps the random-summon max by 1
@@ -3103,14 +3114,15 @@ export function createHideInCorner() {
   return new Card({
     id: 'hide_in_corner',
     name: 'Hide in the Corner',
-    description: 'Recharge -> Block 2,\nGain Shield. Draw.',
-    shortDesc: 'R->Block 2\nGain Shield, Draw',
+    description: 'Recharge -> Block 2, Gain Shield,\nHeal All Ailment, Draw.',
+    shortDesc: 'R->Block 2, Shield\nHeal All, Draw',
     subtype: 'armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('heal_all_negative_effects', 0, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     gamePlusOffset: { block: 2, gain_shield: 1 },
@@ -4061,6 +4073,224 @@ export function createSailorsLuckyCompass() {
     unplayable: true,
     // +1 to the upper bound per offset (1-3 → 1-4 → 1-5).
     gamePlusOffset: { on_draw_heroism_random: 1 },
+  });
+}
+
+// === Ore loot (Tharnag tunnels supply) ===
+// Unplayable — they sit in the deck as recharge fodder only ("can use
+// them as recharge but that's it"). Copper / Silver / Gold sell for FULL
+// value at a weaponsmith or armorsmith (the ORE sell handling in
+// main.js); Mithril is too valuable to sell. All Tier 2. `subtype: 'ore'`
+// keeps them out of the gear deck-limit categories.
+export function createCopperOre() {
+  return new Card({
+    id: 'copper_ore', name: 'Copper Ore',
+    description: 'Raw copper ore. Sells for full value at a\nweaponsmith or armorsmith.',
+    shortDesc: 'Sell full:\nsmith shop',
+    subtype: 'ore', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [], rarity: 'common', tier: 2, unplayable: true, sellable: true,
+  });
+}
+export function createSilverOre() {
+  return new Card({
+    id: 'silver_ore', name: 'Silver Ore',
+    description: 'Raw silver ore. Sells for full value at a\nweaponsmith or armorsmith.',
+    shortDesc: 'Sell full:\nsmith shop',
+    subtype: 'ore', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [], rarity: 'uncommon', tier: 2, unplayable: true, sellable: true,
+  });
+}
+export function createGoldOre() {
+  return new Card({
+    id: 'gold_ore', name: 'Gold Ore',
+    description: 'Raw gold ore. Sells for full value at a\nweaponsmith or armorsmith.',
+    shortDesc: 'Sell full:\nsmith shop',
+    subtype: 'ore', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [], rarity: 'rare', tier: 2, unplayable: true, sellable: true,
+  });
+}
+export function createMithrilOre() {
+  return new Card({
+    id: 'mithril_ore', name: 'Mithril Ore',
+    description: 'Raw mithril ore — too valuable to sell.',
+    shortDesc: "Can't sell",
+    subtype: 'ore', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [], rarity: 'epic', tier: 2, unplayable: true,
+  });
+}
+
+export function createAdamantineOre() {
+  return new Card({
+    id: 'adamantine_ore', name: 'Adamantine Ore',
+    description: 'Dense adamantine, veined with Underdark magic — too valuable to sell.',
+    shortDesc: "Can't sell",
+    subtype: 'ore', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [], rarity: 'epic', tier: 2, unplayable: true,
+  });
+}
+
+// ============================================================
+// The Assassin (Khydhani) drop loot — Part 2. Killing the drow
+// assassin at the Great Forge drops exactly one of these (100%),
+// picked by weight. See LOOT_TABLES.khydhani_loot in main.js.
+// ============================================================
+
+// Drow Parrying Dagger — Tier 2 Rare simple weapon. Dual-mode like the
+// Old Spectral Hand: a free, stays-in-hand 3-damage poke as the attack,
+// or a reactive parry (Block 3, lash a random foe for 3, cycle a card)
+// as the defense.
+export function createDrowParryingDagger() {
+  return new Card({
+    id: 'drow_parrying_dagger', name: 'Drow Parrying Dagger',
+    // Plain text (capital "Hand" so it does NOT trigger the inline
+    // "Stays in hand" pill — that pill mid-damage-line rendered the
+    // "Deal 3" oddly). No Atk:/Def: labels.
+    description: 'Deal 3, Stays in Hand\nBlock 3, Deal 3 Randomly, Draw',
+    shortDesc: '3, Stays\nBlk3, 3 Rand, Draw',
+    subtype: 'simple',
+    cardType: CardType.ATTACK, costType: CostType.FREE,
+    effects: [
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    modes: [
+      new CardMode('Block 3, Deal 3 Randomly, Draw', [
+        new CardEffect('block', 3, TargetType.SELF),
+        new CardEffect('damage_random', 3, TargetType.RANDOM_ENEMY),
+        new CardEffect('draw', 1, TargetType.SELF),
+      ]),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { damage: 1, modes: [{ block: 1, damage_random: 1 }] },
+  });
+}
+
+// Adamantine Rapier — Tier 2 Rare martial weapon. Deal 6, and if THIS
+// card is your first attack of the turn, +4 (First Strike — distinct
+// from the bracer's passive "First Attack" which buffs whatever swings
+// first; first_strike_attack only fires when the rapier itself leads).
+// When it lands in the recharge pile it banks 1 Heroism for your next
+// swing.
+export function createAdamantineRapier() {
+  return new Card({
+    id: 'adamantine_rapier', name: 'Adamantine Rapier',
+    // "First Strike" and "On Recharge" both auto-render as pills. Drop
+    // the "1" — when it's a single Heroism we don't spell the count out.
+    description: 'Deal 6 First Strike: +4\nOn Recharge: Heroism',
+    shortDesc: '6, First Strike +4\nOnRech: Hero',
+    subtype: 'martial',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      // value = base 6; maxTargets carries the +4 First Strike bonus.
+      new CardEffect('first_strike_attack', 6, TargetType.SINGLE_ENEMY, 4),
+      new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { first_strike_attack: 2 },
+  });
+}
+
+// Adamantine Chain Shirt — Tier 2 Rare light armor. Boarhide Bracers'
+// shape scaled up: Block 6, +2 Heroism, Draw on defense, and banks +1
+// Heroism whenever it recharges.
+export function createAdamantineChainShirt() {
+  return new Card({
+    id: 'adamantine_chain_shirt', name: 'Adamantine Chain Shirt',
+    description: 'Block 6, 2 Heroism, Draw\nOn Recharge: Heroism',
+    shortDesc: 'Blk6, 2 Hero, Draw\nOnRech: Hero',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 6, TargetType.SELF),
+      new CardEffect('gain_heroism', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { block: 2, gain_heroism: 1 },
+  });
+}
+
+// Darkwood Hand Crossbow — Tier 2 Rare simple weapon. 2 True Damage
+// (unpreventable) plus Poison equal to the damage dealt. True damage
+// always lands in full, so the Poison rider matches it 1:1.
+export function createDarkwoodHandCrossbow() {
+  return new Card({
+    id: 'darkwood_hand_crossbow', name: 'Darkwood Hand Crossbow',
+    description: 'Deal 2 True Damage.\n+Poison equal to damage dealt.',
+    shortDesc: '2 True Dmg\n+Poison = dmg',
+    subtype: 'simple',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      // True Damage folds in Heroism / Rage / first-attack perks; the
+      // rider then drips Poison equal to whatever actually landed.
+      new CardEffect('unpreventable_damage', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison_per_damage', 0, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { unpreventable_damage: 1 },
+  });
+}
+
+// Piwafwi — Tier 2 Epic clothing (the drow's spider-silk cloak).
+// While it sits in the player's HAND, enemies weight the player at HALF
+// when picking a swing target (see pickEnemyAttackTarget / playerHasPiwafwi).
+// Defense: Block 3, +3 Shield, Scry 3.
+export function createPiwafwi() {
+  return new Card({
+    id: 'piwafwi', name: 'Piwafwi',
+    description: 'Enemies target you less.\nBlock 3, Gain 3 Shield, Scry 3',
+    shortDesc: 'Foes target you less\nBlk3, +3 Shld, Scry3',
+    subtype: 'clothing',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('gain_shield', 3, TargetType.SELF),
+      new CardEffect('scry_pick', 3, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'epic',
+    gamePlusOffset: { block: 1, gain_shield: 1, scry_pick: 1 },
+  });
+}
+
+// Drow Sleep Poison — Tier 2 Uncommon item. Consume to coat your next
+// swing: it applies 1 Drow Sleep Poison (a Poison variant that ticks
+// like Poison, is healed dead-last, and saps 1 attack damage per stack).
+// Mirrors Vial of Poison's grant-buff → consume-on-next-attack flow.
+export function createDrowSleepPoison() {
+  return new Card({
+    id: 'drow_sleep_poison', name: 'Drow Sleep Poison',
+    // "DrowPoison" is a keyword token that renders as the washed Drow
+    // Sleep Poison icon (NOT the green Poison icon).
+    description: 'Consume -> Next attack applies 1 DrowPoison',
+    shortDesc: 'C->Next:\n+1 DrowPoison',
+    subtype: 'item',
+    cardType: CardType.ITEM, costType: CostType.BANISH,
+    effects: [new CardEffect('grant_drow_sleep_buff', 1, TargetType.SELF)],
+    // No class restriction — the Assassin drops it for any class, so any
+    // class can uncork it. Sellable so it's never dead loot.
+    tier: 2, rarity: 'uncommon',
+    sellable: true,
+    gamePlusOffset: { grant_drow_sleep_buff: 0.5 },
+  });
+}
+
+// Enemy-only Drow Sleep Poison — the Assassin's version. Unlike the
+// player's consumable (BANISH), the monster's vial RECHARGES like any
+// other card and is an ABILITY (so the enemy planner queues it as a
+// utility play, not an attack). Playing it buffs his NEXT swing with an
+// extra Drow Sleep Poison stack (consumed via consumePoisonBuff). Not in
+// CARD_REGISTRY — enemy-only, surfaced in the codex via the Assassin deck.
+export function createDrowSleepPoisonEnemy() {
+  return new Card({
+    id: 'drow_sleep_poison_enemy', name: 'Drow Sleep Poison',
+    description: 'Next attack applies 1 DrowPoison',
+    shortDesc: 'Next: +1\nDrowPoison',
+    subtype: 'item',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [new CardEffect('grant_drow_sleep_buff', 1, TargetType.SELF)],
+    tier: 2, rarity: 'uncommon',
+    noTierOffset: true,
   });
 }
 
@@ -5698,6 +5928,197 @@ export function createGoblinSapperCharges() {
   });
 }
 
+// === Goblin Swarm loot drops (Part 2 tunnels) ===
+
+// Goblin Spike Trap — summons 1-2 stationary spike-trap allies that
+// can't attack but Riposte (deal their attack to anything that hits them).
+export function createGoblinSpikeTrap() {
+  return new Card({
+    id: 'goblin_spike_trap', name: 'Goblin Spike Trap',
+    description: 'Summon 1 or 2 Goblin Spike Trap.',
+    shortDesc: 'Summon 1-2\nSpike Traps',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_goblin_spike_trap', 2, TargetType.SUMMON)],
+    rarity: 'uncommon', tier: 2,
+    previewCreature: (() => {
+      const c = new Creature({
+        name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+        description: "Can't Attack. Riposte.", noTierOffset: true,
+      });
+      c._cantAttack = true;
+      c.riposte = true;
+      return c;
+    })(),
+  });
+}
+
+// Goblin War Banner — summons a 0/5 banner that can't attack but buffs
+// every player ally's damage by +1 while it stands.
+export function createGoblinWarBanner() {
+  return new Card({
+    id: 'goblin_war_banner', name: 'Goblin War Banner',
+    description: 'Summon a Goblin War Banner.',
+    shortDesc: 'Summon\nWar Banner',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_goblin_war_banner', 1, TargetType.SUMMON)],
+    rarity: 'uncommon', tier: 2,
+    previewCreature: (() => {
+      const c = new Creature({
+        name: 'Goblin War Banner', attack: 0, maxHp: 5,
+        description: "Can't Attack.\nAllies deal +1 Damage.", noTierOffset: true,
+      });
+      c._cantAttack = true;
+      c._allyDamageAura = 1;
+      return c;
+    })(),
+  });
+}
+
+// Spiked Goblin Helmet — light armor: block + a random spike strike + draw.
+export function createSpikedGoblinHelmet() {
+  return new Card({
+    id: 'spiked_goblin_helmet', name: 'Spiked Goblin Helmet',
+    description: 'Block 3, Deal 5 Randomly. Draw.',
+    shortDesc: 'Block 3\n5 random, Draw',
+    subtype: 'light_armor', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('damage_random', 5, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon', tier: 2,
+    gamePlusOffset: { block: 1, damage_random: 2 },
+  });
+}
+
+// Goblin Boss's Whistle — summons 2-4 random goblins (Minion / Sapper /
+// Warrior) to fight on the player's side. Game+ raises the MAX by +1 per
+// offset (2-5, 2-6, …) — handled in the summon_random_goblins effect.
+export function createGoblinBossWhistle() {
+  return new Card({
+    id: 'goblin_bosss_whistle', name: "Goblin Boss's Whistle",
+    description: 'Summon 2 to 4 Random Goblins.',
+    shortDesc: 'Summon 2-4\nRandom Goblins',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_random_goblins', 2, TargetType.SUMMON)],
+    rarity: 'rare', tier: 2,
+  });
+}
+
+// Bag of Stolen Teeth — relic that converts the combat's body count into
+// Heroism (1 per enemy defeated this combat).
+export function createBagOfStolenTeeth() {
+  return new Card({
+    id: 'bag_of_stolen_teeth', name: 'Bag of Stolen Teeth',
+    description: 'Gain Heroism for each\nenemy defeated this combat.',
+    shortDesc: 'Heroism per\nenemy slain',
+    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [new CardEffect('gain_heroism_per_defeated', 1, TargetType.SELF)],
+    rarity: 'epic', tier: 2,
+  });
+}
+
+// === Rampaging Troll loot drops (Part 2 tunnels) ===
+
+// Ring of Regeneration — stays-in-hand relic; gain 2 Regen each time
+// it's played.
+export function createRingOfRegeneration() {
+  return new Card({
+    id: 'ring_of_regeneration', name: 'Ring of Regeneration',
+    description: 'Gain 2 Regen.\nStays in hand.',
+    shortDesc: '+2 Regen\nStays in hand',
+    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.FREE,
+    effects: [
+      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    rarity: 'epic', tier: 2,
+    gamePlusOffset: { apply_regen: 1 },
+  });
+}
+
+// Troll Skin Jacket — clothing armor: block + regen + draw.
+export function createTrollSkinJacket() {
+  return new Card({
+    id: 'troll_skin_jacket', name: 'Troll Skin Jacket',
+    description: 'Block 3, Gain 2 Regen, Scry 2.',
+    shortDesc: 'Block 3, +2 Regen\nScry 2',
+    subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('scry_pick', 2, TargetType.SELF),
+    ],
+    rarity: 'rare', tier: 2,
+    gamePlusOffset: { block: 1, apply_regen: 1 },
+  });
+}
+
+// Troll Blood Vial — Consume for an immediate 3 Regen; also slots as a
+// Beverage that grants 2 Regen each turn for 3 turns.
+export function createTrollBloodVial() {
+  return new Card({
+    id: 'troll_blood_vial', name: 'Troll Blood Vial',
+    description: 'Consume -> Gain 3 Regen.\nBeverage: Gain 2 Regen for 3 turns.',
+    shortDesc: 'C->+3 Regen\nBeverage:\n+2 Regen 3t',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
+    effects: [
+      new CardEffect('apply_regen', 3, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'beverage',
+      name: 'Troll Blood Vial',
+      // 'regen' tick ADDS to the Regen stack each turn (merges with
+      // existing Regen) rather than healing separately — so 2 Regen +2
+      // from the vial → 4 Regen, heal 4, decay to 3, etc.
+      effectType: 'regen',
+      value: 2,
+      turnsPerCombat: 3,
+      description: 'Gain 2 Regen each turn for 3 turns.',
+    },
+    rarity: 'common', tier: 2,
+  });
+}
+
+// Severed Troll Arm — summons an exact Loathsome Limb ally (3 Atk... it
+// IS the troll's limb: 2/6 wounded to 3, Regen 2, Bleed). When the limb
+// regrows to full HP it re-attaches: you heal for its HP (6) and draw 1.
+export function createSeveredTrollArm() {
+  return new Card({
+    id: 'severed_troll_arm', name: 'Severed Troll Arm',
+    description: 'Summon a Loathsome Limb.',
+    shortDesc: 'Summon a\nLoathsome Limb',
+    subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_severed_troll_arm', 1, TargetType.SUMMON)],
+    rarity: 'rare', tier: 2,
+    previewCreature: (() => {
+      const c = new Creature({
+        name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
+        bleedAttack: 1, description: 'Regen 2.', noTierOffset: true,
+      });
+      c._regen = 2; c._regenMax = 2;
+      return c;
+    })(),
+  });
+}
+
+// Long Troll Teeth — stays-in-hand dagger that scales with how many
+// times it has struck this combat (Deal 2 + X, X = prior swings).
+export function createLongTrollTeeth() {
+  return new Card({
+    id: 'long_troll_teeth', name: 'Long Troll Teeth',
+    description: 'Deal X.\n(2 + swings this combat)\nStays in hand.',
+    shortDesc: 'Deal X\n2+swings, Stays',
+    subtype: 'item', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('troll_teeth_attack', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    rarity: 'uncommon', tier: 2,
+  });
+}
+
 export function createOgreMaul() {
   return new Card({
     id: 'ogre_maul',
@@ -6985,6 +7406,56 @@ export function createDwarvenScoutCard() {
   });
 }
 
+// Dwarven Crossbowman — Dwarven Tavern recruit (post-dragon). Summons the
+// same 2-Atk True-Damage crossbowman that mans the line at the Gate of the
+// Deep. Companion-routed like the Dwarven Scout.
+export function createDwarvenCrossbowmanCard() {
+  return new Card({
+    id: 'dwarven_crossbowman',
+    name: 'Dwarven Crossbowman',
+    description: 'Call Dwarven Crossbowman\nto the battle!',
+    shortDesc: 'Call\nCrossbowman',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_dwarven_crossbowman', 1, TargetType.SUMMON)],
+    rarity: 'uncommon',
+    tier: 2,
+    previewCreature: new Creature({
+      name: 'Dwarven Crossbowman', attack: 2, maxHp: 5, shield: 1,
+      unpreventable: true, description: 'Attacks deal True Damage.',
+    }),
+    gamePlusOffset: {},
+  });
+}
+
+// Dwarven Battle Cleric — Dwarven Tavern recruit (post-dragon). Front-line
+// healer: hits harder vs armored foes and patches up a wounded ally each
+// turn. Companion-routed like the Crossbowman.
+export function createDwarvenBattleClericCard() {
+  return new Card({
+    id: 'dwarven_battle_cleric',
+    name: 'Dwarven Battle Cleric',
+    description: 'Call Dwarven Battle Cleric\nto the battle!',
+    shortDesc: 'Call\nBattle Cleric',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_dwarven_battle_cleric', 1, TargetType.SUMMON)],
+    rarity: 'uncommon',
+    tier: 2,
+    previewCreature: (() => {
+      const c = new Creature({
+        name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
+        description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
+      });
+      c.endTurnHealRandomAlly = 2;
+      return c;
+    })(),
+    gamePlusOffset: {},
+  });
+}
+
 export function createDwarvenBrew() {
   return new Card({
     id: 'dwarven_brew',
@@ -7370,6 +7841,29 @@ export function createDireHide() {
     ],
     priority: 4,
     gamePlusOffset: { block: 2 },
+  });
+}
+
+// Rend — Rampaging Troll's signature claw attack (Part 2 tunnels).
+// Picks up to 2 random player-side targets and rakes each for 4 damage
+// plus 1 Bleed (the bleed rider rides the damage_random_split handler).
+// Monster-only. Base damage stays 4 in the normal game; Game+ scales it
+// +2 per monster offset via gamePlusOffset.
+export function createRend() {
+  return new Card({
+    id: 'rend',
+    name: 'Rend',
+    description: 'Recharge -> Deal 4 + Bleed to 2 targets.',
+    shortDesc: 'R->4 + Bleed x2',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_random_split', 4, TargetType.ALL_ENEMIES, 2, 1),
+    ],
+    tier: 2,
+    rarity: 'epic',
+    gamePlusOffset: { damage_random_split: 2 },
   });
 }
 
@@ -7762,7 +8256,7 @@ export function createLostAdventurersRing() {
     name: "Lost Adventurer's Ring",
     description: 'Heal 1, Gain 1 Heroism.\nStays in hand.',
     shortDesc: 'Heal 1\n+1 Heroism, Stays',
-    subtype: 'item',
+    subtype: 'relic',
     cardType: CardType.ITEM,
     costType: CostType.FREE,
     effects: [

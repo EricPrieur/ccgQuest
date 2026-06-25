@@ -11,10 +11,14 @@ export const EncounterPhase = Object.freeze({
 });
 
 export class EncounterText {
-  constructor(text, speaker = '', bgOverride = '') {
+  constructor(text, speaker = '', bgOverride = '', sfx = '') {
     this.text = text;
     this.speaker = speaker;
     this.bgOverride = bgOverride;
+    // Optional SOUND_MAP alias played as THIS line is revealed (e.g. the
+    // Great Pour lever-pull → 'door_unlock'). Handled generically in the
+    // dialog-advance handler in main.js.
+    this.sfx = sfx;
   }
 }
 
@@ -73,6 +77,10 @@ export class EncounterPhaseData {
     // "Aftermath" titles after the boss swap). Empty string
     // suppresses the title entirely.
     phaseTitle = null,
+    // LOOT phase: bypass the 50% drop gate (GATED_LOOT) so every listed
+    // table drops. Used by the Gate of the Deep front fights (guaranteed
+    // 1 goblin drop + 1 troll drop).
+    guaranteedLoot = false,
   }) {
     this.phaseType = phaseType;
     this.texts = texts;
@@ -89,6 +97,7 @@ export class EncounterPhaseData {
     this.lootPickCards = lootPickCards;
     this.lootPower = lootPower;
     this.phaseTitle = phaseTitle;
+    this.guaranteedLoot = guaranteedLoot;
   }
 }
 
@@ -5357,7 +5366,7 @@ export function createTharnagPart1EndingEncounter() {
 }
 
 // ============================================================
-// PART 2 — work in progress, debug-gated.
+// PART 2 — debug-gated (requires debug to start; gates on part2Started).
 //
 // Triggered from the post-dragon quarters_rest when debugMode is on
 // (see main.js startPart2Sequence). Two TEXT-only encounters drive the
@@ -5402,7 +5411,7 @@ export function createPart2Chapter1Encounter() {
       phaseType: EncounterPhase.TEXT,
       phaseTitle: 'Qualibaf',
       texts: [
-        new EncounterText('Spring. Months have softened the memory of fire. Raena has been back among her people for the better part of the season — and the three of you, you and Thorb and Valdrisa, have come down to Qualibaf wearing the unfamiliar weight of the word "envoys."', '', 'bg_qualibaf'),
+        new EncounterText('Spring, and the thaw has come at last. Months have softened the memory of ice — of the white dragon\'s long cold that choked the valley for twenty years. Raena has been back among her people for the better part of the season, and the three of you, you and Thorb and Valdrisa, have come down to Qualibaf wearing the unfamiliar weight of the word "envoys."', '', 'bg_qualibaf'),
         new EncounterText('The Guild has given over its long hall to the talks. Tharnag wants the trade road open again; Qualibaf wants dwarven masons. And the thing everyone keeps circling back to is the bridge.', '', 'bg_guild_hall'),
         new EncounterText('"Dwarven stone, elven timber, human coin." The Guild Master ticks them off on thick fingers. "Rebuild the Border Road span over the River Cutin and the Frontier opens west to east again. Your King\'s masons could have it standing by autumn." Thorb nods along, important as you please.', 'Guild Master', 'bg_qualibaf_bridge'),
         new EncounterText('Valdrisa leans over and corrects three of his figures in a whisper. Thorb corrects her correction. They argue load-bearing arches for ten solid minutes while the Guild Master waits with the patience of a man billing by the hour.', '', 'bg_guild_hall'),
@@ -5417,6 +5426,370 @@ export function createPart2Chapter1Encounter() {
         new EncounterText('"I am coming with you." Raena says it before anyone asks. "This goblin business runs under Tharnag\'s mountains. If something has pulled a whole people into the dark and made them hold their breath, the answer is that way — and I mean to be there when you find it."', 'Raena', 'bg_guild_hall'),
         new EncounterText('Valdrisa hefts her hammer. Thorb pockets the letters. The four of you turn north — toward the Border Mountains, the long road to Tharnag, and whatever is waiting, too quiet, in the deep.', '', 'bg_qualibaf'),
       ],
+    }),
+  ]);
+}
+
+// Part 2 — the General's alarm. Fires once when the party re-enters
+// Tharnag through the Grand Hall Side Entry after Part 2 has started:
+// the goblins have broken in through the old mine workings and the King
+// is down in the lower galleries. Sends the party to the tunnels.
+export function createPart2GrandHallAlarmEncounter() {
+  return new Encounter('part2_grand_hall_alarm', 'Tharnag Under Attack', 'The halls are in chaos.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Tharnag Under Attack',
+      texts: [
+        new EncounterText('The side door opens onto bedlam. The Grand Hall is a churn of running dwarves — soldiers buckling armor on at a dead sprint, servants hauling children toward the upper galleries, horns blaring somewhere far below your feet. The air tastes of forge-smoke and fear.', '!', 'bg_grand_hall'),
+        new EncounterText('General Durgan, the King\'s war-marshal, carves through the crowd toward you — a broad, grey-bearded dwarf in dented war-plate, barking orders over his shoulder as he comes. The soldiers part for him on instinct.', '!', 'bg_grand_hall'),
+        new EncounterText('"Thorbadin! By the deeps, you\'re finally here." He grips Thorb by both shoulders, relief and dread at war in his face. "It\'s bad, lad. It\'s the deep tunnels."', 'General Durgan', 'bg_grand_hall'),
+        new EncounterText('"You know the old galleries — the ones that run down to the underdark. Sealed for centuries, a standing garrison on every gate. Tonight the watch blew a single horn and went silent. The goblins are through them like the doors were never barred. If we don\'t hold the breach they\'ll be in THIS hall by nightfall."', 'General Durgan', 'bg_grand_hall'),
+        new EncounterText('"Your father wouldn\'t wait for the muster — he took the Mine Guard down to hold the lower galleries himself. He\'s holding. But with far too few, and he needs every axe we have. Go to him, lad. Please."', 'General Durgan', 'bg_grand_hall'),
+        new EncounterText('Raena has gone very still, an arrow already between her fingers. "I knew it," she says, low. "No raids. No tracks past the foothills. No sound, for weeks." Her eyes are hard. "They never left the mountains — they went UNDER them. Down into the deep roads, the underdark, massing in the dark until they could come up beneath your floor."', 'Raena', 'bg_grand_hall'),
+        new EncounterText('Thorb is already moving, axe coming off his back. "Then we stop standing about and we GO." He rounds on the party. "Down the Middle Stairs — the side stair drops to the tunnels. If they take the galleries they take the forge, and if they take the forge they take Tharnag." He doesn\'t slow. "MOVE!"', 'Thorb', 'bg_grand_hall'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — reaching the real tunnel exit (the randomly-chosen one this
+// run): the front of the battle at the Gate of the Deep. Fires after the
+// party transitions onto the Gate of the Deep map, so the dialog plays
+// over that map's art.
+export function createTunnelGateArrivalEncounter() {
+  return new Encounter('tunnel_gate_arrival', 'The Front', 'The Gate of the Deep.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Front',
+      texts: [
+        new EncounterText('The passage opens, and the noise hits you first — the crash and roar of a battle line holding under pressure. You\'ve found it: the front, and the great Gate of the Deep beyond it.'),
+        new EncounterText('"Thorbadin! Get to the line, lad — we\'ll talk while we fight!" King Thorgrim stands in the thick of it, hammer slick to the haft, his guard closed up tight around him.', 'King Thorgrim'),
+        new EncounterText('"They came at us months ago — ogres and crude siege engines. We broke them easy enough." He caves in a goblin\'s skull without breaking stride. "But these trolls are something else."', 'King Thorgrim'),
+        new EncounterText('"We cut them down and they get back UP. Hew off a limb and it knits before your eyes. They are all but unkillable — and the goblins are just fodder, thrown at the gate by the thousand to wear us down."', 'King Thorgrim'),
+        new EncounterText('"It is only a matter of time before they take the gate, and then the tunnels are open and it is a free-for-all. Many goblins, and a few of the trolls, have already slipped past the line into the deeps behind us."', 'King Thorgrim'),
+        new EncounterText('"Thorbadin — I cannot be everywhere at once. Take your company to a flank, LEFT or RIGHT, and break their push there. I will hold the center myself." He grips Thorb\'s shoulder. "Choose a side, and GO."', 'King Thorgrim'),
+        new EncounterText('Thorb hefts his axe, eyes hard. "Aye, Father. We\'ll hold." He turns to the party. "Left or right — pick our fight, and pick it fast."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — The Great Forge floor. The dwarves who should be manning the
+// forge are dead; a drow assassin (Khydhani — see lore) is cleaning his
+// blade over the bodies, and strikes. Placeholder combat for now: the
+// Kobold Slyblade kit, framed as a surprise ambush.
+export function createForgeFloorAmbushEncounter() {
+  return new Encounter('forge_floor_ambush', 'The Forge Floor', 'The great forge — and something is very wrong.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Forge Floor',
+      texts: [
+        new EncounterText('You step onto the forge floor — and stop. Something is wrong. This should be a wall of noise: hammers, bellows, a hundred dwarves heating and working the metal. Instead there is nothing. Only the slow, molten hiss of the lava flowing through its channels.'),
+        new EncounterText('Then you see them. Cadavers, slumped just around the corners. One has skin gone sickly green, face frozen in the agony of some poison. The other lies in a spreading pool of blood, his throat opened ear to ear.'),
+        new EncounterText('A voice reaches you — low, amused, the common tongue broken and accented. You turn. A dark elf stands among the dead, unhurried, wiping a bloodied blade clean against his dark cloak.', '!'),
+        new EncounterText('His pale eyes settle on you. "You should not have come. You will not be able to save the city."', 'Dark Elf'),
+        new EncounterText('And then he MOVES — faster than anything should — already inside your guard before the words have finished, blade flashing for your throat!', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'khydhani',
+    }),
+    // Post-combat — he doesn't die clean. He feints surrender, you
+    // hesitate, and he hurls himself into the tunnels. Plants the seed
+    // that he knew something; the chase is left for later.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Forge Floor',
+      texts: [
+        new EncounterText('Your blade beats his aside at last. The dark elf staggers, one knee folding against the lip of a molten channel, his guard finally broken. You step in for the clean, final cut.'),
+        new EncounterText('But his hand comes up open — not to parry. The mockery is gone from his face. His pale eyes find yours and his mouth works, as though there is something he means for you to hear.', '!'),
+        new EncounterText('"Wait. You do not understand what is truly happening here. Let me—"', 'Dark Elf'),
+        new EncounterText('You hesitate. Only a heartbeat. Only that.'),
+        new EncounterText('It is enough. He throws himself backward off the ledge and is gone — swallowed by the dark of the lower tunnels before you can reach the edge. No body. No answer. Only the hiss of the lava below and the echo of falling stone.', '!'),
+        new EncounterText('You curse yourself for the pause. Whatever he meant to say is lost with him now. But there is no chasing a ghost through the deep — the city above still needs you, and the forge will not wait.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [3, 6],
+      // 100% drop — khydhani_loot is NOT in GATED_LOOT, so the Assassin
+      // always yields exactly one drow-themed item (pick-one by weight).
+      lootCards: ['khydhani_loot'],
+    }),
+  ]);
+}
+
+// Part 2 — The Great Forge. The climax of the forge run: the party reaches
+// the channel-mechanism and must loose the Great Pour the King ordered,
+// knowing it almost certainly drowns Thorgrim himself in the Deep. A
+// TEXT-only beat (no combat, no loot) — the weight is the point.
+export function createGreatForgeEncounter() {
+  return new Encounter('the_great_forge', 'The Great Forge', "The Great Forge — and the lever that looses the mountain's fire.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Great Pour',
+      texts: [
+        new EncounterText("The stair opens onto the heart of the forge: a vast vaulted chamber where the mountain's lava is held in check behind ancient channels and obsidian gates. Durgan's engineers have woken the old mechanism and gone. Only the great levers remain now — and they answer to you. There is no time. And yet you cannot make your hand close on the iron."),
+        new EncounterText("Because you understand, now, what pulling them means. Loose the Pour and the molten rock floods down into the Deep — drowning the trolls, sealing the lower galleries forever... and the King with them. Thorb's father. King Thorgrim, who is holding the Gate of the Deep at this very moment so that his son could reach this very room."),
+        new EncounterText('Will this be the end of the King? He called for it himself — gave the order with his own mouth, eyes open, knowing exactly where he stood. He knew what he was doing. It does not make your hand any steadier.'),
+        new EncounterText('Thorb and Valdrisa stand over the channel-gauges, tracing the old dwarven script with their fingers, their faces heavy with the meaning of it. Neither of them speaks. There is nothing left to say that was not already said on the stair down.'),
+        new EncounterText('Thorb lifts his eyes to Valdrisa. For a long moment the two of them only look at one another. Then — slowly, deliberately — he nods. Yes.', 'Thorb'),
+        new EncounterText('Valdrisa sets her jaw and throws her weight against the levers, one after the next, locking each into its seat. Far down in the stone, something ancient GROANS awake. The Great Pour is loosed into the lower tunnels.', '', '', 'door_unlock'),
+        new EncounterText('At first — nothing. A held breath. The whole mountain seeming to wait on it.'),
+        new EncounterText('Then, as though a dam has broken somewhere far below, the lava COMES. It roars into the channels in a molten tide, the heat climbing in the chamber as the level rises, and you watch the rivers of fire pour themselves down into the dark and swallow the tunnels whole.', '!'),
+        new EncounterText('The fate of the Deep is sealed. The trolls are drowning in fire; the way behind them is closing forever. And the King is somewhere down there, in the heart of it.'),
+        new EncounterText('You did what he asked of you. There is nothing left to do but stand in the rising heat — and wonder. Did it save the city?', '!'),
+        // A held silence — the party just watches the lava. The blank lines
+        // give the moment room to breathe before the quick turn to leave.
+        new EncounterText('\n\n\nNo one speaks. The three of you only stand at the channel-rail and watch the fire pour itself into the dark, the heat washing over your faces.\n\n\n'),
+        new EncounterText('At length Thorb turns from the channels, his eyes wet in the firelight. "...Come. Durgan will be waiting for word." There is nothing more to do here.', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — the reforge station. Once the Pour is done and Durgan has handed
+// over the Mithril Ore, returning to the Great Forge opens this menu: the
+// smiths reforge an armor or weapon (On Recharge: +1 Shield) per Mithril Ore.
+// The 'mithril_reforge' choice opens the FORGE_WEAPON picker; it's
+// returnToChoices so the player can reforge until ore / gear run out.
+// Smith's intro line — shown once before the reforge picker opens (the
+// node intercept fires this only on the first reforge visit, then opens the
+// metal-select picker straight away on later visits). On completion main.js
+// hands off into the picker.
+export function createMithrilForgeEncounter() {
+  return new Encounter('mithril_forge', 'The Great Forge', 'The smiths can reforge your gear.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Great Forge',
+      texts: [
+        new EncounterText('The great channels have cooled to black glass, but the smiths are still at their anvils, and they know their craft. One of them catches the gleam of ore in your pack and gives a slow, approving nod. "Aye. Bring it here, then. Mithril for the shield, Adamantine for the heart — let us see what we can fold into your steel."', 'Dwarven Smith'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — back in Tharnag after the Gate of the Deep. The player carries
+// the King's order to call the Great Pour; General Durgan balks (an
+// unwarranted sacrifice), Thorb trusts the King's plan. Fires once on the
+// return up the "To the Tunnels" stair; opens the "To the Forge" stair.
+export function createGreatPourReturnEncounter() {
+  return new Encounter('great_pour_return', 'General Durgan', 'Back in Tharnag, at the head of the deep stair.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'General Durgan',
+      texts: [
+        new EncounterText('You haul yourself up the last of the dark stair and back into Tharnag, lungs burning. General Durgan is already there — grey beard bristling, barking orders at a knot of soot-stained engineers.'),
+        new EncounterText('"Thorbadin. You look like you crawled out of a grave." He reads your face, and his own hardens. "Out with it, lad."', 'General Durgan'),
+        new EncounterText('"The King\'s order, Durgan. Call the Great Pour. Open the forge-channels and flood the deep tunnels — drown the trolls and seal the Deep behind them."', 'Thorb'),
+        new EncounterText('Durgan goes very still. "...The Great Pour. You want me to scuttle the whole underdeep — the galleries, the lower forges, half of what our grandfathers cut — on a word. With the King STILL DOWN THERE."', 'General Durgan'),
+        new EncounterText('"It is a fool\'s sacrifice. We don\'t even know these trolls can\'t be broken the honest way. I\'ll not drown the Deep and my King on a panic." His voice is flat, unmoved.', 'General Durgan'),
+        new EncounterText('Thorb meets the old marshal\'s glare without flinching. "My father does not panic. If he calls the Pour, he has a reason — and a plan. Trust him, Durgan. I do. Now make it ready."', 'Thorb'),
+        new EncounterText('Durgan holds the stare a long moment, then grunts. "...Aye. To the forge, then. But those channels haven\'t run in an age — we\'ll have to wake them by hand. Go. I\'ll send word ahead."', 'General Durgan'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — back in the Grand Hall after the Great Pour. Durgan meets the
+// party at the head of the forge stair: the King is likely safe (he had a
+// plan), the city is saved, go and rest. Sleeping in the Quarters after this
+// triggers the tier-2 level-up. Fires once on the return to the To-the-Forge
+// stair, gated on greatPourActivated.
+export function createDurganReturnEncounter() {
+  return new Encounter('durgan_return', 'General Durgan', 'Back in the Grand Hall, the deed done.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'General Durgan',
+      texts: [
+        new EncounterText('You climb back up into the Grand Hall, the heat of the forge still clinging to your cloaks. General Durgan is waiting at the head of the stair — and for once the old marshal has no orders ready. He reads your faces, and the fight goes out of him.'),
+        new EncounterText('"...It is done, then." It is not a question. He lets a long breath out through his beard. "The channels are running. The Deep is drowning — and every troll in it."', 'General Durgan'),
+        new EncounterText('Thorb cannot quite meet his eye. "My father was still down there, Durgan. We loosed it knowing that."', 'Thorb'),
+        new EncounterText('"Aye. You did. And so did HE, lad." Durgan\'s voice is rough, but not unkind. "Thorgrim gave that order with his own mouth. He does not spend lives he has not already counted — least of all his own. If any soul alive could find his way out of a flooding mountain, it is your father. He had a plan. He always has a plan."', 'General Durgan'),
+        new EncounterText('"You cannot know that," Thorb says, very quietly.', 'Thorb'),
+        new EncounterText('"No. I cannot." The general grips his shoulder, iron-hard. "But I know you did what was asked of you, and the city still stands for it. Tharnag is SAVED, lad. Tens of thousands who will wake tomorrow because three of you walked into that forge and did the hard thing when it had to be done."', 'General Durgan'),
+        new EncounterText('He steps back, and something in him gentles. "So go. All of you. Your quarters are made up and the watch is set. There will be wounds enough to count come morning, and hard choices about what comes next — but not tonight. Tonight you have earned your rest."', 'General Durgan'),
+        new EncounterText('"Sleep, Thorbadin. That is the only order I will give you." And for the first time you can remember, the old marshal almost smiles. "We will think on the rest of it tomorrow."', 'General Durgan'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — the first sleep in the Quarters after the Great Pour. Sleep →
+// tier-2 level-up (empty LOOT phase routes into ABILITY_SELECT, then the
+// perk + stat steps) → wake the next morning. Same shape as the post-Roc
+// Last Watch rest. Fires once (gated on greatPourActivated + durgan_return
+// in startNodeEncounter); plain quarters_rest takes over afterward.
+export function createGreatPourRestEncounter() {
+  return new Encounter('great_pour_rest', 'Rest', 'Sleep, at last — the city still stands.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Your quarters are dark and forge-warm, the furs heavy on the stone bed. You let yourself down into them, and for the first time since the Gate of the Deep your body finally believes it is allowed to stop.'),
+        new EncounterText('You think you should not be able to sleep at all — not with the King somewhere in the dark and the fire, not with the city only half-mourning a victory it does not yet understand. You are wrong. Sleep takes you like a tide, and pulls you under.', '!'),
+      ],
+    }),
+    // Empty LOOT phase → tier-2 level-up: ability pick, then perk, then the
+    // +1 stat step, exactly like every other narrative level-up beat.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      triggersLevelUp: true,
+      levelUpTier: 2,
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Morning. Pale forge-light through a high slit of a window, the smell of porridge somewhere down a stone corridor. You wake slowly, your whole body filing its many complaints about the day before — but your head is clear, and your mind, you find, is already made up.'),
+        new EncounterText('Thorb is awake before you, sitting on the edge of his bunk, jaw set. He does not look like a man who slept at all. "I am going back down there," he says, before you can get a word out. "Into the tunnels. I have to know. If there is any chance — ANY — that my father found a way out of the Deep, I am going to go and find him."', 'Thorb'),
+        new EncounterText('"Thorb." Valdrisa\'s voice is gentle, but she does not soften the truth of it. "We flooded the whole of the Deep with molten rock. Whatever was down there when the Pour came... the odds that a single soul walked out of that are almost none. You know they are."', 'Valdrisa'),
+        new EncounterText('"Almost none is not none." He gets to his feet. "I am not ordering anyone down after me. But I will not leave my father in the dark without so much as looking. Not him. Not after what he did for all of us."', 'Thorb'),
+        new EncounterText('You meet his eyes — and find your own resolve already there to match his. Almost none is not none. You have to try. All of you, together, the way you have done everything else. You reach for your gear.'),
+        new EncounterText('Durgan said there would be choices to make today. It seems you have already made the first one.'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — leaving the Quarters after the level-up, Durgan catches the
+// party in the hallway: he knows they're going back down for the King, he
+// won't stop them, and he gifts a Mithril Ore from the King's Vault to take
+// to the forge. dialog → LOOT (Mithril Ore) → dialog. Fires once, gated on
+// great_pour_rest in arriveAtNode.
+export function createDurganVaultEncounter() {
+  return new Encounter('durgan_vault', 'General Durgan', 'The hallway outside the Quarters.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'General Durgan',
+      texts: [
+        new EncounterText('Durgan is waiting in the corridor outside your quarters, arms folded, as though he has been standing there some while. He takes one look at the three of you — armed, packed, grim-faced — and whatever he meant to say dies on his lips. He already knows.'),
+        new EncounterText('"...You are going back down. To see if he is still breathing." It is not a question. He looks from Thorb\'s face to yours, and lets a long breath out through his beard. "Aye. I thought as much. It is written plain enough on the three of you."', 'General Durgan'),
+        new EncounterText('"I\'ll not waste either of our time trying to talk you out of it. A son does not leave his father in the dark — and gods know Thorgrim has crawled out of worse holes than a flooded mine." He sets a heavy hand on Thorb\'s shoulder. "So go. Find him, if he is there to be found. I will hold the fort here — Tharnag will stand, and stand WAITING, until you come back up that stair with your father at your side."', 'General Durgan'),
+        new EncounterText('Then he reaches into his pack and presses something into your hands — a lump of pale, blue-sheened metal that seems to drink the torchlight whole. "Before you go. I had this brought up from the King\'s own Vault. Mithril — the truest the mountain ever gave us. Thorgrim would sooner it went into good hands than sat locked in a strongbox while his boy walks into the deep."', 'General Durgan'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      guaranteedLoot: true,
+      lootCards: ['mithril_ore'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'General Durgan',
+      texts: [
+        new EncounterText('"Take it down to the forge before you set off," Durgan says. "The smiths there can work mithril — they will reforge what you already carry, set that metal into your arms and armor and make them stronger than anything that crawls out of the dark to meet you. You will want every edge you can carry down there."', 'General Durgan'),
+        new EncounterText('He steps back and gives you a short, soldier\'s nod. "Go on, then. And mind yourselves below — I have a city to run, and no patience left for burying any more of you."', 'General Durgan'),
+      ],
+    }),
+  ]);
+}
+
+// Part 2 — Gate of the Deep front fights (Left / Right). Both run the
+// same Goblin Front swarm; the dialog differs by whether this is the
+// FIRST flank you take or the SECOND (more desperate). 100% loot: one
+// goblin drop + one troll drop. One-time each (never repeats).
+//   side: 'left' | 'right' — which flank this is.
+//   isSecond: true when the other flank is already held.
+export function createGoblinFrontEncounter(side, isSecond) {
+  const here = side === 'left' ? 'left' : 'right';
+  const other = side === 'left' ? 'right' : 'left';
+  const id = side === 'left' ? 'goblin_front_left' : 'goblin_front_right';
+  const name = side === 'left' ? 'The Left Front' : 'The Right Front';
+  const preTexts = isSecond
+    ? [
+        new EncounterText(`No rest — a runner is already screaming for you. The ${here} flank is far worse: the line stands three deep in goblin dead and still buckling, the second gate groaning on its hinges. You throw your company straight into the thickest of it.`),
+      ]
+    : [
+        new EncounterText(`You and your company pound down the line to the ${here} flank. It is bad — the goblins have smashed through the FIRST gate and are battering at the SECOND, and the dwarves are barely holding the middle. The King's order rings in your ears: contain them. Now.`),
+      ];
+  const postTexts = isSecond
+    ? [
+        new EncounterText(`The ${here} flank holds — for a heartbeat. Then the troll-corpses heaped across the line begin to MOVE: shattered limbs knitting, split skulls closing, the dead hauling themselves upright. One lowers a shoulder and walks clean THROUGH the ${other} flank, scattering the shield-wall like kindling.`),
+        new EncounterText('"FALL BACK! BACK TO THE SECOND GATE!" King Thorgrim\'s roar cuts through the rout. "We cannot hold them — not while every one we put down gets back UP!"', 'King Thorgrim'),
+        new EncounterText('He seizes Thorb by the shoulder, eyes hard as iron. "Thorbadin — listen to me. You run. Get back to Tharnag, fast as your legs will carry you, and tell General Durgan to call THE GREAT POUR. Tap the mountain — bring the volcano\'s fire down through the Great Forge and flood these tunnels. Drown the Deep, and every troll in it."', 'King Thorgrim'),
+        new EncounterText('"The Great Pour?!" Thorb recoils. "Father, that buries the whole Deep in molten rock — and you are STANDING in it! I am NOT leaving you down here to—"', 'Thorb'),
+        new EncounterText('"I can hold the gate. Long enough for you to reach Durgan and loose the Pour — but ONLY if you go NOW." He shoves Thorb toward the tunnels behind the line. "GO, lad — RUN! Quickly!!!"', 'King Thorgrim'),
+      ]
+    : [
+        new EncounterText(`The ${here} flank steadies as the last goblin falls — but the roar from across the gate has not.`),
+        new EncounterText(`"GOOD! But the ${other} — the ${other} flank is BREAKING!" King Thorgrim's voice booms down the whole line. "They're desperate over there, lad — the line won't hold without you! GET TO THEM!"`, 'King Thorgrim'),
+      ];
+  return new Encounter(id, name, 'The front line, before the Gate of the Deep.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: preTexts }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'goblin_front' }),
+    // 100% loot — one goblin-table drop + one troll-table drop.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      guaranteedLoot: true,
+      lootGoldDice: [4, 6],
+      lootCards: ['goblin_swarm_loot', 'rampaging_troll_loot'],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: postTexts }),
+  ]);
+}
+
+// Part 2 — reaching a tunnel dead-end that is NOT the chosen exit this
+// run (5/6 of the time). Tells the player this isn't the front; carries
+// a 50% "found supplies" result. When supplies are found, a LOOT phase
+// rolls the `tunnel_supply` cache and showcases the card on the loot
+// screen (with the loot sound) rather than naming it in the text.
+export function createTunnelDeadEndEncounter(foundSupplies = false) {
+  const texts = [
+    new EncounterText('The passage dead-ends in cold dark. The clamor of the fighting is somewhere else — this is not the front.'),
+  ];
+  const phases = [];
+  if (foundSupplies) {
+    texts.push(new EncounterText('Still, someone sheltered here once. You search the leavings and turn up something useful.'));
+    phases.push(new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }));
+    phases.push(new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootCards: ['tunnel_supply'] }));
+  } else {
+    texts.push(new EncounterText('You search the dead-end thoroughly, but there is nothing of use here.'));
+    phases.push(new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }));
+  }
+  return new Encounter('tunnel_dead_end', 'A Dead End', 'Not the front.', phases);
+}
+
+// Part 2 — Tharnag tunnels random encounter: Goblin Swarm. 4-8 random
+// goblins (Sappers / Minions / Warriors) boil out of the walls. The
+// swarm "leader" is an invulnerable 0-card shell with the "They're in
+// the Walls!" passive (50% to replace each slain goblin); the fight is
+// won by clearing every goblin. Repeatable random encounter.
+export function createGoblinSwarmEncounter() {
+  return new Encounter('goblin_swarm', 'Goblin Swarm', 'Goblins in the walls.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The stone around you erupts with scrabbling claws and shrill war-cries. Goblins pour out of cracks in the walls — wiry minions, hulking warriors, and sappers with fizzing satchels. They\'re everywhere.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'goblin_swarm' }),
+    // 50%-gated drop (GATED_LOOT) — on a hit, one weighted goblin-loot
+    // item. Small gold on every win.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [2, 4],
+      lootCards: ['goblin_swarm_loot'],
+    }),
+  ]);
+}
+
+// Part 2 — Tharnag tunnels random encounter: Rampaging Troll. A
+// regenerating troll that knits its wounds back together every turn
+// (Regeneration power, Regen 10). Repeatable random encounter.
+export function createRampagingTrollEncounter() {
+  return new Encounter('rampaging_troll', 'Rampaging Troll', 'Something huge in the tunnel ahead.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The tunnel ahead shudders. A troll lurches into the torchlight — grey hide split with old wounds that close even as you watch, knitting shut faster than any blade could open them. It throws back its head and roars.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'rampaging_troll' }),
+    // 50%-gated drop (GATED_LOOT) — one weighted troll-loot item. Gold on win.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootGoldDice: [3, 5],
+      lootCards: ['rampaging_troll_loot'],
     }),
   ]);
 }
@@ -6780,9 +7153,10 @@ export const ENCOUNTER_REGISTRY = {
   stair_top_arrival: createStairTopArrivalEncounter,
   overseer_gnikan: createOverseerGnikanEncounter,
   tharnag_part1_ending: createTharnagPart1EndingEncounter,
-  // Part 2 (WIP, debug-gated) — see createPart2EpilogueEncounter.
+  // Part 2 (debug-gated) — see createPart2EpilogueEncounter.
   part2_epilogue: createPart2EpilogueEncounter,
   part2_ch1_qualibaf: createPart2Chapter1Encounter,
+  part2_grand_hall_alarm: createPart2GrandHallAlarmEncounter,
   obsidian_market_arrival: createObsidianMarketArrivalEncounter,
   market_stalls: createMarketStallsEncounter,
   deep_market_rest: createDeepMarketRestEncounter,
@@ -6799,6 +7173,12 @@ export const ENCOUNTER_REGISTRY = {
   kobold_drake_rider: createKoboldDrakeRiderEncounter,
   // Dwarven city random encounters (upper path)
   kobold_slyblade: createKoboldSlybladeEncounter,
+  forge_floor_ambush: createForgeFloorAmbushEncounter,
+  the_great_forge: createGreatForgeEncounter,
+  durgan_return: createDurganReturnEncounter,
+  great_pour_rest: createGreatPourRestEncounter,
+  durgan_vault: createDurganVaultEncounter,
+  mithril_forge: createMithrilForgeEncounter,
   dwarven_specter: createDwarvenSpecterEncounter,
   // Tharnag Interior
   grand_hall_arrival: createGrandHallArrivalEncounter,

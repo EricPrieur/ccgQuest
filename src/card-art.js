@@ -5,6 +5,20 @@
 const BASE = import.meta.env.BASE_URL || '/';
 
 export const CARD_ART_MAP = {
+  // === Tharnag tunnels ore loot (Part 2) ===
+  copper_ore: 'CopperOre.jpg',
+  silver_ore: 'SilverOre.jpg',
+  gold_ore: 'GoldOre.jpg',
+  mithril_ore: 'MithrilOre.jpg',
+  adamantine_ore: 'AdamantineOre.jpg',
+  // === The Assassin (Khydhani) drop loot (Part 2) ===
+  drow_parrying_dagger: 'DrowParryingDagger.jpg',
+  adamantine_rapier: 'AdamantineRapierTier.jpg',
+  adamantine_chain_shirt: 'AdamantineChainShirt.jpg',
+  darkwood_hand_crossbow: 'DarkwoodHandCrossbow.jpg',
+  piwafwi: 'Piwafwi.jpg',
+  drow_sleep_poison: 'DrowSleepPoison.jpg',
+  drow_sleep_poison_enemy: 'DrowSleepPoison.jpg',
   // === Starter / Common Cards ===
   wooden_sword: 'WoodenSword.jpg',
   leather_armor: 'LeatherArmor.jpg',
@@ -108,6 +122,7 @@ export const CARD_ART_MAP = {
   backstab: 'Backstab.jpg',
   poisoned_dagger: 'PoisonedDagger.jpg',
   sprint: 'Sprint.jpg',
+  sprint_enemy: 'Sprint.jpg', // Slyblade/Assassin's Sprint reuses the Sprint art
   // Slyblade enemy-side aliases — same art as the Rogue cards above
   // since the slyblade's kit is the same six abilities a Rogue player
   // could equip. Without these, the enemy versions render as brown
@@ -228,6 +243,41 @@ export const CARD_ART_MAP = {
   // Goblin Sapper creature portrait (referenced via creature_<name>
   // and the lazy fallback).
   goblin_sapper: 'GoblinSapper.jpg',
+
+  // === Tharnag tunnels random encounters (Part 2) ===
+  // Goblin Swarm — invulnerable boss-shell + its three goblin summon
+  // types. Rampaging Troll + its Regeneration power reuse TrollRegen.
+  goblin_swarm: 'GoblinSwarm.jpg',
+  goblin_front: 'GoblinSwarm.jpg', // Gate of the Deep flank fights reuse the swarm art
+  goblin_minion: 'GoblinMinion.jpg',
+  goblin_warrior: 'GoblinWarrior.jpg',
+  // Goblin Swarm loot drops (cards + their summoned creatures share keys).
+  goblin_spike_trap: 'GoblinSpikeTrap.jpg',
+  goblin_war_banner: 'GoblinWarBanner.jpg',
+  spiked_goblin_helmet: 'SpikedGoblinHelmet.jpg',
+  goblin_bosss_whistle: 'GoblinBossWhistle.jpg',
+  bag_of_stolen_teeth: 'BagofStolenTeeth.jpg',
+  // Rampaging Troll loot drops (Part 2). Severed Troll Arm reuses the
+  // Loathsome Limb art (its summon IS a Loathsome Limb).
+  ring_of_regeneration: 'RingofRenegeration.jpg',
+  troll_skin_jacket: 'TrollSkinJacket.jpg',
+  troll_blood_vial: 'TrollBloodVial.jpg',
+  severed_troll_arm: 'TrollLoathsomeLimbs.jpg',
+  long_troll_teeth: 'LongTrollTeeth.jpg',
+  armored_troll: 'ArmoredTroll.jpg',
+  // Gate of the Deep — player-side dwarven line allies (Goblin Front).
+  rampart: 'Rampart.jpg',
+  dwarven_crossbowman: 'DwarvenCrossbowman.jpg',
+  dwarven_battle_cleric: 'DwarvenBattleCleric.jpg',
+  // Khydhani the dark elf — shown in combat as "The Assassin".
+  the_assassin: 'KhydaniTheDarkElf.jpg',
+  khydhani: 'KhydaniTheDarkElf.jpg',
+  rampaging_troll: 'TrollRegen.jpg',
+  regeneration: 'TrollRegen.jpg',
+  // Rend — the troll's claw attack reuses the troll portrait art.
+  rend: 'TrollRegen.jpg',
+  // Loathsome Limb — torn-off limb creature (Loathsome Limbs power).
+  loathsome_limbs: 'TrollLoathsomeLimbs.jpg',
 
   // === Enemy Cards - Obsidian ===
   crush: 'ObsidianGolem.jpg',
@@ -644,6 +694,23 @@ export const CARD_ART_MAP = {
   // Mastery card art (NecromancerPower.jpg) since the perk leans
   // on the same first-skeleton beat.
   skeletal_strength: 'NecromancerPower.jpg',
+  // === Tier-2 perks (upgraded forms; reuse the base-perk art) ===
+  very_tough:          'ToughPerk.jpg',
+  well_prepared:       'PreparedPerk.jpg',
+  very_gritty:         'GritPerk.jpg',
+  prospector:          'LuckyFindPerk.jpg',
+  third_wind:          'SecondWindPerk.jpg',
+  poisoners_ambush:    'AmbushPerk.jpg',
+  first_volley:        'FirstStrikePerk.jpg',
+  power_infusion:      'PowerSurgePerk.jpg',
+  grand_harvest:       'HarvestDruidSpec.jpg',
+  empowered_skeletons: 'NecromancerPower.jpg',
+  divine_protection:   'DivineProtection.png',
+  readiness:           'FlashOfGeniusPerk.jpg',
+  troll_ancestry:      'TrollAncestryPerk.png',
+  bloodied_rage:       'GiantBoar.jpg',
+  cleansing_armor:     'Frostbloom.jpg',
+  swift_assault:       'SwiftAssault.png',
 
   // === Enemy Encounter Portraits ===
   kobold_patrol:   'KoboldPatrolEncounter.jpg',
@@ -673,6 +740,12 @@ export const POWER_ART_MAP = {
   high_priest: 'SahuaginPriest.jpg',
   massive_ogre_ram: 'OgreSiegeRam.jpg',
   goblin_sapper_squad: 'GoblinSapper.jpg',
+  // Goblin Swarm's "They're in the Walls!" passive (Part 2 tunnels).
+  goblins_in_the_walls: 'GoblinSwarm.jpg',
+  // Rampaging Troll's Regeneration passive (Part 2 tunnels).
+  regeneration: 'TrollRegen.jpg',
+  // Rampaging Troll's Loathsome Limbs passive — torn-off limb art.
+  loathsome_limbs: 'TrollLoathsomeLimbs.jpg',
   obsidian_construct: 'ObsidianGolem.jpg',
   obsidian_body: 'ObsidianSlime.jpg',
   lava_floor: 'MagmaFloor.jpg',
@@ -683,6 +756,8 @@ export const POWER_ART_MAP = {
   dark_vision: 'ObsidianOracle.jpg',
   obsidian_oracle_body: 'ObsidianOracle.jpg',
   vanish: 'Vanish.jpg',
+  riposte: 'RipostePower.jpg',
+  drow_sleep_poison: 'DrowSleepPoison.jpg',
   // Brute is Ruga's signature passive — share his portrait so the
   // power card matches the boss. PY game.py:810 uses the same file.
   brute: 'RugaTheSlaveMaster.jpg',

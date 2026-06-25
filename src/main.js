@@ -10,6 +10,10 @@ import {
   createSecondWindPerk, createAmbushPerk, createArmoredPerk, createArmorerTrainingPerk,
   createPowerSurgePerk, createBalancedPerk,
   createLuckyFindPerk, createHarvestPerk, createSkeletalStrengthPerk,
+  createVeryToughPerk, createWellPreparedPerk, createVeryGrittyPerk, createProspectorPerk,
+  createThirdWindPerk, createPoisonersAmbushPerk, createFirstVolleyPerk, createPowerInfusionPerk,
+  createGrandHarvestPerk, createEmpoweredSkeletonsPerk, createDivineProtectionPerk,
+  createReadinessPerk, createTrollAncestryPerk, createBloodiedRagePerk, createCleansingArmorPerk, createSwiftAssaultPerk,
 } from './character.js';
 import { Deck } from './deck.js';
 import { Creature } from './creature.js';
@@ -21,7 +25,7 @@ import {
   getPaladinAbilityChoices, getRangerAbilityChoices, getWizardAbilityChoices,
   getRogueAbilityChoices, getWarriorAbilityChoices, getDruidAbilityChoices,
   getNecromancerAbilityChoices,
-  createBite, createToughHide, createSkreeeeeeeek,
+  createBite, createToughHide, createRend, createSkreeeeeeeek,
   createSkitterBite,
   createBigBone, createLooseBone,
   createSlimeAppendage, createPartiallyDigestedBone, createCorrodedArmor, createPetSlimeCard, createSlimeJar,
@@ -91,9 +95,14 @@ import {
   createMephitSkinSandals, createMephitSkinGloves, createMagmaTablet,
   createDefensiveFormation, createMimicBite, createMimicTongue, createBoneStorm,
   createGoblinRocketBoots, createGoblinSapperCharges, createOgreMaul,
+  createGoblinSpikeTrap, createGoblinWarBanner, createSpikedGoblinHelmet, createGoblinBossWhistle, createBagOfStolenTeeth,
+  createRingOfRegeneration, createTrollSkinJacket, createTrollBloodVial, createSeveredTrollArm, createLongTrollTeeth,
   createThorbCard, createThorbUpgradedCard, createThorbTier3Card,
   createRaenaCardTier3, createValdrisaCardTier3,
-  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createWhitescaleBrew, createDwarvenScoutCard, createWhiteWolfCloak, createWolfFang,
+  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createWhitescaleBrew, createDwarvenScoutCard, createDwarvenCrossbowmanCard, createDwarvenBattleClericCard, createWhiteWolfCloak, createWolfFang,
+  createCopperOre, createSilverOre, createGoldOre, createMithrilOre, createAdamantineOre,
+  createDrowParryingDagger, createAdamantineRapier, createAdamantineChainShirt,
+  createDarkwoodHandCrossbow, createPiwafwi, createDrowSleepPoison, createDrowSleepPoisonEnemy,
   createCaveShroom,
   createSahuaginTridentLoot, createFishScaleBoots, createSahuaginEye,
   createJarOfPiranhas,
@@ -122,19 +131,19 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter } from './encounter.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
   createCleave, createAimedShot, createElementalInfusion,
   createQuickStrike, createBattleFury, createFeralForm,
   createChunkyBite, createDireFury, createOverwhelm, createSplit, createArmorPower, createFeralWrathPower,
-  createMassiveOgreRam, createGoblinSapperSquad,
+  createMassiveOgreRam, createGoblinSapperSquad, createRegenerationPower, createLoathsomeLimbs, createGoblinsInTheWalls,
   createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
-  createObsidianOracleBodyPower, createVanish, createBrute, createEthereal,
+  createObsidianOracleBodyPower, createVanish, createRipostePower, createDrowSleepPoisonPower, createBrute, createEthereal,
 } from './power.js';
 import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, markSlotConsumedForGamePlus, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
@@ -210,8 +219,36 @@ let _pendingGamePlusConsumeSlot = null;
 // screen. Multiple class completions could pile up, so the list is
 // clipped to ~4 visible rows with mouse-wheel scrolling.
 let _gamePlusSavesScrollY = 0;
-// Scroll offset for the save list on the PART2_SETUP screen (WIP).
+// Scroll offset for the save list on the PART2_SETUP screen.
 let _part2SavesScrollY = 0;
+// Part 2 — tunnel dead-ends that can be the real exit to the Gate of the
+// Deep. One is chosen at random the moment the party first steps into the
+// tunnels (persisted, so reloading a save near a dead-end can't reroll
+// it), and re-rolled on rest — UNTIL the player reaches the gate, which
+// locks that node as the real path forever (per character).
+const TUNNEL_EXIT_NODES = ['e2_5', 'em_6', 'w2_a3', 'wt3_7', 'wb2_5', 'mb_4'];
+// Each exit node → [mapId, factory] so the Gate of the Deep can teleport
+// back to whichever node was the real exit this run.
+const TUNNEL_EXIT_NODE_MAP = {
+  e2_5:  ['tharnag_tunnels_east_top_2', createTharnagTunnelsEastTop02Map],
+  em_6:  ['tharnag_tunnels_east_middle', createTharnagTunnelsEastMiddleMap],
+  w2_a3: ['tharnag_tunnels_west_top_2', createTharnagTunnelsWestTop02Map],
+  wt3_7: ['tharnag_tunnels_west_top_3', createTharnagTunnelsWestTop03Map],
+  wb2_5: ['tharnag_tunnels_west_bottom_2', createTharnagTunnelsWestBottom2Map],
+  mb_4:  ['tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap],
+};
+// Dead-ends that are NEVER an exit — they only roll the placeholder 50%
+// supply search (the remaining MiddleBottom dead-end).
+const TUNNEL_SUPPLY_NODES = ['mb_tr3'];
+let _tunnelExitNode = null;          // chosen exit id this run (persisted)
+let _tunnelExitLocked = false;       // true once the gate is reached (persisted)
+let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
+// Tharnag tunnels random-encounter chance. Every walked-onto tunnel node
+// that doesn't already have a scripted encounter (not a dead-end / the
+// exit / the gate) rolls this; on a miss it climbs by TUNNEL_ENC_STEP,
+// on a hit it resets. Goblin Swarm / Rampaging Troll, 50/50.
+const TUNNEL_ENC_STEP = 0.04;
+let tunnelEncounterChance = TUNNEL_ENC_STEP;
 // ccgQuest+ progression — highest monster tier offset the player has
 // ever finished a run at. Persisted to localStorage so the unlock
 // survives across sessions. Finishing the base game (offset 0)
@@ -1496,6 +1533,22 @@ const CREATURE_TIER_OFFSET = {
   // onDeathDiscardOrDamage and the per-name description rebuild
   // sweeps the new max into the rendered text.
   'Goblin Sapper':      { attack: 1, hp: 1, onDeathDamage: 2 },
+  // Goblin Swarm summons (Part 2). Warrior's end-of-turn random damage
+  // scales +1 per offset; Minion's on-summon damage stays flat.
+  'Goblin Minion':      { attack: 1, hp: 1 },
+  'Goblin Warrior':     { attack: 1, hp: 1, endTurnDamage: 1 },
+  // War Banner — +0/+2 HP per offset; its +Damage aura scales +0.5/offset
+  // (applied at spawn, not a stat field here).
+  'Goblin War Banner':  { hp: 2 },
+  // Spike Trap — +1/+1 per offset (the loot card ALSO summons +1 max trap
+  // per offset, handled in the summon effect).
+  'Goblin Spike Trap':  { attack: 1, hp: 1 },
+  // Armored Troll (Goblin Front) — +20 HP / +0.5 Armor per offset; its
+  // Regen scales +4/offset at spawn (not a stat field here).
+  'Armored Troll':      { hp: 20, armor: 0.5 },
+  // Loathsome Limbs (Rampaging Troll) — +1 atk / +1 hp per offset. Its
+  // Regen (+1/offset) is scaled at spawn time (not a stat field here).
+  'Loathsome Limbs':    { attack: 1, hp: 1 },
   'Harpy':              { attack: 2, hp: 4, onDeathDiscardOrDamage: 5 },
   'Magma Mephit':       { attack: 1, hp: 3, onDeathFireHits: 2 },
   // Kraken Spawn's Tentacle — +1 atk / +2 hp per offset. Pairs
@@ -1896,6 +1949,19 @@ let sacrificePickerSubtype = '';
 let forgePickerCards = [];
 let forgePickerBackpackUids = new Set();
 let forgePickerScroll = 0;
+// Forge gear-pick search (filters the gear list by name, codex-style).
+let forgeSearchText = '';
+let forgeSearchActive = false;
+let forgeSearchRect = null;
+// Reforge showcase — the reforged card flies to center, holds, then the
+// enchant flashes in with the buff_powerup cue. STAYS up until the player
+// clicks anywhere, then returns to the metal menu.
+let _forgeShowcaseCard = null;
+let _forgeShowcaseActive = false;
+let _forgeShowcaseElapsed = 0;
+let _forgeShowcaseSoundPlayed = false;
+let _forgeShowcaseMsg = '';             // the "On Recharge: …" line shown above the card
+const FORGE_SHOWCASE_ENCHANT_DELAY = 1200; // ms hold before the enchant flashes in
 // Cards the player has sold at any shop, in chronological order. The
 // Antiquity Shop offers each one back at the price it was sold for.
 // Each entry: { id, price }.
@@ -1934,6 +2000,27 @@ let quartersRested = false;
 // straight into the end-of-game fade-to-menu instead of the normal
 // rebalance. Reset on startNewGame; saved via save.js below.
 let dragonSlain = false;
+// Set once the Part 2 opening (epilogue → Chapter 1) has run and the
+// party lands in Qualibaf. Persisted + restored like dragonSlain. This
+// is the canonical "we are in Part 2" flag: Part 2 quests, areas, and
+// dialog gate on it so none of that content fires during a Part 1 run
+// that happens to revisit the same maps. Set in startPart2Chapter1.
+let part2Started = false;
+// Part 2 — true once the Great Pour has ended the tunnel siege. While
+// false (and part2Started), Tharnag areas play the tense siege bed; once
+// true, they revert to the normal Tharnag music. Set when the Great Pour
+// resolution is built. Persisted.
+let part2SiegeOver = false;
+// Part 2 — true once the party has loosed the Great Pour at the Great
+// Forge. Latches the mournful "sentimental" music bed across the whole
+// Tharnag complex for the rest of the run (wins over the tense siege
+// override). Set when the the_great_forge dialog starts. Persisted.
+let greatPourActivated = false;
+// Set when the party heads back to the tunnels to search for the King
+// (the Chapter 2 "To Be Continued" beat). Flips the Tharnag music from the
+// mournful post-Pour bed back to the tense thriller-brass siege bed.
+// Persisted.
+let chapter2Started = false;
 // Post-dragon staircase chatter (Thorb + Val fanboying over the
 // volcano warming the great forge). One-shot; persists across save
 // so revisits don't replay it.
@@ -1997,13 +2084,13 @@ function armorerQuestRewardClaimed() {
 let _armorerRewardShopId = null;
 // Lifetime damage dealt to the White Dragon Egg across all combats
 // since it was picked up — tracked BEFORE shield/armor mitigation
-// (the raw hit). At threshold (10 for testing, 100 in shipping),
-// the egg hatches into a White Dragon Wyrmling: the egg card is
-// removed from every pile + masterDeck and replaced by the
-// Wyrmling card, the on-field egg creature transforms in place.
+// (the raw hit). At threshold (100), the egg hatches into a White
+// Dragon Wyrmling: the egg card is removed from every pile +
+// masterDeck and replaced by the Wyrmling card, the on-field egg
+// creature transforms in place.
 // Persisted via save.js as `dragonEggDamage`.
 let dragonEggDamage = 0;
-const WHITE_DRAGON_EGG_HATCH_THRESHOLD = 10;
+const WHITE_DRAGON_EGG_HATCH_THRESHOLD = 100;
 let valdrisaJoined = false;
 // Path of the Necromancer — set when the apprentice tries the study
 // door upstairs and finds it unsealed. Latches the dining-room visit
@@ -2224,6 +2311,10 @@ const EXTRA_VISION_MAPS = new Set();
 // scenes like the Summit Ridge plateau.
 const NO_FOG_MAPS = new Set([
   'volcano_summit_ridge',
+  // Part 2 — the forge approach + the Great Forge are small, designed
+  // linear descents; show the whole layout when the party walks in.
+  'tharnag_stairs_to_forge',
+  'tharnag_the_forge',
   // Temple of Moradin — small 2-node side map; the player sees the
   // whole layout (entry + altar) at a glance.
   'temple_of_moradin',
@@ -2363,7 +2454,7 @@ const DECK_LIMIT_CATEGORIES = [
   { id: 'weapon',  label: 'Weapons',   subtypes: WEAPON_SUBTYPES },
   { id: 'armor',   label: 'Armor',     subtypes: ARMOR_SUBTYPES },
   { id: 'ability', label: 'Abilities', subtypes: new Set(['ability']) },
-  { id: 'item',    label: 'Items',     subtypes: new Set(['item', 'potion', 'scroll', 'food']) },
+  { id: 'item',    label: 'Items',     subtypes: new Set(['item', 'potion', 'scroll', 'food', 'ore']) },
   { id: 'allies',  label: 'Allies',    subtypes: new Set(['ally', 'allies', 'companion']) },
   { id: 'relic',   label: 'Relics',    subtypes: new Set(['relic']) },
 ];
@@ -2407,6 +2498,11 @@ function canClassEquip(card) {
 // Level-up / Perk state
 let pendingLevelUp = false;
 let pendingLevelUpTier = 1;
+// The tier of the level-up currently in progress — captured when the level-up
+// starts (handleEncounterLootClick) and read by the perk-select step (which
+// runs AFTER pendingLevelUpTier has been reset) so tier-2 level-ups roll from
+// the tier-2 perk pool.
+let _levelUpTier = 1;
 // Tier-2 companion upgrade screen state. Populated by upgradeCompanions
 // before COMPANION_UPGRADE state is entered. Each entry is
 // { name, oldCreature, newCreature }.
@@ -2422,6 +2518,14 @@ let _restBonusCat = null;
 let _levelUpBonusPending = false;
 // Hit rects for deck-limit +/- buttons (filled during draw, tested on click).
 let _deckLimitBtnRects = [];
+// Set when a Part 2 / ccgQuest+ start raises the deck-limit caps — the
+// inventory pops a one-time "Deck Limits boosted" tutorial the next time
+// the Deck Limits panel draws, then clears this flag.
+let _deckLimitsBoostPending = false;
+// Per-category hover rects for the "count / max" readout in the Deck
+// Limits panel — hovering shows the current bonus + the cap. Rebuilt
+// every frame in drawInventoryCharacter.
+let _deckLimitCountRects = [];
 // Inventory layout positions, stashed each frame by drawInventoryCharacter
 // + the rest-button block so tutorial arrows can point at the actual
 // section headers / button / error box instead of guessing offsets.
@@ -2746,6 +2850,16 @@ const TUTORIAL_BOXES = {
   inventory_deck_limits: {
     title: 'Deck Limits',
     body: 'Each gear category has a cap on how many copies you can equip. Blue numbers mean room, red means over, white means balanced. On level-up you also add +1 to one category (max +3 per category, or +5 in a ccgQuest+ run from a saved game).',
+    arrow: () => {
+      const s = (typeof getInvSections === 'function') ? getInvSections() : null;
+      if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 360 };
+      const y = _invDeckLimitsY || (s.character.y + Math.floor(s.character.h * 0.40));
+      return { x: s.character.x + s.character.w / 2, y };
+    },
+  },
+  deck_limits_boosted: {
+    title: 'Deck Limits Raised',
+    body: 'Starting Part 2 (and every ccgQuest+ run) raises your level-up deck-limit caps: +2 to each gear category, and +1 for Relics. Rest at the inn, then spend your level-up picks here to build past what Part 1 allowed.',
     arrow: () => {
       const s = (typeof getInvSections === 'function') ? getInvSections() : null;
       if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 360 };
@@ -3408,6 +3522,9 @@ const COMBAT_BTN_AREA = { x: COMBAT_RIGHT_X, y: COMBAT_RIGHT_BTN_Y, w: COMBAT_RI
 // Special encounter state
 let killCount = 0; // for kill-count encounters (wolf pack, etc.)
 let killTarget = 0; // how many kills needed to win
+// Enemy creatures defeated this combat (any fight) — read by Bag of
+// Stolen Teeth (1 Heroism per defeated). Reset at combat start.
+let enemiesDefeatedThisCombat = 0;
 let survivalRounds = 0; // total rounds (mirrors Python survival_rounds_total) — used as the bar denominator
 let survivalRoundsRemaining = 0; // countdown — decremented at end of each enemy turn; victory at <= 0
 
@@ -3526,6 +3643,7 @@ let barrageDescending = false;
 // barrage so every subsequent shot in the same card play benefits.
 // Mirrors the multi_damage / picker-flow pattern.
 let barragePoisonStacks = 0;
+let barrageDrowSleepStacks = 0; // Drow Sleep buff snapshot for the active barrage
 let barrageEyeBonus = 0;
 let barrageObsBonus = 0;
 // Heroism / ice snapshots — consumed ONCE on shot 1 (logged + zeroed
@@ -3749,7 +3867,14 @@ const CARD_REGISTRY = {
   dwarven_throwing_axe: createDwarvenThrowingAxe,
   dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew, whitescale_brew: createWhitescaleBrew,
   dwarven_warhammer: createDwarvenWarhammer, miners_pickaxe: createMinersPickaxe,
+  copper_ore: createCopperOre, silver_ore: createSilverOre, gold_ore: createGoldOre, mithril_ore: createMithrilOre,
+  adamantine_ore: createAdamantineOre,
+  drow_parrying_dagger: createDrowParryingDagger, adamantine_rapier: createAdamantineRapier,
+  adamantine_chain_shirt: createAdamantineChainShirt, darkwood_hand_crossbow: createDarkwoodHandCrossbow,
+  piwafwi: createPiwafwi, drow_sleep_poison: createDrowSleepPoison,
   dwarven_scout: createDwarvenScoutCard,
+  dwarven_crossbowman: createDwarvenCrossbowmanCard,
+  dwarven_battle_cleric: createDwarvenBattleClericCard,
   // Zhost Revenge boss drop — same creator as the enemy-deck card; the
   // shared id 'white_claw_reforged' is looked up here by the LOOT phase
   // when the player wins the bridge fight.
@@ -3799,6 +3924,16 @@ const CARD_REGISTRY = {
   molten_scale_relic: createMoltenScaleRelic,
   goblin_rocket_boots: createGoblinRocketBoots,
   goblin_sapper_charges: createGoblinSapperCharges,
+  goblin_spike_trap: createGoblinSpikeTrap,
+  goblin_war_banner: createGoblinWarBanner,
+  spiked_goblin_helmet: createSpikedGoblinHelmet,
+  goblin_bosss_whistle: createGoblinBossWhistle,
+  bag_of_stolen_teeth: createBagOfStolenTeeth,
+  ring_of_regeneration: createRingOfRegeneration,
+  troll_skin_jacket: createTrollSkinJacket,
+  troll_blood_vial: createTrollBloodVial,
+  severed_troll_arm: createSeveredTrollArm,
+  long_troll_teeth: createLongTrollTeeth,
   ogre_maul: createOgreMaul,
 };
 
@@ -4045,6 +4180,66 @@ const LOOT_TABLES = {
     { creator: createMinersPickaxe,      weight: 1.0 },
     { creator: createRuneforgedBuckler,  weight: 1.0 },
   ],
+  // Tharnag tunnels supply (Part 2) — the cache a non-exit dead end may
+  // yield (50% roll). All of the Market Stall Salvage gear at weight 1.0
+  // plus the ore cards. Ores are unplayable recharge-fodder; Copper
+  // / Silver / Gold sell full at a smith, Mithril / Adamantine can't be sold.
+  tunnel_supply: [
+    { creator: createDwarvenCrossbow,    weight: 1.0 },
+    { creator: createDwarvenTowerShield, weight: 1.0 },
+    { creator: createDwarvenGreaves,     weight: 1.0 },
+    { creator: createDwarvenWarhammer,   weight: 1.0 },
+    { creator: createIronforgeChainmail, weight: 1.0 },
+    { creator: createDwarvenThrowingAxe, weight: 1.0 },
+    { creator: createMinersPickaxe,      weight: 1.0 },
+    { creator: createRuneforgedBuckler,  weight: 1.0 },
+    { creator: createCopperOre,          weight: 1.0 },
+    { creator: createSilverOre,          weight: 0.5 },
+    { creator: createGoldOre,            weight: 0.25 },
+    { creator: createMithrilOre,         weight: 0.10 },
+    { creator: createAdamantineOre,      weight: 0.10 },
+  ],
+  // Ore-only pool — same five ores at the same weights as the Tunnels
+  // Supply Cache (Copper common → Mithril / Adamantine rare). For mining /
+  // vein nodes that should drop raw ore and nothing else.
+  ore_cache: [
+    { creator: createCopperOre,          weight: 1.0 },
+    { creator: createSilverOre,          weight: 0.5 },
+    { creator: createGoldOre,            weight: 0.25 },
+    { creator: createMithrilOre,         weight: 0.10 },
+    { creator: createAdamantineOre,      weight: 0.10 },
+  ],
+  // Goblin Swarm drop (Part 2 tunnels). 50%-gated (see GATED_LOOT); on a
+  // drop, pick ONE by weight.
+  goblin_swarm_loot: [
+    { creator: createGoblinSapperCharges, weight: 1.0 },
+    { creator: createGoblinRocketBoots,   weight: 1.0 },
+    { creator: createGoblinSpikeTrap,     weight: 0.75 },
+    { creator: createGoblinWarBanner,     weight: 0.75 },
+    { creator: createSpikedGoblinHelmet,  weight: 0.75 },
+    { creator: createGoblinBossWhistle,   weight: 0.50 },
+    { creator: createBagOfStolenTeeth,    weight: 0.25 },
+  ],
+  // Rampaging Troll drop (Part 2 tunnels). 50%-gated (see GATED_LOOT);
+  // on a drop, pick ONE by weight.
+  rampaging_troll_loot: [
+    { creator: createTrollBloodVial,      weight: 1.0 },
+    { creator: createLongTrollTeeth,      weight: 0.50 },
+    { creator: createTrollSkinJacket,     weight: 0.25 },
+    { creator: createSeveredTrollArm,     weight: 0.25 },
+    { creator: createRingOfRegeneration,  weight: 0.10 },
+  ],
+  // The Assassin (Khydhani) — the drow at the Great Forge. NOT in
+  // GATED_LOOT, so killing him ALWAYS drops loot — TWO distinct picks by
+  // weight. Drow-themed gear + the Underdark venom item.
+  khydhani_loot: Object.assign([
+    { creator: createDrowParryingDagger,  weight: 0.50 },
+    { creator: createAdamantineRapier,    weight: 0.50 },
+    { creator: createAdamantineChainShirt, weight: 0.50 },
+    { creator: createDarkwoodHandCrossbow, weight: 0.50 },
+    { creator: createDrowSleepPoison,     weight: 0.75 },
+    { creator: createPiwafwi,             weight: 0.25 },
+  ], { pickCount: 2, distinct: true }),
   // Obsidian Slime — random labyrinth fight. Pick-one (default).
   // The Obsidian Slime ally card is the slime-only rare drop (the
   // Golem table swaps in Obsidian Core for its rare slot). Staff is
@@ -4137,6 +4332,11 @@ const LOOT_TABLE_LABELS = {
   obsidian_slime_loot:    'Obsidian Slime',
   magma_drake_loot:       'Magma Drake',
   dwarven_market_loot:    'Market Stalls Salvage',
+  tunnel_supply:          'Tunnels Supply Cache',
+  ore_cache:              'Ore Vein',
+  goblin_swarm_loot:      'Goblin Swarm',
+  rampaging_troll_loot:   'Rampaging Troll',
+  khydhani_loot:          'The Assassin',
   drake_rider_loot:       'Kobold Drake Rider',
   magma_mephit_loot:      'Magma Mephit',
   kobold_slyblade_loot:   'Kobold Slyblade',
@@ -4166,6 +4366,11 @@ const LOOT_TABLE_NOTES = {
   bone_amalgam_loot:   'Dropped after defeating the Bone Amalgam. Pick-one bone weapon.',
   wolf_pack_loot:      'Dropped after surviving the Wolf Blizzard (kill 10 wolves).',
   cave_shroom_loot:    'Foraged at the Cave River Landing — always drops 2 Cave Shrooms.',
+  tunnel_supply:       'A non-exit dead end in the Tharnag tunnels has a 50% chance to yield one item — Market Stall Salvage gear, or raw ore (Copper / Silver / Gold sell full at a smith, Mithril can\'t be sold).',
+  ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
+  goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
+  rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
+  khydhani_loot: 'Dropped after killing The Assassin (Khydhani) at the Great Forge. Guaranteed (100%) — TWO distinct picks by weight: Drow Sleep Poison most common; Drow Parrying Dagger / Adamantine Rapier / Adamantine Chain Shirt / Darkwood Hand Crossbow rare; Piwafwi epic (rarest).',
   sahuagin_sentinel_loot: 'Dropped after defeating a Sahuagin Sentinel. Pick one — Trident, Scale Armor or Fresh Fish common; Fish Scale Boots / Jar of Piranhas rare; Sahuagin Eye epic.',
   sahuagin_priest_loot:   'Dropped after defeating the Sahuagin Priest at the Flooded Altar. Always Sahuagin Priest Staff.',
   sahuagin_baron_loot:    'Dropped after defeating the Sahuagin Baron. Always Barnacle Encrusted Plate (rolled alongside a Sahuagin Sentinel pick).',
@@ -4295,7 +4500,7 @@ async function loadAssets() {
     // loadImage tolerates 404s (Image.onerror just leaves the cache
     // entry undefined) so missing art falls back to a styled tile.
     loadImage('quest_main', `${BASE}assets/Backgrounds/MainScreen.jpg`),
-    // Part 2 tile art (debug-only Quest Select). Part 2 is a WIP.
+    // Part 2 tile art (debug-only Quest Select).
     loadImage('quest_part2', `${BASE}assets/Backgrounds/Part2MainScreenBackground.jpg`),
     loadImage('quest_select_bg', `${BASE}assets/Backgrounds/StorySelectorBG.jpg`),
     loadImage('quest_necromancer', `${BASE}assets/Backgrounds/PathoftheNecromancerBG.jpg`),
@@ -4351,6 +4556,23 @@ async function loadAssets() {
     loadImage('map_throne_room', `${BASE}assets/Maps/TharnagThroneRoom.jpg`),
     loadImage('map_personal_quarters', `${BASE}assets/Maps/TharnagPersonalQuarter.jpg`),
     loadImage('map_artisan_hall', `${BASE}assets/Maps/ArtisanHallMap.jpg`),
+    // Part 2 — Tharnag Tunnels entrance (mapArea 'tharnag_tunnels').
+    loadImage('map_tharnag_tunnels', `${BASE}assets/Maps/TharnagTunnelsEntrance.jpg`),
+    loadImage('map_tharnag_tunnels_west_top', `${BASE}assets/Maps/TharnagTunnelsWestTop01.jpg`),
+    loadImage('map_tharnag_tunnels_east_top', `${BASE}assets/Maps/TharnagTunnelsEastTop01.jpg`),
+    loadImage('map_tharnag_tunnels_east_top_2', `${BASE}assets/Maps/TharnagTunnelsEastTop02.jpg`),
+    loadImage('map_tharnag_tunnels_middle', `${BASE}assets/Maps/TharnagTunnelsMiddle.jpg`),
+    loadImage('map_tharnag_tunnels_middle_bottom', `${BASE}assets/Maps/TharnagTunnelsMiddleBottom.jpg`),
+    loadImage('map_tharnag_tunnels_left_bottom', `${BASE}assets/Maps/TharnagTunnelsLeftBottom.jpg`),
+    loadImage('map_tharnag_tunnels_west_middle', `${BASE}assets/Maps/TharnagTunnelsWestMiddle.jpg`),
+    loadImage('map_tharnag_tunnels_east_middle', `${BASE}assets/Maps/TharnagTunnelsEastMiddle.jpg`),
+    loadImage('map_tharnag_tunnels_west_top_2', `${BASE}assets/Maps/TharnagTunnelsWestTop02.jpg`),
+    loadImage('map_tharnag_tunnels_west_bottom', `${BASE}assets/Maps/TharnagTunnelsWestBottom.jpg`),
+    loadImage('map_tharnag_tunnels_west_bottom_2', `${BASE}assets/Maps/TharnagTunnelsWestBottom2.jpg`),
+    loadImage('map_tharnag_tunnels_west_top_3', `${BASE}assets/Maps/TharnagTunnelsWestTop03.jpg`),
+    loadImage('map_gate_of_deep', `${BASE}assets/Maps/TharnagTunnelsTheGateofTheDeep.jpg`),
+    loadImage('map_stairs_to_forge', `${BASE}assets/Maps/StairsToTheForge.jpg`),
+    loadImage('map_the_forge', `${BASE}assets/Maps/TharnagTheForge.jpg`),
     loadImage('map_entry_corridor', `${BASE}assets/Maps/DwarvenCityEntryCorridorMap.jpg`),
     loadImage('map_gate_area', `${BASE}assets/Maps/DwarvenCityGateArea.jpg`),
     loadImage('map_hall_of_ancestors', `${BASE}assets/Maps/DwarvenCityHallofAncestors.jpg`),
@@ -4532,6 +4754,13 @@ async function loadAssets() {
     // the Skeleton Mastery card piece since the perk leans into the
     // same first-skeleton beat.
     loadImage('skeletal_strength_perk', `${BASE}assets/Cards/NecromancerPower.jpg`),
+    // Divine Protection (tier-2 Paladin perk) — its own PNG (alpha kept).
+    loadImage('divine_protection_perk', `${BASE}assets/Cards/DivineProtection.png`),
+    // Tier-2 rare perks.
+    loadImage('troll_ancestry_perk',  `${BASE}assets/Cards/TrollAncestryPerk.png`),
+    loadImage('bloodied_rage_perk',   `${BASE}assets/Cards/GiantBoar.jpg`),
+    loadImage('cleansing_armor_perk', `${BASE}assets/Cards/Frostbloom.jpg`),
+    loadImage('swift_assault_perk',   `${BASE}assets/Cards/SwiftAssault.png`),
   ];
   // Track first-load progress for the boot loading bar, then await the
   // whole critical batch. loadImage never rejects (a 404 resolves null),
@@ -4539,6 +4768,14 @@ async function loadAssets() {
   _assetsTotalCount = _critAssets.length;
   for (const p of _critAssets) p.then(() => { _assetsLoadedCount++; });
   await Promise.all(_critAssets);
+  // Derived status icon — Drow Sleep Poison reuses the green Poison
+  // droplet washed to a cold off-white (pale Underdark venom). Built
+  // once here (icon_poison is in the critical batch above, so it's
+  // loaded) so every status-icon draw site — combat status bar, floating
+  // tokens, codex, keyword tooltips — picks it up via the cache.
+  if (images['icon_poison'] && !images['icon_drow_sleep_poison']) {
+    images['icon_drow_sleep_poison'] = makeTintedIcon(images['icon_poison'], '#dfe7ff', 0.5);
+  }
   // Block on the 6 class-select portraits so they're guaranteed in the
   // card-art cache before the menu becomes interactive. Otherwise the
   // first time the player clicks New Game, the portraits flash in one
@@ -4907,7 +5144,7 @@ canvas.addEventListener('wheel', (e) => {
     }
   }
   if (state === GameState.FORGE_WEAPON) {
-    const totalRows = Math.ceil(forgePickerCards.length / FORGE_PICKER_COLS);
+    const totalRows = Math.ceil(getActiveForgeCards().length / FORGE_PICKER_COLS);
     const maxScroll = Math.max(0, totalRows - FORGE_PICKER_ROWS_VISIBLE);
     const step = e.deltaY > 0 ? 1 : -1;
     forgePickerScroll = Math.max(0, Math.min(maxScroll, forgePickerScroll + step));
@@ -5333,6 +5570,28 @@ function handleKeyDown(key, event) {
     return;
   }
 
+  // Forge gear search input — capture keys while the forge search box is
+  // focused so typing doesn't trigger game shortcuts.
+  if (state === GameState.FORGE_WEAPON && forgeSearchActive) {
+    if (key === 'Escape' || key === 'Enter') {
+      forgeSearchActive = false;
+      event?.preventDefault?.();
+      return;
+    }
+    if (key === 'Backspace') {
+      forgeSearchText = forgeSearchText.slice(0, -1);
+      forgePickerScroll = 0;
+      event?.preventDefault?.();
+      return;
+    }
+    if (key.length === 1 && !event?.ctrlKey && !event?.metaKey) {
+      forgeSearchText += key;
+      forgePickerScroll = 0;
+      event?.preventDefault?.();
+      return;
+    }
+  }
+
   // Codex search input has highest priority — when the search box is focused
   // we capture printable keys + Backspace before any other handler can
   // interpret them (otherwise typing 'c' would close the codex, etc.).
@@ -5529,6 +5788,12 @@ function handleKeyDown(key, event) {
     debugMode = !debugMode;
     addLog(`Debug mode ${debugMode ? 'ON' : 'OFF'}`, debugMode ? Colors.GREEN : Colors.GRAY);
   }
+  // Debug — copy the current map area's node names + positions to the
+  // clipboard (one "Name: x, y" per line) so they can be pasted back in
+  // one shot. MAP only, debug only.
+  if ((key === 'p' || key === 'P') && debugMode && state === GameState.MAP) {
+    copyMapNodePositions();
+  }
   if (key === 'h' || key === 'H') {
     if (state === GameState.HELP_SCREEN) {
       playSound('book_close');
@@ -5681,15 +5946,17 @@ function drawQuestSelect() {
   ctx.shadowOffsetY = 0;
   ctx.fillStyle = '#cfb87a';
   ctx.font = 'italic 18px serif';
-  ctx.fillText('Debug build · pick the storyline for this run', SCREEN_WIDTH / 2, 132);
+  ctx.fillText('Pick the storyline for this run', SCREEN_WIDTH / 2, 132);
 
   // Main Quest tile(s) in the upper half. Quest Select is shown to
-  // every player now, so the Part 2 (WIP) tile is gated on debugMode:
+  // every player now, so the Part 2 tile is gated on debugMode:
   //  - debug: two large squares side by side — Part 1 + Part 2.
   //  - normal: the original single centered Main Quest square.
   const mainH = 400;
   const mainY = 155;
-  if (debugMode) {
+  // Both Part 1 and Part 2 are always offered now (Part 2 carries a finished
+  // Part 1 run into the epilogue + Chapter 1). No longer debug-gated.
+  {
     const mainW = 560;
     const mainGap = 40;
     const pairW = mainW * 2 + mainGap;
@@ -5708,32 +5975,17 @@ function drawQuestSelect() {
         startMainQuestFlow();
       },
     });
-    // Part 2 (WIP) — routes to the Part 2 setup screen, where the player
+    // Part 2 — routes to the Part 2 setup screen, where the player
     // picks a finished Part 1 run to carry into the epilogue + Chapter 1.
     drawQuestTile({
       x: mainX + mainW + mainGap, y: mainY, w: mainW, h: mainH,
       art: images.quest_part2,
       title: 'Part 2: The Blacks',
-      subtitle: 'Work in progress · continue a finished run',
+      subtitle: 'Continue a finished Part 1 run',
       titlePx: 32, subtitlePx: 17,
       onClick: () => {
         _part2SavesScrollY = 0;
         state = GameState.PART2_SETUP;
-      },
-    });
-  } else {
-    const mainW = 720;
-    const mainX = Math.round((SCREEN_WIDTH - mainW) / 2);
-    drawQuestTile({
-      x: mainX, y: mainY, w: mainW, h: mainH,
-      art: images.quest_main,
-      title: 'Main Quest',
-      subtitle: 'Escape the Prison · Save Qualibaf',
-      titlePx: 38, subtitlePx: 18,
-      onClick: () => {
-        selectedQuest = 'main';
-        _fromQuestSelect = true;
-        startMainQuestFlow();
       },
     });
   }
@@ -6086,7 +6338,7 @@ function handleGamePlusSetupClick(x, y) {
   }
 }
 
-// === Part 2 setup (WIP, debug-only) ===
+// === Part 2 setup (debug-only) ===
 // Reached from the Quest Select "Part 2: The Blacks" tile. Lists every
 // finished Part 1 run (the same part1_complete_<class> slots ccgQuest+
 // reads) and lets the player pick one to carry into the Part 2 epilogue
@@ -6133,9 +6385,6 @@ function drawPart2Setup() {
   ctx.font = 'italic 20px serif';
   ctx.textAlign = 'center';
   ctx.fillText('Choose a finished Part 1 run to carry into Part 2.', SCREEN_WIDTH / 2, panelY + 124);
-  ctx.fillStyle = '#ff9a70';
-  ctx.font = 'italic 15px serif';
-  ctx.fillText('Work in progress — the epilogue and Chapter 1 opening are playable so far.', SCREEN_WIDTH / 2, panelY + 152);
 
   // Scrollable save list — one row per finished Part 1 run.
   const listX = panelX + 40;
@@ -6348,6 +6597,10 @@ const MUSIC_FOR_AREA = {
   throne_room: 'Music/music_guild_of_unlikely_heroes_01',
   personal_quarters: 'Music/music_guild_of_unlikely_heroes_01',
   artisan_hall: 'Music/music_guild_of_unlikely_heroes_01',
+  // Part 2 forge route — normal Tharnag bed once the siege is over; the
+  // PART2_TENSE_AREAS override swaps it to siege music while it rages.
+  stairs_to_forge: 'Music/music_guild_of_unlikely_heroes_01',
+  the_forge: 'Music/music_guild_of_unlikely_heroes_01',
   // Temple of Moradin — sacred drone for the all-father's shrine, same
   // bed the Lost Shrine / Old God's Statue / Cathedral Shrine use.
   temple_of_moradin: 'Music/ambience_shrine_drone_01',
@@ -6429,6 +6682,10 @@ const MUSIC_FOR_AREA = {
 // shows up in the codex Sound tab "Wired To" column as `tag:role`.
 const MUSIC_TAGS = {
   'Music/music_heroic_01': ['title', 'chapter-end / level-up'],
+  // Mournful bed that takes over the whole Tharnag complex once the Great
+  // Pour is loosed (greatPourActivated) — exterior, halls, quarters, forge
+  // route — and carries through the post-Pour rest / tier-2 level-up.
+  'Music/music_sentimental_01': ['Tharnag (after the Great Pour)', 'post-Pour rest / level-up'],
   'Music/music_tension_01': ['default combat theme (any fight without a dedicated boss track)'],
   'Music/music_tension_02': ['area: lower_caverns', 'area: lava_chamber', 'area: obsidian_tunnels', 'area: obsidian_forge', 'area: temple_district', 'area: obsidian_cathedral', 'area: obsidian_plaza', 'area: obsidian_streets', 'area: obsidian_market', 'area: upper_bridge', 'area: tunnel_to_bridge'],
   'Music/music_final_streak_01': ['area: volcano_stairs_1', 'area: volcano_stairs_2', 'area: volcano_stairs_3', 'area: volcano_summit_ridge'],
@@ -6451,7 +6708,7 @@ const MUSIC_TAGS = {
   // Looping wet-magma bubble bed — layered during any fight whose
   // boss carries the lava_floor passive (Magma Drake at the Plaza,
   // Magma Mephit kill-count). Stopped at combatVictory + defeat.
-  'Misc/lava_bubble_01': ['combat ambience: Magma Drake', 'combat ambience: Magma Mephits'],
+  'Misc/lava_bubble_01': ['combat ambience: Magma Drake', 'combat ambience: Magma Mephits', 'area: the_forge', 'combat ambience: The Assassin (Forge)'],
   // Varimatras phase-3 dragon fight. Crossfaded in when combat
   // starts against the varimatras enemyId.
   'Music/music_the_trailer_01': ['boss: Varimatras (Phase 3 — frost dragon)'],
@@ -6530,6 +6787,23 @@ const MUSIC_FOR_NODE = {
 };
 
 let _lastMusicNodeId = null;
+// Part 2 — Tharnag areas (exterior + interior halls) and the mine
+// tunnels all play the tense thriller-brass bed once Part 2 has started.
+const PART2_TENSE_AREAS = new Set([
+  'tharnag', 'grand_hall', 'grand_staircase', 'throne_room',
+  'personal_quarters', 'artisan_hall', 'tharnag_tunnels',
+  'tharnag_tunnels_west_top', 'tharnag_tunnels_east_top',
+  'tharnag_tunnels_east_top_2',
+  'tharnag_tunnels_middle', 'tharnag_tunnels_middle_bottom',
+  'tharnag_tunnels_left_bottom',
+  'tharnag_tunnels_west_middle', 'tharnag_tunnels_east_middle',
+  'tharnag_tunnels_west_top_2', 'tharnag_tunnels_west_bottom',
+  'tharnag_tunnels_west_bottom_2', 'tharnag_tunnels_west_top_3',
+  'gate_of_deep',
+  // Part 2 forge route — siege bed while the assault rages.
+  'stairs_to_forge', 'the_forge',
+]);
+
 function updateMusicForCurrentScene() {
   if (!currentMap) return;
   // Path of the Necromancer — eerie-choir latch. Once the apprentice
@@ -6573,6 +6847,24 @@ function updateMusicForCurrentScene() {
   if (area === 'tharnag' && siegeComplete) {
     track = 'Music/music_guild_of_unlikely_heroes_01';
   }
+  // Part 2 — once the goblins are in the tunnels, the whole Tharnag
+  // complex (exterior, interior halls, and the mine tunnels) swaps to
+  // the tense thriller-brass bed to sell the siege-from-below. Applied
+  // after the siege override so it wins over the heroic Guild track.
+  if (part2Started && !part2SiegeOver && PART2_TENSE_AREAS.has(area)) {
+    track = 'Music/music_thriller_brass_01';
+  }
+  // Once the Great Pour is loosed, the whole Tharnag complex falls into the
+  // mournful "sentimental" bed for the rest of the run — wins over both the
+  // heroic Guild track and the tense siege override.
+  if (greatPourActivated && PART2_TENSE_AREAS.has(area)) {
+    track = 'Music/music_sentimental_01';
+  }
+  // ...but once the party turns back to the tunnels to search for the King
+  // (Chapter 2), Tharnag reverts to the tense thriller-brass siege bed.
+  if (chapter2Started && PART2_TENSE_AREAS.has(area)) {
+    track = 'Music/music_thriller_brass_01';
+  }
   // Per-area fade durations: longer crossfades for ambience beds that
   // sound abrupt with the default 1.5 / 2.5 s — the storm bed needs
   // room to breathe vs. the heroic-Guild track that just ended.
@@ -6587,6 +6879,9 @@ function updateMusicForCurrentScene() {
   // ambience; leaving the area (any other map) stops the layer.
   const AREA_AMBIENCE_LAYER = {
     qualibaf_waterfall: ['Music/water_fast_flowing_01', 0.35],
+    // The Great Forge — bubbling lava bed under the music. (The stairs
+    // approach stays quiet; the lava bed is only in the forge proper.)
+    the_forge: ['Misc/lava_bubble_01', 0.5],
   };
   const layer = AREA_AMBIENCE_LAYER[area];
   if (layer) playAmbienceLayer(layer[0], layer[1]);
@@ -6843,6 +7138,9 @@ function startGamePlusFromSave(slot) {
   if (player) {
     player.deckLimitCapBonus = (player.deckLimitCapBonus || 0) + 2;
   }
+  // Surface the Deck Limits explainer tutorial when the rebalance
+  // inventory opens below (same popup Part 2 uses).
+  _deckLimitsBoostPending = true;
   // Drop into restMode after the title card so the player can
   // rebalance their carried-over deck against the new +2 limits
   // BEFORE the bed encounter fires. exitInventory checks the
@@ -6883,6 +7181,14 @@ function resetStoryFlags() {
   throneAudienceComplete = false;
   quartersRested = false;
   dragonSlain = false;
+  part2Started = false;
+  part2SiegeOver = false;
+  greatPourActivated = false;
+  chapter2Started = false;
+  _tunnelExitNode = null;
+  _tunnelExitLocked = false;
+  _tunnelDeadEndsSeen = new Set();
+  tunnelEncounterChance = TUNNEL_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -6998,6 +7304,14 @@ function startNewGame() {
   throneAudienceComplete = false;
   quartersRested = false;
   dragonSlain = false;
+  part2Started = false;
+  part2SiegeOver = false;
+  greatPourActivated = false;
+  chapter2Started = false;
+  _tunnelExitNode = null;
+  _tunnelExitLocked = false;
+  _tunnelDeadEndsSeen = new Set();
+  tunnelEncounterChance = TUNNEL_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -7159,8 +7473,9 @@ function drawMenu() {
     ty += 18;
 
     const body = (
-      'Welcome to ccgQuest! Part 1 — all 8 chapters — is fully done and playable now. ' +
-      'Escape the Prison, Enter the Volcano, and Save Qualibaf! ' +
+      'Welcome to ccgQuest! Part 1 — all 8 chapters — is done and playable: ' +
+      'escape the Prison, enter the Volcano, and save Qualibaf! ' +
+      'Chapter 1 of Part 2 (the Great Forge) is also done, with more chapters on the way. ' +
       'Join the Discord for feedback, to report bugs, or just to chat about your run. Enjoy!'
     );
     ctx.fillStyle = '#e8d59a';
@@ -7990,7 +8305,9 @@ function handleAbilitySelectClick(x, y) {
         // their tier-2 forms way too early.
         // If level 2+, offer perk selection
         if (player.level >= 2) {
-          perkChoices = getPerkChoices(player.perks, 2, selectedClass, 1, playerTierOffset || 0);
+          // Roll perks at the level-up's tier (tier-2 level-ups → tier-2 pool,
+          // falling back to tier 1 for classes with no tier-2 list yet).
+          perkChoices = getPerkChoices(player.perks, 2, selectedClass, _levelUpTier || 1, playerTierOffset || 0);
           state = GameState.PERK_SELECT;
         } else {
           // Return to encounter
@@ -8362,6 +8679,57 @@ function inSameNodeCluster(a, b) {
 // reachable id list AND any cluster siblings of the current node, so
 // the gold "accessible" dot lights up the whole keep cluster the
 // moment the player walks into any one of its nodes.
+// Reveal a discoverable teleport-landing node on the (already-swapped)
+// current map: clear its ??? hidden label and mark it visited. Cross-map
+// teleports set currentNodeId directly (bypassing arriveAtNode's own
+// discoverable-reveal), so the gate you land on would otherwise still
+// read ??? while you stand on it.
+function revealLandingNode(id) {
+  const n = currentMap && currentMap.getNode(id);
+  if (n) { n.hiddenName = ''; n.hiddenDescription = ''; }
+  visitedNodes.add(id);
+}
+
+// Debug — dump the current map area's node names + positions to the
+// clipboard. Format mirrors how positions are dictated back ("Name: x,
+// y", one per line) with a header naming the map + area, so a whole map
+// can be pasted in one shot. Falls back to the console if the clipboard
+// is blocked. Bound to the 'p' key in debug while on the MAP.
+function copyMapNodePositions() {
+  if (!currentMap) return;
+  const cur = currentMap.getCurrentNode && currentMap.getCurrentNode();
+  const area = cur && cur.mapArea ? cur.mapArea : null;
+  const lines = [`${currentMap.name || currentMap.id} (${currentMap.id}${area ? ' / ' + area : ''})`];
+  for (const [id, node] of Object.entries(currentMap.nodes)) {
+    if (area && node.mapArea !== area) continue;
+    const p = node.position || [0, 0];
+    lines.push(`${node.name || id}: ${Math.round(p[0])}, ${Math.round(p[1])}`);
+  }
+  const text = lines.join('\n');
+  const count = lines.length - 1;
+  const ok = () => { addLog(`Copied ${count} node positions to clipboard.`, Colors.GREEN); try { showToast(`Copied ${count} node positions.`); } catch (_) {} };
+  const fallback = () => { console.log(text); addLog(`Clipboard blocked — ${count} positions logged to console (F12).`, Colors.GOLD); };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else {
+      fallback();
+    }
+  } catch (_) {
+    fallback();
+  }
+}
+
+// Part 2 — pick the real tunnel exit if one isn't already chosen for
+// this run. Called when the party enters the tunnels; persists via the
+// autosave so a reload near a dead-end can't reroll which one is the way
+// out. Cleared on rest (setWellRested) to re-roll.
+function chooseTunnelExitIfNeeded() {
+  if (_tunnelExitNode && TUNNEL_EXIT_NODES.includes(_tunnelExitNode)) return;
+  _tunnelExitNode = TUNNEL_EXIT_NODES[Math.floor(Math.random() * TUNNEL_EXIT_NODES.length)];
+  autosaveNow();
+}
+
 function getReachableNodeIds() {
   if (!currentMap) return [];
   const ids = currentMap.getAccessibleNodes().map(n => n.id);
@@ -8411,6 +8779,13 @@ function setWellRested() {
   _currentBridgePatrolNode = null;
   // Giant Boar (Pinewood) — re-arm the ambush on rest.
   giantBoarDefeated = false;
+  // Part 2 — resting re-rolls which tunnel dead-end is the real exit to
+  // the Gate of the Deep, and re-arms the dead-end supply searches. Once
+  // the player has reached the gate the exit is LOCKED, so rest no longer
+  // re-rolls it (the path is fixed for this character).
+  if (!_tunnelExitLocked) _tunnelExitNode = null;
+  _tunnelDeadEndsSeen = new Set();
+  tunnelEncounterChance = TUNNEL_ENC_STEP;
   // Full rest clears active Provisions (Ale, food/drink buffs) + the Frenzy
   // Blood Vial's Bloodied Frenzy — these are "until next full rest".
   clearActiveProvisions();
@@ -8497,6 +8872,106 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     visitedNodes.add(nodeId);
     if (node.hiddenName) node.hiddenName = '';
     if (node.hiddenDescription) node.hiddenDescription = '';
+  }
+
+  // Part 2 — Gate of the Deep teleports back to whichever tunnel node
+  // was this run's real exit (the gate's only link out).
+  if (!skipEncounter && nodeId === 'gate_arrival'
+      && currentMap.id === 'tharnag_tunnels_gate_of_deep'
+      && _tunnelExitNode && TUNNEL_EXIT_NODE_MAP[_tunnelExitNode]) {
+    const [exitMapId, exitFactory] = TUNNEL_EXIT_NODE_MAP[_tunnelExitNode];
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap(exitMapId, exitFactory);
+    revealLandingNode(_tunnelExitNode);
+    currentMap.currentNodeId = _tunnelExitNode;
+    updateMusicForCurrentScene();
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — tunnel dead-ends. The chosen exit crosses to the Gate of
+  // the Deep; on first arrival it fires the King's-front dialog and
+  // LOCKS that node as the real path forever (per character — rest no
+  // longer re-rolls it). Every other listed dead-end (wrong exits + the
+  // supply-only nodes) rolls a placeholder 50% supply search, once per
+  // node per tunnel session.
+  if (!skipEncounter && typeof currentMap.id === 'string' && currentMap.id.startsWith('tharnag_tunnels')) {
+    if (nodeId === _tunnelExitNode && TUNNEL_EXIT_NODES.includes(nodeId)) {
+      const firstTime = !_tunnelExitLocked;
+      _tunnelExitLocked = true;
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('tharnag_tunnels_gate_of_deep', createTharnagTunnelsGateOfDeepMap);
+      visitedNodes.add('gate_arrival');
+      currentMap.currentNodeId = 'gate_arrival';
+      updateMusicForCurrentScene();
+      if (firstTime) {
+        currentEncounter = createTunnelGateArrivalEncounter();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+      } else {
+        state = GameState.MAP;
+      }
+      autosaveNow();
+      return;
+    }
+    // Gate of the Deep — the two scripted flank fights (Goblin Front).
+    // First flank taken gets the standard rush dialog; the second gets the
+    // more-desperate version. One-time each (the side's done flag gates it).
+    if (currentMap.id === 'tharnag_tunnels_gate_of_deep' &&
+        (nodeId === 'left_front_2' || nodeId === 'right_front_2')) {
+      const side = nodeId === 'left_front_2' ? 'left' : 'right';
+      const sideDone = completedEncounters.has(`goblin_front_${side}`);
+      if (!sideDone) {
+        // Second flank (the other is already cleared) gets the desperate
+        // dialog. completedEncounters is set on encounter completion.
+        const frontsWon = (completedEncounters.has('goblin_front_left') ? 1 : 0)
+                        + (completedEncounters.has('goblin_front_right') ? 1 : 0);
+        currentEncounter = createGoblinFrontEncounter(side, frontsWon >= 1);
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        autosaveNow();
+        return;
+      }
+    }
+    if (TUNNEL_EXIT_NODES.includes(nodeId) || TUNNEL_SUPPLY_NODES.includes(nodeId)) {
+      if (!_tunnelDeadEndsSeen.has(nodeId)) {
+        _tunnelDeadEndsSeen.add(nodeId);
+        // 50% chance the dead end holds one item from the tunnel supply
+        // cache. The encounter's LOOT phase rolls + showcases the card
+        // (loot screen + loot sound), so we only decide the gate here.
+        const foundSupplies = Math.random() < 0.5;
+        currentEncounter = createTunnelDeadEndEncounter(foundSupplies);
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        return;
+      }
+    }
+    // Random tunnel encounter. Every walked-onto tunnel node that isn't
+    // a dead-end / the exit / the gate and has no scripted encounter
+    // rolls a cumulative chance (starts at 5%, +5% per miss, resets on a
+    // hit). On a hit: 50/50 Goblin Sapper Squad vs Rampaging Troll.
+    const isTunnelGate = currentMap.id === 'tharnag_tunnels_gate_of_deep';
+    const isDeadEndNode = TUNNEL_EXIT_NODES.includes(nodeId) || TUNNEL_SUPPLY_NODES.includes(nodeId);
+    if (!isTunnelGate && !isDeadEndNode && !node.encounterId) {
+      if (Math.random() < tunnelEncounterChance) {
+        tunnelEncounterChance = TUNNEL_ENC_STEP;
+        currentEncounter = Math.random() < 0.5
+          ? createGoblinSwarmEncounter()
+          : createRampagingTrollEncounter();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        return;
+      }
+      tunnelEncounterChance = Math.min(1.0, tunnelEncounterChance + TUNNEL_ENC_STEP);
+    }
   }
 
   // Extra-vision maps: clear hidden labels two hops out from the
@@ -10615,6 +11090,27 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       return;
     }
   }
+  // Part 2 — leaving the Quarters after the post-Pour level-up, Durgan
+  // catches the party in the hallway: he won't stop them going back down
+  // for the King, and gifts a Mithril Ore from the King's Vault to take to
+  // the forge. Fires once, gated on the great_pour_rest sleep.
+  if (!skipEncounter && nodeId === 'quarters_hallway'
+      && fromNodeId === 'personal_quarters_entry'
+      && currentMap.id === 'tharnag_interior'
+      && completedEncounters && completedEncounters.has('great_pour_rest')
+      && !completedEncounters.has('durgan_vault')) {
+    visitedNodes.add(nodeId);
+    currentMap.currentNodeId = nodeId;
+    const enc = ENCOUNTER_REGISTRY.durgan_vault && ENCOUNTER_REGISTRY.durgan_vault();
+    if (enc) {
+      currentEncounter = enc;
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+  }
   // Valdrisa intercept — leaving the Personal Quarters for the first
   // time after resting drops the party in the hallway and fires the
   // Valdrisa encounter (one-shot). Mirrors PY game.py:2479-2483.
@@ -10690,6 +11186,542 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     if (target) { target.isDone = true; target.isLocked = false; target.hiddenName = ''; }
     currentMap.currentNodeId = 'grand_hall_main_entrance';
     state = GameState.MAP;
+    return;
+  }
+  // Part 2 — "To the Tunnels" (Tharnag interior) → Tharnag Tunnels
+  // entrance. Walk-onto / click-on-self both teleport. Destination
+  // node is set directly (no arriveAtNode on the far side), so the
+  // forward hop never bounces; walking back onto the Tunnel Mouth from
+  // inside the tunnels fires the return below (it's the exit).
+  // First trip back into the tunnels to search for the King — only AFTER
+  // the Pour + the rest + Durgan's send-off (durgan_vault), and only ONCE.
+  // Chapter 2 isn't built yet: fade out, show the "Chapter 2: The Search /
+  // To Be Continued" title card, then drop the party INTO the tunnels.
+  // chapter2Started latches it, so every later trip uses the normal
+  // back-and-forth entry below (no title card).
+  if (!skipEncounter && nodeId === 'grand_hall_to_tunnels'
+      && currentMap.id === 'tharnag_interior'
+      && greatPourActivated && completedEncounters && completedEncounters.has('durgan_vault')
+      && !chapter2Started) {
+    chapter2Started = true;
+    _lastMusicArea = null; // revert Tharnag to the tense thriller-brass bed
+    startFade(() => {
+      showTitleCard('Chapter 2: The Search', 'To Be Continued…', () => {
+        // Land in the tunnels (same as the normal entry below).
+        if (currentMap) _mapCache[currentMap.id] = currentMap;
+        currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+        revealLandingNode('tunnels_entry');
+        currentMap.currentNodeId = 'tunnels_entry';
+        chooseTunnelExitIfNeeded();
+        state = GameState.MAP;
+        autosaveNow();
+      });
+    });
+    return;
+  }
+  if (!skipEncounter && nodeId === 'grand_hall_to_tunnels'
+      && currentMap.id === 'tharnag_interior') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    revealLandingNode('tunnels_entry');
+    currentMap.currentNodeId = 'tunnels_entry';
+    // Lock in this run's random exit the moment the party steps in.
+    chooseTunnelExitIfNeeded();
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Tharnag Tunnels — Tunnel Mouth → back up to the Grand Hall's
+  // "To the Tunnels" stair. Pairs with the gate above.
+  if (!skipEncounter && nodeId === 'tunnels_entry'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+    const target = currentMap.getNode('grand_hall_to_tunnels');
+    if (target) { target.isLocked = false; target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('grand_hall_to_tunnels');
+    currentMap.currentNodeId = 'grand_hall_to_tunnels';
+    // Returning from the Gate of the Deep with the King's order — once both
+    // flanks have fallen, General Durgan meets you at the stair-head to argue
+    // the Great Pour. Fires once; its completion opens the To-the-Forge stair.
+    if (completedEncounters.has('goblin_front_left')
+        && completedEncounters.has('goblin_front_right')
+        && !completedEncounters.has('great_pour_return')) {
+      currentEncounter = createGreatPourReturnEncounter();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      autosaveNow();
+      return;
+    }
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — "To the Forge" (Grand Hall) → Stairs to the Forge. Walk-onto /
+  // click-on-self both teleport; landing node set directly so it never bounces.
+  if (!skipEncounter && nodeId === 'grand_hall_to_forge'
+      && currentMap.id === 'tharnag_interior') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_stairs_to_forge', createStairsToForgeMap);
+    visitedNodes.add('forge_stairs_entry');
+    currentMap.currentNodeId = 'forge_stairs_entry';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Stairs to the Forge — top stair back up to the Grand Hall's "To the Forge".
+  if (!skipEncounter && nodeId === 'forge_stairs_entry'
+      && currentMap.id === 'tharnag_stairs_to_forge') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+    const target = currentMap.getNode('grand_hall_to_forge');
+    if (target) { target.isLocked = false; target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('grand_hall_to_forge');
+    currentMap.currentNodeId = 'grand_hall_to_forge';
+    updateMusicForCurrentScene();
+    // After the Great Pour, General Durgan meets the party here at the
+    // stair-head. Fires once; it sends the party to sleep in the Quarters,
+    // where the rest triggers the tier-2 level-up.
+    if (greatPourActivated && !completedEncounters.has('durgan_return')) {
+      const factory = ENCOUNTER_REGISTRY['durgan_return'];
+      if (factory) {
+        currentEncounter = factory();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        autosaveNow();
+        return;
+      }
+    }
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Forge Plaza → The Great Forge map.
+  if (!skipEncounter && nodeId === 'forge_plaza'
+      && currentMap.id === 'tharnag_stairs_to_forge') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_the_forge', createTharnagTheForgeMap);
+    visitedNodes.add('the_forge_stair');
+    currentMap.currentNodeId = 'the_forge_stair';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // The Great Forge — top stair back to the Forge Plaza.
+  if (!skipEncounter && nodeId === 'the_forge_stair'
+      && currentMap.id === 'tharnag_the_forge') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_stairs_to_forge', createStairsToForgeMap);
+    visitedNodes.add('forge_plaza');
+    currentMap.currentNodeId = 'forge_plaza';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — West-Top tunnels gates. Flooded Drift ↔ Upper Drift (top
+  // path) and West Drift ↔ Lower Drift (south path). Cross-map;
+  // destination nodes are set directly so the forward hop never bounces.
+  if (!skipEncounter && nodeId === 'tunnels_deep_east'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top', createTharnagTunnelsWestTop01Map);
+    revealLandingNode('wt_top_gate');
+    currentMap.currentNodeId = 'wt_top_gate';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wt_top_gate'
+      && currentMap.id === 'tharnag_tunnels_west_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    const target = currentMap.getNode('tunnels_deep_east');
+    if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('tunnels_deep_east');
+    currentMap.currentNodeId = 'tunnels_deep_east';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'tunnels_left'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top', createTharnagTunnelsWestTop01Map);
+    revealLandingNode('wt_south_gate');
+    currentMap.currentNodeId = 'wt_south_gate';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wt_south_gate'
+      && currentMap.id === 'tharnag_tunnels_west_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    const target = currentMap.getNode('tunnels_left');
+    if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('tunnels_left');
+    currentMap.currentNodeId = 'tunnels_left';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — East-Top tunnels gates. East Drift ↔ Eastern Drift (top of
+  // the line) and Collapsed Drift ↔ Collapsed Gallery (bottom).
+  if (!skipEncounter && nodeId === 'tunnels_right'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_top', createTharnagTunnelsEastTop01Map);
+    revealLandingNode('et_top');
+    currentMap.currentNodeId = 'et_top';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'et_top'
+      && currentMap.id === 'tharnag_tunnels_east_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    const target = currentMap.getNode('tunnels_right');
+    if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('tunnels_right');
+    currentMap.currentNodeId = 'tunnels_right';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'tunnels_deep_west'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_top', createTharnagTunnelsEastTop01Map);
+    revealLandingNode('et_collapsed');
+    currentMap.currentNodeId = 'et_collapsed';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'et_collapsed'
+      && currentMap.id === 'tharnag_tunnels_east_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    const target = currentMap.getNode('tunnels_deep_west');
+    if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('tunnels_deep_west');
+    currentMap.currentNodeId = 'tunnels_deep_west';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Far East gate. The Undergate (East Top) ↔ Beyond the Gate
+  // (East Top 2).
+  if (!skipEncounter && nodeId === 'et_7'
+      && currentMap.id === 'tharnag_tunnels_east_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_top_2', createTharnagTunnelsEastTop02Map);
+    revealLandingNode('e2_1');
+    currentMap.currentNodeId = 'e2_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'e2_1'
+      && currentMap.id === 'tharnag_tunnels_east_top_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_top', createTharnagTunnelsEastTop01Map);
+    revealLandingNode('et_7');
+    currentMap.currentNodeId = 'et_7';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Middle (deep) tunnels gate. Lower Galleries ↔ Deep Stair.
+  if (!skipEncounter && nodeId === 'tunnels_lower'
+      && currentMap.id === 'tharnag_tunnels_entrance') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle', createTharnagTunnelsMiddleMap);
+    revealLandingNode('tm_top');
+    currentMap.currentNodeId = 'tm_top';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'tm_top'
+      && currentMap.id === 'tharnag_tunnels_middle') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+    const target = currentMap.getNode('tunnels_lower');
+    if (target) { target.hiddenName = ''; target.hiddenDescription = ''; }
+    visitedNodes.add('tunnels_lower');
+    currentMap.currentNodeId = 'tunnels_lower';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Deep Roads gate. The Threshold (Middle) ↔ The Deep Road
+  // (Middle Bottom top node).
+  if (!skipEncounter && nodeId === 'tm_4'
+      && currentMap.id === 'tharnag_tunnels_middle') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap);
+    revealLandingNode('mb_1');
+    currentMap.currentNodeId = 'mb_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'mb_1'
+      && currentMap.id === 'tharnag_tunnels_middle_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle', createTharnagTunnelsMiddleMap);
+    revealLandingNode('tm_4');
+    currentMap.currentNodeId = 'tm_4';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Lower West gate. Fresh Diggings (West) ↔ Sunken Drift
+  // (Left Bottom top node).
+  if (!skipEncounter && nodeId === 'wt_south_d'
+      && currentMap.id === 'tharnag_tunnels_west_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_left_bottom', createTharnagTunnelsLeftBottomMap);
+    revealLandingNode('lb_1');
+    currentMap.currentNodeId = 'lb_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'lb_1'
+      && currentMap.id === 'tharnag_tunnels_left_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top', createTharnagTunnelsWestTop01Map);
+    revealLandingNode('wt_south_d');
+    currentMap.currentNodeId = 'wt_south_d';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Goblin Hole (Left Bottom) ↔ Slave Pens (Middle Bottom). A
+  // shortcut between the two lower maps; Slave Pens + War Camp are only
+  // reachable through this gate.
+  if (!skipEncounter && nodeId === 'lb_right2'
+      && currentMap.id === 'tharnag_tunnels_left_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap);
+    revealLandingNode('mb_right1');
+    currentMap.currentNodeId = 'mb_right1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'mb_right1'
+      && currentMap.id === 'tharnag_tunnels_middle_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_left_bottom', createTharnagTunnelsLeftBottomMap);
+    revealLandingNode('lb_right2');
+    currentMap.currentNodeId = 'lb_right2';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — West Deep gate. The Sump (Left Bottom) ↔ Sump Passage
+  // (West Middle).
+  if (!skipEncounter && nodeId === 'lb_left2'
+      && currentMap.id === 'tharnag_tunnels_left_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_middle', createTharnagTunnelsWestMiddleMap);
+    revealLandingNode('wm_1');
+    currentMap.currentNodeId = 'wm_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wm_1'
+      && currentMap.id === 'tharnag_tunnels_west_middle') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_left_bottom', createTharnagTunnelsLeftBottomMap);
+    revealLandingNode('lb_left2');
+    currentMap.currentNodeId = 'lb_left2';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — East Deep gate. Side Cavern (East Top 2) ↔ Cavern Mouth
+  // (East Middle).
+  if (!skipEncounter && nodeId === 'e2_branch'
+      && currentMap.id === 'tharnag_tunnels_east_top_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_middle', createTharnagTunnelsEastMiddleMap);
+    revealLandingNode('em_1');
+    currentMap.currentNodeId = 'em_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'em_1'
+      && currentMap.id === 'tharnag_tunnels_east_middle') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_east_top_2', createTharnagTunnelsEastTop02Map);
+    revealLandingNode('e2_branch');
+    currentMap.currentNodeId = 'e2_branch';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Upper West gates. Flooded End (West Middle) ↔ The Crack,
+  // and Old Workings (West) ↔ Old Adit — two separate lines on the West
+  // Top 2 map.
+  if (!skipEncounter && nodeId === 'wm_7'
+      && currentMap.id === 'tharnag_tunnels_west_middle') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top_2', createTharnagTunnelsWestTop02Map);
+    revealLandingNode('w2_a1');
+    currentMap.currentNodeId = 'w2_a1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'w2_a1'
+      && currentMap.id === 'tharnag_tunnels_west_top_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_middle', createTharnagTunnelsWestMiddleMap);
+    revealLandingNode('wm_7');
+    currentMap.currentNodeId = 'wm_7';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wt_top_end'
+      && currentMap.id === 'tharnag_tunnels_west_top') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top_2', createTharnagTunnelsWestTop02Map);
+    revealLandingNode('w2_b1');
+    currentMap.currentNodeId = 'w2_b1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'w2_b1'
+      && currentMap.id === 'tharnag_tunnels_west_top_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top', createTharnagTunnelsWestTop01Map);
+    revealLandingNode('wt_top_end');
+    currentMap.currentNodeId = 'wt_top_end';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Sunken West gate. Drowned Hall (Left Bottom) ↔ The
+  // Confluence (West Bottom, the V's bottom vertex).
+  if (!skipEncounter && nodeId === 'lb_4'
+      && currentMap.id === 'tharnag_tunnels_left_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_bottom', createTharnagTunnelsWestBottomMap);
+    revealLandingNode('wb_bottom');
+    currentMap.currentNodeId = 'wb_bottom';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wb_bottom'
+      && currentMap.id === 'tharnag_tunnels_west_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_left_bottom', createTharnagTunnelsLeftBottomMap);
+    revealLandingNode('lb_4');
+    currentMap.currentNodeId = 'lb_4';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — West Source (West Bottom) ↔ The Pit (Middle Bottom). A
+  // shortcut between the two lower-west maps.
+  if (!skipEncounter && nodeId === 'wb_l4'
+      && currentMap.id === 'tharnag_tunnels_west_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap);
+    revealLandingNode('mb_pit');
+    currentMap.currentNodeId = 'mb_pit';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'mb_pit'
+      && currentMap.id === 'tharnag_tunnels_middle_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_bottom', createTharnagTunnelsWestBottomMap);
+    revealLandingNode('wb_l4');
+    currentMap.currentNodeId = 'wb_l4';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Lower Deep gate. East Source (West Bottom) ↔ The Spillway
+  // (West Bottom 2).
+  if (!skipEncounter && nodeId === 'wb_r4'
+      && currentMap.id === 'tharnag_tunnels_west_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_bottom_2', createTharnagTunnelsWestBottom2Map);
+    revealLandingNode('wb2_1');
+    currentMap.currentNodeId = 'wb2_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wb2_1'
+      && currentMap.id === 'tharnag_tunnels_west_bottom_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_bottom', createTharnagTunnelsWestBottomMap);
+    revealLandingNode('wb_r4');
+    currentMap.currentNodeId = 'wb_r4';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Side Pool (West Bottom 2) ↔ Upper Causeway (Middle Bottom
+  // top-right dead-end chain).
+  if (!skipEncounter && nodeId === 'wb2_branch'
+      && currentMap.id === 'tharnag_tunnels_west_bottom_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap);
+    revealLandingNode('mb_tr1');
+    currentMap.currentNodeId = 'mb_tr1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'mb_tr1'
+      && currentMap.id === 'tharnag_tunnels_middle_bottom') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_bottom_2', createTharnagTunnelsWestBottom2Map);
+    revealLandingNode('wb2_branch');
+    currentMap.currentNodeId = 'wb2_branch';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  // Part 2 — Old Workings gate. Dead Drift (West Top 2) ↔ The Crosscut
+  // (West Top 3).
+  if (!skipEncounter && nodeId === 'w2_b5'
+      && currentMap.id === 'tharnag_tunnels_west_top_2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top_3', createTharnagTunnelsWestTop03Map);
+    revealLandingNode('wt3_1');
+    currentMap.currentNodeId = 'wt3_1';
+    state = GameState.MAP;
+    autosaveNow();
+    return;
+  }
+  if (!skipEncounter && nodeId === 'wt3_1'
+      && currentMap.id === 'tharnag_tunnels_west_top_3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_west_top_2', createTharnagTunnelsWestTop02Map);
+    revealLandingNode('w2_b5');
+    currentMap.currentNodeId = 'w2_b5';
+    state = GameState.MAP;
+    autosaveNow();
     return;
   }
   // Tharnag siege reset: any time the party stands at tharnag_entry
@@ -11432,6 +12464,73 @@ function handleMapClick(x, y) {
         // unlock works.
         (r.nodeId === 'grand_hall_main_entrance' && currentMap.id === 'tharnag_interior' && !node.isLocked) ||
         (r.nodeId === 'tharnag_main_door' && currentMap.id === 'tharnag' && !node.isLocked) ||
+        // Part 2 — "To the Tunnels" stair ↔ Tharnag Tunnels Tunnel Mouth.
+        (r.nodeId === 'grand_hall_to_tunnels' && currentMap.id === 'tharnag_interior' && !node.isLocked) ||
+        (r.nodeId === 'tunnels_entry' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        // Part 2 — "To the Forge" stair ↔ Stairs to the Forge, and the Forge
+        // Plaza ↔ The Great Forge.
+        (r.nodeId === 'grand_hall_to_forge' && currentMap.id === 'tharnag_interior' && !node.isLocked) ||
+        (r.nodeId === 'forge_stairs_entry' && currentMap.id === 'tharnag_stairs_to_forge') ||
+        (r.nodeId === 'forge_plaza' && currentMap.id === 'tharnag_stairs_to_forge') ||
+        (r.nodeId === 'the_forge_stair' && currentMap.id === 'tharnag_the_forge') ||
+        // Part 2 — West-Top gates: Flooded Drift ↔ Upper Drift, West
+        // Drift ↔ Lower Drift.
+        (r.nodeId === 'tunnels_deep_east' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        (r.nodeId === 'tunnels_left' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        (r.nodeId === 'wt_top_gate' && currentMap.id === 'tharnag_tunnels_west_top') ||
+        (r.nodeId === 'wt_south_gate' && currentMap.id === 'tharnag_tunnels_west_top') ||
+        // Part 2 — East-Top gates: East Drift ↔ Eastern Drift, Collapsed
+        // Drift ↔ Collapsed Gallery.
+        (r.nodeId === 'tunnels_right' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        (r.nodeId === 'tunnels_deep_west' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        (r.nodeId === 'et_top' && currentMap.id === 'tharnag_tunnels_east_top') ||
+        (r.nodeId === 'et_collapsed' && currentMap.id === 'tharnag_tunnels_east_top') ||
+        // Part 2 — Far East gate: The Undergate ↔ Beyond the Gate.
+        (r.nodeId === 'et_7' && currentMap.id === 'tharnag_tunnels_east_top') ||
+        (r.nodeId === 'e2_1' && currentMap.id === 'tharnag_tunnels_east_top_2') ||
+        // Part 2 — Middle (deep) gate: Lower Galleries ↔ Deep Stair.
+        (r.nodeId === 'tunnels_lower' && currentMap.id === 'tharnag_tunnels_entrance') ||
+        (r.nodeId === 'tm_top' && currentMap.id === 'tharnag_tunnels_middle') ||
+        // Part 2 — Deep Roads gate: The Threshold ↔ The Deep Road.
+        (r.nodeId === 'tm_4' && currentMap.id === 'tharnag_tunnels_middle') ||
+        (r.nodeId === 'mb_1' && currentMap.id === 'tharnag_tunnels_middle_bottom') ||
+        // Part 2 — Lower West gate: Fresh Diggings ↔ Sunken Drift.
+        (r.nodeId === 'wt_south_d' && currentMap.id === 'tharnag_tunnels_west_top') ||
+        (r.nodeId === 'lb_1' && currentMap.id === 'tharnag_tunnels_left_bottom') ||
+        // Part 2 — Goblin Hole ↔ Slave Pens (Left Bottom ↔ Middle Bottom).
+        (r.nodeId === 'lb_right2' && currentMap.id === 'tharnag_tunnels_left_bottom') ||
+        (r.nodeId === 'mb_right1' && currentMap.id === 'tharnag_tunnels_middle_bottom') ||
+        // Part 2 — West Deep gate: The Sump ↔ Sump Passage.
+        (r.nodeId === 'lb_left2' && currentMap.id === 'tharnag_tunnels_left_bottom') ||
+        (r.nodeId === 'wm_1' && currentMap.id === 'tharnag_tunnels_west_middle') ||
+        // Part 2 — East Deep gate: Side Cavern ↔ Cavern Mouth.
+        (r.nodeId === 'e2_branch' && currentMap.id === 'tharnag_tunnels_east_top_2') ||
+        (r.nodeId === 'em_1' && currentMap.id === 'tharnag_tunnels_east_middle') ||
+        // Part 2 — Upper West gates: Flooded End ↔ The Crack, Old
+        // Workings ↔ Old Adit.
+        (r.nodeId === 'wm_7' && currentMap.id === 'tharnag_tunnels_west_middle') ||
+        (r.nodeId === 'w2_a1' && currentMap.id === 'tharnag_tunnels_west_top_2') ||
+        (r.nodeId === 'wt_top_end' && currentMap.id === 'tharnag_tunnels_west_top') ||
+        (r.nodeId === 'w2_b1' && currentMap.id === 'tharnag_tunnels_west_top_2') ||
+        // Part 2 — Sunken West gate: Drowned Hall ↔ The Confluence.
+        (r.nodeId === 'lb_4' && currentMap.id === 'tharnag_tunnels_left_bottom') ||
+        (r.nodeId === 'wb_bottom' && currentMap.id === 'tharnag_tunnels_west_bottom') ||
+        // Part 2 — West Source ↔ The Pit.
+        (r.nodeId === 'wb_l4' && currentMap.id === 'tharnag_tunnels_west_bottom') ||
+        (r.nodeId === 'mb_pit' && currentMap.id === 'tharnag_tunnels_middle_bottom') ||
+        // Part 2 — Lower Deep gate: East Source ↔ The Spillway.
+        (r.nodeId === 'wb_r4' && currentMap.id === 'tharnag_tunnels_west_bottom') ||
+        (r.nodeId === 'wb2_1' && currentMap.id === 'tharnag_tunnels_west_bottom_2') ||
+        // Part 2 — Side Pool ↔ Upper Causeway (Middle Bottom dead-end).
+        (r.nodeId === 'wb2_branch' && currentMap.id === 'tharnag_tunnels_west_bottom_2') ||
+        (r.nodeId === 'mb_tr1' && currentMap.id === 'tharnag_tunnels_middle_bottom') ||
+        // Part 2 — Old Workings gate: Dead Drift ↔ The Crosscut.
+        (r.nodeId === 'w2_b5' && currentMap.id === 'tharnag_tunnels_west_top_2') ||
+        (r.nodeId === 'wt3_1' && currentMap.id === 'tharnag_tunnels_west_top_3') ||
+        // Part 2 — Gate of the Deep ↔ the chosen exit (click-on-self both
+        // ways; the arriveAtNode handlers do the dynamic routing).
+        (r.nodeId === 'gate_arrival' && currentMap.id === 'tharnag_tunnels_gate_of_deep') ||
+        (TUNNEL_EXIT_NODES.includes(r.nodeId) && typeof currentMap.id === 'string' && currentMap.id.startsWith('tharnag_tunnels')) ||
         // Climbing the Stairs ↔ Top of the Infinite Stairs pair, and
         // Top of the Infinite Stairs ↔ The Last Watch pair. Click-on-
         // self teleports the same way walking onto the node does.
@@ -11696,9 +12795,10 @@ const ENCOUNTER_BG_MAP = {
   general_store: 'bg_general_store', inn: 'bg_inn', church: 'bg_church',
   arcane_emporium: 'bg_arcane_emporium', city_north_gate: 'bg_qualibaf',
   guild_hall: 'bg_guild_hall',
-  // Part 2 (WIP) — montage + Chapter 1 fall back to these when no map
+  // Part 2 — montage + Chapter 1 fall back to these when no map
   // node is active; individual beats still swap via per-text bgOverride.
   part2_epilogue: 'bg_throne_room', part2_ch1_qualibaf: 'bg_qualibaf',
+  part2_grand_hall_alarm: 'bg_grand_hall',
   // North / Forest
   north_crossroad: 'bg_north_crossroad', filibaf_entrance: 'bg_filibaf_entrance',
   forest_shadows: 'bg_filibaf_entrance', forest_ambush_left: 'bg_filibaf_entrance',
@@ -12180,6 +13280,19 @@ function hydrateMapFromGlobalState(map) {
       mr.hiddenName = '';
       mr.hiddenDescription = '';
       mr._stateRevealed = true;
+    }
+  }
+  // Part 2 — the "To the Tunnels" stair off the Middle Stairs opens
+  // once Part 2 has started (the General's alarm sends the party down
+  // to the mine workings). Hidden + locked in a Part 1 run so it never
+  // shows there. _stateRevealed forces visibility regardless of node.
+  if (map.id === 'tharnag_interior' && part2Started) {
+    const tt = map.getNode('grand_hall_to_tunnels');
+    if (tt) {
+      tt.isLocked = false;
+      tt.hiddenName = '';
+      tt.hiddenDescription = '';
+      tt._stateRevealed = true;
     }
   }
   // Post-dragon side quest unlocks on the Tharnag interior map.
@@ -12750,13 +13863,13 @@ function transitionToTharnagPart1Ending(fromNodeId) {
 }
 
 // ============================================================
-// PART 2 — work in progress, debug-gated.
+// PART 2 (gates on part2Started).
 //
-// Entered from the post-dragon quarters_rest sleep when debugMode is on
-// (see the quarters_rest case). Instead of rolling the end credits we
-// play a quiet epilogue montage, then a long fade into the "Part 2: The
-// Blacks" title, then "Chapter 1: Tharnag", then the Qualibaf opening
-// scene. Non-debug players still get the normal end credits.
+// Entered from the post-dragon quarters_rest sleep (see the quarters_rest
+// case). Instead of rolling the end credits we play a quiet epilogue
+// montage, then a long fade into the "Part 2: The Blacks" title, then
+// "Chapter 1: Tharnag", then the Qualibaf opening scene. The end credits
+// (startEndCredits) are deferred to a later build.
 //
 // All three encounters are TEXT-only; their completion is caught in
 // advanceEncounterPhase (search for 'part2_epilogue' / 'part2_ch1').
@@ -12776,6 +13889,18 @@ function startPart2Epilogue() {
 }
 
 function startPart2Chapter1() {
+  // Mark Part 2 as started (canonical flag; persisted). Guard the cap
+  // bump on it so re-entering this path can't stack the bonus: starting
+  // Part 2 raises the level-up deck-limit cap by +2 per category (and +1
+  // for Relics, via the half-rate relic formula in getDeckLimitCap) —
+  // the same bonus a ccgQuest+ restart grants. Flag the inventory to
+  // surface the explainer tutorial the first time the player opens the
+  // Deck Limits panel (at the inn rebalance).
+  if (!part2Started) {
+    part2Started = true;
+    if (player) player.deckLimitCapBonus = (player.deckLimitCapBonus || 0) + 2;
+    _deckLimitsBoostPending = true;
+  }
   // Fade out the homecoming theme and bring up the Qualibaf town music
   // (same track the city plays normally) for the envoy scene.
   try { crossfadeMusic('Music/music_castle_festivities_01', 1500, 2500); _lastMusicArea = 'qualibaf'; _lastMusicNodeId = null; } catch (_) {}
@@ -12798,21 +13923,6 @@ function startPart2Chapter1() {
   advanceEncounterPhase();
 }
 
-// WIP terminator — Part 2 has no playable content past Chapter 1's
-// opening yet, so we tear the run down to the menu the same way the
-// Necromancer-unlock splash does.
-function endPart2Wip() {
-  state = GameState.MENU;
-  player = null;
-  currentMap = null;
-  currentEncounter = null;
-  _encounterBgOverride = null;
-  _hasEnteredCombat = false;
-  _lastMusicArea = null;
-  _lastMusicNodeId = null;
-  startMenuMusicIfNeeded();
-}
-
 // Tharnag siege map → interior (Grand Hall side entry). Reuses the
 // cached interior map so the player keeps prior node state.
 function transitionToGrandHallSideEntry(fromNodeId) {
@@ -12822,6 +13932,24 @@ function transitionToGrandHallSideEntry(fromNodeId) {
   visitedNodes.add('grand_hall_side_entry');
   const target = currentMap.getNode('grand_hall_side_entry');
   if (target) target.isDone = true;
+  // Part 2 — the General's alarm. Fires once on the first side-door
+  // re-entry after Part 2 has started (goblins in the tunnels). Gated on
+  // part2Started + a one-shot via completedEncounters so it never fires
+  // in a Part 1 run and never repeats. Otherwise the normal silent
+  // arrival (Part 1 / already-seen) runs.
+  if (part2Started && !completedEncounters.has('part2_grand_hall_alarm')) {
+    currentMap.currentNodeId = 'grand_hall_side_entry';
+    const factory = ENCOUNTER_REGISTRY['part2_grand_hall_alarm'];
+    if (factory) {
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      autosaveNow();
+      return;
+    }
+  }
   arriveAtNode('grand_hall_side_entry', fromNodeId, true);
   autosaveNow();
 }
@@ -12872,9 +14000,44 @@ function startNodeEncounter(nodeId) {
   currentMap.currentNodeId = nodeId;
   const node = currentMap.getNode(nodeId);
   visitedNodes.add(nodeId);
+  // The Great Pour — as the forge dialog opens, latch the sentimental music
+  // for all of Tharnag. Reset _lastMusicArea so the bed swaps NOW even though
+  // we're still in the same 'the_forge' area we walked in from.
+  if (nodeId === 'the_great_forge' && !greatPourActivated) {
+    greatPourActivated = true;
+    _lastMusicArea = null;
+  }
   // Switch ambience based on the area we just stepped into. No-op when
   // the area hasn't changed.
   updateMusicForCurrentScene();
+
+  // Great Forge revisits (the node is canRevisit so startNodeEncounter runs
+  // every time). The Pour is one-shot; afterward the forge becomes the
+  // Mithril reforge station once Durgan has handed over the ore.
+  if (nodeId === 'the_great_forge' && greatPourActivated && completedEncounters) {
+    if (completedEncounters.has('durgan_vault')) {
+      // Reforge station. First visit plays the smith's intro line (which
+      // hands off into the picker on completion); later visits open the
+      // metal-select step straight away. If no metals, settle on the map.
+      if (!completedEncounters.has('mithril_forge') && ENCOUNTER_REGISTRY.mithril_forge) {
+        currentEncounter = ENCOUNTER_REGISTRY.mithril_forge();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        return;
+      }
+      if (openForgeMetalSelect()) return;
+      state = GameState.MAP;
+      return;
+    }
+    if (completedEncounters.has('the_great_forge')) {
+      // Pour already done but no Mithril yet — don't replay the Pour dialog.
+      state = GameState.MAP;
+      return;
+    }
+    // else: first visit (Pour not yet fired) — fall through to the Pour.
+  }
 
   // Path of the Necromancer — Forgotten Shrine silencer. The shrine
   // node is canRevisit:true so the prayer dialog (Yes / No) re-fires
@@ -13109,7 +14272,16 @@ function startNodeEncounter(nodeId) {
   // Leave Prison encounter branches on whether Thorb has been rescued).
   // Pass that context via the args below.
   const factory = ENCOUNTER_REGISTRY[node.encounterId];
-  if (node.encounterId === 'leave_prison') {
+  if (node.encounterId === 'quarters_rest'
+      && greatPourActivated
+      && completedEncounters && completedEncounters.has('durgan_return')
+      && !completedEncounters.has('great_pour_rest')
+      && ENCOUNTER_REGISTRY['great_pour_rest']) {
+    // After the Great Pour + Durgan's "go and rest", the first sleep in the
+    // Quarters is the tier-2 level-up beat (sleep → level up → wake). Fires
+    // once; afterward the bed falls back to the plain quarters_rest.
+    currentEncounter = ENCOUNTER_REGISTRY['great_pour_rest']();
+  } else if (node.encounterId === 'leave_prison') {
     const cc = currentMap.getNode('corner_cell');
     const thorbRescued = !!(cc && cc.isDone);
     currentEncounter = factory(thorbRescued);
@@ -13549,6 +14721,12 @@ function advanceEncounterPhase() {
     if (completedEncounterId && !REPEATABLE_ENCOUNTERS.has(completedEncounterId)) {
       completedEncounters.add(completedEncounterId);
     }
+    // Mithril Forge — the smith's intro line completing hands straight off
+    // into the reforge metal-select picker (instead of settling on the map).
+    if (completedEncounterId === 'mithril_forge') {
+      currentEncounter = null;
+      if (openForgeMetalSelect()) return;
+    }
     // Giant Frog ambush — prune the rock the player just cleared from
     // the active list so the same stone doesn't keep firing the
     // tongue grab. The other rock in _lakeFrogRocks (if any) stays
@@ -13954,7 +15132,7 @@ function advanceEncounterPhase() {
       });
       return;
     }
-    // Part 2 (WIP) — the epilogue montage ends with a long, slow fade
+    // Part 2 — the epilogue montage ends with a long, slow fade
     // to black, then the Part 2 title card, then the Chapter 1 title
     // card, then the Qualibaf opening scene. The slow fade speed (1.4
     // vs the default 8) is the "long fade out" beat.
@@ -13975,12 +15153,18 @@ function advanceEncounterPhase() {
       }, null, 1.4);
       return;
     }
-    // Part 2 (WIP) — Chapter 1's opening scene is as far as the content
-    // goes for now. Close on a "to be continued" card and drop to menu.
+    // Part 2 — after the Qualibaf opening dialog, drop the party onto
+    // the Qualibaf map to play. They are NOT well rested (clearWellRested),
+    // so the player has to head to the inn — which heals + rebalances the
+    // deck against the new +2 Part 2 deck-limit caps. The qualibaf map +
+    // city_square node were set up in startPart2Chapter1; the encounter
+    // completion above already marked city_square done.
     if (completedEncounterId === 'part2_ch1_qualibaf') {
-      showTitleCard('To be continued…', 'Part 2 is a work in progress.', () => {
-        endPart2Wip();
-      });
+      clearWellRested();
+      currentEncounter = null;
+      encounterChoiceResult = null;
+      state = GameState.MAP;
+      autosaveNow();
       return;
     }
 
@@ -14174,6 +15358,12 @@ function advanceEncounterPhase() {
       crossfadeMusic('Music/music_guild_of_unlikely_heroes_01', 1500, 2500);
       _lastMusicArea = null;
       _lastMusicNodeId = null;
+    }
+
+    // Great Pour return — General Durgan relents; open the To-the-Forge stair.
+    if (completedEncounterId === 'great_pour_return') {
+      const forge = currentMap && currentMap.getNode('grand_hall_to_forge');
+      if (forge) { forge.isLocked = false; forge.hiddenName = ''; forge.hiddenDescription = ''; }
     }
 
     if (completedEncounterId === 'throne_audience') {
@@ -14541,6 +15731,8 @@ function advanceEncounterPhase() {
         _lastMusicArea = null;
         _lastMusicNodeId = null;
       }
+      // The Assassin (Khydhani) gets the "One Last Battle" boss theme via
+      // getCombatMusicTrack (khydhani is in COMBAT_MUSIC_ONE_LAST_BATTLE).
       // Overseer Gnikan phase-2 keeps the phase-1 board state (player
       // creatures, hand, deck, status, shield, heroism, rage) instead
       // of running the full startCombat reset. Hands the first turn to
@@ -14550,6 +15742,10 @@ function advanceEncounterPhase() {
       } else {
         startCombat();
       }
+      // Goblin Swarm — the opening Minions land their on-summon 1 random
+      // damage now that combat state is initialised (deferred from the
+      // fight-start summon in ENEMY_DECKS.goblin_swarm).
+      if (phase.enemyId === 'goblin_swarm') fireGoblinSwarmEntryDamage();
       break;
     case EncounterPhase.LOOT: {
       // Loot-pick mode: phase carries lootPickCards (ids) +
@@ -14610,8 +15806,12 @@ function advanceEncounterPhase() {
         'obsidian_golem_loot', 'obsidian_slime_loot',
         'drake_rider_loot', 'magma_mephit_loot',
         'kobold_slyblade_loot', 'dwarven_specter_loot',
+        'goblin_swarm_loot', 'rampaging_troll_loot',
       ]);
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
+      // Phase opt-out from the 50% gate (Gate of the Deep front fights —
+      // guaranteed 1 goblin drop + 1 troll drop).
+      const guaranteedLoot = !!phase.guaranteedLoot;
       for (const rawCardId of phase.lootCards) {
         // ccgQuest+ companion swap — at higher offsets the rescue
         // gives a tier-up version of the companion. If the player
@@ -14621,7 +15821,7 @@ function advanceEncounterPhase() {
         if (swapped === null) continue;
         const cardId = swapped;
         const wasCompanionSwap = (swapped !== rawCardId);
-        if (GATED_LOOT.has(cardId) && !isThroneSpecter && Math.random() >= 0.5) {
+        if (GATED_LOOT.has(cardId) && !isThroneSpecter && !guaranteedLoot && Math.random() >= 0.5) {
           continue;
         }
         // Loot tables: special IDs that roll a random card
@@ -14643,6 +15843,25 @@ function advanceEncounterPhase() {
             if (wasCompanionSwap) card._companionTierSwapped = true;
             addLootedCard(card);
             phase._lootedCards.push(card);
+          }
+        }
+      }
+      // Prospector perk: when the player gained gold, each stack rolls a
+      // 10% chance to ALSO turn up a chunk of raw ore (from ore_cache). The
+      // ore lands in the same loot list, so it shows on the loot screen and
+      // enters the deck like any other drop.
+      if (lootGoldAmount > 0 && player && player.getPerkStacks) {
+        const oreStacks = player.getPerkStacks('loot_ore_chance');
+        for (let i = 0; i < oreStacks; i++) {
+          if (Math.random() < 0.05) {
+            const oreCards = rollLootTable('ore_cache');
+            if (oreCards) {
+              for (const ore of oreCards) {
+                addLootedCard(ore);
+                phase._lootedCards.push(ore);
+                addLog(`  Prospector! Found ${ore.name}`, Colors.GOLD, perkToCardLike(createProspectorPerk()));
+              }
+            }
           }
         }
       }
@@ -15870,6 +17089,54 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.kobold_slyblade = 3;
 
+  // Khydhani, "The Assassin" — the drow at the Great Forge. Fully
+  // bespoke drow kit (his own loot cards), NOT the slyblade base.
+  // Riposte (parry 1-3 + lash back) takes priority over block cards
+  // (see enemyAutoPlayDefenses). Play-order is priority-driven:
+  //   Drow Sleep Poison (30) — an ABILITY, not an attack, so it buffs
+  //     the next swing with +1 Drow Sleep Poison WITHOUT spending the
+  //     turn's first-attack slot.
+  //   Adamantine Rapier (26) — the opening ATTACK, so its First Strike
+  //     (+4) always lands (and consumes the drow-poison buff).
+  //   Backstab (24) → Darkwood Crossbow (20) → Parrying Dagger (16) →
+  //     Fan of Blades (12) → Heroic Tumble (10) → Sprint (8).
+  //   Chain Shirt + Piwafwi are DEFENSE — auto-played reactively for
+  //     Block / Shield / Heroism (Piwafwi's "target less" is inert on a
+  //     monster — the player chooses targets manually).
+  ENEMY_DECKS.khydhani = () => {
+    enemy = new Character('The Assassin');
+    enemy.deck = new Deck();
+    const addK = (creator, prio, n) => {
+      for (let i = 0; i < n; i++) { const c = creator(); c.priority = prio; enemy.deck.addCard(c); }
+    };
+    // Play order (priority desc): Fan of Blades FIRST (whole-party Drow
+    // Poison spray), then the Poisoned Daggers (cheated into hand below),
+    // then the rest of the kit.
+    addK(createFanOfBlades,          30, 10);
+    addK(createAdamantineRapier,     26, 10);
+    addK(createBackstab,             24, 4);
+    addK(createDarkwoodHandCrossbow, 20, 6);
+    addK(createDrowParryingDagger,   16, 8);
+    addK(createSprintEnemy,           8, 2);
+    addK(createAdamantineChainShirt,  6, 6);
+    addK(createPiwafwi,               6, 6);
+    enemy.addPower(createRipostePower());
+    // Drow Sleep Poison power — Turn Start: his next swing applies +1 Drow
+    // Sleep Poison (replaces the old in-deck Drow Sleep Poison vials).
+    enemy.addPower(createDrowSleepPoisonPower());
+    enemy._enemy_surprise = true;
+    // Cheat a Poisoned Dagger straight into his opening hand — a guaranteed
+    // turn-1 poison weapon. FREE + stays-in-hand so he keeps re-throwing
+    // it. Priority 28 sits just under Fan of Blades (30) but above the rest
+    // (the user wants daggers second). startCombat preserves cards already
+    // in deck.hand; there's no poisoned_dagger in the master deck, so it's
+    // a clean bonus with no duplicate to strip.
+    const pd = createPoisonedDagger();
+    pd.priority = 28;
+    enemy.deck.hand.push(pd);
+  };
+  ENEMY_HAND_SIZE.khydhani = 3;
+
   // (Obsidian Oracle setup is defined earlier above with both Dark
   // Vision + Obsidian Body powers — leaving this slot intentionally
   // empty after removing a duplicate stub that was overwriting it.)
@@ -16054,6 +17321,149 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.varimatras = 2;
 
+  // Part 2 — Tharnag tunnels random encounter: Goblin Swarm. Invulnerable
+  // 0-card boss-shell that opens with 4-8 random goblins (Sappers /
+  // Minions / Warriors, equal weight) and carries the "They're in the
+  // Walls!" passive — every slain goblin has a 50% chance to be replaced
+  // (resummon in countAndRemoveDeadCreatures). Win by clearing the field
+  // (_clearFieldToWin). Mirrors the Army of the Dead shell pattern.
+  ENEMY_DECKS.goblin_swarm = () => {
+    enemy = new Character('Goblin Swarm');
+    enemy.deck = new Deck();
+    enemy._invulnerable = true;
+    enemy._clearFieldToWin = true;
+    enemy.addPower(createGoblinsInTheWalls());
+    const numGoblins = 4 + Math.floor(Math.random() * 5); // 4..8
+    // Fight-start summons skip the Minion on-summon damage (combat state
+    // isn't initialised yet); fireGoblinSwarmEntryDamage runs it right
+    // after startCombat instead. Resummons (during combat) deal it inline.
+    for (let i = 0; i < numGoblins; i++) summonSwarmGoblin();
+    // A rolling chorus of 3-5 grunts as the goblins pour out of the walls
+    // (on top of the fight-start explosion splash). Staggered so it reads
+    // as a swarm, not one chord. Silent during the codex sandbox scan.
+    if (!_codexSandboxRunning) {
+      playStaggeredSfx('monster_snort_01', 3 + Math.floor(Math.random() * 3), 150, 0.55);
+    }
+  };
+  ENEMY_HAND_SIZE.goblin_swarm = 0;
+
+  // Gate of the Deep — Goblin Front (the two scripted flank fights). Two
+  // Armored Trolls anchor the line as 2x2 hulks: one on columns 2-3
+  // (slot anchor 1 = cells 1,2,7,8) and one on columns 5-6 (slot anchor
+  // 4 = cells 4,5,10,11). 40 HP, Regen 8, 1 Armor, and a 4 + Bleed swing
+  // that hits 2 targets (multiAttack 2). The "They're in the Walls!"
+  // power floods goblins into the gap cells (0,3,6,9) between/around the
+  // trolls. WIN by breaking BOTH trolls (_winWhenNamedDead) — the goblins
+  // are endless pressure until then, so this is NOT a clear-field fight.
+  ENEMY_DECKS.goblin_front = () => {
+    enemy = new Character('Goblin Front');
+    enemy.deck = new Deck();
+    enemy._invulnerable = true;
+    enemy._winWhenNamedDead = 'Armored Troll';
+    // 3-row field (18 cells): the two 2x2 trolls hold rows 0-1; the extra
+    // front row (slots 12-17) lets goblins boil up IN FRONT of the trolls
+    // as the "They're in the Walls!" power keeps spawning them.
+    enemy._gridRows = 3;
+    enemy.addPower(createGoblinsInTheWalls());
+    const makeArmoredTroll = () => {
+      const t = new Creature({
+        name: 'Armored Troll', attack: 4, maxHp: 40, armor: 2,
+        bleedAttack: 1, multiAttack: 2, slotW: 2, slotH: 2,
+        // Armor + Bleed read off the buff line / Atk icon; keep the text
+        // to just Regen + the swing pattern (two swings, 2 targets each).
+        description: 'Regen 8.\nAttacks twice,\n2 targets each.',
+      });
+      // Game+ — +20 HP / +0.5 Armor per offset (CREATURE_TIER_OFFSET), and
+      // Regen 8 + 4/offset (scaled here since Regen isn't a stat field).
+      const off = monsterTierOffset || 0;
+      scaleCreatureWithOffset(t, off, 'enemy');
+      const tr = 8 + 4 * off;
+      t._regen = tr; t._regenMax = tr;
+      t._attacksPerTurn = 2; // two separate 2-target swings per round
+      t._sourceRarity = 'rare';
+      return t;
+    };
+    // Place the two trolls at fixed anchors (direct push — addCreature
+    // would auto-anchor troll 1 to slot 0; we want columns 2-3 / 5-6).
+    const t1 = makeArmoredTroll(); t1.owner = enemy; t1.slot = 1; enemy.creatures.push(t1);
+    const t2 = makeArmoredTroll(); t2.owner = enemy; t2.slot = 4; enemy.creatures.push(t2);
+    enemy._winTargetsPlaced = true;
+    enemy._winTargetCount = 2; // for the boss-card win-condition bar
+    // Goblins boil out of the gaps (slots 0,3,6,9) and start filling the
+    // front row (12+). addCreature fills lowest free cells first, so the
+    // last couple land in front of the trolls; the power tops the rest up.
+    for (let i = 0; i < 6; i++) summonSwarmGoblin();
+    if (!_codexSandboxRunning) {
+      playStaggeredSfx('monster_snort_01', 3 + Math.floor(Math.random() * 3), 150, 0.55);
+      // The dwarven line fights alongside you: 2 Crossbowmen (cols 1-2), a
+      // Rampart wall (2x2, cols 3-4), 2 more Crossbowmen (cols 5-6). Added
+      // in this order so addCreature anchors them at slots 0,1,(2x2 at 2),4,5
+      // — exactly columns 1,2 / 3-4 / 5,6. Crossbowmen are battle-ready (no
+      // summon sickness) and deal True Damage; the Rampart shields the line
+      // each turn start. Skipped during the codex sandbox scan so it never
+      // pollutes the real player's field (mirrors the general_zhost guard).
+      const makeCrossbowman = () => {
+        const cb = new Creature({
+          name: 'Dwarven Crossbowman', attack: 2, maxHp: 5, shield: 1,
+          unpreventable: true, description: 'Attacks deal True Damage.',
+        });
+        cb._sourceRarity = 'uncommon';
+        cb._sourceSubtype = 'allies';
+        return cb;
+      };
+      const rampart = new Creature({
+        name: 'Rampart', attack: 0, maxHp: 10, armor: 2, slotW: 2, slotH: 2,
+        description: 'Turn Start: Other Allies gain Shield.',
+      });
+      rampart._cantAttack = true;
+      rampart._turnStartShieldAllies = 1;
+      rampart._sourceRarity = 'rare';
+      rampart._sourceSubtype = 'allies';
+      const cbs = [makeCrossbowman(), makeCrossbowman()];
+      player.addCreature(cbs[0]);
+      player.addCreature(cbs[1]);
+      player.addCreature(rampart);
+      cbs.push(makeCrossbowman()); player.addCreature(cbs[2]);
+      cbs.push(makeCrossbowman()); player.addCreature(cbs[3]);
+      // A Dwarven Battle Cleric joins the line (fills a back-row cell).
+      const cleric = new Creature({
+        name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
+        description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
+      });
+      cleric.endTurnHealRandomAlly = 2;
+      cleric._sourceRarity = 'uncommon';
+      cleric._sourceSubtype = 'allies';
+      player.addCreature(cleric);
+      cbs.push(cleric);
+      // Crossbowmen + cleric can act on turn 1 (clear summon sickness).
+      for (const cb of cbs) { cb.exhausted = false; cb.justSummoned = false; }
+    }
+  };
+  ENEMY_HAND_SIZE.goblin_front = 0;
+
+  // Part 2 — Tharnag tunnels random encounter: Rampaging Troll. 40-card
+  // deck = 28 Rend (claw attack: 4 + Bleed to 2 targets) + 12 Dire Hide
+  // (Block 4 / heal / draw). Regeneration knits it back together — starts
+  // at Regen 8 (the cap) and heals 8/turn via the REGEN status tick;
+  // _regenNoDecay holds the stack from ticking down so it stays pinned at
+  // the cap. Loathsome Limbs tears off a limb per 10 damage taken.
+  // Counterplay is Fire/Poison/Bleed (cancel Regen 1-for-1) and True
+  // Damage (burns it). NOT invulnerable — kill it by burning all 40 cards.
+  ENEMY_DECKS.rampaging_troll = () => {
+    enemy = new Character('Rampaging Troll');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 28; i++) enemy.deck.addCard(createRend());
+    for (let i = 0; i < 12; i++) enemy.deck.addCard(createDireHide());
+    // Regen 8 base, +4 per monster offset (Rend scales +2/offset via the card).
+    const trollRegen = 8 + 4 * (monsterTierOffset || 0);
+    enemy.addPower(createRegenerationPower(trollRegen));
+    enemy.addPower(createLoathsomeLimbs());
+    enemy._regenNoDecay = true;
+    enemy.applyRegen(trollRegen);
+    enemy._loathsomeLimbsSpawned = 0;
+  };
+  ENEMY_HAND_SIZE.rampaging_troll = 2;
+
   if (ENEMY_DECKS[enemyId]) {
     ENEMY_DECKS[enemyId]();
   } else {
@@ -16079,6 +17489,15 @@ function setupEnemyForCombat(enemyId) {
   // enemy key rather than the display name.
   enemy._handSize = ENEMY_HAND_SIZE[enemyId] || 2;
   enemy._enemyId = enemyId;
+
+  // Fighting a Tharnag tunnels random encounter resets the cumulative
+  // encounter chance back to the 5% step (guarded out of the codex
+  // sandbox scan, which runs every enemy setup). Belt-and-suspenders on
+  // top of the reset at the trigger site in arriveAtNode.
+  if (!_codexSandboxRunning
+      && (enemyId === 'goblin_swarm' || enemyId === 'rampaging_troll')) {
+    tunnelEncounterChance = TUNNEL_ENC_STEP;
+  }
 }
 
 function drawMap() {
@@ -16560,6 +17979,21 @@ function drawMapDebugOverlay() {
     lines.push(`dwarven city chance: ${pct}% (next movement node)`);
     lines.push(`current node: ${node ? node.id : '?'}`);
   }
+  // Part 2 — Tharnag tunnels random-encounter chance (Goblin Sapper
+  // Squad / Rampaging Troll). Cumulative: starts at the step, climbs by
+  // it on a miss, resets on a hit. Shown on every tunnel map except the
+  // Gate of the Deep (the front — no random encounters there).
+  if (currentMap && typeof currentMap.id === 'string'
+      && currentMap.id.startsWith('tharnag_tunnels')
+      && currentMap.id !== 'tharnag_tunnels_gate_of_deep') {
+    const node = currentMap.getCurrentNode && currentMap.getCurrentNode();
+    const pct = Math.round(tunnelEncounterChance * 100);
+    const stepPct = Math.round(TUNNEL_ENC_STEP * 100);
+    const mapLabel = currentMap.id.replace(/_/g, ' ');
+    lines.push(`[${mapLabel}]`);
+    lines.push(`tunnel encounter chance: ${pct}% (step ${stepPct}%)`);
+    lines.push(`current node: ${node ? node.id : '?'}`);
+  }
   // Debug node-position editor — selected node id + live position.
   // Use ctrl-click to select a node; arrow keys nudge (shift = 1px).
   if (debugSelectedNodeId && currentMap) {
@@ -16629,6 +18063,12 @@ function handleEncounterTextClick() {
     encounterTextIndex++;
     // Defer the snap to the draw pass — the new overflow isn't known yet.
     encounterTextSnapToBottom = true;
+    // Generic per-beat SFX — any EncounterText carrying an `sfx` plays it as
+    // the line is revealed (e.g. the Great Pour lever-pull → door_unlock).
+    {
+      const _beat = phase.texts[encounterTextIndex];
+      if (_beat && _beat.sfx) playSound(_beat.sfx, 0.85);
+    }
     // Per-encounter dialog cues. Prison Wing line 2 mentions the
     // warden's key clicking each lock — play the unlock click as the
     // line is revealed.
@@ -17011,11 +18451,12 @@ function handleEncounterChoiceClick(x, y) {
         // Personal Quarters bed — same flow as the inn rest: drop into
         // inventory rest mode for a free rebalance and full heal. Mirrors
         // PY game.py:5889-5893 + 4818-4837.
-        // Part 1 ending: if the dragon has been slain, sleeping in
-        // the bed instead fades out to the main menu (the volcano
-        // arc is the credits beat). Skip the rebalance / inventory
-        // pop entirely so the closing fade plays clean.
-        if (dragonSlain) {
+        // Part 1 ending: if the dragon has been slain (but Part 2 hasn't
+        // started yet), sleeping in the bed fades out to the main menu /
+        // credits (the volcano arc is the credits beat). Skip the
+        // rebalance / inventory pop so the closing fade plays clean.
+        // Once Part 2 is active, this is just a normal rest again.
+        if (dragonSlain && !part2Started) {
           addLog('You sink into the furs. Sleep takes you instantly.', Colors.WHITE);
           playSound('click');
           // Swap music to the homecoming theme that plays in the
@@ -17040,7 +18481,7 @@ function handleEncounterChoiceClick(x, y) {
               calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared,
               soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath,
               siegeProgress, siegeComplete, throneAudienceComplete, quartersRested,
-              dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+              dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
               armorerSonQuestStarted,
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, seenDialogs, journalChoices, labyrinthGenerated, labyrinthSeed,
@@ -17070,15 +18511,10 @@ function handleEncounterChoiceClick(x, y) {
           // credits.)
           startFade(() => {
             currentEncounter = null;
-            // Debug players see the work-in-progress Part 2 bridge
-            // (epilogue montage → title cards → Chapter 1) instead of
-            // the credits. Everyone else gets the slow-scrolling end
-            // credits, which auto-return to the main menu.
-            if (debugMode) {
-              startPart2Epilogue();
-            } else {
-              startEndCredits();
-            }
+            // Always continue into Part 2 now (epilogue montage → title
+            // cards → Chapter 1). The end credits are deferred for a later
+            // build — startEndCredits() is kept but no longer called here.
+            startPart2Epilogue();
           }, null, 3);
           return;
         }
@@ -17632,6 +19068,8 @@ function handleEncounterChoiceClick(x, y) {
         state = GameState.FORGE_WEAPON;
         return;
       }
+      // (Mithril/Adamantine reforge is opened directly as the metal-select
+      // picker from the Great Forge node — no encounter choice needed.)
       // Cathedral Shrine — pray for a Tier 2 ability. Opens the
       // ability picker (same screen as Lost Shrine / Church / Statue).
       // We mark the choice exhausted up-front so a cancel-and-retry
@@ -17911,7 +19349,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -18811,6 +20249,107 @@ function collectWorkbenchEligibleArmor() {
   return { cards, backpackUids };
 }
 
+// Reforge metals: ore id → picker mode + enchant id applied.
+const FORGE_METALS = {
+  mithril_ore:    { oreId: 'mithril_ore',    mode: 'mithril',    enchant: 'mithril_alloy', label: 'Mithril' },
+  adamantine_ore: { oreId: 'adamantine_ore', mode: 'adamantine', enchant: 'adamantine',    label: 'Adamantine' },
+};
+// The metal whose gear-pick is currently open (set when an ore card is
+// clicked in the metal-select step; read by confirmForgeWeapon).
+let _forgeActiveMetal = null;
+
+// Metal reforge — eligible gear is any Armor/Shield OR Weapon NOT already
+// carrying an on_recharge_* enchant, so a piece can't be reforged twice.
+// Both metals (Mithril Alloy, Adamantine) work on the same pool.
+function collectMetalEligibleGear() {
+  const cards = [];
+  const backpackUids = new Set();
+  const isGear = (card) => {
+    const t = getCardFilterType(card);
+    return t === 'Armor' || t === 'Weapons';
+  };
+  const isEligible = (card) => isGear(card)
+    && !card.effects.some(e => typeof e.effectType === 'string' && e.effectType.startsWith('on_recharge_'));
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    for (const card of player.deck.masterDeck) if (isEligible(card)) cards.push(card);
+  }
+  for (const card of backpack) {
+    if (isEligible(card)) {
+      cards.push(card);
+      if (card.uid) backpackUids.add(card.uid);
+    }
+  }
+  return { cards, backpackUids };
+}
+
+// Count / consume a specific ore across deck + backpack (the reforge fuel).
+function countOre(oreId) {
+  let n = 0;
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    n += player.deck.masterDeck.filter(c => c && c.id === oreId).length;
+  }
+  n += backpack.filter(c => c && c.id === oreId).length;
+  return n;
+}
+function consumeOneOre(oreId) {
+  let ore = null;
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    ore = player.deck.masterDeck.find(c => c && c.id === oreId);
+  }
+  if (!ore) ore = backpack.find(c => c && c.id === oreId);
+  if (ore) banishCard(ore);
+  return !!ore;
+}
+// One ore CARD per metal the player actually holds (stamped with its count),
+// for the metal-select step of the forge picker.
+function collectForgeMetals() {
+  const cards = [];
+  for (const oreId of Object.keys(FORGE_METALS)) {
+    const n = countOre(oreId);
+    if (n <= 0) continue;
+    const creator = CARD_REGISTRY[oreId];
+    if (!creator) continue;
+    const card = creator();
+    card._forgeOreCount = n;
+    cards.push(card);
+  }
+  return cards;
+}
+// Open the forge directly on its metal-select step (ore cards). Returns false
+// (and toasts) if the player holds no reforge metals.
+function openForgeMetalSelect() {
+  const metals = collectForgeMetals();
+  if (metals.length === 0) {
+    showStickyToast('You have no Mithril or Adamantine to reforge with.');
+    return false;
+  }
+  _forgeActiveMetal = null;
+  forgePickerCards = metals;
+  forgePickerBackpackUids = new Set();
+  forgePickerScroll = 0;
+  forgePickerMode = 'metal_select';
+  previousState = state;
+  state = GameState.FORGE_WEAPON;
+  return true;
+}
+// Click an ore card → load eligible armor/shield for that metal's gear-pick.
+function enterMetalGearPick(oreCard) {
+  const metal = oreCard && FORGE_METALS[oreCard.id];
+  if (!metal) return;
+  const eligible = collectMetalEligibleGear();
+  if (eligible.cards.length === 0) {
+    showStickyToast('No eligible armor or shield to reforge (already enchanted?).');
+    return;
+  }
+  _forgeActiveMetal = metal;
+  forgePickerCards = eligible.cards;
+  forgePickerBackpackUids = eligible.backpackUids;
+  forgePickerScroll = 0;
+  forgePickerMode = metal.mode;
+  forgeSearchText = '';
+  forgeSearchActive = false;
+}
+
 // Heart of the Volcano — gather every card matching the requested
 // inventory category (weapon / armor / item / relic) from masterDeck +
 // backpack. Same masterDeck-as-source rationale as the forge picker:
@@ -18898,18 +20437,53 @@ const CARD_ENCHANTS = {
   },
   dwarven_workbench: {
     name: 'Dwarven Workbench',
-    // Tooltip body. The "When Recharged" prefix tokenizes into the
-    // blue pill (see inlineBadgeRe) and "Shield" picks up its icon
-    // via the keyword pass — drawEnchantTooltip routes through the
-    // rich renderer (drawIconTextLeft) so both pill + icon land.
-    tooltip: 'When Recharged: Gain Shield.',
+    // Tooltip body. The "On Recharge" prefix tokenizes into the blue
+    // pill (see inlineBadgeRe) and "Shield" picks up its icon via the
+    // keyword pass — drawEnchantTooltip routes through the rich renderer
+    // (drawIconTextLeft) so both pill + icon land.
+    tooltip: 'On Recharge: Gain  Shield',
     artId: 'enchant_dwarven_workbench',
     color: '#5a8acb',
+  },
+  // Mithril Alloy — the Great Forge reforge (Mithril Ore). Same On Recharge:
+  // Gain Shield as the Workbench, but its own name + ore-art badge.
+  mithril_alloy: {
+    name: 'Mithril Alloy',
+    tooltip: 'On Recharge: Gain  Shield',
+    artId: 'mithril_ore',
+    color: '#bfe0ff',
+  },
+  // Adamantine — the Great Forge reforge (Adamantine Ore). On Recharge:
+  // Heroism.
+  adamantine: {
+    name: 'Adamantine',
+    tooltip: 'On Recharge: Heroism',
+    artId: 'adamantine_ore',
+    color: '#9a7bd0',
   },
 };
 function applyCardEnchant(card, enchantId) {
   if (enchantId === 'obsidian_forge') applyObsidianForge(card);
   else if (enchantId === 'dwarven_workbench') applyDwarvenWorkbench(card);
+  else if (enchantId === 'mithril_alloy') applyMithrilAlloy(card);
+  else if (enchantId === 'adamantine') applyAdamantine(card);
+}
+
+// Mithril Alloy enchant — On Recharge: +1 Shield (armor/shield only). Same
+// effect as the Workbench, distinct tag/badge. Idempotent.
+function applyMithrilAlloy(card) {
+  if (card.effects.some(e => typeof e.effectType === 'string' && e.effectType.startsWith('on_recharge_'))) return;
+  card.effects.push(new CardEffect('on_recharge_shield', 1, TargetType.SELF));
+  if (!Array.isArray(card._enchants)) card._enchants = [];
+  if (!card._enchants.includes('mithril_alloy')) card._enchants.push('mithril_alloy');
+}
+
+// Adamantine enchant — On Recharge: +1 Heroism (armor/shield only). Idempotent.
+function applyAdamantine(card) {
+  if (card.effects.some(e => typeof e.effectType === 'string' && e.effectType.startsWith('on_recharge_'))) return;
+  card.effects.push(new CardEffect('on_recharge_heroism', 1, TargetType.SELF));
+  if (!Array.isArray(card._enchants)) card._enchants = [];
+  if (!card._enchants.includes('adamantine')) card._enchants.push('adamantine');
 }
 
 // Obsidian Forge enchant — adds +2 damage vs Armor/Shield to a weapon.
@@ -18924,17 +20498,25 @@ function applyObsidianForge(card) {
     .reduce((sum, e) => sum + (e.value || 0), 0);
   if (baseDamage > 0) {
     card.effects = card.effects.filter(e => e.effectType !== 'damage');
-    const encoded = baseDamage * 10 + (baseDamage + 2);
+    const bonus = baseDamage + 2;
+    // Encode to match the runtime decoder (case 'armor_bonus_damage'):
+    // single-digit base AND bonus pack as base*10 + bonus; if either
+    // reaches double digits, use the base*100 + bonus form. The old
+    // base*10 form overflowed for big weapons — Holy Sword's base 11
+    // became 123, which the decoder misread as base 1 / bonus 23, so
+    // an enchanted Holy Sword dealt 1 damage. (bonus = base + 2, so
+    // base >= 8 already trips the double-digit path.)
+    const encoded = (baseDamage >= 10 || bonus >= 10)
+      ? (baseDamage * 100 + bonus)
+      : (baseDamage * 10 + bonus);
     card.effects.unshift(new CardEffect('armor_bonus_damage', encoded, TargetType.SINGLE_ENEMY));
   } else {
     card.effects.push(new CardEffect('armor_bonus_damage', 22, TargetType.SINGLE_ENEMY));
   }
-  if (card.description && !card.description.includes('(+2 vs Armor/Shield)')) {
-    card.description += ' (+2 vs Armor/Shield)';
-  }
-  if (card.shortDesc !== undefined && !String(card.shortDesc).includes('+2 vs Arm/Shd')) {
-    card.shortDesc = (card.shortDesc || '') + (card.shortDesc && card.shortDesc.includes('\n') ? '\n' : '\n') + '+2 vs Arm/Shd';
-  }
+  // The +2-vs-Armor/Shield is surfaced by the Obsidian Forge enchant BADGE
+  // (and its hover tooltip) — we intentionally do NOT append it to the card's
+  // description/shortDesc text, so the card text stays clean like the other
+  // enchants.
   // Tag the card so the on-card enchant badge can render and the save
   // system can re-apply the enchant after a load (cards are recreated
   // from CARD_REGISTRY by id, which would otherwise wipe the modified
@@ -19357,6 +20939,7 @@ function handleEncounterLootPickClick(x, y) {
 function handleEncounterLootClick() {
   if (pendingLevelUp) {
     const tier = pendingLevelUpTier || 1;
+    _levelUpTier = tier; // preserve for the perk-select step (tier-2 pool)
     pendingLevelUp = false;
     pendingLevelUpTier = 1;
     levelUpAbilityMode = true;
@@ -19376,9 +20959,13 @@ function handleEncounterLootClick() {
     //   - tharnag_side_door (Welcome to Tharnag) — the Guild theme
     //     started when the siege broke and runs through the entire
     //     dwarven city, level-up included.
+    //   - great_pour_rest (post-Great-Pour sleep) — the mournful
+    //     "sentimental" bed carries the whole beat; the level-up SFX still
+    //     layers over it, but the music must not cut to the heroic theme.
     const keepMusic = currentEncounter && (
       currentEncounter.id === 'south_gate' ||
-      currentEncounter.id === 'tharnag_side_door'
+      currentEncounter.id === 'tharnag_side_door' ||
+      currentEncounter.id === 'great_pour_rest'
     );
     if (!keepMusic) {
       crossfadeMusic('Music/music_heroic_01', 1500, 2500);
@@ -19579,6 +21166,10 @@ const COMBAT_MUSIC_ONE_LAST_BATTLE = new Set([
   'baby_roc',
   // Armorer's-son quest — the Retreating Kobold Army rescue fight.
   'kellen_rescue',
+  // Gate of the Deep — the two flank battles (Goblin Front).
+  'goblin_front',
+  // The Assassin (Khydhani) — drow duel at the Great Forge.
+  'khydhani',
 ]);
 
 // Pick the music track for the current fight. Every fight gets
@@ -19635,6 +21226,14 @@ function startCombat() {
   cardDiscardPickNeeded = 0;
   pendingDiscardNames = [];
   killCount = 0;
+  enemiesDefeatedThisCombat = 0;
+  // Reset Long Troll Teeth's per-combat swing counter on every player card.
+  if (player && player.deck) {
+    for (const pile of [player.deck.masterDeck, player.deck.drawPile, player.deck.hand,
+                        player.deck.discardPile, player.deck.rechargePile, player.deck.playPile]) {
+      if (Array.isArray(pile)) for (const c of pile) { if (c && c._daggerAttacks) c._daggerAttacks = 0; }
+    }
+  }
   killTarget = enemy._killTarget || 0;
   survivalRounds = enemy._survivalRounds || 0;
   survivalRoundsRemaining = survivalRounds;
@@ -19740,6 +21339,8 @@ function startCombat() {
     if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
     if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
   }
+  // Turn-1 Rampart shield (the wall protects the line from the opening turn).
+  applyTurnStartAllyShields();
 
   addLog(`Your turn! Play cards from your hand.`, Colors.GREEN);
 
@@ -19821,7 +21422,9 @@ function startCombat() {
   // loop's buffer is still loading.
   const hasLavaFloor = enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p.id === 'lava_floor');
   const hasBlizzard = enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p.id === 'blizzard');
-  if (hasLavaFloor) {
+  // Fights in The Great Forge (the Khydhani ambush) get the lava bed too.
+  const onForgeMap = currentMap && currentMap.id === 'tharnag_the_forge';
+  if (hasLavaFloor || onForgeMap) {
     playSound('lava_bubble', 0.85);
     playAmbienceLayer('Misc/lava_bubble_01', 0.6);
   } else if (hasBlizzard) {
@@ -20085,9 +21688,13 @@ function upgradeCompanions() {
 // Caller passes the actual caster so enemy-applied statuses (kobold fire,
 // sahuagin poison) never accidentally trip the player's perk.
 function firePowerSurgeIfArmed(caster, debuffType) {
-  if (caster !== player) return;
-  if (_powerSurgeFired) return;
-  if (!player || !player.hasPerk || !player.hasPerk('power_surge')) return;
+  if (caster !== player || !player) return;
+  // Power Infusion's charge pool (tier-2) fires first and repeatedly; the
+  // tier-1 Power Surge is a one-shot gated by _powerSurgeFired.
+  const useInfusion = (_powerInfusionCharges || 0) > 0;
+  const useSurge = !useInfusion && !_powerSurgeFired
+    && player.hasPerk && player.hasPerk('power_surge');
+  if (!useInfusion && !useSurge) return;
   const candidates = [];
   if (enemy && enemy.isAlive) candidates.push(enemy);
   if (enemy && Array.isArray(enemy.creatures)) {
@@ -20147,10 +21754,60 @@ function firePowerSurgeIfArmed(caster, debuffType) {
     }
     default: return;
   }
-  _powerSurgeFired = true;
+  if (useInfusion) { _powerInfusionCharges--; updatePowerInfusionBuff(); }
+  else _powerSurgeFired = true;
   if (landed) spawnTokenOnTarget(t, 1, tokenLabel, tokenColor);
   const verb = landed ? `+1 ${tokenLabel}` : `cancels 1 ${tokenLabel === 'Fire' ? 'Ice' : 'Fire'}`;
-  addLog(`  Power Surge: ${verb} on ${t.name}`, Colors.GOLD, perkToCardLike(createPowerSurgePerk()));
+  const srcName = useInfusion ? 'Power Infusion' : 'Power Surge';
+  const srcPerk = useInfusion ? createPowerInfusionPerk() : createPowerSurgePerk();
+  addLog(`  ${srcName}: ${verb} on ${t.name}`, Colors.GOLD, perkToCardLike(srcPerk));
+}
+
+// Power Infusion — add / refresh the visible charge buff on the player. No
+// trigger → it never ticks; it's a pure counter synced by firePowerSurgeIfArmed
+// and dropped by endCombatBuffCleanup at combat end.
+function armPowerInfusionBuff(n) {
+  if (!player) return;
+  player.combatBuffs = player.combatBuffs.filter(b => b.id !== 'power_infusion');
+  const buff = new CombatBuff({
+    id: 'power_infusion', name: 'Power Infusion',
+    description: 'Your next debuffs also hit a random enemy.',
+    // imageId must be a getCardArt key (CARD_ART_MAP) for the badge art —
+    // the perk id 'power_surge' resolves to PowerSurgePerk.jpg.
+    imageId: 'power_surge', effectType: 'noop', effectValue: 0,
+    trigger: 'none', combatsRemaining: 1,
+  });
+  buff.stacks = n;
+  player.addCombatBuff(buff);
+}
+function updatePowerInfusionBuff() {
+  if (!player) return;
+  const buff = player.combatBuffs.find(b => b.id === 'power_infusion');
+  if (!buff) return;
+  if ((_powerInfusionCharges || 0) > 0) buff.stacks = _powerInfusionCharges;
+  else player.combatBuffs = player.combatBuffs.filter(b => b.id !== 'power_infusion');
+}
+
+// Divine Protection (tier-2 Armored) — when the player plays an Armor card,
+// also Heal N (1 per stack). Called from the defense-play path.
+function maybeDivineProtectionHeal(card) {
+  if (!player || !card || !isArmorCard(card) || !player.getPerkStacks) return;
+  // Divine Protection (uncommon) — Heal N.
+  const n = player.getPerkStacks('armor_on_play_heal');
+  if (n > 0) {
+    addLog(`  Divine Protection!`, Colors.GREEN, perkToCardLike(createDivineProtectionPerk()));
+    healPlayer(n);
+  }
+  // Cleansing Armor (rare) — also strip N Ailment stacks (Bleed → Poison →
+  // Drow → Fire → Ice → Shock order via healOneNegativeEffectOn).
+  const cleanse = player.getPerkStacks('armor_on_play_cleanse');
+  if (cleanse > 0) {
+    let k = cleanse, cleared = 0;
+    while (k > 0 && healOneNegativeEffectOn(player)) { k--; cleared++; }
+    if (cleared > 0) {
+      addLog(`  Cleansing Armor: cleared ${cleared} Ailment${cleared > 1 ? 's' : ''}.`, Colors.GREEN, perkToCardLike(createCleansingArmorPerk()));
+    }
+  }
 }
 
 function applyPerksCombatStart() {
@@ -20234,6 +21891,79 @@ function applyPerksCombatStart() {
       addLog(`  First Strike: ${firstStrike} dmg to ${enemy.name}!`, Colors.GOLD, fsPerk);
     }
   }
+  // First Volley (tier-2 First Strike) — 1 Unpreventable to a random enemy,
+  // repeated `volley` times (each roll picks its own target).
+  const volley = player.getPerkStacks('combat_start_volley');
+  if (volley > 0) {
+    const fvPerk = perkToCardLike(createFirstVolleyPerk());
+    for (let i = 0; i < volley; i++) {
+      const targets = enemy.creatures.filter(c => c.isAlive);
+      if (targets.length > 0) {
+        const t = targets[Math.floor(Math.random() * targets.length)];
+        t.takeUnpreventableDamage(1);
+        addLog(`  First Volley: 1 dmg to ${t.name}!`, Colors.GOLD, fvPerk);
+        if (!t.isAlive) { addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); countAndRemoveDeadCreatures(); }
+      } else if (enemy.isAlive) {
+        enemy.takeDamageFromDeck(1);
+        addLog(`  First Volley: 1 dmg to ${enemy.name}!`, Colors.GOLD, fvPerk);
+      }
+    }
+  }
+  // Poisoner's Ambush (tier-2 Ambush) — first attack Unpreventable AND lands
+  // Poison. Arms the same unpreventable buff plus a poison flag consumed by
+  // the first attack (see _poisonAmbush handling in the unpreventable path).
+  const poisonAmbush = player.getPerkStacks('combat_first_unpreventable_poison');
+  if (poisonAmbush > 0) {
+    player.unpreventableBuff = Math.max(player.unpreventableBuff || 0, 1);
+    player._ambushUnpreventable = true;
+    // Grant a "next attack applies Poison" buff (the Vial mechanism) so the
+    // first swing also poisons — it rides the consumePoisonBuff choke point
+    // that's already in every player attack handler.
+    resolveEffect(new CardEffect('grant_poison_buff', 2, TargetType.SELF), player, player);
+    addLog(`  Poisoner's Ambush armed — first attack is Unpreventable + 2 Poison.`, Colors.GOLD, perkToCardLike(createPoisonersAmbushPerk()));
+  }
+  // Grand Harvest (tier-2 Harvest) — add `herbs` random Herb cards (Goodberry
+  // / Cave Shroom / Frostbloom) to hand.
+  const herbStacks = player.getPerkStacks('combat_start_herbs');
+  if (herbStacks > 0) {
+    const herbMakers = [createGoodberry, createCaveShroom, createFrostbloom];
+    let addedHerbs = 0;
+    for (let i = 0; i < herbStacks; i++) {
+      if (player.deck.hand.length >= MAX_HAND_SIZE) break;
+      const herb = herbMakers[Math.floor(Math.random() * herbMakers.length)]();
+      applyGamePlusOffsetInPlace(herb, playerTierOffset || 0);
+      player.deck.hand.push(herb);
+      addedHerbs++;
+    }
+    if (addedHerbs > 0) addLog(`  Grand Harvest: +${addedHerbs} Herb in hand!`, Colors.GREEN, perkToCardLike(createGrandHarvestPerk()));
+  }
+  // Power Infusion (tier-2 Power Surge) — arm N debuff-spread charges. A
+  // visible combat buff shows the remaining count; firePowerSurgeIfArmed
+  // decrements it as debuffs spread.
+  _powerInfusionCharges = player.getPerkStacks('combat_debuff_spread_charges');
+  if (_powerInfusionCharges > 0) {
+    armPowerInfusionBuff(_powerInfusionCharges);
+    addLog(`  Power Infusion: your first ${_powerInfusionCharges} debuffs also hit a random enemy.`, Colors.GOLD, perkToCardLike(createPowerInfusionPerk()));
+  }
+  // Empowered Skeletons (tier-2 Skeletal Strength) — every Skeleton summoned
+  // this combat gets +1/+1, not just the first.
+  _empoweredSkeletons = player.getPerkStacks('combat_skeleton_buff_all') > 0;
+  // Readiness (tier-2 common) — Combat Start: draw N.
+  const readyDraw = player.getPerkStacks('combat_start_draw');
+  if (readyDraw > 0) {
+    const drawn = player.deck.draw(readyDraw, MAX_HAND_SIZE);
+    if (drawn.length > 0) addLog(`  Readiness: Draw ${drawn.length}.`, Colors.BLUE, perkToCardLike(createReadinessPerk()));
+    for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+  }
+  // Troll Ancestry (tier-2 rare) — Combat Start: gain N Regen.
+  const ancestryRegen = player.getPerkStacks('combat_start_regen');
+  if (ancestryRegen > 0) {
+    const added = player.applyRegen(ancestryRegen);
+    if (added > 0) {
+      addLog(`  Troll Ancestry: +${added} Regen`, Colors.GREEN, perkToCardLike(createTrollAncestryPerk()));
+      spawnTokenOnTarget(player, added, 'Regen', '#7cff9c');
+    }
+  }
   // Skeletal Strength — arm the first-Skeleton buff for this combat.
   // The actual application fires at each Skeleton summon site via
   // maybeApplySkeletalStrength, which checks _skeletalStrengthArmed and
@@ -20241,6 +21971,11 @@ function applyPerksCombatStart() {
   // perk count so the previous fight's state can't leak forward.
   _skeletalStrengthArmed = player.getPerkStacks('combat_first_skeleton_buff');
 }
+
+// Power Infusion — remaining debuff-spread charges this combat (tier-2 Power
+// Surge). Empowered Skeletons — whether EVERY skeleton gets +1/+1 this combat.
+let _powerInfusionCharges = 0;
+let _empoweredSkeletons = false;
 
 // Skeletal Strength counter — number of fresh Skeleton summons that
 // will still receive the +1/+1 buff this combat. Set in
@@ -20256,14 +21991,19 @@ let _skeletalStrengthArmed = 0;
 // Returns true when the buff fired (helps callers log a unified
 // "raised stronger" line).
 function maybeApplySkeletalStrength(creature) {
-  if (!creature || _skeletalStrengthArmed <= 0) return false;
+  if (!creature) return false;
   if (!Array.isArray(creature.traits) || !creature.traits.includes('Skeleton')) return false;
+  // Empowered Skeletons (tier-2) buffs EVERY skeleton this combat (no
+  // charge); the tier-1 Skeletal Strength buffs only the first.
+  const empowered = _empoweredSkeletons;
+  if (!empowered && _skeletalStrengthArmed <= 0) return false;
   creature.attack = (creature.attack || 0) + 1;
   creature.maxHp = (creature.maxHp || 0) + 1;
   creature.currentHp = (creature.currentHp || 0) + 1;
-  _skeletalStrengthArmed--;
-  addLog(`  Skeletal Strength: +1/+1 on ${creature.name}!`,
-    Colors.GOLD, perkToCardLike(createSkeletalStrengthPerk()));
+  if (!empowered) _skeletalStrengthArmed--;
+  const label = empowered ? 'Empowered Skeletons' : 'Skeletal Strength';
+  const perk = empowered ? createEmpoweredSkeletonsPerk() : createSkeletalStrengthPerk();
+  addLog(`  ${label}: +1/+1 on ${creature.name}!`, Colors.GOLD, perkToCardLike(perk));
   return true;
 }
 
@@ -20307,6 +22047,12 @@ function applySecondWindAtTurnStart() {
   if (secondWindStacks > 0 && _playerDamageTakenLastTurn >= 4) {
     addLog(`  Second Wind triggers!`, Colors.GOLD, perkToCardLike(createSecondWindPerk()));
     healPlayer(secondWindStacks);
+  }
+  // Third Wind (tier-2) — heals on ANY damage last turn, not just 4+.
+  const thirdWindStacks = player.getPerkStacks('turn_start_third_wind');
+  if (thirdWindStacks > 0 && _playerDamageTakenLastTurn > 0) {
+    addLog(`  Third Wind triggers!`, Colors.GOLD, perkToCardLike(createThirdWindPerk()));
+    healPlayer(thirdWindStacks);
   }
 }
 
@@ -20420,6 +22166,11 @@ const KEYWORD_ICONS = {
   ignite: { iconKey: 'icon_ignite', label: 'Ignite', desc: 'Your next damaging attack also applies Fire equal to stacks. Consumed on attack.' },
   ice: { iconKey: 'icon_ice', label: 'Ice', desc: 'Reduces damage dealt by stacks, decays by 1' },
   poison: { iconKey: 'icon_poison', label: 'Poison', desc: 'Deals damage equal to stacks each turn. Only removed by healing.' },
+  drow_sleep_poison: { iconKey: 'icon_drow_sleep_poison', label: 'Drow Sleep Poison', desc: 'Deals damage equal to stacks each turn (like Poison) AND reduces the afflicted\'s attack damage by 1 per stack. Stacks never decay; healing removes them DEAD-LAST (after Bleed, Poison, Fire, Ice and Shock).' },
+  // Card-text token: writing "DrowPoison" in a description renders the
+  // washed Drow Sleep Poison icon (the multi-word status name would
+  // otherwise match the green "Poison" keyword). Same status as above.
+  drowpoison: { iconKey: 'icon_drow_sleep_poison', label: 'Drow Sleep Poison', desc: 'Deals damage equal to stacks each turn (like Poison) AND reduces the afflicted\'s attack damage by 1 per stack. Stacks never decay; healing removes them DEAD-LAST (after Bleed, Poison, Fire, Ice and Shock).' },
   regen: { iconKey: 'icon_regen', label: 'Regen', desc: 'Start of your turn: heal equal to stacks, then -1. Cancels 1-for-1 with Fire, Poison and Bleed (and they cancel it). True Damage burns it too.' },
   shock: { iconKey: 'icon_shock', label: 'Shock', desc: '-1 dmg dealt and +1 dmg taken per stack' },
   bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing). Decays by 1 at end of turn. Cleared 1-to-1 by healing.' },
@@ -20444,6 +22195,7 @@ const KEYWORD_ICONS = {
   heal: { isTextKeyword: true, color: '#7cff9c', label: 'Heal N', desc: 'Restore up to N cards from your discard pile. If you have Poison, each stack is cleared first (1 heal = 1 Poison removed); any leftover heals cards.' },
   sentinel: { isTextKeyword: true, color: '#c8a060', label: 'Sentinel', desc: 'Attacks must target this creature first while it is alive.' },
   haste: { isTextKeyword: true, color: '#9cf07c', label: 'Haste', desc: 'Ready to attack the turn it enters play.' },
+  riposte: { isTextKeyword: true, color: '#ffd070', label: 'Riposte', desc: "When this unit is attacked, it deals its attack back to the attacker at the same time — even if the hit destroys it." },
   block: { isTextKeyword: true, color: '#a8d8ff', label: 'Block N', desc: 'Mitigates up to N damage from an incoming attack. Played reactively in the defending phase when an enemy attacks you.' },
   strip: { isTextKeyword: true, color: '#ffb070', label: 'Strip N',
            desc: 'Remove up to N Shields from the target before the rest of the effects resolve. With "randomly", picks distinct shielded enemies and strips 1 each (total = N).' },
@@ -20558,7 +22310,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // substrings are recursed back through the keyword pass.
   // "End of Turn" is normalized to "Turn End" so the pill matches the
   // perk-card badge palette (one consistent label across the codex).
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overheal|Overwhelm|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Kill|On Death|On Draw|On Discard|On Summon|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets|First Strike|First Shield|Stays in hand|Beverage|Meal|Was Undamaged|Half-HP|Overheal|Overwhelm|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -20618,6 +22370,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // WHEN ATTACKED reactive blue.
         badge = { type: 'badge', label: 'CALLED',
           bg: 'rgba(40,90,130,0.92)', border: '#7fc8e8', fg: '#d6ecff' };
+      } else if (phrase === 'On Summon') {
+        // Fires once when the creature is summoned onto the field
+        // (Goblin Minion's on-summon hit). Generic come-into-play
+        // trigger for non-"Called" summons. Green spawn palette so
+        // it reads distinct from the blue CALLED on-enter pill.
+        badge = { type: 'badge', label: 'ON SUMMON',
+          bg: 'rgba(30,90,50,0.92)', border: '#7fe0a0', fg: '#d6ffe4' };
       } else if (phrase === 'On Death') {
         // Fires when the creature dies (Goblin Sapper explosion, etc.).
         // Purple palette — death-time, distinct from attack/tick/cost.
@@ -20713,6 +22472,13 @@ function tokenizeKeywordText(text, opts = {}) {
         // "Damaged" gating.
         badge = { type: 'badge', label: 'HIT',
           bg: 'rgba(130,50,30,0.92)', border: '#ff9866', fg: '#ffe0c8' };
+      } else if (phrase === 'First Strike') {
+        // Self-referential first-attack bonus (Adamantine Rapier): the
+        // bonus damage only lands when THIS card is the turn's opening
+        // attack. Gold palette — a damage payoff, pairs with Heroism /
+        // First Attack cues; distinct from the blue First Shield pill.
+        badge = { type: 'badge', label: 'FIRST STRIKE',
+          bg: 'rgba(90,70,20,0.92)', border: '#f0c860', fg: '#ffe8a8' };
       } else if (phrase === 'First Shield') {
         // Shield-stack payoff used on Buckler family — fires only when
         // the caster started the card with 0 Shield (snapshot read by
@@ -20773,9 +22539,9 @@ function tokenizeKeywordText(text, opts = {}) {
   // 'True' picks up "True Damage" / "True Dmg" — flagged as the
   // True keyword (KEYWORD_ICONS.true) so hover shows the
   // "unpreventable damage, bypasses Shield/Armor/Block" explainer.
-  const keywordList = ['First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
+  const keywordList = ['DrowPoison', 'First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
-    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste',
+    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte',
     'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
@@ -21520,6 +23286,25 @@ function getTintedFrameImage(frameImg, frameKey, tintColor) {
   return off;
 }
 
+// Build a recolored copy of a status icon (or any alpha PNG) by washing
+// a tint over its opaque pixels with `source-atop`. Stronger alpha than
+// the frame tint (0.2) so a Drow Sleep Poison droplet reads as a frosted
+// off-white version of the green Poison icon while keeping its internal
+// shading + droplet shape. Returns an offscreen canvas usable anywhere
+// drawImage accepts an image.
+function makeTintedIcon(srcImg, tintColor, alpha = 0.5) {
+  const off = document.createElement('canvas');
+  off.width = srcImg.width;
+  off.height = srcImg.height;
+  const oCtx = off.getContext('2d');
+  oCtx.drawImage(srcImg, 0, 0);
+  oCtx.globalCompositeOperation = 'source-atop';
+  oCtx.globalAlpha = alpha;
+  oCtx.fillStyle = tintColor;
+  oCtx.fillRect(0, 0, srcImg.width, srcImg.height);
+  return off;
+}
+
 // Corner size (in frame-image pixels) for the 9-slice. Tuned by visual inspection
 // of each frame PNG — the corner art should stay crisp, edges should stretch.
 const CARD_FRAME_CORNERS = {
@@ -21645,6 +23430,11 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
       const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
       descText = descText.replace(/X/g, String(sneakX));
     }
+    if (card.id === 'long_troll_teeth' && isCombatContext()) {
+      // X = projected damage = base (2) + prior swings this combat.
+      const base = (card.currentEffects.find(e => e.effectType === 'troll_teeth_attack')?.value) || 2;
+      descText = descText.replace(/X/g, String(base + (card._daggerAttacks || 0)));
+    }
     const tokenizeOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
     const iconSize = Math.floor(descFontSize * 1.3);
     const lineH = Math.max(descFontSize + 4, iconSize + 2);
@@ -21673,6 +23463,10 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
     if ((card.id === 'sneak_attack' || card.id === 'rugas_spiked_gauntlets') && isCombatContext()) {
       const sneakX = (card._showcaseSneakX != null) ? card._showcaseSneakX : (attacksThisTurn + 1);
       descText = descText.replace(/X/g, String(sneakX));
+    }
+    if (card.id === 'long_troll_teeth' && isCombatContext()) {
+      const base = (card.currentEffects.find(e => e.effectType === 'troll_teeth_attack')?.value) || 2;
+      descText = descText.replace(/X/g, String(base + (card._daggerAttacks || 0)));
     }
     const smallOpts = (card._isPerk || card.subtype === 'buff' || card.subtype === 'relic') ? { asPerk: true } : {};
     const descFontSize = Math.max(8, Math.floor(w * 0.085));
@@ -22623,10 +24417,16 @@ function drawSummonInfoTooltip({ creature, anchorX, anchorY }) {
   const padY = 8;
   const maxW = 240;
   const fontSize = 13;
+  // Measure the title (creature name) in its own bold/serif font so the
+  // box is wide enough for the NAME, not just the (often short) body —
+  // "Regen 2." was sizing the box too narrow for "Loathsome Limbs".
+  ctx.font = `bold ${fontSize}px Georgia, serif`;
+  const titleW = ctx.measureText(creature.name || '').width;
   ctx.font = `${fontSize}px sans-serif`;
   const lines = wrapTextLong(text, maxW - padX * 2, fontSize);
   const lineH = fontSize + 4;
-  const w = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
+  const bodyW = Math.max(...lines.map(l => ctx.measureText(l).width));
+  const w = Math.min(maxW, Math.max(titleW, bodyW) + padX * 2);
   const titleH = 18;
   const h = padY + titleH + lines.length * lineH + padY;
   let tx = anchorX - w / 2;
@@ -22872,6 +24672,7 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
   if (creature.fireStacks > 0) buffEntries.push({ icon: 'icon_fire', value: creature.fireStacks, color: Colors.ORANGE, keyword: 'fire' });
   if (creature.iceStacks > 0) buffEntries.push({ icon: 'icon_ice', value: creature.iceStacks, color: Colors.ICE_BLUE, keyword: 'ice' });
   if (creature.poisonStacks > 0) buffEntries.push({ icon: 'icon_poison', value: creature.poisonStacks, color: Colors.GREEN, keyword: 'poison' });
+  if (creature.drowSleepStacks > 0) buffEntries.push({ icon: 'icon_drow_sleep_poison', value: creature.drowSleepStacks, color: '#dfe7ff', keyword: 'drow_sleep_poison' });
   if ((creature.shockStacks || 0) > 0) buffEntries.push({ icon: 'icon_shock', value: creature.shockStacks, color: Colors.SHOCK_YELLOW, keyword: 'shock' });
   if ((creature.bleedStacks || 0) > 0) buffEntries.push({ icon: 'icon_bleed', value: creature.bleedStacks, color: Colors.RED, keyword: 'bleed' });
   if ((creature.inkCloudStacks || 0) > 0) buffEntries.push({ icon: 'icon_ink_cloud', value: creature.inkCloudStacks, color: '#202040', keyword: 'ink_cloud' });
@@ -23681,13 +25482,25 @@ function drawCharacterPanel(character, side) {
   // Status icons row (shield, heroism, etc.) above the HP bar. Left edge
   // aligned with the HP bar start (rect.x + 18) so they sit inside the
   // frame's inner edge.
-  const iconRowY = rect.y + rect.h - 74;
+  let iconRowY = rect.y + rect.h - 74;
   let iconX = rect.x + 18;
   const iconSize = 22;
+  const iconRowX0 = rect.x + 18;            // left edge to restart wrapped rows
+  const iconRowRight = rect.x + rect.w - 14; // wrap when an icon would pass this
+  // When the buff/status row fills up, wrap to a NEW row STACKED ABOVE the
+  // current one (so it grows upward, away from the HP bar) and restart from
+  // the left. ~18px reserve covers the icon's trailing count number.
+  const wrapIconRowIfNeeded = () => {
+    if (iconX !== iconRowX0 && iconX + iconSize + 18 > iconRowRight) {
+      iconX = iconRowX0;
+      iconRowY -= (iconSize + 6);
+    }
+  };
   const drawStatusIcon = (iconKey, value, color, keyword) => {
     if (value <= 0) return;
     const img = images[iconKey];
     if (img) {
+      wrapIconRowIfNeeded();
       // Ink Cloud — frame the icon in a red debuff square so it
       // pops out against the row of helpful blue/gold buffs as
       // "something bad is happening to you".
@@ -23738,6 +25551,7 @@ function drawCharacterPanel(character, side) {
   drawStatusIcon('icon_fire', character.getStatus('FIRE') || 0, Colors.ORANGE, 'fire');
   drawStatusIcon('icon_ice', character.getStatus('ICE') || 0, Colors.ICE_BLUE, 'ice');
   drawStatusIcon('icon_poison', character.getStatus('POISON') || 0, Colors.GREEN, 'poison');
+  drawStatusIcon('icon_drow_sleep_poison', character.getStatus('DROW_SLEEP') || 0, '#dfe7ff', 'drow_sleep_poison');
   drawStatusIcon('icon_regen', character.getStatus('REGEN') || 0, '#7cff9c', 'regen');
   drawStatusIcon('icon_shock', character.getStatus('SHOCK') || 0, Colors.SHOCK_YELLOW, 'shock');
   drawStatusIcon('icon_bleed', character.getStatus('BLEED') || 0, Colors.RED, 'bleed');
@@ -23754,6 +25568,7 @@ function drawCharacterPanel(character, side) {
     if (iconX > rect.x + 10) iconX += 4; // small gap after status icons
     const buffSize = iconSize;
     for (const buff of character.combatBuffs) {
+      wrapIconRowIfNeeded();
       const buffArt = getCardArt(buff.imageId);
       const isDebuff = !!buff.isDebuff;
       if (buffArt) {
@@ -23836,6 +25651,23 @@ function drawCharacterPanel(character, side) {
     ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`Kill all enemies (${aliveCount} left)`, barX + barW / 2, barY + 16);
+  } else if (!isPlayer && character._invulnerable && character._winWhenNamedDead) {
+    // Named-target fights (Goblin Front): the invulnerable shell has no
+    // deck, so show "Kill N <name>s" instead of a 0/0 HP bar. Win is both
+    // Armored Trolls dead (checkCombatEnd reads _winWhenNamedDead).
+    const aliveCount = (character.creatures || [])
+      .filter(c => c && c.isAlive && c.name === character._winWhenNamedDead).length;
+    const denom = Math.max(character._winTargetCount || aliveCount || 1, 1);
+    const pct = aliveCount / denom;
+    ctx.fillStyle = Colors.RED;
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.strokeStyle = Colors.WHITE;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.fillStyle = Colors.WHITE;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Kill ${aliveCount} ${character._winWhenNamedDead}${aliveCount === 1 ? '' : 's'}`, barX + barW / 2, barY + 16);
   } else if (!isPlayer && swimTarget > 0) {
     const remaining = Math.max(0, swimTarget - swimCount);
     const pct = remaining / swimTarget;
@@ -23884,7 +25716,9 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
     (state === GameState.MULTI_TARGETING && multiTargets.includes(creature)));
   // Highlight a ready ally that's selected for ally-targeting
   const isSelectedAlly = !isPreview && isPlayer && state === GameState.ALLY_TARGETING && selectedAlly === creature;
-  const isReadyAlly = !isPreview && isPlayer && !creature.exhausted && state === GameState.COMBAT;
+  // _cantAttack allies (White Dragon Egg, prison cart, etc.) never get
+  // the green "ready to attack" ring — they hold the field but can't swing.
+  const isReadyAlly = !isPreview && isPlayer && !creature.exhausted && !creature._cantAttack && state === GameState.COMBAT;
 
   // Outer highlight
   if (isPicked || isSelectedAlly) {
@@ -24143,8 +25977,12 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   drawCreatureStatus('icon_fire', creature.fireStacks, Colors.ORANGE);
   drawCreatureStatus('icon_ice', creature.iceStacks, Colors.ICE_BLUE);
   drawCreatureStatus('icon_poison', creature.poisonStacks, Colors.GREEN);
+  drawCreatureStatus('icon_drow_sleep_poison', creature.drowSleepStacks || 0, '#dfe7ff');
   drawCreatureStatus('icon_shock', creature.shockStacks || 0, Colors.SHOCK_YELLOW);
   drawCreatureStatus('icon_bleed', creature.bleedStacks || 0, Colors.RED);
+  // Creature-level Regen (Loathsome Limbs) — show the regen stack as a
+  // buff on the row, matching the troll's REGEN icon.
+  drawCreatureStatus('icon_regen', creature._regen || 0, '#7cff9c');
   drawCreatureStatus('icon_ink_cloud', creature.inkCloudStacks || 0, '#202040');
   drawCreatureStatus('icon_mark', creature.markStacks || 0, Colors.RED);
 
@@ -24235,6 +26073,17 @@ function getSideCreaturePreviews(card) {
   return card.previewCreature ? [card.previewCreature] : [];
 }
 
+// Normalize a card's side-CARD previews. Cards/perks may use the singular
+// previewCard or the plural previewCards (e.g. Harvest / Bag of Herbs →
+// Goodberry + Cave Shroom + Frostbloom); the plural list wins when set.
+function getSidePreviewCards(card) {
+  if (!card) return [];
+  if (Array.isArray(card.previewCards) && card.previewCards.length) {
+    return card.previewCards;
+  }
+  return card.previewCard ? [card.previewCard] : [];
+}
+
 // Creature-side preview lookup — returns a Card to render as a small
 // mini next to the creature's hover preview, or null. Currently used by
 // foraging allies (Tamed Rat → Goodberry, Dire Rat → Cave Shroom) so
@@ -24284,9 +26133,8 @@ function getSideCreaturePanelWidth(count, sideW) {
 // player sees both side-by-side / stacked next to the main preview.
 function hasAnySidePreview(card) {
   if (!card) return false;
-  if (card.previewCard) return true;
-  const cr = getSideCreaturePreviews(card);
-  return cr.length > 0;
+  if (getSidePreviewCards(card).length) return true;
+  return getSideCreaturePreviews(card).length > 0;
 }
 
 // Returns the width of the combined side preview panel for layout
@@ -24294,32 +26142,32 @@ function hasAnySidePreview(card) {
 // rendering the main card + side area).
 function getCombinedSidePreviewWidth(card, sideW) {
   if (!card) return 0;
+  const cards = getSidePreviewCards(card);
   const creatures = getSideCreaturePreviews(card);
-  const hasCard = !!card.previewCard;
-  if (hasCard && creatures.length) {
-    // Card + creatures stack in a single column at sideW.
-    return sideW;
-  }
-  if (hasCard) return sideW;
+  // Card(s) + creatures stack in a single column at sideW.
+  if (cards.length && creatures.length) return sideW;
+  // Cards alone use the same 1-col(<=2) / 2-col(3+) grid as creatures.
+  if (cards.length) return getSideCreaturePanelWidth(cards.length, sideW);
   if (creatures.length) return getSideCreaturePanelWidth(creatures.length, sideW);
   return 0;
 }
 
 function drawCombinedSidePreview(card, sx, hostY, hostH, sideW, sideH) {
   if (!card) return;
+  const cards = getSidePreviewCards(card);
   const creatures = getSideCreaturePreviews(card);
-  const hasCard = !!card.previewCard;
-  if (hasCard && creatures.length) {
-    // Vertical stack: card on top, then each creature below. Single
+  if (cards.length && creatures.length) {
+    // Vertical stack: card(s) on top, then each creature below. Single
     // column, total height summed so we can vertically center against
     // the main preview area.
     const stackGap = 8;
-    const totalH = sideH + (creatures.length * (sideH + stackGap));
-    const sy0 = hostY + Math.floor((hostH - totalH) / 2);
-    // Top: the previewCard token (e.g. Vial of Poison).
-    drawCard(card.previewCard, sx, sy0, sideW, sideH, false, false);
-    // Below: the creatures, single-column stacked.
-    let y = sy0 + sideH + stackGap;
+    const count = cards.length + creatures.length;
+    const totalH = count * sideH + (count - 1) * stackGap;
+    let y = hostY + Math.floor((hostH - totalH) / 2);
+    for (const pc of cards) {
+      drawCard(pc, sx, y, sideW, sideH, false, false);
+      y += sideH + stackGap;
+    }
     for (const cr of creatures) {
       cr._sourceRarity = card.rarity || 'common';
       cr._sourceSubtype = card.subtype || '';
@@ -24328,13 +26176,33 @@ function drawCombinedSidePreview(card, sx, hostY, hostH, sideW, sideH) {
     }
     return;
   }
-  if (hasCard) {
+  if (cards.length === 1) {
     const sy = hostY + Math.floor((hostH - sideH) / 2);
-    drawCard(card.previewCard, sx, sy, sideW, sideH, false, false);
+    drawCard(cards[0], sx, sy, sideW, sideH, false, false);
+    return;
+  }
+  if (cards.length) {
+    drawSidePreviewCardStack(cards, sx, hostY, hostH, sideW, sideH);
     return;
   }
   if (creatures.length) {
     drawSideCreatureStack(creatures, card, sx, hostY, hostH, sideW, sideH);
+  }
+}
+
+// Multi-card side preview — same 1-col(<=2) / 2-col(3+) grid the creature
+// stack uses, but renders plain cards (Harvest / Bag of Herbs → 3 herbs).
+function drawSidePreviewCardStack(cards, sx, hostY, hostH, sideW, sideH) {
+  if (!cards.length) return;
+  const stackGap = 8;
+  const colGap = 6;
+  const { cols, rowsPerCol } = getSideCreatureGrid(cards.length);
+  const totalH = rowsPerCol * sideH + (rowsPerCol - 1) * stackGap;
+  const sy0 = hostY + Math.floor((hostH - totalH) / 2);
+  for (let i = 0; i < cards.length; i++) {
+    const col = Math.floor(i / rowsPerCol);
+    const row = i - col * rowsPerCol;
+    drawCard(cards[i], sx + col * (sideW + colGap), sy0 + row * (sideH + stackGap), sideW, sideH, false, false);
   }
 }
 
@@ -25057,9 +26925,15 @@ function handleCombatClick(x, y) {
     }
   }
 
+  // Hand cards render ON TOP of the board, so a click that lands on a hand
+  // card takes priority over a board ally underneath it (e.g. a 2nd-row
+  // ally beneath the hand). Without this, clicking the overlap fired the
+  // ally path first — "Rampart can't attack" instead of selecting the card.
+  const _handHitForPriority = getHandCardRects(player.deck.hand)
+    .some(r => r && hitTest(x, y, r));
   // Check player ally click → enter ally targeting if ready
   const allyRects = getPlayerCreatureRects();
-  for (let i = 0; i < player.creatures.length; i++) {
+  if (!_handHitForPriority) for (let i = 0; i < player.creatures.length; i++) {
     if (!allyRects[i]) continue;
     if (hitTest(x, y, allyRects[i])) {
       const ally = player.creatures[i];
@@ -25183,6 +27057,7 @@ function handleCombatClick(x, y) {
             e.effectType === 'damage' || e.effectType === 'apply_poison' ||
             e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
             e.effectType === 'apply_bleed' ||
+            e.effectType === 'first_strike_attack' ||
             e.effectType === 'heal' || e.effectType === 'gain_shield' ||
             e.effectType === 'block' || e.effectType === 'draw'
           ))) {
@@ -25492,6 +27367,24 @@ function refundOnRechargeHeroism(card) {
   player.heroism = Math.max(0, (player.heroism || 0) - amt);
   delete card._onRechargeHeroismGranted;
   addLog(`  ${card.name}: refund ${amt} Heroism (H:${player.heroism})`, Colors.GRAY);
+}
+
+// Enemy mirror — fire on_recharge_heroism for the ENEMY when one of its
+// cards lands in the recharge pile (the Assassin's Adamantine Rapier +
+// Chain Shirt bank +1 Heroism for his next swing each time they cycle).
+// Called right after enemy.deck.playCard(card) at the attack/ability and
+// reactive-defense disposal sites.
+function applyEnemyOnRechargeHeroism(card) {
+  if (!card || !Array.isArray(card.currentEffects)) return;
+  let granted = 0;
+  for (const eff of card.currentEffects) {
+    if (eff.effectType === 'on_recharge_heroism') granted += eff.value;
+  }
+  if (granted > 0) {
+    enemy.heroism = (enemy.heroism || 0) + granted;
+    addLog(`  ${card.name}: +${granted} Heroism (H:${enemy.heroism})`, Colors.GOLD);
+    spawnTokenOnTarget(enemy, granted, 'Heroism', Colors.GOLD);
+  }
 }
 
 function handleCardRechargeClick(x, y) {
@@ -25810,6 +27703,28 @@ function handleDefendingClick(x, y) {
         // an on-turn play.
         let n = Math.max(1, eff.value || 1);
         while (n > 0 && healOneNegativeEffectOn(player)) n--;
+      } else if (eff.effectType === 'heal_all_negative_effects') {
+        // Hide in the Corner — strip every Ailment stack off the player.
+        while (healOneNegativeEffectOn(player)) { /* heal until clean */ }
+      } else if (eff.effectType === 'heal_poison') {
+        // Loose Bone — remove up to N Poison stacks, then spend any leftover
+        // on Drow Sleep Poison (a Poison variant). Mirrors the on-turn
+        // resolveEffect heal_poison case.
+        let budget = Math.max(1, eff.value || 1);
+        const poison = player.getStatus('POISON') || 0;
+        if (poison > 0 && budget > 0) {
+          const cleared = Math.min(poison, budget);
+          player.removeStatus('POISON', cleared);
+          budget -= cleared;
+          addLog(`  Cleared ${cleared} Poison`, Colors.GREEN);
+        }
+        const drow = player.getStatus('DROW_SLEEP') || 0;
+        if (drow > 0 && budget > 0) {
+          const cleared = Math.min(drow, budget);
+          player.removeStatus('DROW_SLEEP', cleared);
+          budget -= cleared;
+          addLog(`  Cleared ${cleared} Drow Sleep Poison`, '#9fb8e8');
+        }
       } else if (eff.effectType === 'transform_ice_to_shield_self') {
         // White Dragonscale Shield payoff: every Ice stack the
         // player is carrying converts 1:1 into Shield. Strips the
@@ -25929,6 +27844,7 @@ function handleDefendingClick(x, y) {
           addLog(`  ${card.name}: Failed (${Math.round(chance)}%)`, Colors.GRAY);
         }
       } else if (eff.effectType === 'apply_fire_random'
+                 || eff.effectType === 'apply_regen'
                  || eff.effectType === 'apply_ice_random'
                  || eff.effectType === 'apply_fire_all'
                  || eff.effectType === 'apply_ice_all'
@@ -25971,6 +27887,9 @@ function handleDefendingClick(x, y) {
         }
       }
     }
+    // Divine Protection (tier-2 Armored) — playing an Armor card to block
+    // also heals the player.
+    maybeDivineProtectionHeal(card);
     _activePlayCard = null;
     // Re-apply auto-mitigation against the pending damage
     pendingIncomingDamage = autoMitigateDamage(pendingIncomingDamage);
@@ -26550,6 +28469,7 @@ function resolveBarrageShot(target) {
   // barrage instead of evaporating after shot 1.
   if (barrageShotsFired === 0) {
     barragePoisonStacks = snapshotPoisonBuff(player);
+    barrageDrowSleepStacks = snapshotDrowSleepBuff(player);
     barrageEyeBonus = snapshotEyeBuff(player);
     barrageObsBonus = snapshotObsidianBuff(player);
     barrageIgnite = consumePlayerIgnite();
@@ -26612,11 +28532,12 @@ function resolveBarrageShot(target) {
   if (target === enemy) {
     enemyAutoPlayDefenses(dmg);
     const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-    triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+    triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
     playAttackHitSfx(dmg, taken);
     const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
     applyPoisonRider(enemy, barragePoisonStacks, taken);
+    applyDrowSleepRider(enemy, barrageDrowSleepStacks);
     if (barrageBonusPoison > 0) {
       enemy.applyStatus('POISON', barrageBonusPoison);
       spawnTokenOnTarget(enemy, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -26632,6 +28553,7 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, actual);
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
     applyPoisonRider(target, barragePoisonStacks, actual);
+    applyDrowSleepRider(target, barrageDrowSleepStacks);
     if (barrageBonusPoison > 0 && target.isAlive) {
       target.poisonStacks = (target.poisonStacks || 0) + barrageBonusPoison;
       spawnTokenOnTarget(target, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -26689,6 +28611,7 @@ function finishBarrage() {
   barrageShotsTotal = 0;
   barrageShotDamage = 1;
   barragePoisonStacks = 0;
+  barrageDrowSleepStacks = 0;
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
@@ -26736,6 +28659,7 @@ function cancelBarrage() {
   barrageStaysInHand = false;
   barrageDrawOnFinish = 1;
   barragePoisonStacks = 0;
+  barrageDrowSleepStacks = 0;
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
@@ -26888,6 +28812,7 @@ function cancelBeamMode() {
 
 let attacksThisTurn = 0; // for sneak_attack scaling
 let _bracerBonusLogged = false; // Boarhide Bracers +2-first-attack log guard (per player turn)
+let _swiftAssaultLogged = false; // Swift Assault perk +first-attack log guard (per player turn)
 // Tracks how much damage the most recent damage effect actually
 // landed on its target. Stamped inside every damage path (creature
 // vs character, unpreventable vs normal) and read by on-damage
@@ -26909,6 +28834,10 @@ let _suppressSummonSfx = false;
 // paths (manual + auto). Lets the weapon SFX classifier route per-ally
 // (e.g. Thorb → 1-handed axe sounds). Cleared right after the swing.
 let _activeAttacker = null;
+// Set transiently while a "called" ally arrow (Raena's summon shot)
+// resolves, so a Riposte lashes back at the summoned ally instead of the
+// player. Read by triggerSplitPower's Riposte block; cleared right after.
+let _calledArrowAlly = null;
 
 // Returns the recharge_extra cost for a card (number of cards to recharge as cost beyond base)
 function getCardRechargeExtra(card) {
@@ -26980,9 +28909,11 @@ function needsTarget(card) {
      e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
+     e.effectType === 'first_strike_attack' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
      e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
      e.effectType === 'apply_bleed' ||
+     e.effectType === 'troll_teeth_attack' ||
      e.effectType === 'damage_range' ||
      e.effectType === 'dragon_bow_barrage' ||
      e.effectType === 'magic_missile_barrage' ||
@@ -27046,7 +28977,18 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
     remaining = Math.max(0, remaining - (enemy.armor || 0));
     remaining = Math.max(0, remaining - (enemy.currentBlock || 0));
     landingDmg = remaining;
-    if (landingDmg <= 0) return; // fully absorbed, no need to defend
+    // Drow Riposte takes PRIORITY over block cards: the parry (1-3 of the
+    // blow, restored as HP) soaks the first chunk of any hit, so the
+    // Assassin only burns block cards on the OVERFLOW past what Riposte
+    // can handle. Reserve up to 3 (capped by cards available to parry);
+    // the actual 1-3 roll + lash-back fires in triggerSplitPower when the
+    // blow lands. If damage still remains after the reserve, blocks play.
+    if (enemy.powers && enemy.powers.some(p => p && p.id === 'riposte')) {
+      // The parry (now pre-mitigation in takeDamageWithDefense) absorbs up
+      // to 3, so don't burn block cards on that slice.
+      landingDmg = Math.max(0, landingDmg - 3);
+    }
+    if (landingDmg <= 0) return; // fully absorbed (or Riposte will cover it)
   }
 
   // Pure DEFENSE cards always count. Dual-mode ATTACK cards (Sturdy
@@ -27072,6 +29014,7 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
     // and needs to draw a fresh defense each round.
     const enemyShieldAtCardStart = enemy.shield || 0;
     enemy.deck.playCard(card);
+    applyEnemyOnRechargeHeroism(card); // Chain Shirt banks Heroism when it recharges
     addLog(`${enemy.name} plays ${card.name}`, Colors.RED, card);
     for (const eff of defEffects) {
       if (eff.effectType === 'block') {
@@ -27101,7 +29044,36 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
         if (landingDmg !== null) landingDmg = Math.max(0, landingDmg - eff.value);
-      } else if (eff.effectType === 'draw') {
+      } else if (eff.effectType === 'gain_heroism') {
+        // Adamantine Chain Shirt — its reactive block also banks Heroism
+        // for the Assassin's next swing (the enemy attack handlers spend
+        // enemy.heroism). Without this the defensive line silently dropped
+        // the +2 Heroism.
+        enemy.heroism = (enemy.heroism || 0) + eff.value;
+        addLog(`  +${eff.value} Heroism (H:${enemy.heroism})`, Colors.GOLD);
+        spawnTokenOnTarget(enemy, eff.value, 'Heroism', Colors.GOLD);
+      } else if (eff.effectType === 'tumble_block') {
+        // Heroic Tumble (enemy) — roll eff.value% for a Block burst; any
+        // Block beyond the incoming hit converts to Heroism for the next
+        // swing (mirrors the player handler, minus the SFX/preview).
+        const chance = Math.max(0, Math.min(100, eff.value));
+        if (Math.random() * 100 < chance) {
+          const BLK = 6 + 4 * (monsterTierOffset || 0);
+          enemy.addBlock(BLK);
+          addLog(`  ${card.name}: +${BLK} Block! (${Math.round(chance)}%)`, Colors.GOLD);
+          spawnTokenOnTarget(enemy, BLK, 'Block', BLOCK_BLUE);
+          const incoming = (landingDmg !== null) ? landingDmg : 0;
+          const leftover = Math.max(0, BLK - incoming);
+          if (landingDmg !== null) landingDmg = Math.max(0, landingDmg - BLK);
+          if (leftover > 0) {
+            enemy.heroism = (enemy.heroism || 0) + leftover;
+            addLog(`  Tumble! +${leftover} Heroism (H:${enemy.heroism})`, Colors.GOLD);
+            spawnTokenOnTarget(enemy, leftover, 'Heroism', Colors.GOLD);
+          }
+        } else {
+          addLog(`  ${card.name}: tumble failed.`, Colors.GRAY);
+        }
+      } else if (eff.effectType === 'draw' || eff.effectType === 'scry_pick') {
         // Varimatras Scale's draw rider. Defense cards play during
         // the player's swing, so feed any drawn cards into the
         // enemy's action queue (queueEnemyDrawnCards) — but only
@@ -27109,8 +29081,11 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         // we just refill the hand; the draw queue is a no-op until
         // the next enemy turn picks the new cards up via the
         // standard planner.
+        // scry_pick (Piwafwi's Scry 3) — the enemy can't sculpt its draw
+        // interactively, so it just draws 1 instead.
+        const drawCount = eff.effectType === 'scry_pick' ? 1 : eff.value;
         const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
-        const drawn = enemy.deck.draw(eff.value, cap);
+        const drawn = enemy.deck.draw(drawCount, cap);
         if (drawn.length > 0 && debugMode) {
           for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
         }
@@ -27264,6 +29239,14 @@ function resolveEffect(eff, caster, target) {
       // the arrow doesn't drain player resources or fire combo riders.
       if (eff.noAttackCount) {
         let raw = Math.max(0, eff.value);
+        // fromAlly (Raena's Called arrow): attribute the shot to the ally
+        // that was just summoned by this same card (the last alive ally),
+        // so a Riposte lashes back at HER, not the player. Cleared right
+        // after this damage resolves.
+        if (eff.fromAlly && caster === player) {
+          const allies = (player.creatures || []).filter(c => c && c.isAlive);
+          _calledArrowAlly = allies.length ? allies[allies.length - 1] : null;
+        }
         if (target instanceof Creature) {
           const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(raw);
@@ -27274,11 +29257,12 @@ function resolveEffect(eff, caster, target) {
           if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(raw);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(raw, taken);
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
         }
+        _calledArrowAlly = null;
         break;
       }
       const heroism = caster.heroism;
@@ -27415,18 +29399,19 @@ function resolveEffect(eff, caster, target) {
           consumePoisonBuff(caster, target, actual);
           _lastEffectDamageLanded = actual;
         }
+        maybeEnemyRiposte(target, caster); // Goblin Spike Trap counters
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           playAttackHitSfx(dmg, dmg); // true damage still rings the weapon
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
           _lastEffectDamageLanded = dmg;
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
@@ -27490,13 +29475,13 @@ function resolveEffect(eff, caster, target) {
         playAttackHitSfx(dmg, actual);
         const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
         addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
-        triggerSplitPower(target, actual > 0);
+        triggerSplitPower(target, actual);
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
         _lastEffectDamageLanded = actual;
       } else {
         if (target === enemy) enemyAutoPlayDefenses(dmg);
         const [blocked, taken] = target.takeDamageWithDefense(dmg);
-        triggerSplitPower(target, taken > 0);
+        triggerSplitPower(target, taken);
         if (taken > 0) spawnDamageOnTarget(target, taken);
         playAttackHitSfx(dmg, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
@@ -27547,12 +29532,12 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
@@ -27609,17 +29594,74 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (gUnpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
+      consumeIgniteOnAttack(caster, target, dmg);
+      attacksThisTurn++;
+      break;
+    }
+    case 'first_strike_attack': {
+      // Adamantine Rapier: Deal `eff.value`. FIRST STRIKE: +`eff.maxTargets`
+      // ONLY when THIS card is the turn's opening attack (attacksThisTurn
+      // is still 0 here — it's bumped at the end). Unlike the Boarhide
+      // Bracers' passive "First Attack" (which buffs whatever swings
+      // first), First Strike is self-referential: the bonus is lost if any
+      // other attack went before the rapier. Same damage pipeline as
+      // gore_attack otherwise (heroism / rage / ice / mark / unpreventable).
+      const fsFirst = (attacksThisTurn === 0);
+      const fsBonus = fsFirst ? (eff.maxTargets || 0) : 0;
+      if (fsBonus > 0) addLog(`  First Strike! +${fsBonus}`, Colors.GOLD);
+      const fsHeroism = caster.heroism;
+      if (fsHeroism > 0) { addLog(`  (Heroism +${fsHeroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + fsBonus + fsHeroism + caster.rage + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      const fsObs = consumeObsidianBuff(caster, target);
+      if (fsObs > 0) dmg += fsObs;
+      const fsIncoming = getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg + fsIncoming);
+      dmg = applyMarkBonus(target, dmg);
+      const fsUnpreventable = consumeUnpreventableBuff(caster);
+      if (!fsUnpreventable && !(target instanceof Creature) && target === enemy) {
+        enemyAutoPlayDefenses(dmg);
+      }
+      if (target instanceof Creature) {
+        if (fsUnpreventable) {
+          target.takeUnpreventableDamage(dmg);
+          if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+        } else {
+          const shieldBefore = target.shield || 0;
+          const actual = target.takeDamage(dmg);
+          if (actual > 0) spawnDamageOnTarget(target, actual);
+          playAttackHitSfx(dmg, actual);
+          const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+          addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+        }
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (fsUnpreventable) {
+          target.takeDamageFromDeck(dmg);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
+        } else {
+          const [blocked, taken] = target.takeDamageWithDefense(dmg);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
+          playAttackHitSfx(dmg, taken);
+          const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
+          addLog(`  ${target.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
+          if (caster === player && target === enemy) onPlayerHitEnemy(taken);
+        }
+      }
+      consumePoisonBuff(caster, target, dmg);
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
       break;
@@ -27654,13 +29696,13 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           landed = dmg;
         } else {
           if (target === enemy) enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
@@ -27708,7 +29750,7 @@ function resolveEffect(eff, caster, target) {
         // too — the attack DID hit, the defense layers just couldn't
         // soak it. Was missing here, so Dwarven Crossbow / Spectral
         // Hand bypassed every on-hit reaction.
-        triggerSplitPower(target, actual > 0);
+        triggerSplitPower(target, actual);
         consumePoisonBuff(caster, target, actual);
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
         // Stamp landed-damage snapshot so the heal_for_landed_damage
@@ -27724,13 +29766,31 @@ function resolveEffect(eff, caster, target) {
         const actual = target.takeDamageFromDeck(dmg);
         spawnDamageOnTarget(target, actual, Colors.ORANGE);
         addLog(`  ${actual} true dmg to ${target.name}`, Colors.ORANGE);
-        triggerSplitPower(target, actual > 0);
+        triggerSplitPower(target, actual);
         consumePoisonBuff(caster, target, actual);
         if (caster === player && target === enemy) onPlayerHitEnemy(actual);
         _lastEffectDamageLanded = actual;
       }
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
+      break;
+    }
+    case 'apply_poison_per_damage': {
+      // Darkwood Hand Crossbow rider — apply Poison equal to the damage
+      // the PRECEDING damage effect actually landed (stamped on
+      // _lastEffectDamageLanded). Because the True Damage line already
+      // folds in Heroism, Rage, and first-attack perks (Boarhide
+      // Bracers' +2), a buffed shot drips proportionally more Poison.
+      const ppd = Math.max(0, _lastEffectDamageLanded || 0);
+      if (ppd > 0) {
+        if (target instanceof Creature) {
+          target.poisonStacks = (target.poisonStacks || 0) + ppd;
+        } else if (target && typeof target.applyStatus === 'function') {
+          target.applyStatus('POISON', ppd);
+        }
+        spawnTokenOnTarget(target, ppd, 'Poison', Colors.GREEN);
+        addLog(`  +${ppd} Poison (per damage dealt) on ${target.name || 'enemy'}`, Colors.GREEN);
+      }
       break;
     }
     case 'armor_bonus_damage': {
@@ -27786,13 +29846,13 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
           if (target === enemy) enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
@@ -27852,12 +29912,12 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
           consumePoisonBuff(caster, target, taken);
@@ -27939,12 +29999,12 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(caster, target, dmg);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
@@ -28048,7 +30108,7 @@ function resolveEffect(eff, caster, target) {
         const tDmg = mdPerTarget(target);
         if (unpreventable) {
           target.takeDamageFromDeck(tDmg);
-          triggerSplitPower(target, tDmg > 0); if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
+          triggerSplitPower(target, tDmg); if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
           addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
           applyPoisonRider(target, mdPoisonStacks, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
@@ -28201,7 +30261,7 @@ function resolveEffect(eff, caster, target) {
         } else {
           if (t === enemy) enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = t.takeDamageWithDefense(dmg);
-          triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
+          triggerSplitPower(t, taken); if (taken > 0) spawnDamageOnTarget(t, taken);
           playAttackHitSfx(dmg, taken, delay);
           addLog(`  ${t.name}: ${taken} dmg`, Colors.RED);
           applyPoisonRider(t, spPoisonStacks, taken);
@@ -28264,6 +30324,7 @@ function resolveEffect(eff, caster, target) {
       }
       spawnTokenOnTarget(target, eff.value, 'Poison', Colors.GREEN);
       firePowerSurgeIfArmed(caster, 'poison');
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'poison_dagger_barrage': {
@@ -28378,6 +30439,7 @@ function resolveEffect(eff, caster, target) {
         addLog(`  +${eff.value} Bleed on ${t.name}`, Colors.RED);
         spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
       }
+      countStatusAttack(caster, bleedTargets);
       break;
     }
     case 'apply_shock': {
@@ -28391,6 +30453,7 @@ function resolveEffect(eff, caster, target) {
       }
       addLog(`  +${eff.value} Shock on ${target.name}`, Colors.GOLD);
       spawnTokenOnTarget(target, eff.value, 'Shock', Colors.GOLD);
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'apply_bleed_all': {
@@ -28407,6 +30470,7 @@ function resolveEffect(eff, caster, target) {
         spawnTokenOnTarget(t, eff.value, 'Bleed', Colors.RED);
       }
       if (targets.length > 0) addLog(`  +${eff.value} Bleed on ${targets.length} target${targets.length > 1 ? 's' : ''}`, Colors.RED);
+      countStatusAttack(caster, targets);
       break;
     }
     case 'feral_swipe_bleed': {
@@ -28512,13 +30576,13 @@ function resolveEffect(eff, caster, target) {
       } else {
         if (unpreventable) {
           target.takeDamageFromDeck(dmg);
-          triggerSplitPower(target, dmg > 0); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
+          triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE);
           landed = dmg;
         } else {
           if (target === enemy) enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
-          triggerSplitPower(target, taken > 0); if (taken > 0) spawnDamageOnTarget(target, taken);
+          triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
@@ -28579,6 +30643,32 @@ function resolveEffect(eff, caster, target) {
         buff.stacks = eff.value;
       }
       addLog(`  ${caster.name}: next attack applies +${eff.value} Poison`, Colors.GREEN);
+      break;
+    }
+    case 'grant_drow_sleep_buff': {
+      // Drow Sleep Poison item — coats the next swing. Mirrors the Vial of
+      // Poison buff exactly (snapshot consumed by consumePoisonBuff on the
+      // next attack via applyDrowSleepRider), just a different status.
+      caster.drowSleepBuff = (caster.drowSleepBuff || 0) + eff.value;
+      const existingDS = (caster.combatBuffs || []).find(b => b.id === 'drow_sleep_buff');
+      if (existingDS) {
+        existingDS.stacks = (existingDS.stacks || 1) + eff.value;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'drow_sleep_buff',
+          name: 'Drow Sleep Poison',
+          description: 'Your next attack applies +1 Drow Sleep Poison to the target.',
+          imageId: 'drow_sleep_poison',
+          effectType: 'grant_drow_sleep_buff',
+          effectValue: eff.value,
+          trigger: 'on_attack',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+        const dsBuff = caster.combatBuffs[caster.combatBuffs.length - 1];
+        dsBuff.stacks = eff.value;
+      }
+      addLog(`  ${caster.name}: next attack applies +${eff.value} Drow Sleep Poison`, '#9fb8e8');
       break;
     }
     case 'grant_bleeding_damage_buff': {
@@ -28856,6 +30946,7 @@ function resolveEffect(eff, caster, target) {
       // Sound is now tied to the card play (ID override), not the
       // apply effect, to avoid double-up across damage + apply.
       if (appliedIce > 0) firePowerSurgeIfArmed(caster, 'ice');
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'apply_fire': {
@@ -28898,6 +30989,7 @@ function resolveEffect(eff, caster, target) {
       }
       if (appliedFire > 0) spawnTokenOnTarget(target, appliedFire, 'Fire', Colors.ORANGE);
       if (appliedFire > 0) firePowerSurgeIfArmed(caster, 'fire');
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'apply_fire_multi': {
@@ -28949,6 +31041,7 @@ function resolveEffect(eff, caster, target) {
         spawnTokenOnTarget(target, appliedFire, 'Fire', Colors.ORANGE);
         firePowerSurgeIfArmed(caster, 'fire');
       }
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'apply_fire_self': {
@@ -29008,6 +31101,7 @@ function resolveEffect(eff, caster, target) {
       if (appliedIce > 0) {
         spawnTokenOnTarget(target, appliedIce, 'Ice', Colors.ICE_BLUE);
       }
+      countStatusAttack(caster, [target]);
       break;
     }
     case 'apply_poison_self': {
@@ -29305,18 +31399,23 @@ function resolveEffect(eff, caster, target) {
         const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
         addLog(`  ${actual} dmg to ${t.name}${absSuffix}`, Colors.RED);
         playAttackHitSfx(dmg, actual, 0);
-        triggerSplitPower(t, actual > 0);
+        triggerSplitPower(t, actual);
+        maybeEnemyRiposte(t, caster); // Goblin Spike Trap counters
         if (!t.isAlive) {
           spawnDeathAnimation(t);
           addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t);
           countAndRemoveDeadCreatures();
         }
       } else {
-        t.takeDamageFromDeck(dmg);
-        triggerSplitPower(t, dmg > 0);
-        spawnDamageOnTarget(t, dmg, Colors.RED);
-        addLog(`  ${dmg} dmg to ${t.name}`, Colors.RED);
-        playAttackHitSfx(dmg, dmg, 0);
+        // Normal swing — respect the boss's Block / Shield / Armor (this
+        // is NOT true damage; Spiked Goblin Helmet etc. shouldn't bypass
+        // the troll's Dire Hide block).
+        const [blocked, taken] = t.takeDamageWithDefense(dmg);
+        triggerSplitPower(t, taken);
+        if (taken > 0) spawnDamageOnTarget(t, taken, Colors.RED);
+        const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
+        addLog(`  ${taken} dmg to ${t.name}${bs}`, Colors.RED);
+        playAttackHitSfx(dmg, taken, 0);
       }
       break;
     }
@@ -29481,7 +31580,7 @@ function resolveEffect(eff, caster, target) {
           const actual = t.takeDamage(dmg);
           // Each charge counts as its own hit so on-hit triggers (small
           // Obsidian Slime armor peel) fire 3 separate times.
-          triggerSplitPower(t, actual > 0);
+          triggerSplitPower(t, actual);
           if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
           addLog(`  Charge ${r + 1}: ${actual} dmg to ${t.name}`, Colors.ORANGE);
           // 1 Fire rider after damage.
@@ -29493,7 +31592,7 @@ function resolveEffect(eff, caster, target) {
           t.takeDamageFromDeck(dmg);
           // Each charge is a separate "When Hit" for the boss too — drives
           // 3 armor peels on Obsidian Construct / Obsidian Body.
-          triggerSplitPower(t, dmg > 0);
+          triggerSplitPower(t, dmg);
           spawnDamageOnTarget(t, dmg, Colors.ORANGE);
           addLog(`  Charge ${r + 1}: ${dmg} dmg to ${t.name}`, Colors.ORANGE);
           const ice = t.getStatus ? (t.getStatus('ICE') || 0) : 0;
@@ -29562,6 +31661,7 @@ function resolveEffect(eff, caster, target) {
         addLog(`  +${eff.value} Poison on ${c.name}`, Colors.GREEN);
         spawnTokenOnTarget(c, eff.value, 'Poison', Colors.GREEN);
       }
+      countStatusAttack(caster, (enemy.creatures || []).filter(c => c && c.isAlive));
       break;
     }
     case 'apply_all_poison_damage': {
@@ -29635,6 +31735,7 @@ function resolveEffect(eff, caster, target) {
           spawnTokenOnTarget(c, remainingC, 'Fire', Colors.ORANGE);
         }
       }
+      countStatusAttack(caster, (enemy.creatures || []).filter(c => c && c.isAlive));
       break;
     }
     case 'apply_ice_all': {
@@ -29690,6 +31791,7 @@ function resolveEffect(eff, caster, target) {
           spawnTokenOnTarget(c, remainingC, 'Ice', Colors.ALLY_BLUE);
         }
       }
+      countStatusAttack(caster, (enemy.creatures || []).filter(c => c && c.isAlive));
       break;
     }
     case 'apply_shock_all': {
@@ -29719,6 +31821,7 @@ function resolveEffect(eff, caster, target) {
       }
       const sparkleCount = Math.min(3, shockedCount);
       if (sparkleCount > 0) playStaggeredSfx('sparkle_spell', sparkleCount, 140, 0.7);
+      countStatusAttack(caster, (enemy.creatures || []).filter(c => c && c.isAlive));
       break;
     }
     case 'apply_ice_self': {
@@ -29902,6 +32005,29 @@ function resolveEffect(eff, caster, target) {
         (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
       let n = Math.max(1, eff.value || 1);
       while (n > 0 && healOneNegativeEffectOn(cureTarget)) n--;
+      break;
+    }
+    case 'heal_poison': {
+      // Remove up to N Poison stacks specifically (Loose Bone), then spend
+      // any leftover on Drow Sleep Poison (a Poison variant). Works on the
+      // picked ally for SINGLE_ALLY effects, else the caster.
+      const pTarget =
+        (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
+      let budget = Math.max(1, eff.value || 1);
+      const poison = pTarget && pTarget.getStatus ? (pTarget.getStatus('POISON') || 0) : 0;
+      if (poison > 0 && budget > 0) {
+        const cleared = Math.min(poison, budget);
+        pTarget.removeStatus('POISON', cleared);
+        budget -= cleared;
+        addLog(`  Cleared ${cleared} Poison`, Colors.GREEN);
+      }
+      const drowSleep = pTarget && pTarget.getStatus ? (pTarget.getStatus('DROW_SLEEP') || 0) : 0;
+      if (drowSleep > 0 && budget > 0) {
+        const cleared = Math.min(drowSleep, budget);
+        pTarget.removeStatus('DROW_SLEEP', cleared);
+        budget -= cleared;
+        addLog(`  Cleared ${cleared} Drow Sleep Poison`, '#9fb8e8');
+      }
       break;
     }
     case 'heal_all_negative_effects': {
@@ -30225,9 +32351,11 @@ function resolveEffect(eff, caster, target) {
         const doused = rt._lastRegenFireCancel || 0;
         const purged = rt._lastRegenPoisonCancel || 0;
         const staunched = rt._lastRegenBleedCancel || 0;
+        const slept = rt._lastRegenDrowCancel || 0;
         if (doused > 0) addLog(`  Regen douses ${doused} Fire on ${rtName}`, Colors.ORANGE);
         if (purged > 0) addLog(`  Regen purges ${purged} Poison on ${rtName}`, Colors.GREEN);
         if (staunched > 0) addLog(`  Regen staunches ${staunched} Bleed on ${rtName}`, Colors.RED);
+        if (slept > 0) addLog(`  Regen purges ${slept} Drow Sleep Poison on ${rtName}`, '#9fb8e8');
         if (applied > 0) {
           addLog(`  +${applied} Regen on ${rt === player ? 'You' : rt.name}`, Colors.GREEN);
           spawnTokenOnTarget(rt, applied, 'Regen', '#7cff9c');
@@ -30489,22 +32617,16 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_thorb': {
-      const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 6, isCompanion: true,
-        description: 'Turn End: +Shield',
-      });
+      // Use the canonical creature creator (createThorbCreature) so the
+      // summoned ally always matches the card preview + codex. The old
+      // inline stats had drifted out of sync after a balance pass (the
+      // creator is now 2/5 Armor 1; the inline was a stale 2/6 + shield),
+      // so playing the base Thorb card summoned the wrong version.
+      const thorb = createThorbCreature();
       // Link to the source card so when Thorb dies, the card moves from
-      // play pile to discard (costs HP). The card was already lifted from
-      // hand by playCardSelf/playCardOnEnemy — we reroute it to the play
-      // pile via _companionCard (see placeByCost override below).
-      // _activePlayCard is set by playCardSelf/playCardOnEnemy before
-      // effects resolve — it's the card instance that was just lifted
-      // from hand. We link it to the creature so dying moves it to
-      // discard, and flag it so placeByCost routes to playPile.
+      // play pile to discard (costs HP). _activePlayCard is the card just
+      // lifted from hand; flag it so placeByCost routes it to playPile.
       thorb.sourceCard = _activePlayCard || null;
-      // Match Raena/Valdrisa: stamp source rarity + subtype so the
-      // in-combat creature card uses the rare frame + ally tint
-      // (codex side-stamps these automatically; live combat doesn't).
       thorb._sourceRarity = 'rare';
       thorb._sourceSubtype = 'allies';
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
@@ -30513,10 +32635,7 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_raena': {
-      const raena = new Creature({
-        name: 'Raena', attack: 2, maxHp: 4, multiAttack: 2, isCompanion: true,
-        description: 'Attacks 2 targets.',
-      });
+      const raena = createRaenaCreature();
       raena.sourceCard = _activePlayCard || null;
       raena._sourceRarity = 'rare';
       raena._sourceSubtype = 'allies';
@@ -30526,10 +32645,7 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_raena_upgraded': {
-      const raena = new Creature({
-        name: 'Raena', attack: 3, maxHp: 5, multiAttack: 2, isCompanion: true,
-        description: 'Attacks 2 targets.',
-      });
+      const raena = createRaenaUpgradedCreature();
       raena.sourceCard = _activePlayCard || null;
       raena._sourceRarity = 'rare';
       raena._sourceSubtype = 'allies';
@@ -30549,10 +32665,7 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_thorb_upgraded': {
-      const thorb = new Creature({
-        name: 'Thorb', attack: 2, maxHp: 7, sentinel: true, isCompanion: true,
-        description: 'Sentinel. Turn End: +Shield',
-      });
+      const thorb = createThorbUpgradedCreature();
       thorb.sourceCard = _activePlayCard || null;
       thorb._sourceRarity = 'rare';
       thorb._sourceSubtype = 'allies';
@@ -30604,6 +32717,40 @@ function resolveEffect(eff, caster, target) {
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(scout);
       addLog(`  Dwarven Scout joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_dwarven_battle_cleric': {
+      const cl = new Creature({
+        name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
+        isCompanion: true,
+        description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
+      });
+      cl.endTurnHealRandomAlly = 2;
+      scaleCreatureWithOffset(cl, playerTierOffset || 0);
+      cl.sourceCard = _activePlayCard || null;
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      cl._sourceRarity = 'uncommon';
+      cl._sourceSubtype = 'allies';
+      player.addCreature(cl);
+      addLog(`  A Dwarven Battle Cleric joins the line!`, Colors.GREEN);
+      const le = combatLog[combatLog.length - 1]; if (le) le.creature = cl;
+      break;
+    }
+    case 'summon_dwarven_crossbowman': {
+      const cb = new Creature({
+        name: 'Dwarven Crossbowman', attack: 2, maxHp: 5, shield: 1,
+        unpreventable: true, isCompanion: true,
+        description: 'Attacks deal True Damage.',
+      });
+      scaleCreatureWithOffset(cb, playerTierOffset || 0);
+      cb.sourceCard = _activePlayCard || null;
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      cb._sourceRarity = 'uncommon';
+      cb._sourceSubtype = 'allies';
+      player.addCreature(cb);
+      addLog(`  A Dwarven Crossbowman takes the line!`, Colors.GREEN);
+      const le = combatLog[combatLog.length - 1]; if (le) le.creature = cb;
+      playSound('arrow_flesh_01', 0.5);
       break;
     }
     case 'summon_misha': {
@@ -31052,6 +33199,152 @@ function resolveEffect(eff, caster, target) {
       if (lastEntry && lastSkel) lastEntry.creature = lastSkel;
       break;
     }
+    case 'summon_goblin_spike_trap': {
+      // 1-2 stationary spike traps (player allies). Can't attack; they
+      // Riposte — deal their attack to anything that strikes them. Game+
+      // raises the MAX by +1 per offset (1-3, 1-4, …); the traps stay 3/1.
+      const num = 1 + Math.floor(Math.random() * (2 + (playerTierOffset || 0)));
+      let last = null;
+      for (let i = 0; i < num; i++) {
+        const trap = new Creature({
+          name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+          description: "Can't Attack. Riposte.",
+        });
+        trap._cantAttack = true;
+        trap.riposte = true;
+        // Game+ — +1/+1 per offset (in addition to the +1 max-trap count).
+        scaleCreatureWithOffset(trap, playerTierOffset || 0, 'player');
+        trap._sourceRarity = 'uncommon';
+        trap._sourceSubtype = 'item';
+        if (caster.addCreature(trap)) last = trap;
+      }
+      addLog(num === 1 ? `  A Goblin Spike Trap is set!` : `  ${num} Goblin Spike Traps are set!`, Colors.ORANGE);
+      const leTrap = combatLog[combatLog.length - 1]; if (leTrap && last) leTrap.creature = last;
+      break;
+    }
+    case 'summon_goblin_war_banner': {
+      const banner = new Creature({
+        name: 'Goblin War Banner', attack: 0, maxHp: 5,
+        description: "Can't Attack.\nAllies deal +1 Damage.",
+      });
+      banner._cantAttack = true;
+      // Game+ — +0/+2 HP per offset (CREATURE_TIER_OFFSET) and +0.5
+      // damage-to-all aura per offset.
+      const bannerOff = playerTierOffset || 0;
+      scaleCreatureWithOffset(banner, bannerOff, 'player');
+      banner._allyDamageAura = 1 + 0.5 * bannerOff;
+      banner._sourceRarity = 'uncommon';
+      banner._sourceSubtype = 'item';
+      if (caster.addCreature(banner)) {
+        addLog(`  A Goblin War Banner is planted! Allies deal +1 Damage.`, Colors.GOLD);
+        const leB = combatLog[combatLog.length - 1]; if (leB) leB.creature = banner;
+      } else {
+        addLog(`  No room for the War Banner.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'summon_random_goblins': {
+      // 1-4 random goblins (Minion / Sapper / Warrior) on the PLAYER side;
+      // Game+ raises the MAX by +1 per offset (1-5, 1-6, …).
+      const num = 1 + Math.floor(Math.random() * (4 + (playerTierOffset || 0)));
+      let last = null;
+      for (let i = 0; i < num; i++) {
+        const g = makePlayerGoblin();
+        if (caster.addCreature(g)) {
+          last = g;
+          // Minion's on-summon hit lands on a random enemy.
+          if (g.name === 'Goblin Minion') dealRandomDamageToEnemySide(1, 'Goblin Minion');
+        }
+      }
+      addLog(`  ${num} goblin${num === 1 ? '' : 's'} answer the whistle!`, Colors.ORANGE);
+      const leW = combatLog[combatLog.length - 1]; if (leW && last) leW.creature = last;
+      break;
+    }
+    case 'gain_heroism_per_defeated': {
+      const per = Math.max(1, eff.value || 1);
+      const raw = (enemiesDefeatedThisCombat || 0) * per;
+      // Silent cap at 10 — with the Goblin Front's endless "They're in the
+      // Walls!" spawns this could otherwise hit 20-30+ Heroism and one-shot
+      // the trolls. Capped, with a silly log when it would have overflowed.
+      // Game+ raises the secret cap by +5 per player offset (15, 20, …).
+      const CAP = 10 + 5 * (playerTierOffset || 0);
+      const gained = Math.min(raw, CAP);
+      if (gained > 0) {
+        caster.heroism = (caster.heroism || 0) + gained;
+        if (raw > CAP) {
+          addLog(`  Bag of Stolen Teeth: +${gained} Heroism — turns out goblins only have 10 teeth!`, Colors.GOLD);
+        } else {
+          addLog(`  Bag of Stolen Teeth: +${gained} Heroism (${enemiesDefeatedThisCombat} defeated).`, Colors.GOLD);
+        }
+        spawnTokenOnTarget(caster, gained, 'Heroism', Colors.GOLD);
+      } else {
+        addLog(`  Bag of Stolen Teeth: no enemies defeated yet.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'summon_severed_troll_arm': {
+      // Severed Troll Arm — summons an exact Loathsome Limb on the PLAYER
+      // side (2/6 wounded to 3, Regen 2, Bleed). When it regrows to full
+      // HP it re-attaches: the player heals for its HP (6) and draws 1
+      // (handled owner-aware in the creature Regen loop).
+      const limb = new Creature({
+        name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
+        bleedAttack: 1, description: 'Regen 2.',
+      });
+      limb._regen = 2;
+      limb._regenMax = 2;
+      limb._sourceRarity = 'rare';
+      limb._sourceSubtype = 'allies';
+      if (caster.addCreature(limb)) {
+        addLog(`  A Loathsome Limb crawls to your side!`, Colors.GREEN);
+        const le = combatLog[combatLog.length - 1]; if (le) le.creature = limb;
+        playSound('spider_scuttle_01', 0.6);
+      } else {
+        addLog(`  No room for the Loathsome Limb.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'troll_teeth_attack': {
+      // Long Troll Teeth — Deal eff.value + X, where X is the number of
+      // times THIS dagger has already struck this combat (counter stamped
+      // on the card, reset at combat start). Stays in hand, so the same
+      // card instance accumulates X across the fight.
+      const card = _activePlayCard;
+      const x = (card && card._daggerAttacks) || 0;
+      let dmg = Math.max(0, eff.value + x + caster.heroism + (caster.rage || 0) + getDamageModifier(caster));
+      if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
+      dmg = consumeIceForAttack(caster, dmg);
+      dmg += getIncomingDamageModifier(target);
+      dmg = Math.max(0, dmg);
+      dmg = applyMarkBonus(target, dmg);
+      if (x > 0) addLog(`  Long Troll Teeth: +${x} (${x} prior swing${x === 1 ? '' : 's'})`, Colors.GOLD);
+      const src = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+      if (target instanceof Creature) {
+        spawnPlayerArrowBatch(src, [target], 550, Colors.RED);
+        const shieldBefore = target.shield || 0;
+        const actual = target.takeDamage(dmg);
+        if (actual > 0) spawnDamageOnTarget(target, actual);
+        const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
+        addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
+        playAttackHitSfx(dmg, actual);
+        triggerSplitPower(target, actual);
+        maybeEnemyRiposte(target, caster);
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        spawnPlayerArrowBatch(src, [target], 550, Colors.RED);
+        enemyAutoPlayDefenses(dmg);
+        const [blocked, taken] = target.takeDamageWithDefense(dmg);
+        triggerSplitPower(target, taken);
+        if (taken > 0) spawnDamageOnTarget(target, taken);
+        const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
+        addLog(`  ${target.name}: ${taken} dmg${bs}`, Colors.RED);
+        playAttackHitSfx(dmg, taken);
+        if (caster === player && target === enemy) onPlayerHitEnemy(taken);
+      }
+      if (card) card._daggerAttacks = x + 1;
+      attacksThisTurn++;
+      break;
+    }
     case 'summon_pet_slime': {
       // 1-N slimes per playerTierOffset (1-2 → 1-3 → 1-4 …). Base
       // roll is 1-2 (cap=2 at offset 0); each offset point bumps the
@@ -31239,6 +33532,10 @@ function resolveEffect(eff, caster, target) {
       // otherwise → open the REVIVE_SELECT modal in multi-pick mode.
       const limit = Math.max(1, eff.value || 1);
       const picks = 1 + Math.floor(0.5 * (playerTierOffset || 0));
+      // Mark a revivify as resolving. The "Heal 2 per ally" heal fires on
+      // EVERY path — including when there's no dead ally to revive — based
+      // on the live ally count, so set this BEFORE the candidates check.
+      _revivifyAlliesBefore = (player.creatures || []).filter(c => c.isAlive).length;
       const candidates = [];
       for (let i = caster.deck.discardPile.length - 1; i >= 0 && candidates.length < limit; i--) {
         const c = caster.deck.discardPile[i];
@@ -31246,12 +33543,9 @@ function resolveEffect(eff, caster, target) {
       }
       if (candidates.length === 0) {
         addLog(`  No dead allies to revive.`, Colors.GRAY);
+        finalizeRevivifyHeal();
         break;
       }
-      // Snapshot the alive-ally count BEFORE any revive so the modal /
-      // auto-revive close path can heal player = max(1, alliesAfter)
-      // — but only if a revive actually landed (after > before).
-      _revivifyAlliesBefore = (player.creatures || []).filter(c => c.isAlive).length;
       if (candidates.length <= picks) {
         // Pool small enough that there's nothing to pick — just revive
         // everyone offered.
@@ -31347,14 +33641,23 @@ function resolveEffect(eff, caster, target) {
       // it lands next time. createVialOfPoison stamps isToken:true so
       // it sells for 0 gp at Antiquity (rejected at other shops by
       // the token gate, mirroring Barnacle / Goodberry).
-      const vial = createVialOfPoison();
-      player.deck.masterDeck.push(vial);
-      if (player.deck.hand.length < MAX_HAND_SIZE) {
-        player.deck.hand.push(vial);
-        addLog('  Vial of Poison created in hand!', Colors.GREEN);
+      if (caster === player) {
+        const vial = createVialOfPoison();
+        player.deck.masterDeck.push(vial);
+        if (player.deck.hand.length < MAX_HAND_SIZE) {
+          player.deck.hand.push(vial);
+          addLog('  Vial of Poison created in hand!', Colors.GREEN);
+        } else {
+          player.deck.addToRechargePile(vial);
+          addLog('  Vial of Poison recharged (hand full)', Colors.GREEN);
+        }
       } else {
-        player.deck.addToRechargePile(vial);
-        addLog('  Vial of Poison recharged (hand full)', Colors.GREEN);
+        // ENEMY (the Assassin's Pet Spider) — the spider's venom coats the
+        // caster's blades immediately: grab the vial and uncork it, granting
+        // the same poison buff a player would get from playing it. The
+        // enemy's card attacks consume it (see the enemy attack handler).
+        resolveEffect(new CardEffect('grant_poison_buff', 1, TargetType.SELF), caster, caster);
+        addLog(`  ${caster.name} uncorks a Vial of Poison — blades envenomed!`, Colors.GREEN);
       }
       break;
     }
@@ -31580,14 +33883,14 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
           const [, taken] = enemy.takeDamageNoBlock(consumed);
           if (taken > 0) { spawnDamageOnTarget(enemy, taken, Colors.ICE_BLUE); anyLanded = true; }
-          triggerSplitPower(enemy, taken > 0);
+          triggerSplitPower(enemy, taken);
           if (caster === player) onPlayerHitEnemy(taken);
         } else {
           t.iceStacks = 0;
           addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
           const actual = t.takeDamage(consumed);
           if (actual > 0) { spawnDamageOnTarget(t, actual, Colors.ICE_BLUE); anyLanded = true; }
-          triggerSplitPower(t, actual > 0);
+          triggerSplitPower(t, actual);
           if (!t.isAlive) addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t);
         }
       }
@@ -31660,7 +33963,7 @@ function resolveEffect(eff, caster, target) {
         // Split / on-attacked triggers fire per target — same as
         // single-target swings — so AoEs like Ice Nova spawn slimes
         // on Obsidian Body and peel armor on Obsidian Construct.
-        triggerSplitPower(enemy, taken > 0);
+        triggerSplitPower(enemy, taken);
         // AoE counts as a hit on the boss for Vanish/Brute triggers
         // — mirrors single-target attacks.
         if (caster === player) onPlayerHitEnemy(taken);
@@ -31681,7 +33984,7 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         }
         applyPoisonRider(c, aoePoisonStacks, actual);
-        triggerSplitPower(c, actual > 0);
+        triggerSplitPower(c, actual);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
       // Cards with explicit per-target SFX (Fan of Blades, Burning
@@ -31783,7 +34086,7 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
         }
         applyPoisonRider(enemy, splitPoison, lastTaken);
-        triggerSplitPower(enemy, lastTaken > 0);
+        triggerSplitPower(enemy, lastTaken);
         if (caster === player) onPlayerHitEnemy(lastTaken);
       }
       // Iterate the ORIGINAL split targets (snapshotted before the boss
@@ -31811,7 +34114,8 @@ function resolveEffect(eff, caster, target) {
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         }
         applyPoisonRider(c, splitPoison, actual);
-        triggerSplitPower(c, actual > 0);
+        triggerSplitPower(c, actual);
+        maybeEnemyRiposte(c, caster); // Goblin Spike Trap counters (Cleave/Consecration)
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
       const sfxMap = getWeaponSfxKeys(_activePlayCard);
@@ -31862,6 +34166,7 @@ function resolveEffect(eff, caster, target) {
       const twiceEye = snapshotEyeBuff(caster);
       const twiceObs = snapshotObsidianBuff(caster);
       const twicePoison = snapshotPoisonBuff(caster);
+      const twiceDrowSleep = snapshotDrowSleepBuff(caster);
       const twiceUnpreventable = consumeUnpreventableBuff(caster);
       const twiceIgnite = (caster === player) ? consumePlayerIgnite() : 0;
       const twicePerTarget = (t) => {
@@ -31898,7 +34203,8 @@ function resolveEffect(eff, caster, target) {
             addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
           }
           applyPoisonRider(enemy, twicePoison, lastTaken);
-          triggerSplitPower(enemy, lastTaken > 0);
+          applyDrowSleepRider(enemy, twiceDrowSleep);
+          triggerSplitPower(enemy, lastTaken);
           if (caster === player) onPlayerHitEnemy(lastTaken);
         }
         for (const c of [...enemy.creatures]) {
@@ -31917,7 +34223,8 @@ function resolveEffect(eff, caster, target) {
             addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
           }
           applyPoisonRider(c, twicePoison, actual);
-          triggerSplitPower(c, actual > 0);
+          applyDrowSleepRider(c, twiceDrowSleep);
+          triggerSplitPower(c, actual);
           if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
         }
         const sfxMap = getWeaponSfxKeys(_activePlayCard);
@@ -32327,7 +34634,7 @@ function playCardOnEnemy(handIndex) {
   // never robs the player of the swing. Only ATTACK-type cards count
   // — buffs / utility plays don't bleed. Bleed still fires on an
   // Ink Cloud miss (the bleeder still "swung", they just whiffed).
-  if (card.cardType === CardType.ATTACK) tickBleedOnAttack(player, 'You');
+  if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
   modalCard = null;
@@ -32401,7 +34708,7 @@ function playCardOnCreature(handIndex, creature) {
     }
   }
 
-  if (card.cardType === CardType.ATTACK) tickBleedOnAttack(player, 'You');
+  if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
   modalCard = null;
@@ -32500,7 +34807,7 @@ function dealDamageToEnemy(amount, target) {
   // we just pass the raw amount here.
   if (target === 'all') {
     const [blocked, taken] = enemy.takeDamageWithDefense(amount);
-    triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+    triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
     addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
     onPlayerHitEnemy(taken);
     for (const c of [...enemy.creatures]) {
@@ -32512,7 +34819,7 @@ function dealDamageToEnemy(amount, target) {
     countAndRemoveDeadCreatures();
   } else {
     const [blocked, taken] = enemy.takeDamageWithDefense(amount);
-    triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+    triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
     if (blocked > 0) addLog(`  (${blocked} blocked)`, Colors.BLUE);
     addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
     onPlayerHitEnemy(taken);
@@ -32803,17 +35110,46 @@ function updateFrenzyRage(log = false) {
   if (!player) return;
   const hasFrenzy = Array.isArray(player.combatBuffs)
     && player.combatBuffs.some(b => b && b.id === 'bloodied_frenzy');
-  if (!hasFrenzy) return;
+  // Bloodied Rage perk (tier-2 rare) stacks the same bloodied-toggle Rage on
+  // top of the Bloodied Frenzy buff: total = (frenzy ? 2 : 0) + perk stacks.
+  const bloodiedRagePerk = player.getPerkStacks ? player.getPerkStacks('bloodied_rage') : 0;
+  const maxBonus = (hasFrenzy ? 2 : 0) + bloodiedRagePerk;
+  // No active source AND nothing previously applied → nothing to reconcile.
+  if (maxBonus <= 0 && !(player._frenzyRageApplied > 0)) return;
+  // Strip the previously-applied bonus, then re-apply if still Bloodied.
   player.rage = Math.max(0, (player.rage || 0) - (player._frenzyRageApplied || 0));
   player._frenzyRageApplied = 0;
-  if (isBloodied(player)) {
-    player.rage = (player.rage || 0) + 2;
-    player._frenzyRageApplied = 2;
+  if (maxBonus > 0 && isBloodied(player)) {
+    player.rage = (player.rage || 0) + maxBonus;
+    player._frenzyRageApplied = maxBonus;
     if (log) {
-      addLog(`  Bloodied Frenzy! +2 Rage (R:${player.rage})`, Colors.RED);
-      spawnTokenOnTarget(player, 2, 'Rage', Colors.RED);
+      addLog(`  Bloodied! +${maxBonus} Rage (R:${player.rage})`, Colors.RED);
+      spawnTokenOnTarget(player, maxBonus, 'Rage', Colors.RED);
     }
   }
+}
+
+// Clear a creature ally's Ailments (Bleed → Poison → Drow Sleep — the same
+// order players use) spending up to `amount` heal points, 1 per stack.
+// Creatures store DoTs as fields, not statuses, so this mirrors healAilments
+// over those fields. Returns the leftover points for HP healing.
+function healCreatureAilments(creature, amount) {
+  let remaining = Math.max(0, amount || 0);
+  const order = [
+    { field: 'bleedStacks',     label: 'Bleed',             color: '#ff5050' },
+    { field: 'poisonStacks',    label: 'Poison',            color: '#3cc83c' },
+    { field: 'drowSleepStacks', label: 'Drow Sleep Poison', color: '#9fb8e8' },
+  ];
+  for (const a of order) {
+    if (remaining <= 0) break;
+    const have = creature[a.field] || 0;
+    if (have <= 0) continue;
+    const n = Math.min(have, remaining);
+    creature[a.field] = have - n;
+    remaining -= n;
+    addLog(`  ${creature.name}: cleared ${n} ${a.label}`, a.color);
+  }
+  return remaining;
 }
 
 function healPlayer(amount) {
@@ -32824,28 +35160,15 @@ function healPlayer(amount) {
   // Each point of poison on the player consumes one point of healing first
   // (clears 1 Poison stack instead of healing 1 card).
   let remaining = amount;
-  let poisonCleared = 0;
-  let bleedCleared = 0;
-  const poison = player.getStatus('POISON') || 0;
-  if (poison > 0 && remaining > 0) {
-    const toClear = Math.min(poison, remaining);
-    player.removeStatus('POISON', toClear);
-    poisonCleared = toClear;
-    remaining -= toClear;
-    addLog(`  Healing purges ${toClear} Poison`, Colors.GREEN);
-    if (state !== GameState.COMBAT) showStyledToast(`-${toClear} Poison (healed)`, 'scry', 2000);
-  }
-  // Bleed clears 1-to-1 with healing (same rule as Poison). Resolves
-  // after Poison so a single heal goes Poison → Bleed → HP cards.
-  const bleed = player.getStatus('BLEED') || 0;
-  if (bleed > 0 && remaining > 0) {
-    const toClear = Math.min(bleed, remaining);
-    player.removeStatus('BLEED', toClear);
-    bleedCleared = toClear;
-    remaining -= toClear;
-    addLog(`  Healing stops ${toClear} Bleed`, Colors.RED);
-    if (state !== GameState.COMBAT) showStyledToast(`-${toClear} Bleed (healed)`, 'scry', 2000);
-  }
+  // Heal priority Bleed → Poison → Drow Sleep → HP cards. The ORDER lives
+  // in one place — Character.HEAL_AILMENTS / healAilments — so every heal
+  // path (this, meal ticks, Regrowth…) clears Ailments identically.
+  let ailmentsCleared = 0;
+  remaining = player.healAilments(remaining, ({ n, label, verb, color }) => {
+    ailmentsCleared += n;
+    addLog(`  Healing ${verb} ${n} ${label}`, color);
+    if (state !== GameState.COMBAT) showStyledToast(`-${n} ${label} (healed)`, 'scry', 2000);
+  });
   let healed = 0;
   for (let i = 0; i < remaining && player.deck.discardPile.length > 0; i++) {
     const card = player.deck.discardPile.pop();
@@ -32859,7 +35182,7 @@ function healPlayer(amount) {
     playSound('heal');
     spawnHealOnTarget(player, healed);
     if (state !== GameState.COMBAT) showStyledToast(`+${healed} Healed`, 'heal', 2000);
-  } else if (poisonCleared === 0 && bleedCleared === 0 && amount > 0) {
+  } else if (ailmentsCleared === 0 && amount > 0) {
     // Nothing to heal
     addLog(`  Nothing to heal.`, Colors.GRAY);
   }
@@ -33047,13 +35370,10 @@ function handlePowerChoiceClick(x, y) {
 // Ice and Shock also hurt the player (tick damage, lower damage,
 // damage swing) so they're cleansed too. Mark is excluded — it's
 // fired by allies attacking, not by the player carrying it.
-const PLAYER_NEGATIVE_STATUSES = [
-  { key: 'BLEED',  label: 'Bleed',  color: '#c83c3c' },
-  { key: 'POISON', label: 'Poison', color: '#3cc83c' },
-  { key: 'FIRE',   label: 'Fire',   color: '#dc8c28' },
-  { key: 'ICE',    label: 'Ice',    color: '#78c8ff' },
-  { key: 'SHOCK',  label: 'Shock',  color: '#ffe650' },
-];
+// This is just an alias of Character.CURE_AILMENTS — the ONE place the
+// cure order lives (shared with the Bear Fat Rations meal tick), so the
+// order Bleed → Poison → Drow Sleep → Fire → Ice → Shock is defined once.
+const PLAYER_NEGATIVE_STATUSES = Character.CURE_AILMENTS;
 
 // Read / write status stacks on EITHER a Character (player / enemy)
 // OR a Creature (ally / enemy ally). Characters use the
@@ -33066,6 +35386,7 @@ const CREATURE_STATUS_FIELD = {
   FIRE:   'fireStacks',
   ICE:    'iceStacks',
   SHOCK:  'shockStacks',
+  DROW_SLEEP: 'drowSleepStacks',
 };
 function getStatusStacks(target, key) {
   if (!target) return 0;
@@ -33697,7 +36018,7 @@ function resolveMultiTargeting() {
       perTargetDmg = Math.max(0, perTargetDmg);
       if (t === enemy) {
         const [blocked, taken] = enemy.takeDamageWithDefense(perTargetDmg);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
         applyPoisonRider(enemy, fsPoisonStacks, taken);
@@ -33844,7 +36165,7 @@ function resolveMultiTargeting() {
       if (t === enemy) {
         if (!hitEnemy) { enemyAutoPlayDefenses(dmg); hitEnemy = true; }
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
         playAttackHitSfx(dmg, taken, delay);
@@ -33996,12 +36317,21 @@ function resolveAllyAttack(ally, target) {
   // dealt per stack; getDamageModifier returns the negative penalty.
   // Previously only ran on Characters, so ally Shock was silently a
   // no-op and a Thorb at 2 atk + 1 Shock still swung for 2.
-  const shockPenalty = getDamageModifier(ally);
-  let dmg = Math.max(0, ally.attack + rageBonus + heroismBonus + shockPenalty);
+  // getDamageModifier folds in the War Banner aura (+1 per banner) for
+  // any player-side attacker, plus the shock penalty.
+  const dmgMod = getDamageModifier(ally); // folds in Shock, Drow Sleep, banner, bracer
+  let dmg = Math.max(0, ally.attack + rageBonus + heroismBonus + dmgMod);
   if (heroismBonus > 0) ally.heroism = 0;
   if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
   if (heroismBonus > 0) addLog(`  Heroism! +${heroismBonus} damage`, Colors.GOLD);
-  if (shockPenalty < 0) addLog(`  Shock! ${shockPenalty} damage`, Colors.SHOCK_YELLOW);
+  // Log Shock and Drow Sleep reductions SEPARATELY (the old code labeled
+  // the whole getDamageModifier penalty "Shock!", which mislabeled Drow
+  // Sleep). getDamageModifier doesn't log here for allies (it runs before
+  // _activeAttacker is set), so both lines are emitted directly.
+  const allyShock = ally.shockStacks || 0;
+  if (allyShock > 0) addLog(`  Shock! -${allyShock} damage`, Colors.SHOCK_YELLOW);
+  const allyDrow = ally.drowSleepStacks || 0;
+  if (allyDrow > 0) addLog(`  Drow Sleep Poison! -${allyDrow} damage`, '#9fb8e8');
   // Ice on the attacker reduces this swing and burns 1 stack.
   dmg = consumeIceForAttack(ally, dmg);
 
@@ -34056,7 +36386,7 @@ function resolveAllyAttack(ally, target) {
     if (t === enemy) {
       if (ally.unpreventable) {
         const taken = enemy.takeDamageFromDeck(tdmg);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
         addLog(`  ${enemy.name}: ${taken} unpreventable dmg`, Colors.ORANGE);
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, tdmg);
@@ -34067,7 +36397,7 @@ function resolveAllyAttack(ally, target) {
         const [blocked, taken] = enemy.takeDamageWithDefense(tdmg);
         const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  ${enemy.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         playAttackHitSfx(tdmg, taken, delay);
         maybeApplyAttackPoison(ally, enemy, taken);
         maybeApplyAttackIce(ally, enemy);
@@ -34095,6 +36425,7 @@ function resolveAllyAttack(ally, target) {
         maybeApplyAttackIce(ally, t);
         maybeApplyAttackBleed(ally, t, actual);
       }
+      maybeEnemyRiposte(t, ally); // Goblin Spike Trap counters the ally
       if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
     }
   }
@@ -34326,10 +36657,13 @@ function checkPowerTargetingComplete() {
   if (!allowDup) {
     // Auto-fire if no more unpicked targets remain (e.g. only 1 creature and
     // cleave normally wants 2 — don't force the player to "click elsewhere").
+    // Invulnerable enemies (the Roc boss shell, etc.) can't be picked, so
+    // they DON'T count as available — otherwise Cleave with a single real
+    // target never auto-resolved next to an invulnerable boss.
     let availableCount = 0;
-    if (enemy.isAlive && !powerTargets.includes(enemy)) availableCount++;
+    if (enemy.isAlive && !enemy._invulnerable && !powerTargets.includes(enemy)) availableCount++;
     for (const c of enemy.creatures) {
-      if (c.isAlive && !powerTargets.includes(c)) availableCount++;
+      if (c.isAlive && !c._invulnerable && !powerTargets.includes(c)) availableCount++;
     }
     if (availableCount === 0 && powerTargets.length > 0) {
       resolvePowerTargeting();
@@ -34399,13 +36733,13 @@ function resolvePowerTargeting() {
       if (t === enemy) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(dmg);
-          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          triggerSplitPower(t, dmg); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
           addLog(`  ${enemy.name}: ${dmg} true dmg`, Colors.ORANGE);
           dmgLanded = dmg;
         } else {
           enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-          triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
+          triggerSplitPower(t, taken); if (taken > 0) spawnDamageOnTarget(t, taken);
           const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  ${enemy.name}: ${taken} dmg${blockedSuffix}`, Colors.RED);
           dmgLanded = taken;
@@ -34413,7 +36747,7 @@ function resolvePowerTargeting() {
       } else {
         if (unpreventable) {
           t.takeUnpreventableDamage(dmg);
-          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          triggerSplitPower(t, dmg); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
           addLog(`  ${t.name}: ${dmg} true dmg`, Colors.ORANGE);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
           dmgLanded = dmg;
@@ -34425,7 +36759,7 @@ function resolvePowerTargeting() {
           // buff parks +1 shield on every minion).
           const shieldBefore = t.shield || 0;
           const actual = t.takeDamage(dmg);
-          triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
+          triggerSplitPower(t, actual); if (actual > 0) spawnDamageOnTarget(t, actual);
           const shieldAbs = shieldBefore - (t.shield || 0);
           const armorAbs = Math.max(0, dmg - shieldAbs - actual);
           const parts = [];
@@ -34565,14 +36899,14 @@ function resolvePowerTargeting() {
       if (t === enemy) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(dmg);
-          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          triggerSplitPower(t, dmg); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
           addLog(`  Shot ${shotIdx + 1}: ${enemy.name} ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(player, t, dmg);
           dmgLanded = dmg;
         } else {
           enemyAutoPlayDefenses(dmg);
           const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-          triggerSplitPower(t, taken > 0); if (taken > 0) spawnDamageOnTarget(t, taken);
+          triggerSplitPower(t, taken); if (taken > 0) spawnDamageOnTarget(t, taken);
           const blockedSuffix = blocked > 0 ? ` (blocked ${blocked})` : '';
           addLog(`  Shot ${shotIdx + 1}: ${enemy.name} ${taken} dmg${blockedSuffix}`, Colors.RED);
           consumePoisonBuff(player, t, taken);
@@ -34581,7 +36915,7 @@ function resolvePowerTargeting() {
       } else {
         if (unpreventable) {
           t.takeUnpreventableDamage(dmg);
-          triggerSplitPower(t, dmg > 0); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
+          triggerSplitPower(t, dmg); if (dmg > 0) spawnDamageOnTarget(t, dmg, Colors.ORANGE);
           addLog(`  Shot ${shotIdx + 1}: ${t.name} ${dmg} true dmg`, Colors.ORANGE);
           consumePoisonBuff(player, t, dmg);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
@@ -34589,7 +36923,7 @@ function resolvePowerTargeting() {
         } else {
           const shieldBefore = t.shield || 0;
           const actual = t.takeDamage(dmg);
-          triggerSplitPower(t, actual > 0); if (actual > 0) spawnDamageOnTarget(t, actual);
+          triggerSplitPower(t, actual); if (actual > 0) spawnDamageOnTarget(t, actual);
           const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
           addLog(`  Shot ${shotIdx + 1}: ${t.name} ${actual} dmg${absSuffix}`, Colors.RED);
           consumePoisonBuff(player, t, actual);
@@ -34701,7 +37035,7 @@ function executePower(power) {
         dmg += getIncomingDamageModifier(enemy); // +Shock
         dmg = Math.max(0, dmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         if (blocked > 0) addLog(`  Shot ${i + 1}: (${blocked} blocked)`, Colors.BLUE);
         addLog(`  Shot ${i + 1}: ${taken} dmg to ${enemy.name}`, Colors.RED);
         playAttackHitSfx(dmg, taken, i * 120);
@@ -35224,6 +37558,24 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   playSound('click');
   addLog('--- End of Your Turn ---', Colors.GRAY);
 
+  // Armored (Paladin perk) — Turn End: if no Armor card in hand, draw 1.
+  // The turn-end mirror of Arsenal / Talented (start-of-turn). Drawing
+  // now gives the player a shot at an Armor card to block with during
+  // the enemy's turn. Was previously a no-op — the effectType had only a
+  // codex label, no handler.
+  const armoredStacks = player.getPerkStacks('turn_end_no_armor_draw');
+  if (armoredStacks > 0) {
+    const hasArmor = player.deck.hand.some(c => c.subtype && ARMOR_SUBTYPES.has(c.subtype));
+    if (!hasArmor) {
+      const drawn = player.deck.draw(armoredStacks, MAX_HAND_SIZE);
+      if (drawn.length > 0) {
+        addLog(`  Armored triggers!`, Colors.GOLD, perkToCardLike(createArmoredPerk()));
+        for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+        playDrawSounds(drawn.length);
+      }
+    }
+  }
+
   // Player allies do NOT auto-attack — the player must click them and pick a target.
   // Unused allies remain ready and will simply re-ready at the start of next turn.
 
@@ -35325,9 +37677,12 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
         const amt = ally.endTurnHealAllies;
         let totalHealed = 0;
         for (const a of aliveAllies) {
-          if (a.currentHp >= a.maxHp) continue;
+          // Spend the heal on Ailments first (Bleed → Poison → Drow), then
+          // top up HP with whatever's left — same order as a player heal.
+          const hpPts = healCreatureAilments(a, amt);
+          if (a.currentHp >= a.maxHp || hpPts <= 0) continue;
           const before = a.currentHp;
-          a.currentHp = Math.min(a.maxHp, a.currentHp + amt);
+          a.currentHp = Math.min(a.maxHp, a.currentHp + hpPts);
           const healed = a.currentHp - before;
           if (healed > 0) { spawnHealOnTarget(a, healed); totalHealed += healed; }
         }
@@ -35339,6 +37694,22 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
         totalHealed += (discardBefore - player.deck.discardPile.length);
         if (totalHealed > 0) {
           addLog(`  ${ally.name} heals allies for ${totalHealed} HP.`, Colors.GREEN);
+        }
+      }
+      // End-turn heal of ONE random damaged ally (Dwarven Battle Cleric).
+      // Falls back to topping up the player if no creature ally is hurt.
+      if ((ally.endTurnHealRandomAlly || 0) > 0) {
+        const amt = ally.endTurnHealRandomAlly;
+        const hurt = aliveAllies.filter(a => a.currentHp < a.maxHp);
+        if (hurt.length > 0) {
+          const pick = hurt[Math.floor(Math.random() * hurt.length)];
+          const before = pick.currentHp;
+          pick.currentHp = Math.min(pick.maxHp, pick.currentHp + amt);
+          const healed = pick.currentHp - before;
+          if (healed > 0) { spawnHealOnTarget(pick, healed); addLog(`  ${ally.name} heals ${pick.name} for ${healed} HP.`, Colors.GREEN); }
+        } else if (getHP(player) < getMaxHP(player)) {
+          healPlayer(amt);
+          addLog(`  ${ally.name} heals you for ${amt} HP.`, Colors.GREEN);
         }
       }
       if ((ally.endTurnShieldAllies || 0) > 0) {
@@ -35465,7 +37836,11 @@ function processStatusEffects(character, label) {
       }
       if (healed > 0) spawnHealOnTarget(character, healed);
     }
-    character.removeStatus('REGEN', 1);
+    // Most Regen decays 1/turn. A monster flagged _regenNoDecay (the
+    // Rampaging Troll) holds its stack instead — its Regeneration power
+    // tops the stack back toward its cap each turn, so the heal stays
+    // pinned rather than bleeding out.
+    if (!character._regenNoDecay) character.removeStatus('REGEN', 1);
   }
   // Fire: deal damage equal to stacks (reduced by armor/shield), then reduce by 1.
   // fire_immune characters no-sell the damage but the stack still
@@ -35475,7 +37850,11 @@ function processStatusEffects(character, label) {
     if (character.fireImmune) {
       addLog(`  ${label} no-sells the Fire (immune)`, Colors.ORANGE);
     } else {
+      // Fire is a DoT, not an attack — don't let the Assassin's Riposte
+      // parry it (the parry/lash is for swings only).
+      character._noRiposte = true;
       const [blocked, taken] = character.takeDamageWithDefense(fire);
+      character._noRiposte = false;
       if (taken > 0) spawnDamageOnTarget(character, taken);
       const bs = blocked > 0 ? ` (${blocked} absorbed)` : '';
       addLog(`  ${label} takes ${taken} Fire damage!${bs}`, Colors.RED);
@@ -35495,6 +37874,17 @@ function processStatusEffects(character, label) {
     // Poison is unpreventable — every stack lands as deck damage.
     if (character === player) _playerDamageTakenThisTurn += poison;
   }
+  // Drow Sleep Poison: ticks exactly like Poison — unpreventable deck
+  // damage, and the stacks do NOT decay (only healing removes them, and
+  // it heals dead-last). The attack-sapping half lives in
+  // getDamageModifier; this is just the DoT.
+  const drowSleep = character.getStatus('DROW_SLEEP');
+  if (drowSleep > 0) {
+    character.takeDamageFromDeck(drowSleep);
+    spawnDamageOnTarget(character, drowSleep);
+    addLog(`  ${label} takes ${drowSleep} Drow Sleep Poison damage!`, '#9fb8e8');
+    if (character === player) _playerDamageTakenThisTurn += drowSleep;
+  }
   // Ice decay is NOT done here — it runs from decayIceAtTurnEnd() at
   // the end of the affected character's own turn (mirrors PY help text
   // "-1 per attack and end of turn"). Per-attack reduction still
@@ -35508,6 +37898,63 @@ function processStatusEffects(character, label) {
   }
   // Process creature status effects
   for (const c of [...character.creatures]) {
+    // Creature-level Regeneration (Loathsome Limbs) — mirrors the troll's
+    // Regeneration: the DoTs (Bleed/Poison/Drow Sleep/Fire) cancel Regen
+    // 1-for-1 (here, at the creature's turn start, BEFORE they tick — so a
+    // regen that survives also blunts the incoming DoT), the stack regains
+    // +1 per turn toward its cap, then heals currentHp by the remaining
+    // Regen. The troll cancels at status-apply time; creatures have no
+    // status engine, so we reconcile here instead.
+    if (c._regenMax) {
+      // 1. DoTs eat Regen and Regen eats DoTs, 1-for-1 (lose regen), in the
+      //    same Bleed → Poison → Drow Sleep → Fire order Regen uses on the
+      //    player. Drow Sleep Poison is cleared here too (it was missing).
+      for (const dot of ['bleedStacks', 'poisonStacks', 'drowSleepStacks', 'fireStacks']) {
+        if ((c._regen || 0) <= 0) break;
+        const have = c[dot] || 0;
+        if (have > 0) {
+          const cancel = Math.min(have, c._regen);
+          c[dot] = have - cancel;
+          c._regen -= cancel;
+        }
+      }
+      // 2. Regain +1 toward the cap at the start of its turn.
+      if ((c._regen || 0) < c._regenMax) c._regen = (c._regen || 0) + 1;
+      // 3. Heal by the current Regen.
+      const heal = c._regen || 0;
+      if (heal > 0 && c.currentHp < c.maxHp) {
+        c.currentHp = Math.min(c.maxHp, c.currentHp + heal);
+        spawnHealOnTarget(c, heal);
+        addLog(`  ${c.name} regenerates ${heal} (Regen ${c._regen})`, Colors.GREEN);
+      }
+      // 4. Re-attach — a Loathsome Limb that has regrown to FULL HP crawls
+      // back onto its owner: the owner heals for the arm's HP and draws 1,
+      // and the arm leaves the field. Strong reason to finish a wounded
+      // arm off before it knits back to full. Owner-aware: a player's
+      // Severed Troll Arm heals the player's HP; the troll restores cards.
+      if (c.name === 'Loathsome Limbs' && c.currentHp >= c.maxHp) {
+        const healAmt = c.currentHp;
+        if (character === player) {
+          healPlayer(healAmt);
+        } else if (character.deck && Array.isArray(character.deck.discardPile)) {
+          let restored = 0;
+          for (let k = 0; k < healAmt && character.deck.discardPile.length > 0; k++) {
+            const cc = character.deck.discardPile.pop();
+            if (typeof character.deck.addToRechargePile === 'function') character.deck.addToRechargePile(cc);
+            else character.deck.rechargePile.push(cc);
+            restored++;
+          }
+          if (restored > 0) spawnHealOnTarget(character, restored);
+        }
+        if (character.deck && typeof character.deck.draw === 'function') {
+          character.deck.draw(1, character._uncappedHand ? 999 : (character._handSize || 10));
+        }
+        const idx = character.creatures.indexOf(c);
+        if (idx !== -1) character.creatures.splice(idx, 1);
+        addLog(`  A Loathsome Limb re-attaches! ${character === player ? 'You heal' : character.name + ' restores'} ${healAmt} and draw 1.`, Colors.ORANGE);
+        continue; // arm left the field — skip its DoT ticks this pass
+      }
+    }
     if (c.fireStacks > 0) {
       // fire_immune creatures (Magma Mephit, Magma Drake) still stack
       // Fire visually and the icon still decays by 1/turn (so Ice can
@@ -35532,6 +37979,15 @@ function processStatusEffects(character, label) {
       spawnDamageOnTarget(c, dmg);
       addLog(`  ${c.name} takes ${dmg} Poison damage!`, Colors.GREEN);
       // Stacks persist — only healing removes Poison. Enemies/creatures never heal, so it's permanent for them.
+      if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
+    }
+    if (c.drowSleepStacks > 0) {
+      const dmg = c.drowSleepStacks;
+      c.takeUnpreventableDamage(dmg);
+      spawnDamageOnTarget(c, dmg);
+      addLog(`  ${c.name} takes ${dmg} Drow Sleep Poison damage!`, '#9fb8e8');
+      // Persists like Poison; the -attack sap is read off drowSleepStacks
+      // at the creature's swing site.
       if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
     }
   }
@@ -35751,12 +38207,23 @@ function killEndOfTurnDeathCreatures(character) {
 function getDamageModifier(character) {
   if (!character) return 0;
   let shock = 0;
+  let drowSleep = 0;
   if (typeof character.getStatus === 'function') {
     shock = character.getStatus('SHOCK') || 0;
+    drowSleep = character.getStatus('DROW_SLEEP') || 0;
   } else {
     shock = character.shockStacks || 0;
+    drowSleep = character.drowSleepStacks || 0;
   }
-  let mod = -shock;
+  // Shock and Drow Sleep Poison each sap 1 damage per stack.
+  let mod = -shock - drowSleep;
+  // Surface the Drow Sleep Poison sap in the log when this is a real swing
+  // (a card play or a creature/ally attack is active) — gated so card-hover
+  // previews don't spam it. getDamageModifier is called once per attack's
+  // damage calc, so this reads as one "-N damage" line per swing.
+  if (drowSleep > 0 && (_activePlayCard || _activeAttacker)) {
+    addLog(`  Drow Sleep Poison! -${drowSleep} damage`, '#9fb8e8');
+  }
   // Boarhide Bracers — passive while it sits in the player's hand: the FIRST
   // attack of the turn hits for +2. attacksThisTurn is still 0 on that first
   // swing (it's bumped after the attack resolves), so this fires exactly once
@@ -35772,6 +38239,26 @@ function getDamageModifier(character) {
       addLog(`  Boarhide Bracers: +2 First Attack`, Colors.GOLD);
     }
   }
+  // Swift Assault perk (tier-2 rare) — +1 damage per stack on the FIRST
+  // attack of the turn (same window as Boarhide Bracers; stacks with it).
+  if (character === player && attacksThisTurn === 0 && player.getPerkStacks) {
+    const swift = player.getPerkStacks('first_attack_damage');
+    if (swift > 0) {
+      mod += swift;
+      if (!_swiftAssaultLogged) {
+        _swiftAssaultLogged = true;
+        addLog(`  Swift Assault: +${swift} First Attack`, Colors.GOLD);
+      }
+    }
+  }
+  // Goblin War Banner aura — +1 damage per standing banner to EVERY ally
+  // of the banner: the player's own attacks AND powers (Cleave,
+  // Consecration, …) and every ally creature's swing. Player-side only —
+  // gated so it never buffs the enemy. allyDamageAuraBonus excludes the
+  // attacker itself, so a banner never buffs its own (non-)attack.
+  const isPlayerSide = character === player
+    || (player && Array.isArray(player.creatures) && player.creatures.includes(character));
+  if (isPlayerSide) mod += allyDamageAuraBonus(character);
   return mod;
 }
 
@@ -35890,7 +38377,7 @@ function applyMarkBonus(target, dmg) {
 // Obsidian-family ally bonus: Valdrisa, Obsidian Slime, and Obsidian
 // Construct deal +2 damage when their target has any armor or shield.
 // Mirrors PY game.py:9363 (the same trio listed there).
-const _OBSIDIAN_ALLY_NAMES = new Set(['valdrisa', 'obsidian slime', 'obsidian construct']);
+const _OBSIDIAN_ALLY_NAMES = new Set(['valdrisa', 'obsidian slime', 'obsidian construct', 'dwarven battle cleric']);
 function applyObsidianAllyBonus(ally, target, dmg) {
   if (dmg <= 0 || !ally) return dmg;
   if (!_OBSIDIAN_ALLY_NAMES.has((ally.name || '').toLowerCase())) return dmg;
@@ -35988,7 +38475,7 @@ function processPlayerAllyAttacks() {
       } else {
         const shieldBefore = target.shield || 0;
         const actual = target.takeDamage(tdmg);
-        triggerSplitPower(target, actual > 0); if (actual > 0) spawnDamageOnTarget(target, actual);
+        triggerSplitPower(target, actual); if (actual > 0) spawnDamageOnTarget(target, actual);
         const absSuffix = creatureAbsorbSuffix(tdmg, actual, shieldBefore, target.shield || 0);
         addLog(`  ${ally.name} attacks ${target.name} for ${actual}!${absSuffix}`, Colors.GREEN);
         playAttackHitSfx(tdmg, actual);
@@ -36012,7 +38499,7 @@ function processPlayerAllyAttacks() {
         maybeApplyAttackBleed(ally, enemy, edmg);
       } else {
         const [blocked, taken] = enemy.takeDamageWithDefense(edmg);
-        triggerSplitPower(enemy, taken > 0); if (taken > 0) spawnDamageOnTarget(enemy, taken);
+        triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         addLog(`  ${ally.name} attacks ${enemy.name} for ${taken}!`, Colors.GREEN);
         playAttackHitSfx(edmg, taken);
         maybeApplyAttackPoison(ally, enemy, taken);
@@ -36336,13 +38823,30 @@ function pickEnemyAttackTarget() {
   // 25/25/25/25, etc. (Previously PLAYER_WEIGHT was 2, which made the
   // player a 2x target — that read as too punishing once summons came
   // online.) Mirrors the user-requested flat distribution.
-  const totalWeight = 1 + aliveAllies.length;
+  //
+  // Piwafwi (drow spider-silk cloak) — while it's in the player's hand,
+  // enemies weight the PLAYER at half. With 1 ally that turns the 50/50
+  // split into ally 66% / player 33% (each ally weight 1, player weight
+  // 0.5). The player region is the last `playerWeight` slice of the
+  // range; allies are still weight-1 each in the loop below.
+  const playerWeight = playerHasPiwafwi() ? 0.5 : 1;
+  const totalWeight = playerWeight + aliveAllies.length;
   let r = Math.random() * totalWeight;
   for (const ally of aliveAllies) {
     if (r < 1) return ally;
     r -= 1;
   }
   return player;
+}
+
+// True while a Piwafwi (the drow cloak) sits in the player's HAND — the
+// "enemies target you less" effect only applies while the cloak is held,
+// the same passive-while-in-hand model as Boarhide Bracers. Playing it
+// (it goes to the recharge pile) or leaving it in the draw pile drops
+// the effect until it's drawn back.
+function playerHasPiwafwi() {
+  return !!(player && player.deck && Array.isArray(player.deck.hand)
+    && player.deck.hand.some(c => c && c.id === 'piwafwi'));
 }
 
 // Apply N damage from an enemy attack to an ally creature immediately.
@@ -36363,6 +38867,24 @@ function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
   if (actual > 0) spawnDamageOnTarget(ally, actual);
   const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, ally.shield || 0);
   addLog(`  ${ally.name}: ${actual} damage${absSuffix}`, Colors.RED);
+  // Riposte (Goblin Spike Trap) — when this ally is attacked it deals its
+  // attack back to the attacker, simultaneously (even if the hit kills it).
+  if (ally.riposte && attacker && (ally.attack || 0) > 0) {
+    const rip = ally.attack;
+    if (attacker instanceof Creature) {
+      if (attacker.isAlive) {
+        const a = attacker.takeDamage(rip);
+        if (a > 0) spawnDamageOnTarget(attacker, a, Colors.GOLD);
+        addLog(`  Riposte! ${a} damage to ${attacker.name}`, Colors.GOLD);
+        if (!attacker.isAlive) addLog(`  ${attacker.name} destroyed!`, Colors.GOLD, null, null, attacker);
+      }
+    } else if (attacker === enemy && enemy.isAlive && !enemy._invulnerable) {
+      const [, tk] = enemy.takeDamageWithDefense(rip);
+      if (tk > 0) spawnDamageOnTarget(enemy, tk, Colors.GOLD);
+      addLog(`  Riposte! ${tk} damage to ${enemy.name}`, Colors.GOLD);
+    }
+    playSound('sword_light_1h_flesh_01', 0.6);
+  }
   // Overwhelm passive: any overkill damage beyond the ally's HP
   // rolls onto the player. Queue it on the enemy-damage
   // accumulator so it joins this turn's defense phase like any
@@ -36433,7 +38955,6 @@ function handleWhiteDragonEggHit(egg, rawDmg, attacker) {
 // the live source.
 function hatchWhiteDragonEgg(egg) {
   if (!player || !player.deck) return;
-  addLog(`  The White Dragon Egg cracks open!`, Colors.ALLY_BLUE);
   playSound('egg_hatch', 0.9);
   // Strip every egg card from every pile.
   const piles = ['masterDeck', 'drawPile', 'hand', 'discardPile', 'rechargePile', 'playPile', 'damagePile'];
@@ -36444,9 +38965,15 @@ function hatchWhiteDragonEgg(egg) {
       if (arr[i] && arr[i].id === 'white_dragon_egg') arr.splice(i, 1);
     }
   }
-  // Add the Wyrmling card to the player's deck (masterDeck +
-  // hand if there's room, else the bottom of the draw pile).
-  addLootedCard(createWhiteDragonWyrmling());
+  // The Wyrmling card REPLACES the egg in the deck. It rides in the
+  // PLAY pile pinned to the freshly-hatched wyrmling creature (a
+  // companion link), exactly like casting the Wyrmling card — NOT a
+  // fresh copy dropped into hand. The old code addLootedCard'd it into
+  // hand WHILE also spawning the creature, which gave the player two
+  // white dragons. When the wyrmling dies, removeDeadCreatures moves
+  // this card play->discard and it reshuffles into the deck next combat.
+  const wyrmCard = createWhiteDragonWyrmling();
+  player.deck.masterDeck.push(wyrmCard);
   // Swap the on-field creature in place so the row layout stays
   // stable. Player.creatures slot index is preserved. Fires the
   // wyrmling's Called effects too — apply 1 Ice to every enemy,
@@ -36456,7 +38983,7 @@ function hatchWhiteDragonEgg(egg) {
   if (idx !== -1) {
     const wyrmling = new Creature({
       name: 'White Dragon Wyrmling', attack: 3, maxHp: 6,
-      iceAttack: 1, armor: 1,
+      iceAttack: 1, armor: 1, isCompanion: true,
       description: 'Attacks apply 1 Ice.',
     });
     // ccgQuest+ scaling — match the card-play Wyrmling stats so a
@@ -36474,8 +39001,17 @@ function hatchWhiteDragonEgg(egg) {
     // ancestor at slot 0, hover still hits the wyrmling underneath).
     wyrmling.slot = egg.slot;
     wyrmling.owner = egg.owner || player;
+    // Companion-link the Wyrmling card to the live creature + park it in
+    // the play area. Clear the egg's link so removeDeadCreatures doesn't
+    // also try to discard the (already-stripped) egg card.
+    wyrmling.sourceCard = wyrmCard;
+    wyrmling._sourceRarity = 'legendary';
+    wyrmling._sourceSubtype = 'allies';
+    player.deck.playPile.push(wyrmCard);
+    egg.sourceCard = null;
+    egg.isCompanion = false;
     player.creatures[idx] = wyrmling;
-    addLog(`  A White Dragon Wyrmling rises from the shell!`, Colors.ALLY_BLUE);
+    addLog(`  The White Dragon Egg HATCHES — a White Dragon Wyrmling bursts from the shell!`, Colors.ALLY_BLUE);
     playCreaturePlaySfx(wyrmling);
     // Called effects on the hatch path. The card-play path runs
     // these as regular effects in resolveEffect; here we trigger
@@ -36505,6 +39041,311 @@ function hatchWhiteDragonEgg(egg) {
 // behavior on a specific enemy passive.
 function enemyHasPower(id) {
   return !!(enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p && p.id === id));
+}
+
+// === Goblin Swarm (Part 2 tunnels) ===
+// The three goblin summon types + shared spawn helpers. Used at fight
+// start (ENEMY_DECKS.goblin_swarm) AND on the "They're in the Walls!"
+// resummon. Equal-weight random pick of the three types.
+const GOBLIN_SWARM_NAMES = new Set(['Goblin Sapper', 'Goblin Minion', 'Goblin Warrior', 'Goblin War Banner', 'Goblin Spike Trap']);
+function makeSwarmGoblin() {
+  // Weighted pick: Sapper / Minion / Warrior at 1.0 each; Spike Trap at
+  // 0.5; War Banner at 1/3 (the rarest piece — it pumps the whole swarm's
+  // damage, so it stays uncommon). Total weight 3 + 0.5 + 1/3.
+  const r = Math.random() * (3 + 0.5 + 1 / 3);
+  if (r < 1.0) {
+    return new Creature({
+      name: 'Goblin Sapper', attack: 1, maxHp: 2,
+      selfDestruct: true, onDeathDamage: 2,
+      description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
+    });
+  }
+  if (r < 2.0) {
+    return new Creature({
+      name: 'Goblin Minion', attack: 1, maxHp: 1,
+      description: 'On Summon: Deal 1 Random Damage.',
+    });
+  }
+  if (r < 3.0) {
+    return new Creature({
+      name: 'Goblin Warrior', attack: 2, maxHp: 2, shield: 2,
+      endTurnDamage: 1,
+      description: 'End of Turn: Deal 1 Random Damage.',
+    });
+  }
+  if (r < 3.5) {
+    const trap = new Creature({
+      name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+      description: "Can't Attack. Riposte.",
+    });
+    trap._cantAttack = true;
+    trap.riposte = true;
+    return trap;
+  }
+  const banner = new Creature({
+    name: 'Goblin War Banner', attack: 0, maxHp: 5,
+    description: "Can't Attack.\nAllies deal +1 Damage.",
+  });
+  banner._cantAttack = true;
+  banner._allyDamageAura = 1;
+  return banner;
+}
+// Spawn one random goblin into the live Goblin Swarm fight (scaled for
+// Game+ via the addCreature offset wrapper). The Goblin Minion's
+// on-summon 1 random damage fires when combat is live (the resummon
+// path); at fight start it's deferred to fireGoblinSwarmEntryDamage,
+// since the player's combat state isn't initialised during setup.
+function summonSwarmGoblin(avoidSlots = null) {
+  if (!enemy) return null;
+  const g = makeSwarmGoblin();
+  g.exhausted = false;
+  g._codexSide = 'enemy';
+  g._sourceRarity = 'common';
+  g._sourceSubtype = 'allies';
+  // Game+ scaling — Sapper/Minion/Warrior +1/+1, War Banner +0/+2 (via
+  // CREATURE_TIER_OFFSET). Spike Trap has no entry so it stays 3/1.
+  const off = monsterTierOffset || 0;
+  scaleCreatureWithOffset(g, off, 'enemy');
+  // War Banner aura scales +0.5 damage-to-all per offset (1 → 1.5 → 2 …).
+  if (g.name === 'Goblin War Banner' && off > 0) {
+    g._allyDamageAura = 1 + 0.5 * off;
+  }
+  // Resummons pass the just-vacated slots to avoid (so the replacement
+  // pops into a different spot); fight-start / turn-start summons just
+  // take the next free slot.
+  const placed = (avoidSlots && avoidSlots.length)
+    ? enemy.addCreatureAvoiding(g, avoidSlots)
+    : enemy.addCreature(g);
+  if (!placed) return null;
+  // Spawn cue — non-sapper goblins snort as they crawl out (in-combat
+  // spawns only; the fight-start batch is covered by the swarm's
+  // fight-start splash, and the codex sandbox stays silent).
+  if (g.name !== 'Goblin Sapper'
+      && state === GameState.COMBAT && !_codexSandboxRunning) {
+    playSound('monster_snort_01', 0.6);
+  }
+  if (g.name === 'Goblin Minion' && state === GameState.COMBAT && !_codexSandboxRunning) {
+    dealRandomDamageToPlayerSide(1, 'Goblin Minion');
+  }
+  return g;
+}
+// Fight-start Minion on-summon damage — runs once right after startCombat
+// so the opening minions each land their 1 random damage with combat
+// state ready.
+function fireGoblinSwarmEntryDamage() {
+  if (!enemy || !Array.isArray(enemy.creatures)) return;
+  for (const c of enemy.creatures) {
+    if (c && c.isAlive && c.name === 'Goblin Minion') {
+      dealRandomDamageToPlayerSide(1, 'Goblin Minion');
+    }
+  }
+}
+// Deal `amount` damage to a random player-side target (player or a live
+// ally), through the standard defense flow. Used by the Goblin Minion's
+// on-summon hit and the Goblin Warrior's end-of-turn hit.
+function dealRandomDamageToPlayerSide(amount, sourceName, color = Colors.ORANGE) {
+  if (amount <= 0 || !player) return;
+  const pool = [player, ...(player.creatures || []).filter(a => a.isAlive)];
+  if (pool.length === 0) return;
+  const t = pool[Math.floor(Math.random() * pool.length)];
+  if (t === player) {
+    const [absorbed, taken] = player.takeDamageWithDefense(amount);
+    if (taken > 0) spawnDamageOnTarget(player, taken, color);
+    const bs = absorbed > 0 ? ` (blocked ${absorbed})` : '';
+    addLog(`  ${sourceName}: ${taken} damage to you${bs}`, color);
+  } else {
+    const shieldBefore = t.shield || 0;
+    const actual = t.takeDamage(amount);
+    if (actual > 0) spawnDamageOnTarget(t, actual, color);
+    const bs = creatureAbsorbSuffix(amount, actual, shieldBefore, t.shield || 0);
+    addLog(`  ${sourceName}: ${actual} damage to ${t.name}${bs}`, color);
+    if (!t.isAlive) {
+      addLog(`  ${t.name} destroyed!`, Colors.RED, null, null, t);
+      const dkey = getDeathSfxKey(t);
+      if (dkey) playSound(dkey, 0.7);
+      // Sweep the dead ally off the field NOW. This helper runs in
+      // post-sweep contexts (Goblin Minion resummon, Goblin Warrior
+      // end-of-turn) where the normal countAndRemoveDeadCreatures pass
+      // has already finished — without this, a killed ally (e.g. Thordak)
+      // lingers at 0 HP, can't act, and only vanishes on the next sweep.
+      player.removeDeadCreatures();
+    }
+  }
+}
+
+// Player-side goblin (Goblin Boss's Whistle summon). Random Minion /
+// Sapper / Warrior that fights FOR the player — their riders fire at the
+// ENEMY side (Warrior's endTurnDamage uses the existing ally end-of-turn
+// hook; Minion's on-summon + Sapper's on-death route through the
+// enemy-side helpers/handlers).
+function makePlayerGoblin() {
+  const roll = Math.floor(Math.random() * 3);
+  let g;
+  if (roll === 0) {
+    g = new Creature({
+      name: 'Goblin Sapper', attack: 1, maxHp: 2,
+      selfDestruct: true, onDeathDamage: 2,
+      description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
+    });
+  } else if (roll === 1) {
+    g = new Creature({
+      name: 'Goblin Minion', attack: 1, maxHp: 1,
+      description: 'On Summon: Deal 1 Random Damage.',
+    });
+  } else {
+    g = new Creature({
+      name: 'Goblin Warrior', attack: 2, maxHp: 3,
+      endTurnDamage: 1,
+      description: 'End of Turn: Deal 1 Random Damage.',
+    });
+  }
+  // Game+ — player-summoned goblins scale +1/+1 per offset (same
+  // CREATURE_TIER_OFFSET rules as the enemy swarm goblins).
+  scaleCreatureWithOffset(g, playerTierOffset || 0, 'player');
+  g._sourceRarity = 'rare';
+  g._sourceSubtype = 'item';
+  return g;
+}
+
+// Deal `amount` damage to a random enemy-side target (boss or a live,
+// non-invulnerable creature). Mirror of dealRandomDamageToPlayerSide for
+// player-summoned goblins (Minion on-summon hit).
+function dealRandomDamageToEnemySide(amount, sourceName, color = Colors.RED) {
+  if (amount <= 0) return;
+  const t = pickRandomEnemyTargetForEffect();
+  if (!t) return;
+  if (t instanceof Creature) {
+    const a = t.takeDamage(amount);
+    if (a > 0) spawnDamageOnTarget(t, a, color);
+    addLog(`  ${sourceName}: ${a} damage to ${t.name}`, color);
+    if (!t.isAlive) { addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); countAndRemoveDeadCreatures(); }
+  } else {
+    const [, tk] = t.takeDamageWithDefense(amount);
+    if (tk > 0) spawnDamageOnTarget(t, tk, color);
+    addLog(`  ${sourceName}: ${tk} damage to ${t.name}`, color);
+  }
+}
+
+// Riposte — when a player/ally attack lands on an ENEMY creature that has
+// the riposte flag (Goblin Spike Trap), it deals its attack straight back
+// to the attacker. The player takes it through Block/Shield/Armor; an ally
+// attacker takes it raw. Called at the player→enemy-creature damage sites
+// (the on-attacked power hook isn't reliably invoked for creature targets,
+// and the target is often swept before it could run). Idempotent per hit:
+// each damage site calls it exactly once.
+function maybeEnemyRiposte(target, attacker) {
+  if (!target || !target.riposte || (target.attack || 0) <= 0 || !attacker) return;
+  // Enemy-side creatures only (don't double-fire with the ally-side path
+  // in applyDamageToAlly).
+  const isEnemyCreature = target.owner === enemy
+    || (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(target));
+  if (!isEnemyCreature) return;
+  const rip = target.attack;
+  if (attacker === player && player) {
+    const [, tk] = player.takeDamageWithDefense(rip);
+    if (tk > 0) spawnDamageOnTarget(player, tk, Colors.GOLD);
+    addLog(`  Riposte! ${tk} damage to you`, Colors.GOLD);
+  } else if (attacker instanceof Creature && attacker.isAlive) {
+    const a = attacker.takeDamage(rip);
+    if (a > 0) spawnDamageOnTarget(attacker, a, Colors.GOLD);
+    addLog(`  Riposte! ${a} damage to ${attacker.name}`, Colors.GOLD);
+    if (!attacker.isAlive) addLog(`  ${attacker.name} destroyed!`, Colors.GOLD, null, null, attacker);
+  }
+  playSound('sword_light_1h_flesh_01', 0.6);
+}
+
+// Effect types that ALREADY register as an attack (they deal damage and
+// bump attacksThisTurn / fire Riposte at their damage sites). Used to tell
+// a damage-LESS poison/bleed card (Plague) — which IS its own attack —
+// apart from a poison/bleed rider riding on a damage card (already counted).
+const DAMAGE_EFFECT_TYPES = new Set([
+  'damage', 'damage_random', 'damage_random_split', 'multi_damage', 'split_damage',
+  'damage_all', 'damage_split_all', 'damage_all_twice', 'damage_range', 'damage_draw_on_hit',
+  'sneak_attack', 'careful_strike', 'charge_attack', 'shield_bash', 'shield_bash_half',
+  'armor_bonus_damage', 'unpreventable_damage', 'troll_teeth_attack', 'feral_swipe',
+  'first_strike_attack',
+  'dragon_bow_barrage', 'magic_missile_barrage', 'poison_dagger_barrage', 'blade_flurry_barrage',
+]);
+
+// "Applying a status (Poison / Bleed / Fire / Ice / Shock) counts as an
+// attack" (full attack semantics): a damage-LESS status play (Plague, a
+// pure-bleed card, a Wand of Fire with no base damage) registers as the
+// player's attack — it bumps attacksThisTurn (so Sneak Attack scales and
+// First-Attack windows close) and provokes Riposte from each enemy creature
+// it hits, exactly like a swing. Also closes the "DoT then wait" loophole:
+// you can't tag with poison/fire and stall without it counting as aggression.
+// One bump per application (an AoE Plague is still one attack). Skipped when:
+//   - the caster isn't the player (enemy status never feeds the player's
+//     Sneak Attack; the ally-side Riposte is handled at the damage sites), or
+//   - the card ALSO deals damage (that swing already counted + Riposted, so
+//     the status here is just a rider — don't double-count).
+// NOTE: this does NOT trigger the enemy's reactive Block cards — those still
+// require ≥1 damage that would land (see enemyAutoPlayDefenses).
+function countStatusAttack(caster, targets) {
+  if (caster !== player) return;
+  const card = _activePlayCard;
+  // A summon card's status effect is the SUMMONED creature's breath (e.g. the
+  // White Dragon Wyrmling's "Called" Ice on all enemies), not the player
+  // swinging. It must NOT make the player eat trap Riposte — the summoned
+  // creature takes Riposte on its own attacks instead.
+  if (card && card.cardType === CardType.CREATURE) return;
+  // Relics are passive/utility, not swings — a relic's status (e.g. Mimic
+  // Tongue's Poison) is NOT an attack unless that relic explicitly opts in
+  // via statusCountsAsAttack.
+  if (card && card.cardType === CardType.RELIC && !card.statusCountsAsAttack) return;
+  if (card && Array.isArray(card.currentEffects)
+      && card.currentEffects.some(e => DAMAGE_EFFECT_TYPES.has(e.effectType))) {
+    return;
+  }
+  attacksThisTurn++;
+  for (const t of (targets || [])) {
+    if (t instanceof Creature) maybeEnemyRiposte(t, caster);
+  }
+}
+
+// The status-application effect types that register as an attack (must mirror
+// the handlers that call countStatusAttack). Used by cardIsStatusAttack.
+const STATUS_ATTACK_EFFECT_TYPES = new Set([
+  'apply_poison', 'apply_poison_all', 'apply_bleed', 'apply_bleed_all',
+  'apply_fire', 'apply_fire_multi', 'apply_fire_all',
+  'apply_ice', 'apply_ice_multi', 'apply_ice_all',
+  'apply_shock', 'apply_shock_all',
+]);
+
+// True when a damage-LESS card's whole point is applying a status (Plague,
+// pure Fire/Ice/Bleed plays) — i.e. it registered as an attack via
+// countStatusAttack. Used so the player's own Bleed ticks on these plays too
+// (full attack semantics), not just on cardType ATTACK cards. Mirrors the
+// countStatusAttack guard: a card that ALSO deals damage already ticked Bleed
+// (and counted) via its swing, so it's excluded here to avoid double-ticking.
+function cardIsStatusAttack(card) {
+  if (!card || !Array.isArray(card.currentEffects)) return false;
+  if (card.cardType === CardType.CREATURE) return false; // summon breath, not a swing
+  // Relics aren't swings (Mimic Tongue's Poison etc.) unless opted in.
+  if (card.cardType === CardType.RELIC && !card.statusCountsAsAttack) return false;
+  if (card.currentEffects.some(e => DAMAGE_EFFECT_TYPES.has(e.effectType))) return false;
+  return card.currentEffects.some(e => STATUS_ATTACK_EFFECT_TYPES.has(e.effectType));
+}
+
+// Sum of every standing Goblin War Banner's damage aura on the
+// attacker's OWN side (excluding the attacker itself). Owner-aware: a
+// player banner buffs the player + player allies; an enemy banner buffs
+// the enemy's goblins. +1 per banner while it holds the field.
+function allyDamageAuraBonus(self) {
+  if (!self) return 0;
+  let creatures = null;
+  if (self === player || (player && Array.isArray(player.creatures) && player.creatures.includes(self))) {
+    creatures = player.creatures;
+  } else if (self === enemy || (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(self))) {
+    creatures = enemy.creatures;
+  }
+  if (!creatures) return 0;
+  let bonus = 0;
+  for (const c of creatures) {
+    if (c && c.isAlive && c !== self && (c._allyDamageAura || 0) > 0) bonus += c._allyDamageAura;
+  }
+  // Auras can be fractional (War Banner +0.5/offset); damage is integer.
+  return Math.floor(bonus);
 }
 
 // Count of "enemies" relative to a caster — the boss character on the
@@ -36574,7 +39415,7 @@ function routeEnemyDamage(dmg, sourceLabel, sourceCreature = null) {
 //     ally defenses, since allies resolve synchronously).
 // Callers use the return to gate per-swing rider effects (e.g. the
 // "no damage, no poison" rule on Deathjump Spider).
-function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = null) {
+function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = null, arrowDurationMs = null) {
   // Always draw the swing animation, even at 0 damage. Ice can fully
   // cancel an attacker's swing — the creature should still SWING
   // visually so the player sees the chill kicking in. We just skip
@@ -36590,7 +39431,8 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
   }
   if (!src) src = getEnemyCenter();
   const dst = getTargetCenter(target);
-  const arrowDur = (sourceCreature ? 550 : ENEMY_ARROW_DURATION) * getEnemySpeedMul();
+  const arrowBase = arrowDurationMs != null ? arrowDurationMs : (sourceCreature ? 550 : ENEMY_ARROW_DURATION);
+  const arrowDur = arrowBase * getEnemySpeedMul();
   enemyArrow = { x1: src.x, y1: src.y, x2: dst.x, y2: dst.y, timer: arrowDur, sourceCreature: sourceCreature || null };
   screenFlashTimer = 150;
   if (dmg <= 0) {
@@ -36656,6 +39498,40 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
     const actual = applyDamageToAlly(target, dmg, sourceCreature || enemy);
     playAttackHitSfx(dmg, actual);
     return actual;
+  }
+}
+
+// Apply an enemy swing's damage to one player-side target WITHOUT
+// firing the single `enemyArrow` animation — used by batch-AoE
+// handlers (Fan of Blades) that draw their own `enemyArrowsBatch`
+// spray and don't want a stray lone arrow on top. Player damage routes
+// Block → Shield → Armor → accumulator (resolved at end of turn); ally
+// damage lands synchronously through applyDamageToAlly so Riposte /
+// Overwhelm / death handling stays consistent. Feral Wrath split is
+// applied up front, matching routeEnemyDamageToTarget.
+function applyEnemyAoeDamage(target, dmg) {
+  if (!target) return;
+  dmg = applyEnemyFeralWrathSplit(target, dmg);
+  if (target === player) {
+    let queued = dmg;
+    if (player.currentBlock > 0 && queued > 0) {
+      const a = Math.min(player.currentBlock, queued); player.currentBlock -= a; queued -= a;
+      addLog(`  Block absorbs ${a} damage`, Colors.BLUE);
+    }
+    if (player.shield > 0 && queued > 0) {
+      const a = Math.min(player.shield, queued); player.shield -= a; queued -= a;
+      addLog(`  Shield absorbs ${a} (S:${player.shield} remaining)`, Colors.ALLY_BLUE);
+    }
+    if (player.armor > 0 && queued > 0) {
+      const a = Math.min(player.armor, queued); queued -= a;
+      addLog(`  Armor absorbs ${a}`, Colors.GRAY);
+    }
+    if (queued > 0) {
+      enemyDamageAccumulator += queued;
+      addLog(`  ${queued} damage to you`, Colors.RED);
+    }
+  } else {
+    applyDamageToAlly(target, dmg, enemy);
   }
 }
 
@@ -37349,6 +40225,34 @@ function startEnemyTurn() {
           }
           enemy.addCreature(summoned);
         }
+      } else if (power.id === 'regeneration') {
+        // Regenerating monster (Rampaging Troll). Ramp the Regen stack
+        // up by 1 toward the power's cap; the REGEN status tick (in
+        // processStatusEffects, just below) heals by the current stack
+        // and _regenNoDecay holds it from ticking down. A monster
+        // started at the cap (troll, Regen 10) just heals the cap every
+        // turn; one started below it climbs +1/turn up to the cap.
+        const regenCap = power.regenMax || 10;
+        if ((enemy.getStatus('REGEN') || 0) < regenCap) {
+          enemy.applyRegen(1);
+          addLog(`  Regeneration! Regen rises to ${enemy.getStatus('REGEN')}.`, Colors.GREEN);
+        }
+      } else if (power.id === 'drow_sleep_poison') {
+        // Drow Sleep Poison (Khydhani) — Turn Start: coat his next swing
+        // with +1 Drow Sleep Poison (same buff the player's vial grants;
+        // consumed by his attacks via consumePoisonBuff).
+        resolveEffect(new CardEffect('grant_drow_sleep_buff', 1, TargetType.SELF), enemy, enemy);
+      } else if (power.id === 'goblins_in_the_walls') {
+        // They're in the Walls! — Turn Start: 1-2 more goblins spill out
+        // of the walls each enemy turn (on top of the on-death resummon).
+        // Mechanic only; the power's description text stays as-is.
+        // Base 1-2, +1 per monster offset (offset 1 → 2-3, offset 2 → 3-4 …).
+        const num = 1 + (monsterTierOffset || 0) + Math.floor(Math.random() * 2);
+        let spawned = 0;
+        for (let i = 0; i < num; i++) { if (summonSwarmGoblin()) spawned++; }
+        if (spawned > 0) {
+          addLog(`  They're in the Walls! ${spawned} more goblin${spawned === 1 ? '' : 's'} pour out!`, Colors.ORANGE);
+        }
       }
     }
   }
@@ -37527,7 +40431,12 @@ function startEnemyTurn() {
   // field until something kills them.
   for (const c of enemy.creatures) {
     if (c.isAlive && !c.exhausted && !c._cantAttack) {
-      enemyActions.push({ type: 'creature_attack', creature: c });
+      // _attacksPerTurn > 1 (Armored Troll) swings multiple times per round.
+      // The creature isn't exhausted until its last swing (_swingsLeft, see
+      // the multi-attack exhaust below), so each queued action fires.
+      const swings = Math.max(1, c._attacksPerTurn || 1);
+      c._swingsLeft = swings;
+      for (let k = 0; k < swings; k++) enemyActions.push({ type: 'creature_attack', creature: c });
     }
   }
 
@@ -37660,11 +40569,20 @@ function updateEnemyTurn(dt) {
         const aliveAllies = enemy.creatures.filter(a => a.isAlive).length;
         swarmBonus = Math.floor(aliveAllies / 5);
       }
-      let raw = c.attack + rageBonus + heroismBonus + swarmBonus;
+      // Goblin War Banner aura — +1 per enemy banner standing (owner-
+      // aware; an enemy War Banner buffs the swarm's goblins).
+      const bannerBonus = allyDamageAuraBonus(c);
+      // Drow Sleep Poison saps 1 attack per stack (mirrors the character
+      // getDamageModifier reduction; creatures have no status engine so
+      // it's read straight off the field). Clamped to 0 below.
+      const drowSleepPenalty = c.drowSleepStacks || 0;
+      let raw = Math.max(0, c.attack + rageBonus + heroismBonus + swarmBonus + bannerBonus - drowSleepPenalty);
+      if (drowSleepPenalty > 0) addLog(`  Drow Sleep Poison! -${drowSleepPenalty} damage`, '#9fb8e8');
       if (heroismBonus > 0) c.heroism = 0;
       if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
       if (heroismBonus > 0) addLog(`  Heroism! +${heroismBonus} damage`, Colors.GOLD);
       if (swarmBonus > 0) addLog(`  Swarm! +${swarmBonus} damage`, Colors.ORANGE);
+      if (bannerBonus > 0) addLog(`  War Banner! +${bannerBonus} damage`, Colors.GOLD);
       // Ice on the attacking creature reduces this swing and consumes 1 stack.
       let swingDmg = consumeIceForAttack(c, raw);
       // attackAll (Thordak Ashmantle boss-shell): hit every alive
@@ -37823,7 +40741,10 @@ function updateEnemyTurn(dt) {
           addLog(`  Bloodfrenzy! ${c.name} +${c.bloodfrenzy} Rage (R:${c.rage})`, Colors.RED);
           spawnTokenOnTarget(c, c.bloodfrenzy, 'Rage', Colors.RED);
         }
-        c.exhaust();
+        // Multi-swing creatures (Armored Troll, _attacksPerTurn > 1) stay
+        // ready until their last swing resolves; everyone else exhausts now.
+        c._swingsLeft = (c._swingsLeft != null ? c._swingsLeft : 1) - 1;
+        if (c._swingsLeft <= 0) c.exhaust();
         // Self-destruct: same crumble-on-attack handling as the single-
         // target branch below. Without this, attackAll+selfDestruct
         // creatures (Baby Giant Frog) would deal their AoE damage and
@@ -37948,12 +40869,11 @@ function updateEnemyTurn(dt) {
           if (ally.isAlive) applyIceToTarget(ally, c.iceAttackAll);
         }
       }
-      // Enemy-side bleed rider — same lands-only rule as the ally side.
+      // Enemy-side bleed rider — ALWAYS applies on swing, even when the
+      // hit was fully absorbed by Block / Shield / Armor (matches the
+      // ally helper maybeApplyAttackBleed and the multi-attack branch).
       if (c.bleedAttack > 0) {
-        const lands = (c.attack || 0) > 0 ? swingLanded > 0 : true;
-        if (!lands) {
-          addLog(`  (Bleed absorbed — no effect)`, Colors.GRAY);
-        } else if (target instanceof Creature) {
+        if (target instanceof Creature) {
           target.bleedStacks = (target.bleedStacks || 0) + c.bleedAttack;
           addLog(`  +${c.bleedAttack} Bleed on ${target.name}`, Colors.RED);
         } else if (target && typeof target.applyStatus === 'function') {
@@ -37962,33 +40882,16 @@ function updateEnemyTurn(dt) {
         }
       }
       if (c.poisonAttack) {
-        // Match the player-ally rule (maybeApplyAttackPoison): if the
-        // swing was fully absorbed by passive defenses, the venom can't
-        // get past the bite either. Exception for 0-attack poison
-        // creatures — their fangs ignore shield/block and only armor
-        // stops them. (Currently no enemy fits the carve-out, but it
-        // keeps both sides symmetric for future content.)
-        let polLands;
-        if ((c.attack || 0) > 0) {
-          polLands = swingLanded > 0;
-        } else {
-          const armorVal = target === player
-            ? (player.armor || 0)
-            : ((target && (target.armor || target.baseArmor)) || 0);
-          polLands = armorVal <= 0;
+        // ALWAYS applies on swing (mitigation-independent) — same rule as
+        // the ally helper maybeApplyAttackPoison and the multi-attack branch.
+        if (target instanceof Creature) {
+          target.poisonStacks = (target.poisonStacks || 0) + 1;
+          addLog(`  +1 Poison on ${target.name}`, Colors.GREEN);
+        } else if (target && typeof target.applyStatus === 'function') {
+          target.applyStatus('POISON', 1);
+          addLog(`  +1 Poison on ${target.name || 'you'}`, Colors.GREEN);
         }
-        if (!polLands) {
-          addLog(`  (Poison absorbed — no effect)`, Colors.GRAY);
-        } else {
-          if (target instanceof Creature) {
-            target.poisonStacks = (target.poisonStacks || 0) + 1;
-            addLog(`  +1 Poison on ${target.name}`, Colors.GREEN);
-          } else if (target && typeof target.applyStatus === 'function') {
-            target.applyStatus('POISON', 1);
-            addLog(`  +1 Poison on ${target.name || 'you'}`, Colors.GREEN);
-          }
-          if (target) spawnTokenOnTarget(target, 1, 'Poison', Colors.GREEN);
-        }
+        if (target) spawnTokenOnTarget(target, 1, 'Poison', Colors.GREEN);
       }
       // Kraken Tentacle snag — on every swing that targets the player,
       // splice 1 random hand card off and park it on the creature
@@ -38180,6 +41083,10 @@ function updateEnemyTurn(dt) {
     card.exhausted = true;
   } else {
     enemy.deck.playCard(card);
+    // on_recharge_heroism is granted AFTER the card's effects resolve
+    // (see the end of this play handler) so the Rapier's own strike
+    // doesn't eat the Heroism — it banks for the NEXT swing, mirroring
+    // the player flow (strike → recharge → Heroism).
   }
 
   // Pay extra recharge cost from remaining hand. Log one card per line so
@@ -38214,9 +41121,20 @@ function updateEnemyTurn(dt) {
     // undamaged one (player first if intact, else first full-HP
     // ally). hasUndamagedPlayerTarget() gated the play already, so
     // at least one valid target exists here.
-    if ((card.effects || []).some(e => e.effectType === 'backstab_restriction')) {
-      const playerMax = (player && player.deck && player.deck.masterDeck && player.deck.masterDeck.length) || 0;
-      const playerUndamaged = playerMax > 0 && player.totalCards >= playerMax && enemyDamageAccumulator === 0;
+    // Backstab — PREFER an undamaged target (so its "Was Undamaged" bonus
+    // lands), else keep the random pick. Covers both the gated
+    // backstab_restriction variant AND the Rogue card's draw_if_target_undamaged
+    // rider (the Assassin's 6 Backstabs); the latter isn't held when no clean
+    // target exists — it just swings at the random pick.
+    if ((card.effects || []).some(e => e.effectType === 'backstab_restriction'
+        || e.effectType === 'draw_if_target_undamaged')) {
+      // "Undamaged" = the player has taken no ACTUAL HP loss (no cards in
+      // the discard/damage piles). The pending accumulator must NOT gate
+      // this: the Assassin's Poisoned Daggers (priority 26) queue damage
+      // before Backstab (priority 24), so an accumulator===0 check made
+      // Backstab's draw impossible. Queued damage hasn't landed yet — the
+      // player's HP bar is still full at the moment Backstab swings.
+      const playerUndamaged = getDamage(player) === 0;
       const undamagedAlly = (player && player.creatures || []).find(a => a.isAlive && (a.currentHp || 0) >= (a.maxHp || 0));
       if (!(cardTarget === player ? playerUndamaged : (cardTarget && cardTarget.isAlive && (cardTarget.currentHp || 0) >= (cardTarget.maxHp || 0)))) {
         if (playerUndamaged) cardTarget = player;
@@ -38251,6 +41169,7 @@ function updateEnemyTurn(dt) {
         if (enemy.heroism > 0) enemy.heroism = 0;
         addLog(`  Sneak Attack! ${dmg} dmg (cards played: ${_enemyCardsThisTurn || 0})`, Colors.RED);
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        consumePoisonBuff(enemy, cardTarget, dmg); // Vial of Poison buff (enemy)
       } else if (eff.effectType === 'damage') {
         let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
         dmg = consumeIceForAttack(enemy, dmg);
@@ -38258,6 +41177,7 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        consumePoisonBuff(enemy, cardTarget, dmg); // Vial of Poison buff (enemy)
         // On Kill: Draw rider (Kobold Spear etc.) — fires for the enemy
         // too when their swing kills one of the player's allies.
         // maybeFireDrawOnKill reads draw_on_kill off _activePlayCard
@@ -38278,6 +41198,24 @@ function updateEnemyTurn(dt) {
         dmg = Math.max(0, dmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        attacksThisTurn++;
+      } else if (eff.effectType === 'first_strike_attack') {
+        // Adamantine Rapier (enemy) — Deal `eff.value`. FIRST STRIKE:
+        // +`eff.maxTargets` only when this is the turn's opening attack
+        // (attacksThisTurn === 0, reset at startEnemyTurn). The Assassin's
+        // deck plays Drow Sleep Poison (an ability, doesn't bump the
+        // counter) before the Rapier, so the Rapier still lands first and
+        // banks its First Strike. Consumes any Vial/Drow Sleep buff.
+        const fsFirst = (attacksThisTurn === 0);
+        const fsBonus = fsFirst ? (eff.maxTargets || 0) : 0;
+        if (fsBonus > 0) addLog(`  First Strike! +${fsBonus}`, Colors.GOLD);
+        let dmg = Math.max(0, eff.value + fsBonus + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        consumePoisonBuff(enemy, cardTarget, dmg); // Vial / Drow Sleep buff
         attacksThisTurn++;
       } else if (eff.effectType === 'mark_deathly_strike') {
         // Death Sickle's "Hit: Death" rider. Stamps a module flag the
@@ -38386,9 +41324,52 @@ function updateEnemyTurn(dt) {
         // the swing-time hook. Play it inline here.
         const sfx = getWeaponSfxKeys();
         if (sfx && sfx.flesh) playSound(sfx.flesh, 0.7);
-        player.takeDamageFromDeck(eff.value);
-        spawnDamageOnTarget(player, eff.value, Colors.ORANGE);
-        addLog(`  ${eff.value} true damage to you!`, Colors.ORANGE);
+        // Heroism/Rage/mods fold into the true damage too (so a buffed
+        // Darkwood shot drips more Poison via the per-damage rider below).
+        let trueDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        // Route to the SENTINEL-respecting cardTarget (pickEnemyAttackTarget
+        // returns a sentinel ally first), not always the player — the enemy
+        // Darkwood Crossbow was hardcoded at `player`, so it ignored the
+        // player's sentinel allies and always shot past them.
+        const utgt = cardTarget || player;
+        // Red swing arrow from the enemy to whoever's actually hit, so the
+        // shot visibly lands on the sentinel rather than silently flashing.
+        const uSrc = getEnemyCenter();
+        const uDst = getTargetCenter(utgt);
+        enemyArrow = { x1: uSrc.x, y1: uSrc.y, x2: uDst.x, y2: uDst.y, timer: ENEMY_ARROW_DURATION * getEnemySpeedMul(), sourceCreature: null };
+        screenFlashTimer = 150;
+        let trueLanded;
+        if (utgt instanceof Creature) {
+          trueLanded = utgt.takeUnpreventableDamage(trueDmg);
+          spawnDamageOnTarget(utgt, trueDmg, Colors.ORANGE);
+          addLog(`  ${trueDmg} true damage to ${utgt.name}!`, Colors.ORANGE);
+          _lastEffectDamageLanded = trueLanded;
+          consumePoisonBuff(enemy, utgt, trueLanded);
+          if (!utgt.isAlive) { spawnDeathAnimation(utgt); addLog(`  ${utgt.name} destroyed!`, Colors.GOLD, null, null, utgt); countAndRemoveDeadCreatures(); }
+        } else {
+          trueLanded = player.takeDamageFromDeck(trueDmg);
+          _lastEffectDamageLanded = trueLanded; // read by apply_poison_per_damage
+          spawnDamageOnTarget(player, trueDmg, Colors.ORANGE);
+          addLog(`  ${trueDmg} true damage to you!`, Colors.ORANGE);
+          consumePoisonBuff(enemy, player, trueLanded); // Vial / Drow Sleep buff
+        }
+      } else if (eff.effectType === 'apply_poison_per_damage') {
+        // Darkwood Hand Crossbow (enemy) — Poison the SAME target the True
+        // Damage above landed on (sentinel ally or player), equal to it.
+        const ppd = Math.max(0, _lastEffectDamageLanded || 0);
+        const ptgt = cardTarget || player;
+        if (ppd > 0) {
+          if (ptgt instanceof Creature) {
+            ptgt.poisonStacks = (ptgt.poisonStacks || 0) + ppd;
+            spawnTokenOnTarget(ptgt, ppd, 'Poison', Colors.GREEN);
+            addLog(`  +${ppd} Poison on ${ptgt.name} (per damage dealt)`, Colors.GREEN);
+          } else if (typeof player.applyStatus === 'function') {
+            player.applyStatus('POISON', ppd);
+            spawnTokenOnTarget(player, ppd, 'Poison', Colors.GREEN);
+            addLog(`  +${ppd} Poison (per damage dealt)`, Colors.GREEN);
+          }
+        }
       } else if (eff.effectType === 'necrotic_drain') {
         // Drain Essence — roll min..max random unpreventable damage
         // to the player, then heal the Specter by the amount
@@ -38798,7 +41779,20 @@ function updateEnemyTurn(dt) {
                 addLog(`  Claw! ${queued} damage to you`, Colors.RED);
               }
             } else {
-              applyDamageToAlly(t, tHit);
+              // Pass the casting enemy as the attacker so a Riposte ally
+              // (Goblin Spike Trap) counters this Rend / Claw swing.
+              applyDamageToAlly(t, tHit, enemy);
+            }
+            // Optional Bleed rider (Rend) — lands on each picked target
+            // regardless of how much damage was mitigated.
+            if (eff.bleed > 0) {
+              if (t === player) {
+                if (t.applyStatus) t.applyStatus('BLEED', eff.bleed);
+              } else if (t instanceof Creature) {
+                t.bleedStacks = (t.bleedStacks || 0) + eff.bleed;
+              }
+              spawnTokenOnTarget(t, eff.bleed, 'Bleed', Colors.RED);
+              addLog(`  +${eff.bleed} Bleed on ${t === player ? 'you' : t.name}`, Colors.RED);
             }
             // Double-strike SFX: the claw lands twice per pick with
             // a tight delay so each target reads as a paired slash
@@ -39305,6 +42299,148 @@ function updateEnemyTurn(dt) {
             else playSound('shark_splash', 0.8);
           }
         }
+      } else if (eff.effectType === 'draw_if_target_undamaged') {
+        // Backstab — draw if the target started the swing at full HP.
+        // (This was previously only in the ability branch, so the enemy's
+        // ATTACK-card Backstab never drew — same root cause as the
+        // barrages below.)
+        let undamaged;
+        if (cardTarget === player) {
+          undamaged = getDamage(player) === 0;
+        } else {
+          undamaged = !!(cardTarget && cardTarget.isAlive && (cardTarget.currentHp || 0) >= (cardTarget.maxHp || 0));
+        }
+        if (undamaged) {
+          const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
+          const drawn = enemy.deck.draw(eff.value || 1, cap);
+          addLog(`  Was Undamaged — ${enemy.name} draws ${drawn.length}.`, Colors.GRAY);
+        }
+      } else if (eff.effectType === 'poison_dagger_barrage') {
+        // Poisoned Daggers — TWO staggered throws, each its own red-arrow
+        // swing + dagger SFX + 1 Poison. (Lives here in the ATTACK branch;
+        // the copy in the ability branch never ran for the attack card.)
+        let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        const shots = 2;
+        const speed = getEnemySpeedMul();
+        // Snappy arrows (450ms) with a stagger just past them, so the two
+        // throws still read as two distinct swings but the whole barrage
+        // wraps in ~1s — then the queue resumes at the normal pace instead
+        // of stalling for the old 875ms-arrow fade.
+        const daggerArrow = 450;
+        const stagger = (daggerArrow + 60) * speed;
+        const sfxCard = _activePlayCard;
+        // Snapshot the Vial / Drow Sleep buffs ONCE — a barrage carries its
+        // riders to EVERY throw, so each dagger lands the same +Poison /
+        // +Drow Poison (both throws, not just the first).
+        const snapPoison = snapshotPoisonBuff(enemy);
+        const snapDrow = snapshotDrowSleepBuff(enemy);
+        for (let s = 0; s < shots; s++) {
+          const fire = () => {
+            const prevCard = _activePlayCard;
+            _activePlayCard = sfxCard;
+            try {
+              const t = pickEnemyAttackTarget();
+              if (!t) return;
+              let tDmg = consumeIceForAttack(enemy, baseDmg);
+              tDmg += getIncomingDamageModifier(t);
+              tDmg = Math.max(0, tDmg);
+              addLog(`  Poisoned Dagger ${s + 1}:`, Colors.GRAY);
+              routeEnemyDamageToTarget(t, tDmg, card.name, null, daggerArrow);
+              if (t instanceof Creature) t.poisonStacks = (t.poisonStacks || 0) + 1;
+              else if (t && typeof t.applyStatus === 'function') t.applyStatus('POISON', 1);
+              spawnTokenOnTarget(t, 1, 'Poison', Colors.GREEN);
+              applyPoisonRider(t, snapPoison, tDmg);  // Vial rider, every throw
+              applyDrowSleepRider(t, snapDrow);        // Drow Sleep rider, every throw
+              countAndRemoveDeadCreatures();
+            } finally {
+              _activePlayCard = prevCard;
+            }
+          };
+          if (s === 0) fire();
+          else setTimeout(fire, s * stagger);
+        }
+        // No enemyActionTimer extension: the `animating` gate (showcase +
+        // arrows) already PAUSES the action timer while the throws play, so
+        // extending it here just double-counted ~1s of dead air after the
+        // arrows faded. The standard 375ms inter-action delay governs once
+        // the last arrow clears.
+      } else if (eff.effectType === 'blade_flurry_barrage') {
+        // Blade Flurry — FIVE rapid staggered strikes, each re-rolling its
+        // target.
+        let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        const shots = 5;
+        const speed = getEnemySpeedMul();
+        const stagger = 240 * speed;
+        const sfxCard = _activePlayCard;
+        for (let s = 0; s < shots; s++) {
+          const fire = () => {
+            const prevCard = _activePlayCard;
+            _activePlayCard = sfxCard;
+            try {
+              const t = pickEnemyAttackTarget();
+              if (!t) return;
+              let tDmg = consumeIceForAttack(enemy, baseDmg);
+              tDmg += getIncomingDamageModifier(t);
+              tDmg = Math.max(0, tDmg);
+              addLog(`  Blade Flurry ${s + 1}:`, Colors.GRAY);
+              routeEnemyDamageToTarget(t, tDmg, card.name);
+              consumePoisonBuff(enemy, t, tDmg);
+              countAndRemoveDeadCreatures();
+            } finally {
+              _activePlayCard = prevCard;
+            }
+          };
+          if (s === 0) fire();
+          else setTimeout(fire, s * stagger);
+        }
+        // No timer extension — the animating gate already holds for the
+        // strikes; the standard delay governs once the last arrow clears.
+      } else if (eff.effectType === 'damage_all_twice') {
+        // Fan of Blades — TWO sweeping batch-arrow waves at the player +
+        // every alive ally, with a short delay between volleys. The Vial /
+        // Drow Sleep rider is snapshotted ONCE and re-applied to every
+        // target on BOTH waves.
+        let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        const fanPoison = snapshotPoisonBuff(enemy);
+        const fanDrow = snapshotDrowSleepBuff(enemy);
+        const speed = getEnemySpeedMul();
+        const batchTimer = 550 * speed;
+        const waveDelay = batchTimer + 150 * speed;
+        const sfx = getWeaponSfxKeys();
+        const fireWave = (wave) => {
+          const targets = [];
+          if (player) targets.push(player);
+          for (const a of (player.creatures || [])) if (a.isAlive) targets.push(a);
+          if (targets.length === 0) return;
+          const src = getEnemyCenter();
+          enemyArrowsBatch = {
+            segments: targets.map(t => {
+              const d = getTargetCenter(t);
+              return { x1: src.x, y1: src.y, x2: d.x, y2: d.y };
+            }),
+            timer: batchTimer,
+          };
+          screenFlashTimer = 200;
+          if (sfx && sfx.flesh) playSound(sfx.flesh, 0.7);
+          addLog(`  Fan of Blades — wave ${wave + 1}:`, Colors.GRAY);
+          for (const t of targets) {
+            let tDmg = consumeIceForAttack(enemy, baseDmg);
+            tDmg += getIncomingDamageModifier(t);
+            tDmg = Math.max(0, tDmg);
+            applyEnemyAoeDamage(t, tDmg);
+            applyPoisonRider(t, fanPoison, tDmg);
+            applyDrowSleepRider(t, fanDrow);
+          }
+          countAndRemoveDeadCreatures();
+        };
+        fireWave(0);
+        setTimeout(() => fireWave(1), waveDelay);
+        // No timer extension — the showcase covers the inter-wave gap and
+        // the batch arrows hold the animating gate; the standard delay
+        // governs once wave 2's arrows clear.
       }
     }
     _activePlayCard = null;
@@ -39382,6 +42518,11 @@ function updateEnemyTurn(dt) {
         enemy.heroism = (enemy.heroism || 0) + eff.value;
         addLog(`  +${eff.value} Heroism (H:${enemy.heroism})`, Colors.GOLD);
         spawnTokenOnTarget(enemy, eff.value, 'Heroism', Colors.GOLD);
+      } else if (eff.effectType === 'grant_drow_sleep_buff') {
+        // Drow Sleep Poison (enemy) — coat the next swing. resolveEffect's
+        // grant_drow_sleep_buff sets caster.drowSleepBuff (+ buff badge);
+        // the next attack's consumePoisonBuff applies the Drow Sleep rider.
+        resolveEffect(eff, enemy, enemy);
       } else if (eff.effectType === 'gain_rage') {
         // Pulling Back the Ram (siege ogre) — accumulates Rage so the
         // eventual Massive Ogre Ram swing scales up.
@@ -39397,12 +42538,13 @@ function updateEnemyTurn(dt) {
           buffed++;
         }
         if (buffed > 0) addLog(`  Allies gain +${eff.value} Heroism!`, Colors.GOLD);
-      } else if (eff.effectType === 'draw') {
+      } else if (eff.effectType === 'draw' || eff.effectType === 'scry_pick') {
         // Uncapped enemies (Siege Ogre) use a high cap so the hand can
         // grow turn over turn; standard enemies stay capped at their
         // _handSize so card-driven draws don't accidentally overflow.
+        // scry_pick → the enemy just draws 1 (no interactive scry).
         const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
-        const drawn = enemy.deck.draw(eff.value, cap);
+        const drawn = enemy.deck.draw(eff.effectType === 'scry_pick' ? 1 : eff.value, cap);
         // Per-card name log is debug-only — the player shouldn't see
         // what the enemy is drawing under normal play. Summary line
         // already shows the count for the top-of-turn refill.
@@ -39558,9 +42700,10 @@ function updateEnemyTurn(dt) {
         enemy.shield = (enemy.shield || 0) + eff.value;
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
-      } else if (eff.effectType === 'draw') {
+      } else if (eff.effectType === 'draw' || eff.effectType === 'scry_pick') {
+        // scry_pick → the enemy can't scry interactively, so just draw 1.
         const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
-        const drawn = enemy.deck.draw(eff.value, cap);
+        const drawn = enemy.deck.draw(eff.effectType === 'scry_pick' ? 1 : eff.value, cap);
         if (drawn.length > 0 && debugMode) {
           for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
         }
@@ -39653,6 +42796,13 @@ function updateEnemyTurn(dt) {
           if (lastEntry) lastEntry.creature = spider;
           lastSpider = spider;
         }
+      } else if (eff.effectType === 'create_vial_of_poison') {
+        // Pet Spider's second rider — the Assassin carries no Vial
+        // card to play, so he uncorks the brewed vial immediately.
+        // resolveEffect's enemy branch (create_vial_of_poison →
+        // grant_poison_buff) coats his blades with the next-attack
+        // +Poison buff; his swings consume it via consumePoisonBuff.
+        resolveEffect(eff, enemy, player);
       } else if (eff.effectType === 'summon_large_boulder') {
         // Legacy single-Large-Boulder path kept for back-compat with any
         // older save still holding a card that points at this effect id.
@@ -39760,6 +42910,12 @@ function updateEnemyTurn(dt) {
         }
       }
     }
+    // on_recharge_heroism banks AFTER the card's effects resolved (so the
+    // Rapier's own strike didn't eat it). Skip stays-in-hand cards — they
+    // never reach the recharge pile. No-op unless the card carries the rider.
+    if (card && !(card.currentEffects || []).some(e => e.effectType === 'stays_in_hand')) {
+      applyEnemyOnRechargeHeroism(card);
+    }
     _activePlayCard = null;
   }
 
@@ -39785,6 +42941,26 @@ function finishEnemyTurn() {
   }
 
   completePlayerTurnTransition();
+}
+
+// Rampart — Turn Start: shield the rest of the line. Every OTHER living
+// ally and the player gain Shield (the wall protects everyone but itself).
+// Called at the start of every player turn (turn 1 from startCombat, turn
+// 2+ from completePlayerTurnTransition).
+function applyTurnStartAllyShields() {
+  if (!player || !Array.isArray(player.creatures)) return;
+  for (const wall of player.creatures) {
+    if (!wall.isAlive || !wall._turnStartShieldAllies) continue;
+    const amt = wall._turnStartShieldAllies;
+    player.shield = (player.shield || 0) + amt;
+    spawnTokenOnTarget(player, amt, 'Shield', Colors.ALLY_BLUE);
+    for (const ally of player.creatures) {
+      if (ally === wall || !ally.isAlive) continue;
+      ally.shield = (ally.shield || 0) + amt;
+      spawnTokenOnTarget(ally, amt, 'Shield', Colors.ALLY_BLUE);
+    }
+    addLog(`  ${wall.name}: the line gains +${amt} Shield`, Colors.ALLY_BLUE);
+  }
 }
 
 function completePlayerTurnTransition() {
@@ -39841,6 +43017,14 @@ function completePlayerTurnTransition() {
   if (enemy && Array.isArray(enemy.creatures)) {
     const aliveAllies = enemy.creatures.filter(c => c && c.isAlive);
     for (const c of aliveAllies) {
+      // Enemy creature end-of-turn damage (Goblin Warrior) — 1 random
+      // damage to a random player-side target. Mirrors the player-ally
+      // endTurnDamage shot in endPlayerTurn, reversed onto the party.
+      if ((c.endTurnDamage || 0) > 0) {
+        const sfx = getWeaponSfxKeys(null, c);
+        if (sfx && sfx.flesh) playSound(sfx.flesh, 0.7);
+        dealRandomDamageToPlayerSide(c.endTurnDamage, c.name, Colors.RED);
+      }
       if ((c.endTurnHealAllies || 0) > 0) {
         const amt = c.endTurnHealAllies;
         let anyHealed = false;
@@ -39921,6 +43105,7 @@ function completePlayerTurnTransition() {
   for (const c of player.deck.hand) c.exhausted = false;
   attacksThisTurn = 0;
   _bracerBonusLogged = false; // re-arm the Boarhide Bracers first-attack log
+  _swiftAssaultLogged = false; // re-arm the Swift Assault first-attack log
   // Frenzy Blood Vial — apply the Bloodied Frenzy Rage for the turn (announce).
   updateFrenzyRage(true);
 
@@ -39957,6 +43142,7 @@ function completePlayerTurnTransition() {
   // the fight).
   processStatusEffects(player, 'You');
   if (checkCombatEnd()) return;
+  applyTurnStartAllyShields();
 
   // Deferred Flash of Genius — a surprise/ambush fight held the picker
   // back at combat start (see applyPerksCombatStart) so the enemy's free
@@ -40320,6 +43506,20 @@ function checkCombatEnd() {
       return true;
     }
   }
+  // Named-target victory (Goblin Front — break BOTH Armored Trolls). The
+  // goblins keep spawning, so the win is the trolls dying, not the field
+  // clearing. Guarded by _winTargetsPlaced so it can't fire before setup.
+  if (enemy && enemy._invulnerable && enemy._winTargetsPlaced && enemy._winWhenNamedDead) {
+    const targetsAlive = (enemy.creatures || [])
+      .filter(c => c && c.isAlive && c.name === enemy._winWhenNamedDead).length;
+    if (targetsAlive === 0) {
+      addLog(`VICTORY! The ${enemy._winWhenNamedDead}s are broken — the line holds!`, Colors.GOLD);
+      const endKey = getDeathSfxKey(enemy);
+      if (endKey) playSound(endKey, 0.7);
+      combatVictory();
+      return true;
+    }
+  }
   // Kill count victory (wolf pack, etc.)
   if (killTarget > 0 && killCount >= killTarget) {
     addLog(`VICTORY! Killed ${killCount}/${killTarget}!`, Colors.GOLD);
@@ -40629,6 +43829,31 @@ function applyPoisonRider(target, stacks, _damageDealt = null) {
   }
   addLog(`  (Vial of Poison) +${stacks} Poison on ${target.name}`, Colors.GREEN);
 }
+// Drow Sleep Poison — the Vial-of-Poison twins for the drow venom buff.
+// Consumed by the same consumePoisonBuff choke-point so every attack
+// site (player + enemy) applies it without per-site wiring.
+function snapshotDrowSleepBuff(caster) {
+  if (!caster || !(caster.drowSleepBuff > 0)) return 0;
+  const stacks = caster.drowSleepBuff;
+  caster.drowSleepBuff = 0;
+  if (Array.isArray(caster.combatBuffs)) {
+    caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'drow_sleep_buff');
+  }
+  return stacks;
+}
+function applyDrowSleepRider(target, stacks) {
+  // Lands regardless of mitigation, like the Poison rider — the venom
+  // coats the blade even on a blocked swing.
+  if (!stacks || stacks <= 0 || !target) return;
+  if (target instanceof Creature) {
+    target.drowSleepStacks = (target.drowSleepStacks || 0) + stacks;
+  } else if (typeof target.applyStatus === 'function') {
+    target.applyStatus('DROW_SLEEP', stacks);
+  } else {
+    return;
+  }
+  addLog(`  (Drow Sleep Poison) +${stacks} on ${target.name}`, '#9fb8e8');
+}
 function snapshotEyeBuff(caster) {
   if (!caster || !Array.isArray(caster.combatBuffs)) return 0;
   // Sum every damaged_bonus_on_attack buff's value (persistent +
@@ -40779,6 +44004,11 @@ function consumeObsidianBuff(caster, target) {
 function consumePoisonBuff(caster, target, damageDealt = null) {
   const stacks = snapshotPoisonBuff(caster);
   applyPoisonRider(target, stacks, damageDealt);
+  // Piggyback the Drow Sleep Poison rider on the same hook — every
+  // attack that consumes a Vial-of-Poison buff also consumes a Drow
+  // Sleep buff if one is active (Drow Sleep Poison item).
+  const drowStacks = snapshotDrowSleepBuff(caster);
+  applyDrowSleepRider(target, drowStacks);
 }
 
 // Trigger split power: when a character with "split" power takes
@@ -40788,6 +44018,13 @@ function consumePoisonBuff(caster, target, damageDealt = null) {
 //   damageLanded: true if the swing actually dealt > 0 damage (gates
 //     the split spawn). The on-hit obsidian dispatch always fires.
 function triggerSplitPower(character, damageLanded = true) {
+  // `damageLanded` may be a boolean (legacy) OR the actual damage amount
+  // (number). When it's a number, the Riposte parry is CAPPED at it so the
+  // Assassin can never restore more cards than the blow removed — without
+  // this cap a 1-damage chip could be parried for 3, NET-HEALING him and
+  // making him effectively unkillable.
+  const dmgAmount = (typeof damageLanded === 'number') ? Math.max(0, damageLanded) : null;
+  const landed = (dmgAmount !== null) ? dmgAmount > 0 : !!damageLanded;
   if (character instanceof Creature) {
     triggerOnAttackedPowers(enemy, character);
   } else {
@@ -40798,8 +44035,44 @@ function triggerSplitPower(character, damageLanded = true) {
   // Fires only when damage actually broke through, mirroring the
   // user spec: "if we are attacked and take any damage (it goes over
   // our block/shield/armor)".
-  if (damageLanded) maybeIceShatter(character);
-  if (!damageLanded) return;
+  if (landed) maybeIceShatter(character);
+  // Riposte (Khydhani / "The Assassin") — the PARRY already happened
+  // PRE-mitigation in takeDamageWithDefense (it prevented 1-3 of the blow
+  // before block/armor/shield and stashed the prevented amount + the full
+  // 1-3 roll). Here we LASH the full roll back at the attacker — fired even
+  // when the parry fully absorbed the blow (so it works on a 0-damage hit
+  // too, which is why it sits ABOVE the `!landed` early-out). No card
+  // restoration → he never net-heals. _calledArrowAlly makes Raena's Called
+  // arrow lash back at HER, not the player. The lash is the full roll, so a
+  // 1-damage chip can still riposte for up to 3.
+  if (character && Array.isArray(character.powers)
+      && character.powers.some(p => p && p.id === 'riposte')
+      && (character._pendingRiposteLash > 0 || character._pendingRiposteParry > 0)) {
+    const parried = character._pendingRiposteParry || 0;
+    const lash = character._pendingRiposteLash || 0;
+    character._pendingRiposteParry = 0;
+    character._pendingRiposteLash = 0;
+    const attacker = _calledArrowAlly || _activeAttacker || player;
+    if (lash > 0 && attacker === player && player) {
+      const [blocked, tk] = player.takeDamageWithDefense(lash);
+      if (tk > 0) spawnDamageOnTarget(player, tk, Colors.GOLD);
+      const absSuffix = blocked > 0
+        ? (tk > 0 ? ` (${blocked} blocked by Shield/Armor)` : ` — fully absorbed by your Shield/Armor`)
+        : ` to you`;
+      addLog(`  ${character.name} parries ${parried} and ripostes ${tk}${absSuffix}!`, Colors.GOLD);
+      playSound('slyblade_hiss', 0.5);
+    } else if (lash > 0 && attacker instanceof Creature && attacker.isAlive) {
+      const a = attacker.takeDamage(lash);
+      if (a > 0) spawnDamageOnTarget(attacker, a, Colors.GOLD);
+      addLog(`  ${character.name} parries ${parried} and ripostes ${a} to ${attacker.name}!`, Colors.GOLD);
+      if (!attacker.isAlive) addLog(`  ${attacker.name} destroyed!`, Colors.GOLD, null, null, attacker);
+      playSound('slyblade_hiss', 0.5);
+    } else if (parried > 0) {
+      addLog(`  ${character.name} parries ${parried}!`, Colors.GOLD);
+      playSound('slyblade_hiss', 0.5);
+    }
+  }
+  if (!landed) return;
   if (!character || !character.powers) return;
   for (const power of character.powers) {
     if (power.id === 'split') {
@@ -40960,6 +44233,8 @@ function triggerOnAttackedPowers(character, creatureTarget) {
   // new slimes; the spawned slimes themselves are stable shells).
   // Character-side triggers — only when the boss itself was attacked
   // (creatureTarget is null = the attack landed on the enemy character).
+  // Enemy-creature Riposte is handled by maybeEnemyRiposte at the damage
+  // sites (this hook isn't reliably called for creature targets).
   if (creatureTarget) return;
   if (!character || !Array.isArray(character.powers)) return;
   for (const power of character.powers) {
@@ -40997,6 +44272,47 @@ function triggerOnAttackedPowers(character, creatureTarget) {
         addLog(`  -> Obsidian Body: -1 Armor (${character.baseArmor}).`, Colors.ORANGE);
         playSound('rocks_impact_small', 0.6);
       }
+      break;
+    }
+    // Rampaging Troll — Loathsome Limbs. For every 10 damage the troll
+    // has taken (cumulative missing HP in 10-card chunks, same accounting
+    // as Zhost's Revenge) it tears off a Loathsome Limb the instant the
+    // damage lands during the player's turn: discard a random hand card
+    // and summon a wounded 5/10 limb (3 Atk + Bleed, Regen 3). NOT hasted
+    // — it appears on the player's turn and acts on the troll's next turn.
+    // Latched on _loathsomeLimbsSpawned so the troll's own Regeneration
+    // (which restores curHp) can't un-spawn limbs.
+    if (power.id === 'loathsome_limbs' && character.deck) {
+      const maxHp = (character.deck.masterDeck && character.deck.masterDeck.length) || 50;
+      const curHp = character.deck.drawPile.length + character.deck.hand.length
+        + character.deck.rechargePile.length + (character.deck.playPile ? character.deck.playPile.length : 0);
+      const targetLimbs = Math.floor(Math.max(0, maxHp - curHp) / 10);
+      let spawned = character._loathsomeLimbsSpawned || 0;
+      while (spawned < targetLimbs) {
+        spawned++;
+        if (character.deck.hand.length > 0) {
+          const idx = Math.floor(Math.random() * character.deck.hand.length);
+          const [lost] = character.deck.hand.splice(idx, 1);
+          if (typeof character.deck.discardCard === 'function') character.deck.discardCard(lost);
+          else character.deck.discardPile.push(lost);
+          addLog(`  Loathsome Limbs! ${character.name} sloughs off ${lost.name}.`, Colors.ORANGE);
+        }
+        const limb = new Creature({
+          name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
+          bleedAttack: 1,
+          description: 'Regen 2.',
+        });
+        // Regen scales +1 per monster offset (base 2); attack/hp scale
+        // +1/+1 via the addCreature offset wrapper (CREATURE_TIER_OFFSET).
+        const limbRegen = 2 + (monsterTierOffset || 0);
+        limb._regen = limbRegen;
+        limb._regenMax = limbRegen;
+        limb._codexSide = 'enemy';
+        character.addCreature(limb);
+        addLog(`  A Loathsome Limb tears free!`, Colors.ORANGE);
+        if (!_codexSandboxRunning) playSound('sahuagin_scream_02', 0.5);
+      }
+      character._loathsomeLimbsSpawned = spawned;
       break;
     }
   }
@@ -41127,6 +44443,17 @@ function getDeathSfxKey(c) {
   if (name === "general zhost's army" || name === 'general zhost') {
     return 'zhost_hiss';
   }
+  // Rampaging Troll / Armored Troll death — same deep ogre groan. (For the
+  // Goblin Front the shell is 'goblin front'; its win cue routes here too.)
+  if (name === 'rampaging troll' || name === 'armored troll' || name === 'goblin front') return 'ogre_groan_02';
+  // Loathsome Limbs (troll's torn-off limbs) — skitter scuttle on death,
+  // matching their attack swing cue.
+  if (name === 'loathsome limbs') return 'spider_scuttle_01';
+  // Goblin Swarm non-sapper goblins (Minion / Warrior / War Banner /
+  // Spike Trap) — snort on death, matching their spawn cue. (The Sapper
+  // keeps its explosion.)
+  if (name === 'goblin minion' || name === 'goblin warrior'
+      || name === 'goblin war banner' || name === 'goblin spike trap') return 'monster_snort_01';
   // Stone Giant — heavy rocks tumble at death (matches fight start).
   if (name === 'stone giant') return 'stone_giant_roll';
   // Boulders (both Large and Small Stone Giant summons) — reuse the
@@ -41158,6 +44485,7 @@ function getDeathSfxKey(c) {
   // (also wired to drake_rider_charge's play sound for showcase).
   if (name === 'kobold drake rider') return 'drake_rider_hiss';
   // Kobold Slyblade — softer reptilian hiss for ambush start + death.
+  if (name === 'the assassin') return 'male_warrior_hit_01';
   if (name === 'kobold slyblade') return 'slyblade_hiss';
   // Ruga the Slave Master — heavier reptilian chuff for the
   // Sky Shaft mini-boss. Bookends the fight and also fires from
@@ -41271,10 +44599,17 @@ function getFightStartSfxKey(rawName) {
   if (name === 'tentacle') return 'splash_dive';
   if (name === 'deathjump spiders') return 'spider_scuttle';
   if (name === 'siege ogre') return 'ogre_growl';
+  // Rampaging Troll — Part 2 tunnels random encounter. A deep ogre
+  // groan bookends the fight (start + death) and rides every Rend.
+  if (name === 'rampaging troll') return 'ogre_groan_02';
+  // Goblin Swarm — Part 2 tunnels. Explosive burst as the goblins boil
+  // out of the walls at fight start.
+  if (name === 'goblin swarm' || name === 'goblin front') return 'goblin_explosion_01';
   // Mimic — antiquity shop ambush. The alien shriek doubles as the
   // fight-start splash and the death cue (see getDeathSfxKey).
   if (name === 'mimic') return 'monster_alien_scream_01';
   if (name === 'kobold drake rider') return 'drake_rider_hiss';
+  if (name === 'the assassin') return 'male_warrior_hit_01';
   if (name === 'kobold slyblade') return 'slyblade_hiss';
   if (name === 'ruga the slave master') return 'ruga_chuff';
   if (name === 'dwarven specter') return 'specter_screech';
@@ -41443,6 +44778,27 @@ function countAndRemoveDeadCreatures() {
     c.onDeathDamage = 0;
     if (typeof playSound === 'function') playSound('goblin_explosion', 0.7);
   }
+  // Player-side on-death damage — a player-summoned Goblin Sapper (Goblin
+  // Boss's Whistle) explodes onto a random ENEMY when it dies. Mirror of
+  // the enemy block above.
+  for (const c of (player.creatures || [])) {
+    if (c.isAlive) continue;
+    if (!(c.onDeathDamage > 0)) continue;
+    const explosion = Math.floor(Math.random() * c.onDeathDamage) + 1;
+    const foes = (enemy && enemy.creatures || []).filter(e => e.isAlive && !e._invulnerable);
+    if (foes.length > 0) {
+      const t = foes[Math.floor(Math.random() * foes.length)];
+      const actual = t.takeDamage(explosion);
+      if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
+      addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!`, Colors.ORANGE);
+    } else if (enemy && enemy.isAlive && !enemy._invulnerable) {
+      const [, taken] = enemy.takeDamageWithDefense(explosion);
+      if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
+      addLog(`  ${c.name} explodes! ${taken} damage to ${enemy.name}!`, Colors.ORANGE);
+    }
+    c.onDeathDamage = 0;
+    if (typeof playSound === 'function') playSound('goblin_explosion', 0.7);
+  }
   // On-death Poison AoE — The Butcher (either side). When it falls it
   // bursts Poison across the OPPOSING side: a player Butcher poisons
   // the enemy + its creatures; an enemy Butcher poisons the player +
@@ -41528,8 +44884,25 @@ function countAndRemoveDeadCreatures() {
     }
     c.onDeathDiscardOrDamage = 0;
   }
+  // Goblin Swarm — "They're in the Walls!": collect the slots of the
+  // goblins that died this sweep BEFORE they're removed, then (after
+  // removal) give each a 50% chance to be replaced by a fresh random
+  // goblin — placed AWAY from the just-vacated slot so it's obviously a
+  // new goblin, not the same one refusing to die.
+  const deadGoblinSlots = enemyHasPower('goblins_in_the_walls')
+    ? enemy.creatures.filter(c => c && !c.isAlive && GOBLIN_SWARM_NAMES.has(c.name)).map(c => c.slot)
+    : [];
   enemy.removeDeadCreatures();
   player.removeDeadCreatures();
+  // Respawn chance: 50% base, +5% per monster offset (55%, 60% …), capped.
+  const respawnChance = Math.min(1, 0.5 + 0.05 * (monsterTierOffset || 0));
+  for (let i = 0; i < deadGoblinSlots.length; i++) {
+    if (Math.random() < respawnChance) {
+      const g = summonSwarmGoblin(deadGoblinSlots);
+      if (g) addLog(`  They're in the Walls! A ${g.name} crawls out of the stone!`, Colors.ORANGE);
+    }
+  }
+  if (deadBefore > 0) enemiesDefeatedThisCombat += deadBefore;
   if (deadBefore > 0 && killTarget > 0) {
     killCount += deadBefore;
     addLog(`  Kill count: ${killCount}/${killTarget}`, Colors.GOLD);
@@ -41682,6 +45055,14 @@ function handlePerkSelectClick(x, y) {
     if (hitTest(x, y, rects[i])) {
       playSound('perk_pick', 0.7);
       const perk = perkChoices[i];
+      // Upgrade perks replace their tier-1 prerequisite (Third Wind removes
+      // Second Wind, etc.). Match on base id so a stamped prereq is dropped
+      // too. Divine Protection has no `replaces`, so Armored stays.
+      if (perk.replaces) {
+        const replaced = player.perks.find(p => (p.id || '').replace(/_p\d+$/, '') === perk.replaces);
+        player.perks = player.perks.filter(p => (p.id || '').replace(/_p\d+$/, '') !== perk.replaces);
+        if (replaced) addLog(`  Replaces ${replaced.name}.`, Colors.GRAY);
+      }
       player.perks.push(perk);
       addLog(`Perk gained: ${perk.name}!`, Colors.GOLD);
       // Mini level-up beats (currently just the Path of the Necromancer
@@ -42060,16 +45441,16 @@ let _revivifyAlliesBefore = -1;
 
 function finalizeRevivifyHeal() {
   if (_revivifyAlliesBefore < 0 || !player) return;
-  const after = (player.creatures || []).filter(c => c.isAlive).length;
-  const before = _revivifyAlliesBefore;
   _revivifyAlliesBefore = -1;
-  if (after <= before) return;
-  // X = number of allies, minimum 1 (the just-summoned one). `after`
-  // already includes the new ally, so a successful revive guarantees
-  // after >= 1.
-  const heal = Math.max(1, after) * 2;
-  addLog(`  Revivify: Heal ${heal} (2 per ally × ${after} on field)`, Colors.GREEN);
-  healPlayer(heal);
+  // Heal 2 per ally currently on the field (counted AFTER any revive, so
+  // a freshly-revived ally is included). Fires whether or not a dead
+  // ally was actually revived — "Heal 2 per ally" is unconditional.
+  const allies = (player.creatures || []).filter(c => c.isAlive).length;
+  const heal = allies * 2;
+  if (heal > 0) {
+    addLog(`  Revivify: Heal ${heal} (2 per ally × ${allies} on field)`, Colors.GREEN);
+    healPlayer(heal);
+  }
 }
 
 function cardCanRevive(card) {
@@ -42242,13 +45623,25 @@ function drawReviveSelectOverlay() {
 // wheel hook below).
 const FORGE_PICKER_COLS = 4;
 const FORGE_PICKER_ROWS_VISIBLE = 2;
+// The forge cards to actually show — in a gear-pick mode the search box
+// filters them by name (metal-select / armor / weapon modes are unfiltered).
+function getActiveForgeCards() {
+  if ((forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') && forgeSearchText) {
+    const q = forgeSearchText.toLowerCase();
+    return forgePickerCards.filter(c => c && (c.name || '').toLowerCase().includes(q));
+  }
+  return forgePickerCards;
+}
 function layoutForgePickerRects() {
   const cardW = 200, cardH = 280, gapX = 20, gapY = 30;
   const totalW = FORGE_PICKER_COLS * cardW + (FORGE_PICKER_COLS - 1) * gapX;
   const startX = Math.floor((SCREEN_WIDTH - totalW) / 2);
-  const startY = 160;
+  // Pushed down a touch so a hovered card's gold frame (drawn 4px out)
+  // clears the search box (which ends at y 156) instead of overlapping it.
+  const startY = 168;
+  const cards = getActiveForgeCards();
   const rects = [];
-  for (let i = 0; i < forgePickerCards.length; i++) {
+  for (let i = 0; i < cards.length; i++) {
     const col = i % FORGE_PICKER_COLS;
     const row = Math.floor(i / FORGE_PICKER_COLS) - forgePickerScroll;
     if (row < 0 || row >= FORGE_PICKER_ROWS_VISIBLE) continue;
@@ -42256,7 +45649,7 @@ function layoutForgePickerRects() {
       x: startX + col * (cardW + gapX),
       y: startY + row * (cardH + gapY),
       w: cardW, h: cardH,
-      card: forgePickerCards[i],
+      card: cards[i],
       cardIndex: i,
     });
   }
@@ -42265,23 +45658,84 @@ function layoutForgePickerRects() {
 
 let forgeCancelRect = null;
 
+function dismissForgeShowcase() {
+  _forgeShowcaseActive = false;
+  _forgeShowcaseCard = null;
+  _forgeShowcaseMsg = '';
+  playSound('click');
+  backToForgeMetalSelect();
+}
+
 function handleForgeWeaponClick(x, y) {
+  // The reforge showcase holds until any click — dismiss it and return.
+  if (_forgeShowcaseActive) { dismissForgeShowcase(); return; }
   if (forgeCancelRect && hitTest(x, y, forgeCancelRect)) {
+    forgeSearchActive = false;
+    playSound('click');
     cancelForgeWeapon();
+    return;
+  }
+  // Search box — click the × to clear, anywhere else in the box to focus.
+  if (forgeSearchRect && hitTest(x, y, forgeSearchRect)) {
+    if (forgeSearchText && x >= forgeSearchRect.x + forgeSearchRect.w - 26) {
+      forgeSearchText = '';
+      forgePickerScroll = 0;
+    } else {
+      forgeSearchActive = true;
+    }
+    playSound('click');
     return;
   }
   const rects = layoutForgePickerRects();
   for (const r of rects) {
     if (hitTest(x, y, r)) {
-      confirmForgeWeapon(r.card);
+      forgeSearchActive = false;
+      playSound('click');
+      // Metal-select step: clicking an ore card opens the gear-pick for that
+      // metal. Otherwise it's a gear pick → reforge.
+      if (forgePickerMode === 'metal_select') enterMetalGearPick(r.card);
+      else confirmForgeWeapon(r.card);
       return;
     }
   }
+  forgeSearchActive = false; // clicked empty space → defocus
+}
+
+// Return to the metal-select step (ore cards). Leaves the forge entirely if
+// the player has no metals left.
+function backToForgeMetalSelect() {
+  _forgeActiveMetal = null;
+  forgePickerCards = collectForgeMetals();
+  forgePickerBackpackUids = new Set();
+  forgePickerScroll = 0;
+  forgePickerMode = 'metal_select';
+  forgeSearchText = '';
+  forgeSearchActive = false;
+  if (forgePickerCards.length === 0) leaveForge();
+}
+function leaveForge() {
+  forgePickerCards = [];
+  forgePickerBackpackUids = new Set();
+  forgePickerScroll = 0;
+  forgeCancelRect = null;
+  forgeSearchRect = null;
+  forgeSearchText = '';
+  forgeSearchActive = false;
+  _forgeActiveMetal = null;
+  // Forge opened straight onto the map (no encounter), so return there.
+  state = (previousState === GameState.ENCOUNTER_CHOICE) ? GameState.ENCOUNTER_CHOICE : GameState.MAP;
 }
 
 function cancelForgeWeapon() {
-  // Bail without forging — return to the encounter choice screen so
-  // the player can pick Rest or Leave instead.
+  if (_forgeShowcaseActive) { dismissForgeShowcase(); return; } // click/Esc dismisses the showcase
+  // From a metal's gear-pick, the cancel button steps BACK to metal-select;
+  // from metal-select it leaves the forge.
+  if (forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') {
+    backToForgeMetalSelect();
+    return;
+  }
+  if (forgePickerMode === 'metal_select') { leaveForge(); return; }
+  // Legacy weapon/armor (volcano forge / workbench) — back to the encounter.
   forgePickerCards = [];
   forgePickerBackpackUids = new Set();
   forgePickerScroll = 0;
@@ -42291,6 +45745,27 @@ function cancelForgeWeapon() {
 
 function confirmForgeWeapon(card) {
   if (!card) return;
+  // Metal reforge — armor/shield gets the metal's On Recharge enchant
+  // (Mithril Alloy → Shield, Adamantine → Heroism), paid with one ore. Then
+  // step back to the metal-select for more reforges.
+  if ((forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') && _forgeActiveMetal) {
+    const metal = _forgeActiveMetal;
+    applyCardEnchant(card, metal.enchant);
+    propagateEnchantToActivePiles(card, metal.enchant);
+    consumeOneOre(metal.oreId);
+    const what = metal.enchant === 'adamantine' ? 'Gain Heroism' : 'Gain Shield';
+    addLog(`Reforged ${card.name} with ${metal.label} at the forge!`, Colors.GOLD);
+    playSound('blunt_1h_flesh', 0.7);
+    // Kick off the reforge showcase — holds the card up (message above it)
+    // until the player clicks anywhere.
+    _forgeShowcaseCard = card;
+    _forgeShowcaseActive = true;
+    _forgeShowcaseElapsed = 0;
+    _forgeShowcaseSoundPlayed = false;
+    _forgeShowcaseMsg = `${card.name}: On Recharge, ${what}`;
+    forgeSearchActive = false;
+    return;
+  }
   const armorMode = forgePickerMode === 'armor';
   if (armorMode) {
     applyDwarvenWorkbench(card);
@@ -42339,13 +45814,83 @@ function confirmForgeWeapon(card) {
   state = GameState.ENCOUNTER_CHOICE;
 }
 
+// Reforge showcase — the just-reforged card centered, the enchant flashing
+// in after a short hold. Overrides the picker render while it plays.
+// Purple toast-style banner used above the showcased card.
+function drawForgeShowcaseToast(msg, cx, cy) {
+  ctx.font = 'bold 16px sans-serif';
+  const w = ctx.measureText(msg).width + 32, h = 34;
+  const bx = cx - w / 2, by = cy - h / 2;
+  ctx.fillStyle = 'rgba(60, 30, 80, 0.95)';
+  ctx.fillRect(bx, by, w, h);
+  ctx.strokeStyle = '#b070e0';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx, by, w, h);
+  ctx.fillStyle = '#f0d8ff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(msg, cx, cy);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+}
+
+function drawForgeShowcase() {
+  const bgImg = getEncounterBgImage('bg_dwarven_smithy');
+  if (bgImg) ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  else { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); }
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  const card = _forgeShowcaseCard;
+  const fadeIn = Math.min(1, _forgeShowcaseElapsed / 300);
+  const scW = 280, scH = 392;
+  const scX = Math.floor((SCREEN_WIDTH - scW) / 2);
+  const scY = Math.floor((SCREEN_HEIGHT - scH) / 2);
+  const enchantPhase = _forgeShowcaseElapsed >= FORGE_SHOWCASE_ENCHANT_DELAY;
+
+  // Purple "toaster" message above the card (once the enchant lands).
+  if (enchantPhase && _forgeShowcaseMsg) {
+    drawForgeShowcaseToast(_forgeShowcaseMsg, SCREEN_WIDTH / 2, scY - 48);
+  }
+
+  ctx.globalAlpha = fadeIn;
+  // Hide the enchant badge during the hold so it "appears" on the flash.
+  const savedEnch = card._enchants;
+  if (!enchantPhase) card._enchants = [];
+  drawCard(card, scX, scY, scW, scH, false, false, 'full');
+  card._enchants = savedEnch;
+  ctx.globalAlpha = 1;
+
+  if (enchantPhase) {
+    const te = _forgeShowcaseElapsed - FORGE_SHOWCASE_ENCHANT_DELAY;
+    const pulse = 0.35 + 0.45 * Math.abs(Math.sin(te / 90));
+    ctx.save();
+    ctx.shadowColor = `rgba(255, 225, 130, ${pulse})`;
+    ctx.shadowBlur = 26;
+    ctx.strokeStyle = `rgba(255, 225, 130, ${pulse})`;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(scX - 4, scY - 4, scW + 8, scH + 8);
+    ctx.restore();
+  }
+
+  ctx.fillStyle = enchantPhase ? '#cfcfcf' : Colors.GOLD;
+  ctx.font = enchantPhase ? '15px sans-serif' : 'bold 24px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(enchantPhase ? 'Click anywhere to continue' : 'Reforging…', SCREEN_WIDTH / 2, scY + scH + 28);
+  ctx.textAlign = 'left';
+}
+
 function drawForgeWeaponOverlay() {
+  // Reforge showcase takes over the whole screen while it plays.
+  if (_forgeShowcaseActive && _forgeShowcaseCard) { drawForgeShowcase(); return; }
   // Forge/workbench backdrop — same art the encounter draws behind
   // the choice prompt, so the picker reads as a continuation of the
   // same scene. forgePickerMode picks between the obsidian forge
   // (weapon-side) and the dwarven workbench (armor-side).
   const armorMode = forgePickerMode === 'armor';
-  const bgKey = armorMode ? 'bg_dwarven_smithy' : 'bg_obsidian_forge_map';
+  const metalSelect = forgePickerMode === 'metal_select';
+  const reforgeMode = forgePickerMode === 'mithril' || forgePickerMode === 'adamantine';
+  const bgKey = (armorMode || metalSelect || reforgeMode) ? 'bg_dwarven_smithy' : 'bg_obsidian_forge_map';
   const bgImg = getEncounterBgImage(bgKey);
   if (bgImg) {
     ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -42356,22 +45901,68 @@ function drawForgeWeaponOverlay() {
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 
+  const metalLabel = _forgeActiveMetal ? _forgeActiveMetal.label : 'Mithril';
+  const metalEnchant = _forgeActiveMetal ? CARD_ENCHANTS[_forgeActiveMetal.enchant] : null;
   ctx.fillStyle = Colors.GOLD;
   ctx.font = 'bold 30px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText(armorMode ? 'Choose Armor to Reinforce' : 'Choose a Weapon to Forge', SCREEN_WIDTH / 2, 70);
+  ctx.fillText(metalSelect ? 'The Great Forge'
+    : reforgeMode ? `Choose Gear to Reforge with ${metalLabel}`
+    : armorMode ? 'Choose Armor to Reinforce' : 'Choose a Weapon to Forge', SCREEN_WIDTH / 2, 70);
 
   ctx.fillStyle = Colors.WHITE;
   ctx.font = '16px sans-serif';
-  ctx.fillText(armorMode
-    ? 'The dwarven workbench will grant Shield each time the card recharges.'
-    : 'The obsidian will grant +2 damage vs Armor/Shield.', SCREEN_WIDTH / 2, 100);
+  if (reforgeMode && metalEnchant) {
+    // Plain instruction, then the enchant in the SAME rich pill+icon format
+    // the game uses for card text (drawIconText is centered).
+    ctx.fillText(`The smiths fold the ${metalLabel} in — costs 1 ${metalLabel} Ore:`, SCREEN_WIDTH / 2, 94);
+    drawIconText(metalEnchant.tooltip, SCREEN_WIDTH / 2, 104, 700, 15, '#eaeaea');
+  } else {
+    ctx.fillText(metalSelect
+      ? 'Click a metal to reforge a weapon or piece of armor with it.'
+      : armorMode
+      ? 'The dwarven workbench will grant Shield each time the card recharges.'
+      : 'The obsidian will grant +2 damage vs Armor/Shield.', SCREEN_WIDTH / 2, 100);
+  }
 
-  if (forgePickerCards.length > FORGE_PICKER_COLS * FORGE_PICKER_ROWS_VISIBLE) {
+  // Gear search box — top-left, just above the gear grid (gear modes only).
+  forgeSearchRect = null;
+  if (reforgeMode) {
+    const gridW = FORGE_PICKER_COLS * 200 + (FORGE_PICKER_COLS - 1) * 20;
+    const gridX = Math.floor((SCREEN_WIDTH - gridW) / 2);
+    const sr = { x: gridX, y: 128, w: 230, h: 28 };
+    forgeSearchRect = sr;
+    ctx.fillStyle = forgeSearchActive ? 'rgba(40, 50, 80, 0.95)' : 'rgba(20, 20, 35, 0.85)';
+    ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
+    ctx.strokeStyle = forgeSearchActive ? Colors.GOLD : '#666';
+    ctx.lineWidth = forgeSearchActive ? 2 : 1;
+    ctx.strokeRect(sr.x, sr.y, sr.w, sr.h);
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    if (forgeSearchText) {
+      ctx.fillStyle = '#fff';
+      ctx.fillText(forgeSearchText + (forgeSearchActive ? '|' : ''), sr.x + 8, sr.y + sr.h / 2);
+      ctx.fillStyle = '#aaa';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('×', sr.x + sr.w - 14, sr.y + sr.h / 2);
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.fillText('Search gear…', sr.x + 8, sr.y + sr.h / 2);
+    }
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+  }
+
+  if (getActiveForgeCards().length > FORGE_PICKER_COLS * FORGE_PICKER_ROWS_VISIBLE) {
     ctx.fillStyle = Colors.GRAY;
     ctx.font = '13px sans-serif';
-    const totalRows = Math.ceil(forgePickerCards.length / FORGE_PICKER_COLS);
-    ctx.fillText(`Page ${forgePickerScroll + 1} / ${Math.max(1, totalRows - FORGE_PICKER_ROWS_VISIBLE + 1)} — scroll to see more`, SCREEN_WIDTH / 2, 122);
+    ctx.textAlign = 'center';
+    const totalRows = Math.ceil(getActiveForgeCards().length / FORGE_PICKER_COLS);
+    // Sits just above the Back/Leave button (cy 800) instead of under the
+    // header pill where it collided with the enchant line.
+    ctx.fillText(`Page ${forgePickerScroll + 1} / ${Math.max(1, totalRows - FORGE_PICKER_ROWS_VISIBLE + 1)} — scroll to see more`, SCREEN_WIDTH / 2, 788);
   }
 
   const rects = layoutForgePickerRects();
@@ -42383,13 +45974,37 @@ function drawForgeWeaponOverlay() {
       ctx.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
     }
     drawCard(r.card, r.x, r.y, r.w, r.h, false, false, 'full');
-    if (forgePickerBackpackUids.has(r.card.uid)) {
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(r.x, r.y + r.h - 22, r.w, 22);
+    // Hovering an ore surfaces the metal's enchant detail (On Recharge: …),
+    // reusing the same enchant-tooltip the on-card badges use.
+    if (hov && r.card._forgeOreCount) {
+      const m = FORGE_METALS[r.card.id];
+      const meta = m && CARD_ENCHANTS[m.enchant];
+      if (meta) {
+        _pendingEnchantTooltip = {
+          x: r.x + r.w + 8, y: r.y + 20,
+          name: meta.name, tooltip: meta.tooltip, color: meta.color || '#a8a060',
+        };
+      }
+    }
+    // Ore count — same upper-right "xN" badge the inventory uses.
+    if (r.card._forgeOreCount) {
+      const bx = r.x + r.w - 28, by = r.y + 4;
+      ctx.fillStyle = 'rgba(0,0,0,0.8)';
+      ctx.fillRect(bx, by, 24, 20);
+      ctx.strokeStyle = Colors.GOLD;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, 24, 20);
+      ctx.fillStyle = Colors.GOLD;
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`x${r.card._forgeOreCount}`, bx + 12, by + 15);
+      ctx.textAlign = 'left';
+    } else if (forgePickerBackpackUids.has(r.card.uid)) {
+      // Label sits BELOW the card (no dark bar over the art).
       ctx.fillStyle = Colors.GOLD;
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Backpack', r.x + r.w / 2, r.y + r.h - 6);
+      ctx.fillText('Backpack', r.x + r.w / 2, r.y + r.h + 20);
     }
   }
 
@@ -42407,7 +46022,9 @@ function drawForgeWeaponOverlay() {
   ctx.font = 'bold 22px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('Cancel (Esc)', cx + cw / 2, cy + ch / 2);
+  ctx.fillText(forgePickerMode === 'metal_select' ? 'Leave the forge'
+    : (forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') ? 'Back' : 'Cancel (Esc)',
+    cx + cw / 2, cy + ch / 2);
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 }
@@ -43009,6 +46626,8 @@ const SHOP_INVENTORIES = {
   dwarven_tavern: [
     createDwarvenBrew,
     createDwarvenScoutCard,
+    createDwarvenCrossbowmanCard,
+    createDwarvenBattleClericCard,
   ],
   dwarven_smithy: [
     createDwarvenCrossbow,
@@ -43063,6 +46682,8 @@ function buildDwarvenTavernInventory() {
   return [
     ...base,
     createWhitescaleBrew,
+    createDwarvenCrossbowmanCard,
+    createDwarvenBattleClericCard,
   ];
 }
 // Dwarven Smithy inventory — base stock (Crossbow, Tower Shield,
@@ -43420,10 +47041,28 @@ function getCardBuyPrice(card) {
   return price;
 }
 
+// Ore loot (Part 2 tunnels). Copper / Silver / Gold sell for FULL value
+// at a weapon/armor smith; Mithril is never sellable. Anywhere else the
+// sellable ores fall through to the normal (1/5) consumable price.
+const ORE_SELL_SHOPS = new Set(['weaponsmith', 'armorsmith', 'dwarven_smithy']);
+const SELLABLE_ORE_IDS = new Set(['copper_ore', 'silver_ore', 'gold_ore']);
+
+// Raw ore value before any shop-specific rebate (mirrors getCardBuyPrice's
+// rarity*tier base without the armorer discount, so a smith pays full).
+function getOreBaseValue(card) {
+  const base = CARD_BUY_PRICE_BY_RARITY[(card.rarity || '').toLowerCase()] || 50;
+  const tier = card.tier || 0;
+  return tier >= 2 ? base * tier : base;
+}
+
 function getCardSellPrice(card) {
   // Antiquity exception: tokens are sellable but worthless (PY's
   // get_antiquity_sell_price short-circuits to 0 for token cards).
   if (shopMode && shopMode.id === 'antiquity_shop' && card.isToken) return 0;
+  // Ores sell for their FULL value at a weapon/armor smith.
+  if (SELLABLE_ORE_IDS.has(card.id) && shopMode && ORE_SELL_SHOPS.has(shopMode.id)) {
+    return getOreBaseValue(card);
+  }
   return Math.floor(getCardBuyPrice(card) / 5);
 }
 
@@ -43435,6 +47074,12 @@ function getCardSellPrice(card) {
 function canSellAtShop(card) {
   if (!shopMode || !shopCards.length) return false;
   if (card.isUnique) return false;
+  // Ore loot — Mithril is never sellable ("too valuable"); Copper /
+  // Silver / Gold sell only at a weapon/armor smith (where they fetch
+  // full value via getCardSellPrice), and nowhere else.
+  if (card.id === 'mithril_ore') return false;
+  if (card.id === 'adamantine_ore') return false;
+  if (SELLABLE_ORE_IDS.has(card.id)) return ORE_SELL_SHOPS.has(shopMode.id);
   // Class restriction — normally blocks selling. Sellable-opt-in
   // cards (Vial of Poison, Wand of Fire) bypass this so the player
   // can offload them despite the lock.
@@ -44768,6 +48413,40 @@ function drawInventory() {
     drawSectionInfoTooltip(_sectionInfoHover);
   }
 
+  // Deck-limit count hover — hovering a category's "count / max (+N)"
+  // readout shows how much it's been raised and the cap for this run
+  // (cap = base +3 / +5 etc., relics +1 / +2). Skipped if a section
+  // (i) tooltip is already up so the two don't stack.
+  if (!_sectionInfoHover && Array.isArray(_deckLimitCountRects)) {
+    for (const r of _deckLimitCountRects) {
+      if (!hitTest(mouseX, mouseY, r)) continue;
+      const l1 = `${r.label} level-up cap`;
+      const l2 = r.bonus > 0
+        ? `Raised +${r.bonus} of a possible +${r.cap} this run`
+        : `Not raised yet — up to +${r.cap} this run`;
+      ctx.font = '12px sans-serif';
+      const tw = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 16;
+      const th = 40;
+      let tx = mouseX + 14, ty = mouseY + 14;
+      if (tx + tw > SCREEN_WIDTH) tx = SCREEN_WIDTH - tw - 4;
+      if (ty + th > SCREEN_HEIGHT) ty = mouseY - th - 8;
+      ctx.fillStyle = 'rgba(20,18,14,0.96)';
+      ctx.fillRect(tx, ty, tw, th);
+      ctx.strokeStyle = '#c8a860';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx + 0.5, ty + 0.5, tw - 1, th - 1);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#ffe0a0';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText(l1, tx + 8, ty + 17);
+      ctx.fillStyle = '#d8d0c0';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(l2, tx + 8, ty + 33);
+      break;
+    }
+  }
+
   // Character splash overlay (click portrait to show)
   if (characterSplashCharacter) drawCharacterSplash();
 
@@ -45124,6 +48803,13 @@ function drawInventoryCharacter(rect) {
   ctx.textAlign = 'left';
   ctx.fillText('Deck Limits', limitsBaseX + 2, nextY);
   _invDeckLimitsY = nextY - 4; // stash for tutorial arrow
+  _deckLimitCountRects = []; // rebuilt below, read by the hover-tooltip pass
+  // Part 2 / ccgQuest+ raised the caps — pop the one-time explainer now
+  // that the Deck Limits panel is on screen so its arrow has a target.
+  if (_deckLimitsBoostPending) {
+    _deckLimitsBoostPending = false;
+    showTutorial('deck_limits_boosted');
+  }
   // (i) badge mirroring the inventory_deck_limits tutorial. Anchors
   // to the full character column right edge (rect.x + rect.w) so the
   // glyph lines up vertically with the character section's badge
@@ -45179,7 +48865,15 @@ function drawInventoryCharacter(rect) {
     const btnReserve = showBtn ? 20 : 0;
     const rightEdge = limitsBaseX + limitsW - 4 - btnReserve;
     ctx.textAlign = 'right';
-    ctx.fillText(`${count} / ${max}${bonusStr}`, rightEdge, nextY);
+    const _countTxt = `${count} / ${max}${bonusStr}`;
+    ctx.fillText(_countTxt, rightEdge, nextY);
+    // Register the count readout as a hover region — the tooltip pass
+    // shows how much the player has raised this category and its cap.
+    const _countW = ctx.measureText(_countTxt).width;
+    _deckLimitCountRects.push({
+      x: rightEdge - _countW - 2, y: nextY - 11, w: _countW + 4, h: 14,
+      label: cat.label, bonus, cap: getDeckLimitCap(cat.id),
+    });
     // Rest-level-up button shape — one +1 pick, max +3 per category.
     if (restMode && (pendingChapter2Transition || _levelUpBonusPending)) {
       const btnSize = 13;
@@ -45624,7 +49318,7 @@ function commitSaveEditing() {
     antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun,
     forestCleared, forestLoopLevel, forestCorrectPath,
     siegeProgress, siegeComplete,
-    throneAudienceComplete, quartersRested, dragonSlain, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
+    throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, templeMoradinPrayed, lastWatchRested, lastWatchAudienceComplete, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted,
     armorerSonQuestStarted,
     valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
     // Path of the Necromancer story flag — required so the bedroom
@@ -46320,6 +50014,12 @@ function restoreFromSave(data) {
   throneAudienceComplete = !!data.throneAudienceComplete;
   quartersRested = !!data.quartersRested;
   dragonSlain = !!data.dragonSlain;
+  part2Started = !!data.part2Started;
+  part2SiegeOver = !!data.part2SiegeOver;
+  greatPourActivated = !!data.greatPourActivated;
+  chapter2Started = !!data.chapter2Started;
+  _tunnelExitNode = data.tunnelExitNode || null;
+  _tunnelExitLocked = !!data.tunnelExitLocked;
   staircaseTopDragonDialogSeen = !!data.staircaseTopDragonDialogSeen;
   mithrilRemediesVisited = !!data.mithrilRemediesVisited;
   templeMoradinPrayed = !!data.templeMoradinPrayed;
@@ -46502,6 +50202,24 @@ function restoreFromSave(data) {
     volcano: createVolcanoMap,
     obsidian_wastes: createObsidianWastesMap,
     tharnag_interior: createTharnagInteriorMap,
+    tharnag_tunnels_entrance: createTharnagTunnelsEntranceMap,
+    tharnag_tunnels_west_top: createTharnagTunnelsWestTop01Map,
+    tharnag_tunnels_east_top: createTharnagTunnelsEastTop01Map,
+    tharnag_tunnels_east_top_2: createTharnagTunnelsEastTop02Map,
+    tharnag_tunnels_middle: createTharnagTunnelsMiddleMap,
+    tharnag_tunnels_middle_bottom: createTharnagTunnelsMiddleBottomMap,
+    tharnag_tunnels_left_bottom: createTharnagTunnelsLeftBottomMap,
+    tharnag_tunnels_west_middle: createTharnagTunnelsWestMiddleMap,
+    tharnag_tunnels_east_middle: createTharnagTunnelsEastMiddleMap,
+    tharnag_tunnels_west_top_2: createTharnagTunnelsWestTop02Map,
+    tharnag_tunnels_west_bottom: createTharnagTunnelsWestBottomMap,
+    tharnag_tunnels_west_bottom_2: createTharnagTunnelsWestBottom2Map,
+    tharnag_tunnels_west_top_3: createTharnagTunnelsWestTop03Map,
+    tharnag_tunnels_gate_of_deep: createTharnagTunnelsGateOfDeepMap,
+    // Part 2 forge route — without these, a save on the forge stairs or the
+    // Great Forge itself fell back to createPrisonCellMap (broken/empty map).
+    tharnag_stairs_to_forge: createStairsToForgeMap,
+    tharnag_the_forge: createTharnagTheForgeMap,
     entry_corridor: createEntryCorridorMap,
     gate_area: createGateAreaMap,
     hall_of_ancestors: createHallOfAncestorsMap,
@@ -48152,6 +51870,14 @@ function spawnDamageNumber(x, y, text, color = Colors.RED) {
 // pick the wired SOUND_MAP aliases for the flesh / blocked / play /
 // playMulti / defense channels.
 const CARD_SFX_OVERRIDES = {
+  // Bear Claw — simple weapon that had no wired swing cue. Light sword
+  // slash on a clean hit, stone-wall clang when blocked.
+  bear_claw:                { flesh: 'sword_light_1h_flesh_01', blocked: 'sword_rock_wall_01' },
+  // Rend — Rampaging Troll's claw attack (Part 2 tunnels). Combines the
+  // troll's base ogre groan (on cast) with a sword-light slash on the
+  // landed / blocked hit, so each Rend reads as the troll roaring as its
+  // claws rake home.
+  rend:                     { play: 'ogre_groan_02', flesh: 'sword_light_1h_flesh_01', blocked: 'sword_light_1h_flesh_01' },
   // Skitter Bite — Plague Cockroach's dual-mode card. Leg-rustle
   // scuttle on cast, on swing hit, and on a blocked swing — the
   // bug sounds the same whether it's attacking or counter-biting.
@@ -48295,6 +52021,8 @@ const CARD_SFX_OVERRIDES = {
   // fallback misses (no "dagger" in the id), so wire it explicitly so
   // it sounds like Bone Dagger / Poisoned Dagger.
   sly_blade:                { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  // Long Troll Teeth — a dagger; standard gore/stab cues.
+  long_troll_teeth:         { play: 'dagger_flesh', flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
   // Gravechill Shard — Specter drop. Ice-blast whoosh on cast so the
   // necrotic-frost theming reads sonically. `play` fires at cast
   // regardless of damage (matches the apply_ice riders); flesh/
@@ -48309,6 +52037,8 @@ const CARD_SFX_OVERRIDES = {
   // from the Spectral Hand attack cue.
   specter_ectoplasm:        { play: 'dark_crystals_02' },
   sprint:                   { playMulti: { key: 'footstep', count: 5, stagger: 220 } },
+  // Enemy Sprint (Assassin) — same staggered footsteps as the player card.
+  sprint_enemy:             { playMulti: { key: 'footstep', count: 5, stagger: 220 } },
   shield_of_faith:          { play: 'arcane_shield' },
   reckless_strike:          { flesh: 'reckless_axe_hit', blocked: 'axe_blocked' },
   execute:                  { flesh: 'execute_axe', blocked: 'axe_blocked' },
@@ -48482,6 +52212,12 @@ const CARD_SFX_OVERRIDES = {
   small_pouch:              { play: 'bag_use' },
   slime_jar:                { play: 'jar_use' },
   vial_of_poison:           { play: 'jar_use' },
+  // Drow Sleep Poison — uncork/quaff a vial (same potion glug as a
+  // healing potion). Both the player consumable and the enemy version.
+  drow_sleep_poison:        { play: 'drink' },
+  drow_sleep_poison_enemy:  { play: 'drink' },
+  // Troll Blood Vial — quaffed like a potion.
+  troll_blood_vial:         { play: 'drink' },
   torch:                    { play: 'torch_use' },
   scroll_of_potency:        { play: 'scroll_use' },
   ale:                      { play: 'drink' },
@@ -48614,11 +52350,32 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'huffer') {
       return { flesh: 'pig_grunt', blocked: 'pig_grunt', play: 'pig_grunt' };
     }
+    // Loathsome Limbs (Rampaging Troll) — skittering scuttle on every
+    // swing. Same sample fires on death via getDeathSfxKey.
+    if (name === 'loathsome limbs') {
+      return { flesh: 'spider_scuttle_01', blocked: 'spider_scuttle_01' };
+    }
+    // Goblin Minion / Goblin Warrior (Part 2 swarm) — snort on every
+    // swing. Same sample fires on spawn + death. (Sapper keeps its
+    // fireworks burst below.)
+    if (name === 'goblin minion' || name === 'goblin warrior') {
+      return { flesh: 'monster_snort_01', blocked: 'monster_snort_01' };
+    }
     // Goblin Sapper — fireworks burst on attack (the rigged-charge
     // detonation). Same sample fires on death from the on-death
     // explosion path inside countAndRemoveDeadCreatures.
     if (name === 'goblin sapper') {
       return { flesh: 'goblin_explosion', blocked: 'goblin_explosion' };
+    }
+    // Armored Troll (Goblin Front 2x2 hulk) — deep ogre groan layered with
+    // a heavy flesh hit on its 4 + Bleed two-target swing.
+    if (name === 'armored troll') {
+      return { flesh: 'sword_light_1h_flesh_01', blocked: 'sword_rock_wall_01', play: 'ogre_groan_02' };
+    }
+    // Dwarven Crossbowman (Gate of the Deep ally) — bolt thuds into flesh,
+    // clangs off armor when blocked.
+    if (name === 'dwarven crossbowman') {
+      return { flesh: 'arrow_flesh_01', blocked: 'arrow_metal_01' };
     }
     // Bone Amalgam (3/3 ally summoned by amalgam power) — same heavy
     // skull crunch as the Big Bone card.
@@ -48812,7 +52569,7 @@ function getWeaponSfxKeys(card = null, creature = null) {
       blocked: 'axe_blocked',
     };
   }
-  if (id.includes('sword')) {
+  if (id.includes('sword') || id.includes('rapier')) {
     return {
       flesh: isTwoHanded ? 'sword_2h_flesh' : 'sword_1h_flesh',
       blocked: 'sword_blocked',
@@ -49503,6 +53260,17 @@ function gameLoop(timestamp) {
     }
   }
 
+  // Reforge showcase tick — fire the buff-powerup cue when the enchant
+  // flashes in. The showcase then holds until the player clicks (handled in
+  // handleForgeWeaponClick / cancelForgeWeapon).
+  if (_forgeShowcaseActive) {
+    _forgeShowcaseElapsed += dt;
+    if (!_forgeShowcaseSoundPlayed && _forgeShowcaseElapsed >= FORGE_SHOWCASE_ENCHANT_DELAY) {
+      _forgeShowcaseSoundPlayed = true;
+      playSound('buff_powerup_02', 0.9);
+    }
+  }
+
   // Update toast timer
   if (toastTimer > 0 && !toastSticky) toastTimer = Math.max(0, toastTimer - dt);
 
@@ -49642,11 +53410,11 @@ const ALL_POWER_CREATORS = [
   () => createArmorPower(1),
   createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam,
   createPiranhasSwarm, createFromTheDeep, createWolfPack,
-  createMassiveOgreRam, createGoblinSapperSquad,
+  createMassiveOgreRam, createGoblinSapperSquad, createRegenerationPower, createLoathsomeLimbs, createGoblinsInTheWalls,
   createLavaFloor, createBlizzard, createAncientWhite,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower,
-  createVanish, createBrute, createEthereal,
+  createVanish, createRipostePower, createDrowSleepPoisonPower, createBrute, createEthereal,
   // Path of the Necromancer — Plague Cockroach + Necromancer's Power
   // + Army of the Dead (Worn Floor boss) + Endless Dead (Gravekeeper).
   createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
@@ -51103,7 +54871,33 @@ function perkToCardLike(perk) {
   // smaller side-preview when the perk is hovered, same pattern used by
   // Druid ability cards like Goodberries.
   let previewCard = null;
-  if (perk.id === 'harvest') previewCard = createGoodberry();
+  let previewCards = null;
+  // Harvest / Grand Harvest pull from the herb pool — show all three.
+  if (perk.id === 'harvest' || perk.id === 'grand_harvest') {
+    previewCards = [createGoodberry(), createCaveShroom(), createFrostbloom()];
+  }
+  // Surface the combat buffs these perks arm, so the codex hover preview
+  // shows what they actually put on you in a fight (mirrors the buff-badge
+  // hover card shape used in combat).
+  else if (perk.id === 'power_infusion') {
+    previewCard = {
+      id: 'power_surge', name: 'Power Infusion',
+      description: 'Combat buff: your first debuffs also hit a random enemy.',
+      shortDesc: 'Debuffs also\nspread',
+      cardType: 'ABILITY', costType: 'FREE', subtype: 'buff',
+      effects: [], currentEffects: [], modes: null, exhausted: false,
+      copy() { return previewCard; },
+    };
+  } else if (perk.id === 'poisoners_ambush') {
+    previewCard = {
+      id: 'ambush', name: "Poisoner's Ambush",
+      description: 'Combat buff: your first attack is Unpreventable and applies 2 Poison.',
+      shortDesc: 'First atk:\nTrue + Poison',
+      cardType: 'ABILITY', costType: 'FREE', subtype: 'buff',
+      effects: [], currentEffects: [], modes: null, exhausted: false,
+      copy() { return previewCard; },
+    };
+  }
 
   return {
     id: perk.id,
@@ -51115,7 +54909,8 @@ function perkToCardLike(perk) {
     shortDesc: perk.description,
     subtype: 'ability',
     cardType: CardType.ABILITY,
-    rarity: perk.unique ? 'uncommon' : 'common',
+    // Explicit perk.rarity wins (rare tier-2 perks); else unique→uncommon.
+    rarity: perk.rarity || (perk.unique ? 'uncommon' : 'common'),
     // Mirror the perk's tier onto the pseudo-card so the tier badge in
     // drawCard reflects the ccgQuest+ stamp (Prepared+ → tier 2 etc.).
     tier: perk.tier || 1,
@@ -51123,6 +54918,7 @@ function perkToCardLike(perk) {
     _perkUnique: !!perk.unique,
     _perkOriginal: perk,
     previewCard,
+    previewCards,
     // Default structural fields drawCard occasionally reads — kept safe
     // so nothing crashes when the pseudo-card ends up in a code path
     // that expects a normal Card.
@@ -51187,6 +54983,19 @@ const PERK_TRIGGER_LABELS = {
   combat_first_debuff_spread:  'Combat',
   combat_first_skeleton_buff:  'Combat',
   loot_bonus_gold:             'Loot',
+  loot_ore_chance:             'Loot',
+  turn_start_third_wind:       'Turn Start',
+  combat_first_unpreventable_poison: 'Combat Start',
+  combat_start_volley:         'Combat Start',
+  combat_debuff_spread_charges: 'Combat Start',
+  combat_start_herbs:          'Combat Start',
+  combat_skeleton_buff_all:    'Combat',
+  armor_on_play_heal:          'Combat',
+  combat_start_draw:           'Combat Start',
+  combat_start_regen:          'Combat Start',
+  bloodied_rage:               'Combat',
+  armor_on_play_cleanse:       'Combat',
+  first_attack_damage:         'Combat',
   combat_start_goodberry:      'Combat Start',
   combat_end_heal:             'Combat End',
   turn_start_no_weapon_draw:   'Turn Start',
@@ -51822,6 +55631,16 @@ function drawCodexDecksGrid(L) {
   }
 }
 
+// Display-name overrides for monster ids whose id doesn't title-case
+// into the in-game name (gauntlet/fight ids, etc.). Shared by the codex
+// character grid panel and the right-side stats panel so both agree.
+const CODEX_MONSTER_NAME_REMAP = {
+  siege_gauntlet_1: 'Siege Ogre',
+  // Khydhani is met as the unknown "The Assassin" — keep the codex in step
+  // with the in-combat name rather than spoiling his real name.
+  khydhani: 'The Assassin',
+};
+
 // Hard-coded list of monster art ids known to have a portrait — used so the
 // codex shows them in their character-card form. Keeping it explicit avoids
 // pulling in the runtime ENEMY_DECKS init plumbing.
@@ -51830,6 +55649,16 @@ function getCodexMonsterIds() {
     'giant_rat', 'bone_pile', 'slime', 'kobold_warden', 'dire_rat',
     'kobold_patrol', 'elite_kobold_patrol', 'giant_boar', 'kellen_rescue', 'sahuagin_sentinel', 'sahuagin_priest', 'sahuagin_baron',
     'forest_spiders', 'obsidian_golem', 'obsidian_slime',
+    // Chapter 5 Tharnag siege — the Siege Ogre gauntlet (first defence
+    // of Tharnag). Portrait + display name remapped below; the three
+    // gauntlet ids share one deck, so one codex entry covers the fight.
+    'siege_gauntlet_1',
+    // Part 2 Tharnag tunnels random encounters — Goblin Swarm
+    // (invulnerable shell + goblin pack) and Rampaging Troll (Regen 10).
+    'goblin_swarm', 'rampaging_troll',
+    // Part 2 Gate of the Deep — the flank fight (Goblin Front + Armored
+    // Trolls) and Khydhani the drow assassin ("The Assassin") at the Forge.
+    'goblin_front', 'khydhani',
     'kobold_drake_rider', 'general_zhost', 'wolf_pack',
     'piranhas_swarm', 'stone_giant', 'bone_amalgam',
     // Qualibaf antiquity shop one-time fight — the chest reveals
@@ -51968,6 +55797,8 @@ function drawCodexCharacterPanel(entry, x, y, w, h) {
     // Kellen's Rescue — the enemy id is the fight id, but the invulnerable
     // boss-shell's portrait art is keyed off its Character name.
     kellen_rescue: 'retreating_kobold_army',
+    // Tharnag siege — gauntlet id maps to the Siege Ogre ram portrait.
+    siege_gauntlet_1: 'siege_ogre',
   };
   let portraitId, displayName;
   if (entry.kind === 'hero') {
@@ -51975,7 +55806,7 @@ function drawCodexCharacterPanel(entry, x, y, w, h) {
     displayName = entry.name;
   } else {
     portraitId = PORTRAIT_REMAP[entry.id] || entry.id;
-    displayName = entry.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    displayName = CODEX_MONSTER_NAME_REMAP[entry.id] || entry.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
   // Eager-preloaded boss/character art lives in `images[id]`; fall back
   // to the lazy getCardArt cache so codex tiles for bosses with
@@ -52261,6 +56092,80 @@ function buildCodexSourceCache() {
   slimeSummon._sourceSubtype = 'allies';
   addCreature(slimeSummon, 'Summoned by: Split (on hit)');
 
+  // Loathsome Limb — torn off the Rampaging Troll by its Loathsome Limbs
+  // power (one per 10 damage the troll takes). Spawned at runtime by the
+  // power, so the sandbox scan never sees it — add it explicitly.
+  const loathsomeLimb = new Creature({
+    name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
+    bleedAttack: 1, description: 'Regen 2.',
+  });
+  loathsomeLimb._regen = 2;
+  loathsomeLimb._regenMax = 2;
+  loathsomeLimb._codexSide = 'enemy';
+  loathsomeLimb._sourceRarity = 'epic';
+  loathsomeLimb._sourceSubtype = 'ability';
+  addCreature(loathsomeLimb, 'Summoned by: Loathsome Limbs (Rampaging Troll)');
+
+  // Gate of the Deep — the dwarven line allies fight at the player's side
+  // in the Goblin Front flank battles. Spawned at fight start (skipped in
+  // the sandbox scan), so add them explicitly, player-side. (The Armored
+  // Troll is deterministic, so the sandbox scan already captures it.)
+  const dwarvenCrossbowman = new Creature({
+    name: 'Dwarven Crossbowman', attack: 2, maxHp: 5, shield: 1,
+    unpreventable: true, description: 'Attacks deal True Damage.',
+  });
+  dwarvenCrossbowman._codexSide = 'player';
+  dwarvenCrossbowman._sourceRarity = 'uncommon';
+  dwarvenCrossbowman._sourceSubtype = 'allies';
+  addCreature(dwarvenCrossbowman, 'Allied: Goblin Front (dwarven line)');
+  const dwarvenCleric = new Creature({
+    name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
+    description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
+  });
+  dwarvenCleric.endTurnHealRandomAlly = 2;
+  dwarvenCleric._codexSide = 'player';
+  dwarvenCleric._sourceRarity = 'uncommon';
+  dwarvenCleric._sourceSubtype = 'allies';
+  addCreature(dwarvenCleric, 'Allied: Goblin Front (dwarven line)');
+  const rampartAlly = new Creature({
+    name: 'Rampart', attack: 0, maxHp: 10, armor: 2, slotW: 2, slotH: 2,
+    description: 'Turn Start: Other Allies gain Shield.',
+  });
+  rampartAlly._cantAttack = true;
+  rampartAlly._codexSide = 'player';
+  rampartAlly._sourceRarity = 'rare';
+  rampartAlly._sourceSubtype = 'allies';
+  addCreature(rampartAlly, 'Allied: Goblin Front (dwarven line)');
+
+  // Goblin Swarm summons — the three goblin types are spawned randomly at
+  // fight start + on the "They're in the Walls!" resummon, so the sandbox
+  // scan can't reliably capture all three. Add them explicitly.
+  const swarmSrc = 'Summoned by: Goblin Swarm';
+  const goblinSapperSummon = new Creature({
+    name: 'Goblin Sapper', attack: 1, maxHp: 2, selfDestruct: true, onDeathDamage: 2,
+    description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
+  });
+  goblinSapperSummon._codexSide = 'enemy';
+  goblinSapperSummon._sourceRarity = 'common';
+  goblinSapperSummon._sourceSubtype = 'allies';
+  addCreature(goblinSapperSummon, swarmSrc);
+  const goblinMinionSummon = new Creature({
+    name: 'Goblin Minion', attack: 1, maxHp: 1,
+    description: 'On Summon: Deal 1 Random Damage.',
+  });
+  goblinMinionSummon._codexSide = 'enemy';
+  goblinMinionSummon._sourceRarity = 'common';
+  goblinMinionSummon._sourceSubtype = 'allies';
+  addCreature(goblinMinionSummon, swarmSrc);
+  const goblinWarriorSummon = new Creature({
+    name: 'Goblin Warrior', attack: 2, maxHp: 2, shield: 2, endTurnDamage: 1,
+    description: 'End of Turn: Deal 1 Random Damage.',
+  });
+  goblinWarriorSummon._codexSide = 'enemy';
+  goblinWarriorSummon._sourceRarity = 'common';
+  goblinWarriorSummon._sourceSubtype = 'allies';
+  addCreature(goblinWarriorSummon, swarmSrc);
+
   // Rat Taming now uses previewCreatures: [Tamed Rat, Dire Rat] —
   // both are auto-picked up by the previewCreatures scan above, so
   // no explicit addCreature needed here.
@@ -52447,6 +56352,8 @@ function buildCodexSourceCache() {
     'kellen_rescue',
     'bone_amalgam','sahuagin_sentinel','sahuagin_priest','sahuagin_baron',
     'forest_spiders','obsidian_golem','obsidian_slime','siege_gauntlet_1',
+    // Part 2 Tharnag tunnels random encounters + Gate of the Deep fronts.
+    'goblin_swarm','goblin_front','rampaging_troll','khydhani',
     'kobold_drake_rider','piranhas_swarm','general_zhost','general_zhost_boss',
     'wolf_pack','stone_giant','mimic','ruga_slave_master','zhost_revenge','ancestor_spirits',
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',
@@ -53510,7 +57417,7 @@ function handleCodexClick(x, y) {
       const e = a.entry;
       const name = e.kind === 'hero'
         ? e.name
-        : e.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        : (CODEX_MONSTER_NAME_REMAP[e.id] || e.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
       codexSelectedCard = { name, id: e.kind === 'hero' ? e.name : e.id, _isCharacter: true, _charEntry: e };
       return;
     }

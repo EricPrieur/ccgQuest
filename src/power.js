@@ -248,6 +248,64 @@ export function createGoblinSapperSquad() {
   });
 }
 
+// Regenerating-monster passive — at the start of the monster's turn it
+// tops its Regen status up toward `regenMax` (capped). The REGEN status
+// tick then heals by the current stack, and the holder's _regenNoDecay
+// flag stops the stack from ticking down. Net effect: a monster started
+// at the cap (Rampaging Troll, Regen 10) heals the cap every turn flat;
+// a monster started below it (Regen 5) ramps +1/turn up to the cap.
+// regenMax is the per-monster ceiling so the same power covers Regen 5
+// / Regen 10 / Regen X. The "Turn Start:" prefix paints the trigger pill.
+export function createRegenerationPower(regenMax = 10) {
+  const p = new Power({
+    id: 'regeneration',
+    name: 'Regeneration',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Regenerate.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Turn Start:\nRegenerate',
+    noTierOffset: true,
+  });
+  p.regenMax = regenMax;
+  return p;
+}
+
+// Loathsome Limbs — Rampaging Troll passive (Part 2 tunnels). For every
+// 10 damage the troll has taken (cumulative missing HP, measured in
+// 10-card chunks like Zhost's Revenge), it discards a random card from
+// hand and tears off a Loathsome Limb creature (wounded 5/10, 3 Atk +
+// Bleed, Regen 3). Spawn bookkeeping lives in startEnemyTurn.
+export function createLoathsomeLimbs() {
+  return new Power({
+    id: 'loathsome_limbs',
+    name: 'Loathsome Limbs',
+    costDescription: 'Passive',
+    effectDescription: 'Per 10 Damage Taken: discard a card and tear off a Loathsome Limb.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Per 10 Dmg:\nDiscard + Limb',
+    noTierOffset: true,
+  });
+}
+
+// They're in the Walls! — Goblin Swarm passive (Part 2 tunnels).
+// Whenever one of the swarm's goblins is killed, there is a 50% chance
+// another goblin (random of the three types) crawls out to replace it.
+// Resummon logic lives in countAndRemoveDeadCreatures.
+export function createGoblinsInTheWalls() {
+  return new Power({
+    id: 'goblins_in_the_walls',
+    name: "They're in the Walls!",
+    costDescription: 'Passive',
+    effectDescription: 'Goblins are Swarming you!',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Goblins are\nSwarming you!',
+    noTierOffset: true,
+  });
+}
+
 // Dire Bear passive — every swing the bear lands converts half of
 // the damage that ACTUALLY lands (post block/shield/armor) into
 // Bleed on the target, rounded UP toward Bleed. A fully soaked swing
@@ -679,6 +737,38 @@ export function createEthereal() {
 // Ruga the Slave Master passive — attacks against Ruga deal +1
 // extra damage, and Ruga draws a card whenever he's hit. Mirrors PY
 // power.py:create_brute.
+// Riposte — Khydhani's defensive power. When an attack lands, he parries
+// 1-3 of it (reduces the damage taken) and lashes the parried amount back
+// at the attacker. Resolved in triggerSplitPower (damage-landed gated).
+export function createRipostePower() {
+  return new Power({
+    id: 'riposte',
+    name: 'Riposte',
+    costDescription: 'Passive',
+    effectDescription: 'On Hit: parry 1-3 of the damage and deal that much back to the attacker.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'On Hit:\nParry 1-3 +\nRiposte',
+    noTierOffset: true,
+  });
+}
+
+// Drow Sleep Poison (Khydhani) — Turn Start: coats his next swing with
+// +1 Drow Sleep Poison (the same buff the player's Drow Sleep Poison vial
+// grants). Effect logic lives in startEnemyTurn.
+export function createDrowSleepPoisonPower() {
+  return new Power({
+    id: 'drow_sleep_poison',
+    name: 'Drow Sleep Poison',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Next attack applies 1 DrowPoison.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Turn Start:\nNext atk +1\nDrowPoison',
+    noTierOffset: true,
+  });
+}
+
 export function createBrute() {
   return new Power({
     id: 'brute',

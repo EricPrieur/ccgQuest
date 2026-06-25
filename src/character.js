@@ -93,7 +93,7 @@ export class PersistentBuff {
  * A perk chosen during character progression.
  */
 export class Perk {
-  constructor({ id, name, description, imageId, effectType, effectValue, unique = false, tier = 1 }) {
+  constructor({ id, name, description, imageId, effectType, effectValue, unique = false, tier = 1, rarity = null, requires = null, replaces = null }) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -102,6 +102,14 @@ export class Perk {
     this.effectValue = effectValue;
     this.unique = unique;
     this.tier = tier;
+    // Optional explicit rarity ('rare' for tier-2 rare perks); null falls
+    // back to unique→uncommon / common in perkToCardLike.
+    this.rarity = rarity;
+    // Upgrade perks: `requires` is a tier-1 perk id that must be owned for
+    // this perk to be OFFERED; `replaces` is a perk id removed when this one
+    // is taken. (Divine Protection requires but does not replace.)
+    this.requires = requires;
+    this.replaces = replaces;
   }
 }
 
@@ -367,6 +375,23 @@ export class Character {
         && this.powers.some(p => p && p.id === 'ethereal')) {
       amount = 1;
     }
+    // Drow Riposte (Khydhani) — parry 1-3 of an incoming ATTACK BEFORE
+    // block / armor / shield, so his standing defenses aren't burned on
+    // damage he can simply dodge. The parried amount is PREVENTED (no card
+    // restoration → he never net-heals). The FULL 1-3 roll is stashed for
+    // the lash-back, which triggerSplitPower applies (it runs only on
+    // attacks, so DoTs never lash). `_noRiposte` gates out the Fire DoT
+    // tick. True damage skips this (it doesn't route through here).
+    this._pendingRiposteParry = 0;
+    this._pendingRiposteLash = 0;
+    if (amount > 0 && !this._noRiposte && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'riposte')) {
+      const roll = 1 + Math.floor(Math.random() * 3); // 1-3
+      const parry = Math.min(roll, amount);
+      amount -= parry;
+      this._pendingRiposteParry = parry;
+      this._pendingRiposteLash = roll; // full roll lashes back, even > damage
+    }
     let remaining = amount;
     // Block absorbs FIRST — it's a one-attack temp absorber, so
     // consume it before the persistent layers (shield, armor) so
@@ -412,11 +437,44 @@ export class Character {
   // leftover applyStatus() call, so the check below just no-ops there.
   // _lastStatusCancel records what got eaten so callers can log/float it.
   static STATUS_OPPOSITES = {
-    REGEN: ['FIRE', 'POISON', 'BLEED'],
+    // Regen cancels DoTs in this priority order: Bleed → Poison →
+    // Drow Sleep → Fire (matches the healing-clear order).
+    REGEN: ['BLEED', 'POISON', 'DROW_SLEEP', 'FIRE'],
     FIRE: ['REGEN'],
     POISON: ['REGEN'],
     BLEED: ['REGEN'],
+    // Drow Sleep Poison behaves like Poison: Regen cancels it 1-for-1 on
+    // application (and it cancels Regen), so Regen / heals can clear it.
+    DROW_SLEEP: ['REGEN'],
   };
+
+  // THE single source of truth for the heal-clear order. Every heal that
+  // spends points clearing Ailments before HP (healPlayer, meal ticks,
+  // Regrowth, Bad Rations…) routes through healAilments() below, which
+  // walks this list in order. Change the order HERE and every heal follows.
+  // (Heal-Ailment "cure" cards use PLAYER_NEGATIVE_STATUSES in main.js,
+  // which is kept in the same Bleed → Poison → Drow order.)
+  static HEAL_AILMENTS = [
+    { key: 'BLEED',      label: 'Bleed',             verb: 'stops',  color: '#ff5050' },
+    { key: 'POISON',     label: 'Poison',            verb: 'purges', color: '#3cc83c' },
+    { key: 'DROW_SLEEP', label: 'Drow Sleep Poison', verb: 'purges', color: '#9fb8e8' },
+  ];
+
+  // THE single source of truth for the "cure" (Heal-Ailment) priority order.
+  // Unlike HEAL_AILMENTS (which only the heal-points paths use, and which
+  // Fire/Ice/Shock can't be spent on), a cure strips ONE stack of each
+  // Ailment in this order. Used by main.js (PLAYER_NEGATIVE_STATUSES alias →
+  // healOneNegativeEffectOn for Heal-Ailment cards) AND the Bear Fat Rations
+  // meal tick below. Same Bleed → Poison → Drow Sleep head as HEAL_AILMENTS,
+  // then the decaying elementals.
+  static CURE_AILMENTS = [
+    { key: 'BLEED',      label: 'Bleed',             color: '#c83c3c' },
+    { key: 'POISON',     label: 'Poison',            color: '#3cc83c' },
+    { key: 'DROW_SLEEP', label: 'Drow Sleep Poison', color: '#dfe7ff' },
+    { key: 'FIRE',       label: 'Fire',              color: '#dc8c28' },
+    { key: 'ICE',        label: 'Ice',               color: '#78c8ff' },
+    { key: 'SHOCK',      label: 'Shock',             color: '#ffe650' },
+  ];
   applyStatus(status, stacks) {
     let n = stacks;
     this._lastStatusCancel = null;
@@ -450,7 +508,27 @@ export class Character {
     this._lastRegenFireCancel = eaten.FIRE || 0;
     this._lastRegenPoisonCancel = eaten.POISON || 0;
     this._lastRegenBleedCancel = eaten.BLEED || 0;
+    this._lastRegenDrowCancel = eaten.DROW_SLEEP || 0;
     return this.getStatus('REGEN') - before;
+  }
+
+  // Spend up to `amount` healing points clearing Ailments in the canonical
+  // HEAL_AILMENTS order (Bleed → Poison → Drow Sleep), 1 point per stack.
+  // Calls onClear({ key, n, label, verb, color }) for each type cleared so
+  // the caller can log it however it formats (addLog, a logs[] array, a
+  // toast…). Returns the leftover points for HP healing.
+  healAilments(amount, onClear = null) {
+    let remaining = Math.max(0, amount || 0);
+    for (const a of Character.HEAL_AILMENTS) {
+      if (remaining <= 0) break;
+      const have = this.getStatus ? (this.getStatus(a.key) || 0) : 0;
+      if (have <= 0) continue;
+      const n = Math.min(have, remaining);
+      this.removeStatus(a.key, n);
+      remaining -= n;
+      if (onClear) onClear({ key: a.key, n, label: a.label, verb: a.verb, color: a.color });
+    }
+    return remaining;
   }
 
   removeStatus(status, stacks = null) {
@@ -503,11 +581,15 @@ export class Character {
 
   addCreature(creature) {
     const cols = Character.CREATURE_COLS;
-    const rows = Character.MAX_CREATURES / cols; // 2
+    // Default field is 2 rows (12 cells). A fight can widen THIS character's
+    // field via `_gridRows` (e.g. the Gate of the Deep Goblin Front gives
+    // the enemy 3 rows so goblins spawn in front of the trolls).
+    const rows = this._gridRows || (Character.MAX_CREATURES / cols);
+    const maxCells = rows * cols;
     const fw = creature.slotW || 1;
     const fh = creature.slotH || 1;
     // Cell-budget check first (fast reject).
-    if (this.usedCells() + fw * fh > Character.MAX_CREATURES) return false;
+    if (this.usedCells() + fw * fh > maxCells) return false;
     // Find the lowest anchor whose fw x fh block is fully in-grid AND
     // free. For 1x1 creatures this is just the lowest free slot, so
     // existing behavior is unchanged.
@@ -531,11 +613,52 @@ export class Character {
     return true;
   }
 
+  // Like addCreature, but tries to AVOID the given slot anchors when
+  // picking a spot (falls back to any free slot if none else is open).
+  // Used by the Goblin Swarm resummon so a replacement goblin doesn't
+  // pop into the exact slot just vacated by the one you killed — making
+  // it obvious it's a fresh goblin, not the same one refusing to die.
+  addCreatureAvoiding(creature, avoidSlots = []) {
+    const cols = Character.CREATURE_COLS;
+    const rows = this._gridRows || (Character.MAX_CREATURES / cols);
+    const maxCells = rows * cols;
+    const fw = creature.slotW || 1;
+    const fh = creature.slotH || 1;
+    if (this.usedCells() + fw * fh > maxCells) return false;
+    const occ = this._occupiedCells();
+    const avoid = new Set(avoidSlots);
+    const findAnchor = (respectAvoid) => {
+      for (let s = 0; s < cols * rows; s++) {
+        const ac = s % cols, ar = Math.floor(s / cols);
+        if (ac + fw > cols || ar + fh > rows) continue;
+        if (respectAvoid && avoid.has(s)) continue;
+        let fits = true;
+        for (let dr = 0; dr < fh && fits; dr++) {
+          for (let dc = 0; dc < fw && fits; dc++) {
+            if (occ.has((ac + dc) + (ar + dr) * cols)) fits = false;
+          }
+        }
+        if (fits) return s;
+      }
+      return -1;
+    };
+    let anchor = findAnchor(true);
+    if (anchor < 0) anchor = findAnchor(false); // field full except vacated slot
+    if (anchor < 0) return false;
+    creature.owner = this;
+    creature.slot = anchor;
+    this.creatures.push(creature);
+    return true;
+  }
+
   // True if a default 1x1 ally can still be summoned. Footprint-aware
   // callers (the enemy Butcher) rely on addCreature's boolean return
   // instead, which checks the actual 2x2 block.
   canSummonMore() {
-    return this.usedCells() < Character.MAX_CREATURES;
+    const maxCells = this._gridRows
+      ? this._gridRows * Character.CREATURE_COLS
+      : Character.MAX_CREATURES;
+    return this.usedCells() < maxCells;
   }
 
   readyCreatures() {
@@ -661,45 +784,67 @@ export class Character {
           });
         }
         break;
+      case 'regen': {
+        // Regen-granting tick (Troll Blood Vial beverage). Instead of a
+        // flat heal, this ADDS to the Regen stack — so it merges with any
+        // Regen the holder already has and rides the normal Regen rules
+        // (heal = stacks at turn start, then -1, cancels DoTs). applyRegen
+        // returns the net stacks added after DoT cancellation.
+        const added = this.applyRegen(effectValue);
+        const regenSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        // Surface what the Regen ATE on application (DoT cancellation, in the
+        // STATUS_OPPOSITES order Bleed → Poison → Drow Sleep → Fire) — without
+        // this, a tick fully consumed cancelling Poison reads as "did nothing".
+        const regenCancels = [
+          { n: this._lastRegenBleedCancel || 0,  label: 'Bleed',             color: '#ff5050' },
+          { n: this._lastRegenPoisonCancel || 0, label: 'Poison',            color: '#3cc83c' },
+          { n: this._lastRegenDrowCancel || 0,   label: 'Drow Sleep Poison', color: '#9fb8e8' },
+          { n: this._lastRegenFireCancel || 0,   label: 'Fire',              color: '#dc8c28' },
+        ];
+        for (const rc of regenCancels) {
+          if (rc.n <= 0) continue;
+          logs.push({
+            text: `  ${buff.name}: Regen cancels ${rc.n} ${rc.label}`,
+            color: rc.color,
+            buff,
+            sfxKey: regenSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
+        if (added > 0) {
+          logs.push({
+            text: `  ${buff.name}: +${added} Regen`,
+            color: '#7cff9c',
+            token: 'Regen', tokenAmount: added, tokenColor: '#7cff9c',
+            buff,
+            sfxKey: regenSfx,
+            sfxCount: buff.tickSfxCount || 1,
+            sfxStagger: buff.tickSfxStagger || 150,
+          });
+        }
+        break;
+      }
       case 'heal': {
-        // Food / meal heal tick. Each "point" of healing first clears
-        // a Poison stack, then a Bleed stack, then heals a card from
-        // discard as the remainder. Value defaults to 1.
+        // Food / meal heal tick. Heal priority Bleed → Poison → Drow Sleep
+        // → HP card (each "point" of healing clears one stack in that order).
+        // Value defaults to 1.
         let remaining = Math.max(1, effectValue || 1);
-        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
-        if (poison > 0 && remaining > 0) {
-          const toClear = Math.min(poison, remaining);
-          this.removeStatus('POISON', toClear);
-          remaining -= toClear;
-          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        remaining = this.healAilments(remaining, ({ n, label, verb, color }) => {
+          const V = verb.charAt(0).toUpperCase() + verb.slice(1);
           logs.push({
-            text: `  ${buff.name}: Purged ${toClear} Poison`,
-            color: '#3cc83c',
+            text: `  ${buff.name}: ${V} ${n} ${label}`,
+            color,
             buff,
             sfxKey: tickSfx,
             sfxCount: buff.tickSfxCount || 1,
             sfxStagger: buff.tickSfxStagger || 150,
           });
-        }
-        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
-        if (bleed > 0 && remaining > 0) {
-          const toClear = Math.min(bleed, remaining);
-          this.removeStatus('BLEED', toClear);
-          remaining -= toClear;
-          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
-          logs.push({
-            text: `  ${buff.name}: Stopped ${toClear} Bleed`,
-            color: '#ff5050',
-            buff,
-            sfxKey: tickSfx,
-            sfxCount: buff.tickSfxCount || 1,
-            sfxStagger: buff.tickSfxStagger || 150,
-          });
-        }
+        });
         while (remaining > 0 && this.deck && this.deck.discardPile.length > 0) {
           const card = this.deck.discardPile.pop();
           this.deck.addToRechargePile(card);
-          const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
           logs.push({
             text: `  ${buff.name}: Healed 1 (${card.name})`,
             color: '#3cc83c',
@@ -718,20 +863,10 @@ export class Character {
         // flagged as `summonTreant` so main.js sprouts that many Treants.
         let remaining = Math.max(1, effectValue || 1);
         const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
-        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
-        if (poison > 0 && remaining > 0) {
-          const toClear = Math.min(poison, remaining);
-          this.removeStatus('POISON', toClear);
-          remaining -= toClear;
-          logs.push({ text: `  ${buff.name}: Purged ${toClear} Poison`, color: '#3cc83c', buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
-        }
-        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
-        if (bleed > 0 && remaining > 0) {
-          const toClear = Math.min(bleed, remaining);
-          this.removeStatus('BLEED', toClear);
-          remaining -= toClear;
-          logs.push({ text: `  ${buff.name}: Stopped ${toClear} Bleed`, color: '#ff5050', buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
-        }
+        remaining = this.healAilments(remaining, ({ n, label, verb, color }) => {
+          const V = verb.charAt(0).toUpperCase() + verb.slice(1);
+          logs.push({ text: `  ${buff.name}: ${V} ${n} ${label}`, color, buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+        });
         while (remaining > 0 && this.deck && this.deck.discardPile.length > 0) {
           const card = this.deck.discardPile.pop();
           this.deck.addToRechargePile(card);
@@ -789,29 +924,20 @@ export class Character {
             if (drawn.length === 0) logs.push({ text: `  ${buff.name}: (no cards to draw)`, color: '#808080', buff });
           }
         } else {
-          // Heal 1 branch — status-first like the standard meal heal:
-          // clear a Poison stack, then a Bleed stack, before falling
-          // through to card-from-discard, so the heal point never goes
-          // to waste.
-          const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
-          const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
-          if (poison > 0) {
-            this.removeStatus('POISON', 1);
+          // Heal 1 branch — status-first (Bleed → Poison → Drow Sleep →
+          // card) so the heal point never goes to waste. healAilments
+          // clears 1 of the first present ailment; if none, the leftover
+          // point heals a card.
+          const left = this.healAilments(1, ({ n, label, verb, color }) => {
+            const V = verb.charAt(0).toUpperCase() + verb.slice(1);
             logs.push({
-              text: `  ${buff.name}: Purged 1 Poison`,
-              color: '#3cc83c',
+              text: `  ${buff.name}: ${V} ${n} ${label}`,
+              color,
               buff,
               sfxKey: 'heal_spell',
             });
-          } else if (bleed > 0) {
-            this.removeStatus('BLEED', 1);
-            logs.push({
-              text: `  ${buff.name}: Stopped 1 Bleed`,
-              color: '#ff5050',
-              buff,
-              sfxKey: 'heal_spell',
-            });
-          } else if (this.deck && this.deck.discardPile.length > 0) {
+          });
+          if (left > 0 && this.deck && this.deck.discardPile.length > 0) {
             const card = this.deck.discardPile.pop();
             this.deck.addToRechargePile(card);
             logs.push({
@@ -846,34 +972,17 @@ export class Character {
         // before falling through to card-from-discard.
         let remaining = 1 + Math.floor(Math.random() * Math.max(1, effectValue));
         const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
-        const poison = this.getStatus ? (this.getStatus('POISON') || 0) : 0;
-        if (poison > 0 && remaining > 0) {
-          const toClear = Math.min(poison, remaining);
-          this.removeStatus('POISON', toClear);
-          remaining -= toClear;
+        remaining = this.healAilments(remaining, ({ n, label, verb, color }) => {
+          const V = verb.charAt(0).toUpperCase() + verb.slice(1);
           logs.push({
-            text: `  ${buff.name}: Purged ${toClear} Poison`,
-            color: '#3cc83c',
+            text: `  ${buff.name}: ${V} ${n} ${label}`,
+            color,
             buff,
             sfxKey: tickSfx,
             sfxCount: buff.tickSfxCount || 1,
             sfxStagger: buff.tickSfxStagger || 150,
           });
-        }
-        const bleed = this.getStatus ? (this.getStatus('BLEED') || 0) : 0;
-        if (bleed > 0 && remaining > 0) {
-          const toClear = Math.min(bleed, remaining);
-          this.removeStatus('BLEED', toClear);
-          remaining -= toClear;
-          logs.push({
-            text: `  ${buff.name}: Stopped ${toClear} Bleed`,
-            color: '#ff5050',
-            buff,
-            sfxKey: tickSfx,
-            sfxCount: buff.tickSfxCount || 1,
-            sfxStagger: buff.tickSfxStagger || 150,
-          });
-        }
+        });
         let healed = 0;
         for (let i = 0; i < remaining && this.deck && this.deck.discardPile.length > 0; i++) {
           const card = this.deck.discardPile.pop();
@@ -893,23 +1002,15 @@ export class Character {
         break;
       }
       case 'heal_n_negative_effects': {
-        // Bear Fat Rations Meal tick — strip up to N Ailment stacks
-        // off the eater in Bleed → Poison → Fire → Ice → Shock
-        // priority order. Mirrors the resolveEffect player path
-        // (healOneNegativeEffectOn) but logs through the buff line
-        // so the meal banner shows the heal source.
-        const order = [
-          { key: 'BLEED',  label: 'Bleed',  color: '#ff5050' },
-          { key: 'POISON', label: 'Poison', color: '#3cc83c' },
-          { key: 'FIRE',   label: 'Fire',   color: '#dc8c28' },
-          { key: 'ICE',    label: 'Ice',    color: '#78c8ff' },
-          { key: 'SHOCK',  label: 'Shock',  color: '#ffe650' },
-        ];
+        // Bear Fat Rations Meal tick — strip up to N Ailment stacks off
+        // the eater in the shared CURE_AILMENTS order (Bleed → Poison →
+        // Drow Sleep → Fire → Ice → Shock). Same constant main.js's
+        // PLAYER_NEGATIVE_STATUSES aliases, so both cures stay in lockstep.
         let remaining = Math.max(1, effectValue || 1);
         const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
         while (remaining > 0) {
           let cleared = false;
-          for (const s of order) {
+          for (const s of Character.CURE_AILMENTS) {
             if (!this.getStatus) break;
             if ((this.getStatus(s.key) || 0) > 0) {
               this.removeStatus(s.key, 1);
@@ -1196,6 +1297,61 @@ export function createLuckyFindPerk() {
   });
 }
 
+// ----- Common, Tier 2 (repeatable) -----
+// Upgraded forms of the four common perks — same art as the base perks,
+// double the effect. Offered only from the tier-2 perk pool (wired into
+// CLASS_PERK_WEIGHTS[2] later). combat_start_shield / combat_start_heroism /
+// combat_end_heal already sum effectValue via getPerkStacks, so the bumped
+// values "just work"; loot_ore_chance is a new effect handled in main.js.
+
+export function createVeryToughPerk() {
+  return new Perk({
+    id: 'very_tough', name: 'Very Tough',
+    description: 'Combat Start: +2 Shield.',
+    imageId: 'tough_perk', effectType: 'combat_start_shield', effectValue: 2,
+    tier: 2,
+  });
+}
+
+export function createWellPreparedPerk() {
+  return new Perk({
+    id: 'well_prepared', name: 'Well Prepared',
+    description: 'Combat Start: +2 Heroism.',
+    imageId: 'prepared_perk', effectType: 'combat_start_heroism', effectValue: 2,
+    tier: 2,
+  });
+}
+
+export function createVeryGrittyPerk() {
+  return new Perk({
+    id: 'very_gritty', name: 'Very Gritty',
+    description: 'Combat End: Heal 2.',
+    imageId: 'grit_perk', effectType: 'combat_end_heal', effectValue: 2,
+    tier: 2,
+  });
+}
+
+// Prospector — the miner's-eye upgrade of Lucky Find. When gold is gained,
+// 10% chance per stack to also turn up a chunk of raw ore (rolled from the
+// ore_cache loot table). Effect lives in the loot-gold handler in main.js.
+export function createProspectorPerk() {
+  return new Perk({
+    id: 'prospector', name: 'Prospector',
+    description: 'Loot: When gaining gold, 5% chance to find ore.',
+    imageId: 'lucky_find_perk', effectType: 'loot_ore_chance', effectValue: 1,
+    tier: 2,
+  });
+}
+
+export function createReadinessPerk() {
+  return new Perk({
+    id: 'readiness', name: 'Readiness',
+    description: 'Combat Start: Draw 1.',
+    imageId: 'flash_of_genius_perk', effectType: 'combat_start_draw', effectValue: 1,
+    tier: 2,
+  });
+}
+
 // ----- Uncommon (unique) -----
 
 export function createArsenalPerk() {
@@ -1312,6 +1468,114 @@ export function createHarvestPerk() {
   });
 }
 
+// ----- Uncommon, Tier 2 (unique upgrades) -----
+// Each upgrades a tier-1 unique perk. All but Divine Protection REPLACE
+// their prerequisite (the "requires X / replaces X" gating is wired with
+// the tier-2 selection later). Art is keyed by perk id in CARD_ART_MAP.
+
+export function createThirdWindPerk() {
+  return new Perk({
+    id: 'third_wind', name: 'Third Wind',
+    description: 'Turn Start: If you took damage last turn, Heal 1.',
+    imageId: 'second_wind_perk', effectType: 'turn_start_third_wind', effectValue: 1,
+    unique: true, tier: 2, requires: 'second_wind', replaces: 'second_wind',
+  });
+}
+
+export function createPoisonersAmbushPerk() {
+  return new Perk({
+    id: 'poisoners_ambush', name: "Poisoner's Ambush",
+    description: 'Combat Start: Your first attack is Unpreventable and applies Poison.',
+    imageId: 'ambush_perk', effectType: 'combat_first_unpreventable_poison', effectValue: 1,
+    unique: true, tier: 2, requires: 'ambush', replaces: 'ambush',
+  });
+}
+
+export function createFirstVolleyPerk() {
+  return new Perk({
+    id: 'first_volley', name: 'First Volley',
+    description: 'Combat Start: Deal 1 Unpreventable damage to a random enemy 3 times.',
+    imageId: 'first_strike_perk', effectType: 'combat_start_volley', effectValue: 3,
+    unique: true, tier: 2, requires: 'first_strike', replaces: 'first_strike',
+  });
+}
+
+export function createPowerInfusionPerk() {
+  return new Perk({
+    id: 'power_infusion', name: 'Power Infusion',
+    description: 'Combat: Your first 3 debuffs also hit a random enemy.',
+    imageId: 'power_surge_perk', effectType: 'combat_debuff_spread_charges', effectValue: 3,
+    unique: true, tier: 2, requires: 'power_surge', replaces: 'power_surge',
+  });
+}
+
+export function createGrandHarvestPerk() {
+  return new Perk({
+    id: 'grand_harvest', name: 'Grand Harvest',
+    description: 'Combat Start: Gain 2 random Herbs (Goodberry, Cave Shroom or Frostbloom).',
+    imageId: 'harvest_perk', effectType: 'combat_start_herbs', effectValue: 2,
+    unique: true, tier: 2, requires: 'harvest', replaces: 'harvest',
+  });
+}
+
+export function createEmpoweredSkeletonsPerk() {
+  return new Perk({
+    id: 'empowered_skeletons', name: 'Empowered Skeletons',
+    description: 'Combat: Your Skeletons get +1/+1.',
+    imageId: 'skeletal_strength_perk', effectType: 'combat_skeleton_buff_all', effectValue: 1,
+    unique: true, tier: 2, requires: 'skeletal_strength', replaces: 'skeletal_strength',
+  });
+}
+
+export function createDivineProtectionPerk() {
+  return new Perk({
+    id: 'divine_protection', name: 'Divine Protection',
+    description: 'Combat: Your Armor cards also Heal 1.',
+    imageId: 'divine_protection_perk', effectType: 'armor_on_play_heal', effectValue: 1,
+    unique: true, tier: 2, requires: 'armored', // requires Armored but does NOT replace it
+  });
+}
+
+// ----- Rare, Tier 2 -----
+
+export function createTrollAncestryPerk() {
+  return new Perk({
+    id: 'troll_ancestry', name: 'Troll Ancestry',
+    description: 'Combat Start: Gain 2 Regen.',
+    imageId: 'troll_ancestry_perk', effectType: 'combat_start_regen', effectValue: 2,
+    unique: true, tier: 2, rarity: 'rare',
+  });
+}
+
+export function createBloodiedRagePerk() {
+  return new Perk({
+    id: 'bloodied_rage', name: 'Bloodied Rage',
+    description: 'Combat: While Bloodied, gain 1 Rage.',
+    imageId: 'bloodied_rage_perk', effectType: 'bloodied_rage', effectValue: 1,
+    unique: true, tier: 2, rarity: 'rare',
+  });
+}
+
+export function createCleansingArmorPerk() {
+  return new Perk({
+    id: 'cleansing_armor', name: 'Cleansing Armor',
+    description: 'Combat: Your Armor cards also Heal 1 Ailment.',
+    imageId: 'cleansing_armor_perk', effectType: 'armor_on_play_cleanse', effectValue: 1,
+    unique: true, tier: 2, rarity: 'rare',
+  });
+}
+
+// Swift Assault STACKS (not unique) — like Boarhide Bracers, +1 per copy on
+// the first attack of the turn.
+export function createSwiftAssaultPerk() {
+  return new Perk({
+    id: 'swift_assault', name: 'Swift Assault',
+    description: 'Combat: First Attack: +1 Damage.',
+    imageId: 'swift_assault_perk', effectType: 'first_attack_damage', effectValue: 1,
+    tier: 2, rarity: 'rare',
+  });
+}
+
 // Per-class perk weights at each level-up tier. Mirrors PY's
 // `CLASS_PERK_WEIGHTS` dict. Tier 2 is currently empty (reserved for
 // future expansion) — falls back to tier 1 if empty for a class.
@@ -1328,7 +1592,41 @@ export const CLASS_PERK_WEIGHTS = {
     Necromancer: { tough: 0.5, prepared: 0.5, flash_of_genius: 0.5, grit: 1.0, talented: 0.25, lucky_find: 0.5, skeletal_strength: 0.25 },
   },
   2: {
-    // Tier 2 rolls currently empty; getPerkChoices falls back to tier 1.
+    Warrior: {
+      very_tough: 0.75, well_prepared: 0.50, very_gritty: 0.75, prospector: 0.75,
+      readiness: 0.50, third_wind: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.50,
+      cleansing_armor: 0.25, swift_assault: 0.25,
+    },
+    Ranger: {
+      very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.75, prospector: 0.75,
+      readiness: 0.50, first_volley: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
+      cleansing_armor: 0.25, swift_assault: 0.50,
+    },
+    Paladin: {
+      very_tough: 1.00, well_prepared: 0.50, very_gritty: 0.75, prospector: 0.75,
+      readiness: 0.50, divine_protection: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
+      cleansing_armor: 0.50, swift_assault: 0.25,
+    },
+    Rogue: {
+      very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.50, prospector: 0.75,
+      readiness: 0.75, poisoners_ambush: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
+      cleansing_armor: 0.25, swift_assault: 0.50,
+    },
+    Druid: {
+      very_tough: 0.75, well_prepared: 0.75, very_gritty: 0.75, prospector: 0.75,
+      readiness: 0.75, grand_harvest: 0.25, troll_ancestry: 0.50, bloodied_rage: 0.25,
+      cleansing_armor: 0.25, swift_assault: 0.25,
+    },
+    Wizard: {
+      very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.50, prospector: 0.75,
+      readiness: 1.00, power_infusion: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
+      cleansing_armor: 0.50, swift_assault: 0.25,
+    },
+    Necromancer: {
+      very_tough: 0.75, well_prepared: 0.75, very_gritty: 0.75, prospector: 0.75,
+      readiness: 0.75, empowered_skeletons: 0.25, troll_ancestry: 0.50, bloodied_rage: 0.25,
+      cleansing_armor: 0.25, swift_assault: 0.25,
+    },
   },
 };
 
@@ -1340,6 +1638,25 @@ export const PERK_REGISTRY = {
   flash_of_genius: createFlashOfGeniusPerk,
   grit:            createGritPerk,
   lucky_find:      createLuckyFindPerk,
+  // Tier-2 common perks (upgraded forms; offered from the tier-2 pool).
+  very_tough:      createVeryToughPerk,
+  well_prepared:   createWellPreparedPerk,
+  very_gritty:     createVeryGrittyPerk,
+  prospector:      createProspectorPerk,
+  readiness:       createReadinessPerk,
+  // Tier-2 uncommon perks (unique upgrades; offered from the tier-2 pool).
+  third_wind:          createThirdWindPerk,
+  poisoners_ambush:    createPoisonersAmbushPerk,
+  first_volley:        createFirstVolleyPerk,
+  power_infusion:      createPowerInfusionPerk,
+  grand_harvest:       createGrandHarvestPerk,
+  empowered_skeletons: createEmpoweredSkeletonsPerk,
+  divine_protection:   createDivineProtectionPerk,
+  // Tier-2 rare perks.
+  troll_ancestry:      createTrollAncestryPerk,
+  bloodied_rage:       createBloodiedRagePerk,
+  cleansing_armor:     createCleansingArmorPerk,
+  swift_assault:       createSwiftAssaultPerk,
   arsenal:         createArsenalPerk,
   talented:        createTalentedPerk,
   second_wind:     createSecondWindPerk,
@@ -1411,11 +1728,16 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
     stackCount[p.id] = (stackCount[p.id] || 0) + 1;
   }
   const STACK_CAP = 5;
+  // Upgrade perks (Third Wind, Poisoner's Ambush, …) only appear once the
+  // player owns their `requires` prerequisite. Match on base ids so a
+  // ccgQuest+ stamped prereq (second_wind_p1) still counts.
+  const ownedBaseIds = new Set(existingPerks.map(p => (p.id || '').replace(/_p\d+$/, '')));
   let ids = Object.keys(weights).filter(id => {
     const creator = PERK_REGISTRY[id];
     if (!creator) return false;
     const sample = creator();
     const fullId = id + idSuffix;
+    if (sample.requires && !ownedBaseIds.has(sample.requires)) return false;
     if (sample.unique) return !ownedUniqueIds.has(fullId);
     return (stackCount[fullId] || 0) < STACK_CAP;
   });

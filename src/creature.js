@@ -103,6 +103,9 @@ export class Creature {
     this.poisonStacks = 0;
     this.shockStacks = 0;
     this.bleedStacks = 0;
+    // Drow Sleep Poison — a Poison variant that also saps 1 attack/stack
+    // and heals dead-last. Applied by the Drow Sleep Poison item.
+    this.drowSleepStacks = 0;
     this.inkCloudStacks = 0;
     this.markStacks = 0;
 
@@ -193,6 +196,12 @@ export class Creature {
   takeUnpreventableDamage(amount) {
     // Ethereal caps even true damage — "can't take more than N".
     if (this.damageCap > 0) amount = Math.min(amount, this.damageCap);
+    // True Damage burns Regen 1:1 — same rule as Character true damage.
+    // Keeps regenerating creatures (Armored Troll, Loathsome Limbs) honest:
+    // True Damage chips the Regen pool, which only recovers +1/turn.
+    if (this._regenMax && (this._regen || 0) > 0 && amount > 0) {
+      this._regen = Math.max(0, this._regen - amount);
+    }
     this.currentHp = Math.max(0, this.currentHp - amount);
     return amount;
   }

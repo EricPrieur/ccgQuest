@@ -1383,7 +1383,20 @@ export function createTharnagInteriorMap() {
     // Side Door (eventual gateway to the Stairs of the Infinite
     // side-quest line).
     { id: 'grand_hall_main_entrance', name: 'Main Entrance', description: 'The grand front doors of Tharnag — the path out to the mountain road.', encounterId: '', connections: ['grand_hall_lower_stairs'], position: [420, 970], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A massive set of doors leads out of the city.' },
-    { id: 'grand_hall_mid_stairs', name: 'Middle Stairs', description: 'The stairs continue upward past towering pillars.', encounterId: '', connections: ['grand_hall_lower_stairs', 'grand_hall_upper_stairs'], position: [690, 520], mapArea: 'grand_hall', canRevisit: true },
+    { id: 'grand_hall_mid_stairs', name: 'Middle Stairs', description: 'The stairs continue upward past towering pillars.', encounterId: '', connections: ['grand_hall_lower_stairs', 'grand_hall_upper_stairs', 'grand_hall_to_tunnels', 'grand_hall_to_forge'], position: [690, 520], mapArea: 'grand_hall', canRevisit: true },
+    // Part 2 — side stair off the Middle Stairs toward the Great Forge.
+    // Opens only after the player returns from the Gate of the Deep with
+    // the King's order to call the Great Pour (unlocked in the post-dialog
+    // handler). Destination map wired later.
+    { id: 'grand_hall_to_forge', name: 'To the Forge', description: 'A stair off the Middle Stairs leads down toward the Great Forge, where the mountain\'s lava is tamed.', encounterId: '', connections: ['grand_hall_mid_stairs'], position: [560, 460], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A stair leads off toward the forges.' },
+    // Part 2 — side stair off the Middle Stairs down to the Tharnag
+    // Tunnels / mine workings (where the goblins broke in). Locked +
+    // hidden until part2Started (hydrateMapFromGlobalState reveals it);
+    // a Part 1 player never sees it. Cross-maps to the
+    // tharnag_tunnels_entrance map via the teleport pair in arriveAtNode
+    // (grand_hall_to_tunnels <-> tunnels_entry) + the isCrossMapGate
+    // click handler.
+    { id: 'grand_hall_to_tunnels', name: 'To the Tunnels', description: 'A side stair off the Middle Stairs drops toward the deep tunnels — the sealed galleries that run down to the underdark, where the goblins broke through.', encounterId: '', connections: ['grand_hall_mid_stairs'], position: [870, 470], mapArea: 'grand_hall', canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'A dark stair leads down off the Middle Stairs.' },
     { id: 'grand_hall_upper_stairs', name: 'Upper Stairs', description: 'The top of the grand stairway. A massive archway leads deeper into Tharnag.', encounterId: '', connections: ['grand_hall_mid_stairs', 'staircase_entry'], position: [740, 420], mapArea: 'grand_hall', canRevisit: true, passthroughTo: 'staircase_entry' },
     // Grand Staircase area — Thorb's homecoming dialog at the entry,
     // then a top + landing bridge into the throne room.
@@ -1441,6 +1454,476 @@ export function createTharnagInteriorMap() {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'grand_hall_side_entry';
+  return map;
+}
+
+// === Tharnag Tunnels Entrance (Part 2) ===
+// The old mine workings under Tharnag where the goblins broke in.
+// Placeholder area for now: 8 connected nodes, no encounters / dialog
+// yet. `tunnels_entry` is the landing + teleport-back node (cross-maps
+// to the Tharnag interior's grand_hall_to_tunnels via arriveAtNode +
+// the isCrossMapGate click handler).
+export function createTharnagTunnelsEntranceMap() {
+  const map = new GameMap('tharnag_tunnels_entrance', 'Tharnag Tunnels');
+  map.mapImages = {
+    tharnag_tunnels: 'Maps/TharnagTunnelsEntrance.jpg',
+  };
+  // tunnels_entry is the visible landing/teleport node; every other
+  // node is `discoverable` (revealed one hop at a time as ???). Flooded
+  // Drift and West Drift are also cross-map gates into the West-Top
+  // tunnels (see arriveAtNode + isCrossMapGate in main.js).
+  const nodes = [
+    { id: 'tunnels_entry', name: 'Tunnel Mouth', description: 'The stair from the Grand Hall opens into the deep tunnels — the sealed gates now smashed wide.', encounterId: '', connections: ['tunnels_fork'], position: [510, 130], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stair drops away into the dark.' },
+    { id: 'tunnels_fork', name: 'The Fork', description: 'The tunnel splits around a great pillar of unworked stone.', encounterId: '', connections: ['tunnels_entry', 'tunnels_deep_east', 'tunnels_right', 'tunnels_gallery'], position: [500, 310], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The tunnel runs on into the dark.' },
+    { id: 'tunnels_right', name: 'East Drift', description: 'The eastern drift, cart rails rusting into the rock.', encounterId: '', connections: ['tunnels_fork'], position: [740, 310], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side drift branches off into the dark.' },
+    { id: 'tunnels_deep_east', name: 'Flooded Drift', description: 'Black water pools in this side drift, dripping steadily from the ceiling.', encounterId: '', connections: ['tunnels_fork'], position: [300, 310], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side drift branches off into the dark.' },
+    { id: 'tunnels_gallery', name: 'The Gallery', description: 'A tall worked gallery, pillars marching off into the dark.', encounterId: '', connections: ['tunnels_fork', 'tunnels_deep_west', 'tunnels_left', 'tunnels_lower'], position: [500, 670], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The tunnel opens into a larger space ahead.' },
+    { id: 'tunnels_deep_west', name: 'Collapsed Drift', description: 'A fresh collapse blocks this side gallery — new tool-marks in the rubble.', encounterId: '', connections: ['tunnels_gallery'], position: [810, 670], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side gallery branches off into the dark.' },
+    { id: 'tunnels_left', name: 'West Drift', description: 'A low drift heads west, props sagging under the weight of the mountain.', encounterId: '', connections: ['tunnels_gallery'], position: [140, 630], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side drift branches off into the dark.' },
+    { id: 'tunnels_lower', name: 'Lower Galleries', description: 'The galleries fall away toward the deep roads and the underdark below — and the sound of fighting.', encounterId: '', connections: ['tunnels_gallery'], position: [500, 870], mapArea: 'tharnag_tunnels', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The galleries fall away into deeper dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tunnels_entry';
+  return map;
+}
+
+// === Tharnag Tunnels — West Top (Part 2) ===
+// Western extension off the entrance map. Two 3-node paths: the top
+// path connects (cross-map gate) to the entrance map's Flooded Drift,
+// the south path to its West Drift. The gate nodes (wt_*_gate) are the
+// visible landing nodes; the rest are `discoverable` (??? one hop at a
+// time). Cross-map teleports live in main.js arriveAtNode +
+// isCrossMapGate. No encounters / dialog yet.
+export function createTharnagTunnelsWestTop01Map() {
+  const map = new GameMap('tharnag_tunnels_west_top', 'Tharnag Tunnels — West');
+  map.mapImages = {
+    tharnag_tunnels_west_top: 'Maps/TharnagTunnelsWestTop01.jpg',
+  };
+  // Top path (4 nodes): gate ↔ entrance map's Flooded Drift.
+  // South path (4 nodes): gate ↔ entrance map's West Drift.
+  // Gate nodes (wt_*_gate) are visible landings; the rest are
+  // `discoverable` (??? one hop at a time). New-node positions are
+  // first-pass placeholders pending art-aligned coords.
+  const nodes = [
+    // Top path: Upper Drift → The Descent → Cracked Pillars → Old Workings.
+    { id: 'wt_top_gate', name: 'Upper Drift', description: 'A worked drift climbing west off the flooded gallery.', encounterId: '', connections: ['wt_top_b'], position: [870, 190], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A drift opens off the gallery.' },
+    { id: 'wt_top_b', name: 'The Descent', description: 'The drift drops in rough-cut steps, deeper into the rock.', encounterId: '', connections: ['wt_top_gate', 'wt_top_mid'], position: [530, 30], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'wt_top_mid', name: 'Cracked Pillars', description: 'Squat pillars, split and weeping dust, hold up a low roof.', encounterId: '', connections: ['wt_top_b', 'wt_top_end'], position: [320, 70], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'wt_top_end', name: 'Old Workings', description: 'Abandoned diggings, tools left where they were dropped.', encounterId: '', connections: ['wt_top_mid'], position: [90, 380], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift dead-ends somewhere ahead.' },
+    // South path: Lower Drift → The Small Bridge → Deep Cut → Fresh Diggings.
+    { id: 'wt_south_gate', name: 'Lower Drift', description: 'A sagging drift heading west off the lower workings.', encounterId: '', connections: ['wt_south_mid'], position: [840, 660], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A drift opens off the gallery.' },
+    { id: 'wt_south_mid', name: 'The Small Bridge', description: 'A narrow span of old timber crosses a black crevice.', encounterId: '', connections: ['wt_south_gate', 'wt_south_end'], position: [530, 590], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'wt_south_end', name: 'Deep Cut', description: 'A raw cut driven hard into the rock — and not by dwarven hands.', encounterId: '', connections: ['wt_south_mid', 'wt_south_d'], position: [240, 700], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cut drives deeper somewhere ahead.' },
+    { id: 'wt_south_d', name: 'Fresh Diggings', description: 'Raw goblin diggings, the spoil still loose underfoot.', encounterId: '', connections: ['wt_south_end'], position: [500, 970], mapArea: 'tharnag_tunnels_west_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The diggings run on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'wt_top_gate';
+  return map;
+}
+
+// === Tharnag Tunnels — East Top (Part 2) ===
+// Eastern extension off the entrance map. A single line of 8 nodes: the
+// top gate connects (cross-map) to the entrance map's East Drift, the
+// bottom gate to its Collapsed Drift, with 6 nodes forming a single
+// line between them. Gate nodes are visible landings; the rest are
+// `discoverable` (??? one hop at a time). Positions are first-pass
+// placeholders pending art-aligned coords. No encounters / dialog yet.
+export function createTharnagTunnelsEastTop01Map() {
+  const map = new GameMap('tharnag_tunnels_east_top', 'Tharnag Tunnels — East');
+  map.mapImages = {
+    tharnag_tunnels_east_top: 'Maps/TharnagTunnelsEastTop01.jpg',
+  };
+  const nodes = [
+    { id: 'et_top', name: 'Eastern Drift', description: 'A worked drift running east off the upper gallery.', encounterId: '', connections: ['et_2'], position: [440, 100], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A drift opens off the gallery.' },
+    { id: 'et_2', name: 'Cart Track', description: 'Rusted cart rails run on down the slope.', encounterId: '', connections: ['et_top', 'et_3'], position: [590, 90], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_3', name: 'The Winze', description: 'A steep winze drops away, ladders rotted to splinters.', encounterId: '', connections: ['et_2', 'et_4'], position: [560, 240], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_4', name: 'Ore Stope', description: 'A worked-out stope, the walls scarred where the seam was chased.', encounterId: '', connections: ['et_3', 'et_5'], position: [700, 380], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_5', name: 'The Deeps', description: 'The air turns cold and dead. Something has been through here.', encounterId: '', connections: ['et_4', 'et_6', 'et_collapsed'], position: [300, 630], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_6', name: 'Black Seam', description: 'A black seam of unworked ore glitters in the dark.', encounterId: '', connections: ['et_5', 'et_6b'], position: [370, 870], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_6b', name: 'Broken Steps', description: 'A flight of broken steps drops toward the old gate.', encounterId: '', connections: ['et_6', 'et_7'], position: [590, 880], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_7', name: 'The Undergate', description: 'An old sealed gate, the seal broken — the way down to the deep roads.', encounterId: '', connections: ['et_6b'], position: [830, 770], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'et_collapsed', name: 'Collapsed Gallery', description: 'A side gallery choked with fresh-fallen rubble.', encounterId: '', connections: ['et_5'], position: [150, 600], mapArea: 'tharnag_tunnels_east_top', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side gallery opens into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'et_top';
+  return map;
+}
+
+// === Tharnag Tunnels — East Top 2 (Part 2) ===
+// Past the East map's Undergate. A series of 5 nodes with a 6th
+// branching off the 2nd (a Y). The top gate connects (cross-map) to the
+// East map's The Undergate. Gate node is the landing; the rest are
+// `discoverable` (??? one hop at a time). Positions are first-pass
+// placeholders pending art-aligned coords. No encounters / dialog yet.
+export function createTharnagTunnelsEastTop02Map() {
+  const map = new GameMap('tharnag_tunnels_east_top_2', 'Tharnag Tunnels — Far East');
+  map.mapImages = {
+    tharnag_tunnels_east_top_2: 'Maps/TharnagTunnelsEastTop02.jpg',
+  };
+  const nodes = [
+    { id: 'e2_1', name: 'Beyond the Gate', description: 'Past the broken Undergate, the deep roads run on into the black.', encounterId: '', connections: ['e2_2'], position: [210, 680], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road runs on past the gate.' },
+    { id: 'e2_2', name: 'The Split', description: 'The road splits around a fallen column.', encounterId: '', connections: ['e2_1', 'e2_3', 'e2_branch'], position: [500, 760], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road forks somewhere ahead.' },
+    { id: 'e2_3', name: 'Deep Drift', description: 'A long drift driven deep into the rock.', encounterId: '', connections: ['e2_2', 'e2_4'], position: [610, 510], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road runs on into the dark.' },
+    { id: 'e2_4', name: 'The Hollow', description: 'A wide hollow worn smooth by ages of water.', encounterId: '', connections: ['e2_3', 'e2_5'], position: [650, 270], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road runs on into the dark.' },
+    { id: 'e2_5', name: 'The Far Deep', description: 'The road ends — for now — at the edge of the far deep.', encounterId: '', connections: ['e2_4'], position: [570, 90], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road runs on into the dark.' },
+    // Branch off the 2nd node (the Y). Side Cavern teleports to the East
+    // Middle map (see arriveAtNode + isCrossMapGate in main.js).
+    { id: 'e2_branch', name: 'Side Cavern', description: 'A natural cavern opens off the road.', encounterId: '', connections: ['e2_2'], position: [490, 940], mapArea: 'tharnag_tunnels_east_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A cavern opens off the road.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'e2_1';
+  return map;
+}
+
+// === Tharnag Tunnels — Middle (Part 2) ===
+// Central descent off the entrance map. A single line of 4 nodes; the
+// top gate connects (cross-map) to the entrance map's Lower Galleries.
+// Gate node is the visible landing; the rest are `discoverable` (??? one
+// hop at a time). Positions are first-pass placeholders pending
+// art-aligned coords. No encounters / dialog yet.
+export function createTharnagTunnelsMiddleMap() {
+  const map = new GameMap('tharnag_tunnels_middle', 'Tharnag Tunnels — Deep');
+  map.mapImages = {
+    tharnag_tunnels_middle: 'Maps/TharnagTunnelsMiddle.jpg',
+  };
+  const nodes = [
+    { id: 'tm_top', name: 'Deep Stair', description: 'A long stair drops from the lower galleries into the dark.', encounterId: '', connections: ['tm_2'], position: [500, 240], mapArea: 'tharnag_tunnels_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stair drops away into the dark.' },
+    { id: 'tm_2', name: 'The Shaft', description: 'A wide shaft, the floor lost somewhere far below.', encounterId: '', connections: ['tm_top', 'tm_3'], position: [500, 470], mapArea: 'tharnag_tunnels_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The stair drops on into the dark.' },
+    { id: 'tm_3', name: 'Sunless Drift', description: 'A drift that has never seen daylight, the walls slick and cold.', encounterId: '', connections: ['tm_2', 'tm_4'], position: [500, 700], mapArea: 'tharnag_tunnels_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'tm_4', name: 'The Threshold', description: 'The drift opens onto the black mouth of the deep roads.', encounterId: '', connections: ['tm_3'], position: [500, 930], mapArea: 'tharnag_tunnels_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something vast opens up ahead.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'tm_top';
+  return map;
+}
+
+// === Tharnag Tunnels — Middle Bottom (Part 2) ===
+// Off the Middle map's Threshold. A straight line of 5 nodes with a 6th
+// branching off the 4th (a Y). The top gate connects (cross-map) to the
+// Middle map's The Threshold. Gate node is the visible landing; the rest
+// are `discoverable` (??? one hop at a time). Positions are first-pass
+// placeholders pending art-aligned coords. No encounters / dialog yet.
+export function createTharnagTunnelsMiddleBottomMap() {
+  const map = new GameMap('tharnag_tunnels_middle_bottom', 'Tharnag Tunnels — Deep Roads');
+  map.mapImages = {
+    tharnag_tunnels_middle_bottom: 'Maps/TharnagTunnelsMiddleBottom.jpg',
+  };
+  // Inverse cross (8 nodes): a 4-node vertical line (top gate ↔ the West
+  // map's Fresh Diggings), with a horizontal arm off the 3rd node (The
+  // Fork) — 2 nodes left, 2 nodes right. Plus an isolated 2-node pair
+  // above The Pit (unlinked for now; left visible so it can be placed).
+  // Positions for unspecified nodes are first-pass placeholders.
+  const nodes = [
+    // Vertical line.
+    { id: 'mb_1', name: 'The Deep Road', description: 'The diggings open onto a broad, ancient road running into the underdark.', encounterId: '', connections: ['mb_2'], position: [510, 170], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A broad road runs off into the dark.' },
+    { id: 'mb_2', name: 'Black Gallery', description: 'A vast black gallery, the roof lost in darkness overhead.', encounterId: '', connections: ['mb_1', 'mb_3'], position: [510, 450], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road runs on into the dark.' },
+    { id: 'mb_3', name: 'The Fork', description: 'The road forks around a spur of black stone.', encounterId: '', connections: ['mb_2', 'mb_4', 'mb_left1'], position: [500, 730], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The road forks somewhere ahead.' },
+    { id: 'mb_4', name: 'Fallen Guard Tower', description: 'A toppled guard tower, dwarven stone cracked and scattered across the road.', encounterId: '', connections: ['mb_3'], position: [510, 940], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A ruined shape looms ahead.' },
+    // Horizontal arm — left.
+    { id: 'mb_left1', name: 'Bone Midden', description: 'A heaped midden of cracked bones, picked clean.', encounterId: '', connections: ['mb_3', 'mb_pit'], position: [320, 800], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    { id: 'mb_pit', name: 'The Pit', description: 'A black pit yawns at the road\'s edge, dropping away forever.', encounterId: '', connections: ['mb_left1'], position: [140, 830], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    // Horizontal arm — right.
+    // Slave Pens + War Camp are a standalone pair (NOT linked to The
+    // Fork) — reached only by the Goblin Hole teleport from the Left
+    // Bottom map. Slave Pens is the landing/return gate.
+    { id: 'mb_right1', name: 'Slave Pens', description: 'Rusted cages line the wall, their doors hanging open.', encounterId: '', connections: ['mb_right2'], position: [80, 330], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    { id: 'mb_right2', name: 'War Camp', description: 'A goblin war camp, cookfires still smoking.', encounterId: '', connections: ['mb_right1'], position: [290, 120], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    // Isolated pair above The Pit — unlinked for now. Left visible (not
+    // discoverable) so they render before being wired into the graph.
+    { id: 'mb_pit_a', name: 'Old Cell', description: 'An old dwarven holding cell, the door long rusted away.', encounterId: '', connections: ['mb_pit_b'], position: [140, 600], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true },
+    { id: 'mb_pit_b', name: 'Forgotten Cell', description: 'A deeper cell, forgotten by everyone but its last occupant.', encounterId: '', connections: ['mb_pit_a'], position: [140, 400], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true },
+    // Top-right dead-end chain (3 nodes) — reached only by the Side Pool
+    // teleport from the West Bottom 2 map. mb_tr1 is the landing/return
+    // gate; the chain dead-ends at mb_tr3.
+    { id: 'mb_tr1', name: 'Upper Causeway', description: 'A raised causeway runs along the gallery wall.', encounterId: '', connections: ['mb_tr2'], position: [990, 480], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A causeway runs off into the dark.' },
+    { id: 'mb_tr2', name: 'The Buttress', description: 'A great stone buttress holds back the dark.', encounterId: '', connections: ['mb_tr1', 'mb_tr3'], position: [910, 230], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The causeway runs on into the dark.' },
+    { id: 'mb_tr3', name: 'Sealed Vault', description: 'A sealed vault at the causeway\'s end — the way no further.', encounterId: '', connections: ['mb_tr2'], position: [760, 90], mapArea: 'tharnag_tunnels_middle_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The causeway dead-ends somewhere ahead.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'mb_1';
+  return map;
+}
+
+// === Tharnag Tunnels — Left Bottom (Part 2) ===
+// Off the West map's Fresh Diggings. An inverse cross of 8 nodes: a
+// 4-node vertical line (top gate ↔ Fresh Diggings) with a horizontal arm
+// off the 3rd node — 2 nodes left, 2 nodes right. Top gate is the
+// landing; all nodes are `discoverable` (??? one hop at a time).
+// Positions are first-pass placeholders pending art-aligned coords.
+export function createTharnagTunnelsLeftBottomMap() {
+  const map = new GameMap('tharnag_tunnels_left_bottom', 'Tharnag Tunnels — Lower West');
+  map.mapImages = {
+    tharnag_tunnels_left_bottom: 'Maps/TharnagTunnelsLeftBottom.jpg',
+  };
+  const nodes = [
+    // Vertical line.
+    { id: 'lb_1', name: 'Sunken Drift', description: 'The diggings drop into an older, sunken drift.', encounterId: '', connections: ['lb_2'], position: [510, 170], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A drift drops away into the dark.' },
+    { id: 'lb_2', name: 'The Long Gallery', description: 'A long gallery, its far end lost in the dark.', encounterId: '', connections: ['lb_1', 'lb_3'], position: [510, 450], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The gallery runs on into the dark.' },
+    { id: 'lb_3', name: 'The Crossways', description: 'Old workings cross and part again here.', encounterId: '', connections: ['lb_2', 'lb_4', 'lb_left1', 'lb_right1'], position: [510, 650], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The way forks somewhere ahead.' },
+    { id: 'lb_4', name: 'Drowned Hall', description: 'A flooded hall, black water to the knees.', encounterId: '', connections: ['lb_3'], position: [510, 940], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A larger space opens ahead.' },
+    // Horizontal arm — left.
+    { id: 'lb_left1', name: 'West Stope', description: 'A worked-out stope branching west.', encounterId: '', connections: ['lb_3', 'lb_left2'], position: [210, 510], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    { id: 'lb_left2', name: 'The Sump', description: 'A black sump where the water pools and stills.', encounterId: '', connections: ['lb_left1'], position: [40, 580], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    // Horizontal arm — right. Goblin Hole teleports to the Middle Bottom
+    // map's Slave Pens (see arriveAtNode + isCrossMapGate in main.js).
+    { id: 'lb_right1', name: 'East Stope', description: 'A worked-out stope branching east.', encounterId: '', connections: ['lb_3', 'lb_right2'], position: [810, 520], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+    { id: 'lb_right2', name: 'Goblin Hole', description: 'A raw hole gnawed through the rock by goblin hands.', encounterId: '', connections: ['lb_right1'], position: [980, 650], mapArea: 'tharnag_tunnels_left_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage branches off into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'lb_1';
+  return map;
+}
+
+// === Tharnag Tunnels — West Middle (Part 2) ===
+// A straight line of 7 nodes off the Left Bottom map's The Sump. Top
+// gate connects (cross-map) to The Sump; the rest are `discoverable`.
+// Positions are first-pass placeholders pending art-aligned coords.
+export function createTharnagTunnelsWestMiddleMap() {
+  const map = new GameMap('tharnag_tunnels_west_middle', 'Tharnag Tunnels — West Deep');
+  map.mapImages = {
+    tharnag_tunnels_west_middle: 'Maps/TharnagTunnelsWestMiddle.jpg',
+  };
+  const nodes = [
+    { id: 'wm_1', name: 'Sump Passage', description: 'A waterlogged passage leading off the sump.', encounterId: '', connections: ['wm_2'], position: [400, 400], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage runs off into the dark.' },
+    { id: 'wm_2', name: 'Drowned Stair', description: 'A stair vanishing into still black water.', encounterId: '', connections: ['wm_1', 'wm_3'], position: [200, 660], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wm_3', name: 'The Cistern', description: 'A vast old cistern, the water mirror-still.', encounterId: '', connections: ['wm_2', 'wm_4'], position: [400, 940], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wm_4', name: 'Weeping Drift', description: 'Water weeps from every crack in the stone.', encounterId: '', connections: ['wm_3', 'wm_5'], position: [840, 820], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wm_5', name: 'Still Water', description: 'A flooded chamber, the water dead and silent.', encounterId: '', connections: ['wm_4', 'wm_6'], position: [800, 480], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wm_6', name: 'The Deep Well', description: 'A black well drops away into nothing.', encounterId: '', connections: ['wm_5', 'wm_7'], position: [480, 270], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wm_7', name: 'Flooded End', description: 'The passage ends at a wall of black water — and a crack just wide enough to slip through.', encounterId: '', connections: ['wm_6'], position: [520, 60], mapArea: 'tharnag_tunnels_west_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'wm_1';
+  return map;
+}
+
+// === Tharnag Tunnels — West Top 2 (Part 2) ===
+// Two SEPARATE lines on one map: a 3-node line whose gate links
+// (cross-map) to the West Middle map's Flooded End, and a 5-node line
+// whose gate links to the West map's Old Workings. The two lines are not
+// connected to each other. Gate nodes are landings; the rest are
+// `discoverable`. Positions are first-pass placeholders.
+export function createTharnagTunnelsWestTop02Map() {
+  const map = new GameMap('tharnag_tunnels_west_top_2', 'Tharnag Tunnels — Upper West');
+  map.mapImages = {
+    tharnag_tunnels_west_top_2: 'Maps/TharnagTunnelsWestTop02.jpg',
+  };
+  const nodes = [
+    // Line A (3 nodes) — gate ↔ West Middle's Flooded End.
+    { id: 'w2_a1', name: 'The Crack', description: 'You squeeze through the crack into a drier passage beyond.', encounterId: '', connections: ['w2_a2'], position: [500, 950], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage opens beyond the crack.' },
+    { id: 'w2_a2', name: 'Drowned Gallery', description: 'A gallery half-reclaimed by the water table.', encounterId: '', connections: ['w2_a1', 'w2_a3'], position: [500, 640], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'w2_a3', name: 'Sunken Vault', description: 'A flooded vault, its contents long since claimed.', encounterId: '', connections: ['w2_a2'], position: [500, 410], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    // Line B (5 nodes) — gate ↔ West map's Old Workings.
+    { id: 'w2_b1', name: 'Old Adit', description: 'An old adit driven straight into the rock.', encounterId: '', connections: ['w2_b2'], position: [960, 480], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A drift opens into the dark.' },
+    { id: 'w2_b2', name: 'Timbered Drift', description: 'Sagging timbers hold back the weight of the mountain.', encounterId: '', connections: ['w2_b1', 'w2_b3'], position: [700, 340], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'w2_b3', name: 'The Stope', description: 'A tall worked stope, ladders climbing into the dark.', encounterId: '', connections: ['w2_b2', 'w2_b4'], position: [590, 110], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'w2_b4', name: 'Ore Chute', description: 'A steep ore chute drops away below.', encounterId: '', connections: ['w2_b3', 'w2_b5'], position: [370, 130], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+    { id: 'w2_b5', name: 'Dead Drift', description: 'A worked-out drift, dead and silent.', encounterId: '', connections: ['w2_b4'], position: [90, 480], mapArea: 'tharnag_tunnels_west_top_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The drift runs on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'w2_a1';
+  return map;
+}
+
+// === Tharnag Tunnels — West Bottom (Part 2) ===
+// A V of 9 nodes: a bottom vertex (the teleport gate to the Left Bottom
+// map's Drowned Hall) with a 4-node arm climbing up-left and a 4-node
+// arm climbing up-right. The vertex is the landing; the rest are
+// `discoverable`. Positions are first-pass placeholders.
+export function createTharnagTunnelsWestBottomMap() {
+  const map = new GameMap('tharnag_tunnels_west_bottom', 'Tharnag Tunnels — Sunken West');
+  map.mapImages = {
+    tharnag_tunnels_west_bottom: 'Maps/TharnagTunnelsWestBottom.jpg',
+  };
+  const nodes = [
+    // Bottom vertex of the V — gate ↔ Drowned Hall.
+    { id: 'wb_bottom', name: 'The Confluence', description: 'Two flooded channels meet at a still black pool.', encounterId: '', connections: ['wb_mid'], position: [520, 130], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Water pools where two channels meet.' },
+    // Junction between The Confluence and the two channels.
+    { id: 'wb_mid', name: 'The Antechamber', description: 'A small antechamber where the two channels join.', encounterId: '', connections: ['wb_bottom', 'wb_l1', 'wb_r1'], position: [520, 230], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channels meet somewhere ahead.' },
+    // Left arm.
+    { id: 'wb_l1', name: 'West Channel', description: 'A flooded channel running up to the west.', encounterId: '', connections: ['wb_mid', 'wb_l2'], position: [360, 340], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A channel runs off into the dark.' },
+    { id: 'wb_l2', name: 'Sunken Stair', description: 'A stair drowned to the rail.', encounterId: '', connections: ['wb_l1', 'wb_l3'], position: [310, 580], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    { id: 'wb_l3', name: 'The Drowned Drift', description: 'A drift lost beneath the water table.', encounterId: '', connections: ['wb_l2', 'wb_l4'], position: [130, 780], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    { id: 'wb_l4', name: 'West Source', description: 'The spring that feeds the flooded west.', encounterId: '', connections: ['wb_l3'], position: [210, 970], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    // Right arm.
+    { id: 'wb_r1', name: 'East Channel', description: 'A flooded channel running up to the east.', encounterId: '', connections: ['wb_mid', 'wb_r2'], position: [690, 390], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A channel runs off into the dark.' },
+    { id: 'wb_r2', name: 'Flooded Stope', description: 'A worked stope half-full of black water.', encounterId: '', connections: ['wb_r1', 'wb_r3'], position: [850, 570], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    { id: 'wb_r3', name: 'The Deep Pool', description: 'A deep, glassy pool, bottomless to the eye.', encounterId: '', connections: ['wb_r2', 'wb_r4'], position: [790, 820], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    { id: 'wb_r4', name: 'East Source', description: 'The spring that feeds the flooded east.', encounterId: '', connections: ['wb_r3'], position: [890, 970], mapArea: 'tharnag_tunnels_west_bottom', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'wb_bottom';
+  return map;
+}
+
+// === Tharnag Tunnels — West Bottom 2 (Part 2) ===
+// Off the West Bottom map's East Source. A line of 5 nodes with a 6th
+// branching off the 2nd (a Y). The left/first node is the gate
+// (cross-map) to East Source. Gate is the landing; the rest are
+// `discoverable`. Positions are first-pass placeholders.
+export function createTharnagTunnelsWestBottom2Map() {
+  const map = new GameMap('tharnag_tunnels_west_bottom_2', 'Tharnag Tunnels — Lower Deep');
+  map.mapImages = {
+    tharnag_tunnels_west_bottom_2: 'Maps/TharnagTunnelsWestBottom2.jpg',
+  };
+  const nodes = [
+    { id: 'wb2_1', name: 'The Spillway', description: 'Water spills away down a long, dark race.', encounterId: '', connections: ['wb2_2'], position: [240, 40], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A passage opens off into the dark.' },
+    { id: 'wb2_2', name: 'The Junction', description: 'The race splits at an old stone junction.', encounterId: '', connections: ['wb2_1', 'wb2_3', 'wb2_branch'], position: [350, 200], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The way forks somewhere ahead.' },
+    { id: 'wb2_3', name: 'Black Current', description: 'A black current pulls steadily into the deep.', encounterId: '', connections: ['wb2_2', 'wb2_4', 'wb2_br1'], position: [390, 380], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wb2_4', name: 'The Undertow', description: 'The water drags hard at your boots here.', encounterId: '', connections: ['wb2_3', 'wb2_5'], position: [290, 660], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    { id: 'wb2_5', name: 'Drowned Deep', description: 'The passage ends — for now — in drowned dark.', encounterId: '', connections: ['wb2_4', 'wb2_br2'], position: [660, 960], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The passage runs on into the dark.' },
+    // Right-hand branch (2 nodes) bridging Black Current → Drowned Deep,
+    // forming a loop with the Undertow on the left.
+    { id: 'wb2_br1', name: 'The Eddy', description: 'A slow eddy turns endlessly against the wall.', encounterId: '', connections: ['wb2_3', 'wb2_br2'], position: [800, 410], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A side channel branches off into the dark.' },
+    { id: 'wb2_br2', name: 'Sluice Gate', description: 'A rotted sluice gate, jammed half-open.', encounterId: '', connections: ['wb2_br1', 'wb2_5'], position: [890, 640], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The channel runs on into the dark.' },
+    // Branch off the 2nd node (the Y). Side Pool teleports to the Middle
+    // Bottom map's top-right dead-end chain (see main.js).
+    { id: 'wb2_branch', name: 'Side Pool', description: 'A still side pool, fed by an unseen spring.', encounterId: '', connections: ['wb2_2'], position: [540, 110], mapArea: 'tharnag_tunnels_west_bottom_2', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A pool opens off the passage.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'wb2_1';
+  return map;
+}
+
+// === Tharnag Tunnels — West Top 3 (Part 2) ===
+// A single line of 7 nodes off the West Top 2 map's Dead Drift. The gate
+// (first node) connects cross-map to Dead Drift; the rest are
+// `discoverable`. Positions are first-pass placeholders.
+export function createTharnagTunnelsWestTop03Map() {
+  const map = new GameMap('tharnag_tunnels_west_top_3', 'Tharnag Tunnels — Old Workings');
+  map.mapImages = {
+    tharnag_tunnels_west_top_3: 'Maps/TharnagTunnelsWestTop03.jpg',
+  };
+  const nodes = [
+    { id: 'wt3_1', name: 'The Crosscut', description: 'A crosscut driven off the dead drift into fresh rock.', encounterId: '', connections: ['wt3_2'], position: [790, 50], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A crosscut opens off into the dark.' },
+    { id: 'wt3_2', name: 'Forgotten Level', description: 'A whole level the maps forgot.', encounterId: '', connections: ['wt3_1', 'wt3_3'], position: [400, 80], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+    { id: 'wt3_3', name: 'Rotten Stull', description: 'Rotten stull-timbers groan overhead.', encounterId: '', connections: ['wt3_2', 'wt3_4'], position: [80, 290], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+    { id: 'wt3_4', name: 'The Glory Hole', description: 'A great open glory hole drops through the level.', encounterId: '', connections: ['wt3_3', 'wt3_5'], position: [790, 920], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+    { id: 'wt3_5', name: 'Abandoned Face', description: 'An abandoned working face, tools still in the rock.', encounterId: '', connections: ['wt3_4', 'wt3_6'], position: [450, 500], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+    { id: 'wt3_6', name: 'The Last Drift', description: 'The last drift anyone bothered to cut.', encounterId: '', connections: ['wt3_5', 'wt3_7'], position: [590, 340], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+    { id: 'wt3_7', name: 'Worked Out', description: 'Worked out and walked away from — the end of the line.', encounterId: '', connections: ['wt3_6'], position: [690, 150], mapArea: 'tharnag_tunnels_west_top_3', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The level runs on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'wt3_1';
+  return map;
+}
+
+// === The Gate of the Deep (Part 2) ===
+// The next area, reached from whichever of the 6 tunnel dead-ends was
+// randomly chosen as the real exit this run. Placeholder for now — just
+// the arrival node (the King's-front dialog fires here); the rest of the
+// area's nodes come later.
+export function createTharnagTunnelsGateOfDeepMap() {
+  const map = new GameMap('tharnag_tunnels_gate_of_deep', 'The Gate of the Deep');
+  map.mapImages = {
+    gate_of_deep: 'Maps/TharnagTunnelsTheGateofTheDeep.jpg',
+  };
+  const nodes = [
+    // The Gate of the Deep sits up top, linked down to the 3rd Gate. The
+    // 3rd Gate is the hub: the two fronts (left + right), each a line of
+    // two nodes, hang off it. The two nodes within each front also link so
+    // each side reads as a line.
+    { id: 'gate_arrival', name: 'The Gate of the Deep', description: 'The great gate, and the battle raging before it.', encounterId: '', connections: ['third_gate'], position: [510, 80], mapArea: 'gate_of_deep', canRevisit: true },
+    // 3rd Gate — hub: links to the Gate of the Deep and the near node of
+    // each front. Each front then runs deeper as a 2-node line.
+    { id: 'third_gate', name: '3rd Gate', description: 'The third gate, behind the front line.', encounterId: '', connections: ['gate_arrival', 'left_front_1', 'right_front_1'], position: [510, 260], mapArea: 'gate_of_deep', canRevisit: true },
+    // Left front (line of 2): 3rd Gate → Left Front → Left Front Deep.
+    { id: 'left_front_1', name: 'Left Front', description: 'The left flank of the line holding before the Gate.', encounterId: '', connections: ['third_gate', 'left_front_2'], position: [270, 350], mapArea: 'gate_of_deep', canRevisit: true },
+    { id: 'left_front_2', name: 'Left Front — Deep', description: 'The far end of the left flank, pressed hard.', encounterId: '', connections: ['left_front_1'], position: [260, 640], mapArea: 'gate_of_deep', canRevisit: true },
+    // Right front (line of 2): 3rd Gate → Right Front → Right Front Deep.
+    { id: 'right_front_1', name: 'Right Front', description: 'The right flank of the line holding before the Gate.', encounterId: '', connections: ['third_gate', 'right_front_2'], position: [750, 350], mapArea: 'gate_of_deep', canRevisit: true },
+    { id: 'right_front_2', name: 'Right Front — Deep', description: 'The far end of the right flank, pressed hard.', encounterId: '', connections: ['right_front_1'], position: [810, 600], mapArea: 'gate_of_deep', canRevisit: true },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'gate_arrival';
+  return map;
+}
+
+// === Stairs to the Forge (Part 2) ===
+// A switchback stair off the Grand Hall's "To the Forge" node: one entry at
+// the top, two zig-zag landings, down to the Forge Plaza. The Plaza cross-
+// maps to The Great Forge map.
+export function createStairsToForgeMap() {
+  const map = new GameMap('tharnag_stairs_to_forge', 'Stairs to the Forge');
+  map.mapImages = { stairs_to_forge: 'Maps/StairsToTheForge.jpg' };
+  const nodes = [
+    { id: 'forge_stairs_entry', name: 'Forge Stair', description: 'The stair down from the Middle Stairs toward the Great Forge.', encounterId: '', connections: ['forge_stairs_2'], position: [920, 380], mapArea: 'stairs_to_forge', canRevisit: true },
+    { id: 'forge_stairs_2', name: 'Switchback', description: 'The stair doubles back, hewn into the living rock.', encounterId: '', connections: ['forge_stairs_entry', 'forge_stairs_3'], position: [550, 550], mapArea: 'stairs_to_forge', canRevisit: true },
+    { id: 'forge_stairs_3', name: 'Switchback', description: 'Another switchback — the air grows hot and bright below.', encounterId: '', connections: ['forge_stairs_2', 'forge_stairs_4'], position: [650, 710], mapArea: 'stairs_to_forge', canRevisit: true },
+    { id: 'forge_stairs_4', name: 'Forge Landing', description: 'A last landing before the plaza opens out — the heat rolls up the stair in waves.', encounterId: '', connections: ['forge_stairs_3', 'forge_plaza'], position: [465, 810], mapArea: 'stairs_to_forge', canRevisit: true },
+    { id: 'forge_plaza', name: 'The Forge Plaza', description: 'A wide plaza before the Great Forge, ringed with idle lava channels and quenching pools.', encounterId: '', connections: ['forge_stairs_4'], position: [520, 970], mapArea: 'stairs_to_forge', canRevisit: true },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'forge_stairs_entry';
+  return map;
+}
+
+// === The Great Forge (Part 2) ===
+// The Forge Plaza descends here: a last stair into the forge, then the Great
+// Forge itself (where the Great Pour channels are loosed). Destination
+// content wired later.
+export function createTharnagTheForgeMap() {
+  const map = new GameMap('tharnag_the_forge', 'The Great Forge');
+  map.mapImages = { the_forge: 'Maps/TharnagTheForge.jpg' };
+  const nodes = [
+    { id: 'the_forge_stair', name: 'Forge Stair', description: 'The stair down from the plaza into the forge proper.', encounterId: '', connections: ['the_forge_stair_2'], position: [690, 90], mapArea: 'the_forge', canRevisit: true },
+    { id: 'the_forge_stair_2', name: 'Forge Steps', description: 'The steps wind down past roaring furnaces.', encounterId: '', connections: ['the_forge_stair', 'the_forge_plaza'], position: [400, 190], mapArea: 'the_forge', canRevisit: true },
+    { id: 'the_forge_plaza', name: 'Forge Floor', description: 'The forge floor — anvils, crucibles, and the great lava channels running through it all.', encounterId: 'forge_floor_ambush', connections: ['the_forge_stair_2', 'the_forge_stair_3'], position: [510, 320], mapArea: 'the_forge', canRevisit: false },
+    { id: 'the_forge_stair_3', name: 'Forge Descent', description: 'A final flight drops to the very heart of the forge.', encounterId: '', connections: ['the_forge_plaza', 'the_great_forge'], position: [510, 500], mapArea: 'the_forge', canRevisit: true },
+    { id: 'the_great_forge', name: 'The Great Forge', description: "The Great Forge itself — the mountain's lava tamed into rivers of fire, and the channels that could loose the Great Pour.", encounterId: 'the_great_forge', connections: ['the_forge_stair_3'], position: [510, 630], mapArea: 'the_forge', canRevisit: true },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'the_forge_stair';
+  return map;
+}
+
+// === Tharnag Tunnels — East Middle (Part 2) ===
+// A straight line of 6 nodes off the East Top 2 map's Side Cavern. Top
+// gate connects (cross-map) to Side Cavern; the rest are `discoverable`.
+// Positions are first-pass placeholders pending art-aligned coords.
+export function createTharnagTunnelsEastMiddleMap() {
+  const map = new GameMap('tharnag_tunnels_east_middle', 'Tharnag Tunnels — East Deep');
+  map.mapImages = {
+    tharnag_tunnels_east_middle: 'Maps/TharnagTunnelsEastMiddle.jpg',
+  };
+  const nodes = [
+    { id: 'em_1', name: 'Cavern Mouth', description: 'The side cavern widens into a natural cave system.', encounterId: '', connections: ['em_2'], position: [160, 70], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A cave opens off into the dark.' },
+    { id: 'em_2', name: 'The Grotto', description: 'A dripping grotto, pale things growing on the walls.', encounterId: '', connections: ['em_1', 'em_3'], position: [190, 210], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cave runs on into the dark.' },
+    { id: 'em_3', name: 'Stalactite Hall', description: 'A hall of teeth, stone hanging from the roof.', encounterId: '', connections: ['em_2', 'em_4'], position: [420, 330], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cave runs on into the dark.' },
+    { id: 'em_4', name: 'The Narrows', description: 'The cave pinches to a crawl through the rock.', encounterId: '', connections: ['em_3', 'em_5'], position: [800, 480], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cave runs on into the dark.' },
+    { id: 'em_5', name: 'Crystal Drift', description: 'Crystals glitter coldly in the walls.', encounterId: '', connections: ['em_4', 'em_6'], position: [920, 700], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cave runs on into the dark.' },
+    { id: 'em_6', name: 'Cavern Deep', description: 'The cave ends — for now — in deep, cold dark.', encounterId: '', connections: ['em_5'], position: [730, 960], mapArea: 'tharnag_tunnels_east_middle', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The cave runs on into the dark.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'em_1';
   return map;
 }
 

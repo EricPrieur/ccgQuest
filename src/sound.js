@@ -349,6 +349,10 @@ export const SOUND_MAP = {
   // Execute (warrior tier 2) — heavier 2H axe-cleave variant.
   execute_axe:    'Weapons/axe_heavy_2h_flesh_03',
   sword_1h_flesh: 'Weapons/sword_light_1h_flesh_01',
+  // Direct alias — Rampaging Troll's Rend swing + Bear Claw clean hit.
+  sword_light_1h_flesh_01: 'Weapons/sword_light_1h_flesh_01',
+  // Direct alias — Bear Claw blocked hit (stone-wall clang).
+  sword_rock_wall_01: 'Weapons/sword_rock_wall_01',
   sword_2h_flesh: 'Weapons/sword_heavy_2h_flesh_01',
   sword_blocked:  'Weapons/sword_rock_wall_01',
   // Blunts (hammer + mace) — small hammer thwack for 1H, heavy mace
@@ -363,6 +367,9 @@ export const SOUND_MAP = {
   // Bows + crossbows — flesh on landed shots, metal clang when blocked.
   bow_flesh:      'Weapons/arrow_flesh_01',
   bow_blocked:    'Weapons/arrow_metal_01',
+  // Direct aliases (Dwarven Crossbowman swing cues).
+  arrow_flesh_01: 'Weapons/arrow_flesh_01',
+  arrow_metal_01: 'Weapons/arrow_metal_01',
   // Daggers — gore on landed flesh, clean stab when fully blocked.
   dagger_flesh:   'Weapons/dagger_gore_flesh_01',
   dagger_blocked: 'Weapons/dagger_stab_01',
@@ -444,13 +451,22 @@ export const SOUND_MAP = {
   ogre_growl:     'Monster/ogre_growl_01',
   ogre_pain:      'Monster/ogre_pain_02',
   ogre_groan:     'Monster/ogre_groan_01',
+  // Direct alias — Rampaging Troll (Part 2) start-of-fight, Rend, death.
+  ogre_groan_02:  'Monster/ogre_groan_02',
+  // Direct alias — Goblin Minion / Goblin Warrior (Part 2 swarm) spawn,
+  // attack, and death cue.
+  monster_snort_01: 'Monster/monster_snort_01',
   battering_ram:  'Monster/battering_ram_01',
   // Goblin Sapper — fireworks burst on attack + on-death explosion.
   goblin_explosion: 'Monster/goblin_explosion_01',
+  // Direct alias — Goblin Sapper Squad (Part 2) fight-start explosion.
+  goblin_explosion_01: 'Monster/goblin_explosion_01',
   // Big Bone (enemy 2H club card) — heavy skull crunch.
   big_bone_hit:   'Misc/bone_skull_crush_02',
   // Spider scuttle — Pet Spider summon + every spider creature swing.
   spider_scuttle: 'Monster/spider_scuttle_01',
+  // Direct alias — Loathsome Limbs (Part 2 troll) attack + death cue.
+  spider_scuttle_01: 'Monster/spider_scuttle_01',
   // Kobold Warden — louder hiss for fight start / death + the warden's
   // Guards! / Hide in the Corner card plays.
   warden_hiss:    'Monster/reptilian_hiss_01',
@@ -547,6 +563,9 @@ export const SOUND_MAP = {
   sahuagin_scream:       'Monster/sahuagin_scream_01',
   // Sahuagin Baron — heavier scream variant for the boss bookend.
   sahuagin_baron_scream: 'Monster/sahuagin_scream_02',
+  // Direct alias for the middle scream — Rampaging Troll (Part 2 tunnels)
+  // uses it for fight-start, every Rend swing, and death.
+  sahuagin_scream_02:    'Monster/sahuagin_scream_02',
   // Varimatras — heaviest cave-monster scream variant (03). Doubles
   // as the dragon's fight-start / death cue AND the Cold Breath
   // play SFX so every breath weapon feels like the dragon roaring
@@ -577,6 +596,9 @@ export const SOUND_MAP = {
   thorb_shout:    'Misc/male_warrior_hit_01',
   // Dwarven Scout (Korgan) summon — same male-warrior shout sample.
   dwarven_scout_shout: 'Misc/male_warrior_hit_01',
+  // The Assassin (Khydhani) — male-warrior hit/grunt bookends his fight
+  // (fight-start + death, see getFightStartSfxKey / getDeathSfxKey).
+  male_warrior_hit_01: 'Misc/male_warrior_hit_01',
   // Raena summon (ally card play) — female battle yell.
   raena_summon:   'Heroes/hero_female_pain_04',
   valdrisa_summon: 'Heroes/hero_female_pain_04',
