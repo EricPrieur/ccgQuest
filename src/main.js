@@ -38006,6 +38006,33 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   startEnemyTurn();
 }
 
+// Creature-level Regen ↔ DoT reconciliation. Creatures have no status
+// engine (the player/troll cancel Regen vs Bleed/Poison/Drow/Fire 1-for-1
+// at apply time), so we mirror that for creatures: each DoT eats Regen and
+// Regen eats the DoT, 1-for-1, in the Bleed → Poison → Drow Sleep → Fire
+// order. Called BOTH from the creature's turn-start regen tick AND
+// continuously during the player's turn (so you never see a creature
+// holding, say, 8 Poison and 8 Regen at the same time — they cancel the
+// instant the poison lands, like they do on the player).
+function reconcileCreatureRegenVsDots(c) {
+  if (!c || !((c._regen || 0) > 0)) return;
+  for (const dot of ['bleedStacks', 'poisonStacks', 'drowSleepStacks', 'fireStacks']) {
+    if ((c._regen || 0) <= 0) break;
+    const have = c[dot] || 0;
+    if (have > 0) {
+      const cancel = Math.min(have, c._regen);
+      c[dot] = have - cancel;
+      c._regen -= cancel;
+    }
+  }
+}
+// Sweep every live creature on both sides — cheap, idempotent (one of the
+// two stacks hits 0 and the rest is a no-op). Run during the player's turn.
+function reconcileAllCreatureRegenVsDots() {
+  for (const c of (enemy && enemy.creatures || [])) if (c && c.isAlive) reconcileCreatureRegenVsDots(c);
+  for (const c of (player && player.creatures || [])) if (c && c.isAlive) reconcileCreatureRegenVsDots(c);
+}
+
 // --- Status Effects ---
 function processStatusEffects(character, label) {
   // Regen: heal equal to stacks at the start of the turn, then decay by 1.
@@ -38100,16 +38127,9 @@ function processStatusEffects(character, label) {
     if (c._regenMax) {
       // 1. DoTs eat Regen and Regen eats DoTs, 1-for-1 (lose regen), in the
       //    same Bleed → Poison → Drow Sleep → Fire order Regen uses on the
-      //    player. Drow Sleep Poison is cleared here too (it was missing).
-      for (const dot of ['bleedStacks', 'poisonStacks', 'drowSleepStacks', 'fireStacks']) {
-        if ((c._regen || 0) <= 0) break;
-        const have = c[dot] || 0;
-        if (have > 0) {
-          const cancel = Math.min(have, c._regen);
-          c[dot] = have - cancel;
-          c._regen -= cancel;
-        }
-      }
+      //    player. (Usually already reconciled at apply time during the
+      //    player's turn, so this is mostly a no-op by the troll's turn.)
+      reconcileCreatureRegenVsDots(c);
       // 2. Regain +1 toward the cap at the start of its turn.
       if ((c._regen || 0) < c._regenMax) c._regen = (c._regen || 0) + 1;
       // 3. Heal by the current Regen.
@@ -53378,6 +53398,15 @@ function drawFogHole(fCtx, x, y, radius, intensity) {
 function gameLoop(timestamp) {
   const dt = timestamp - lastTime;
   lastTime = timestamp;
+
+  // Keep creature Regen ↔ DoT reconciled in real time during the player's
+  // turn, so a creature (Armored Troll, Loathsome Limbs) never visibly holds
+  // both at once — e.g. 8 Poison + 8 Regen cancel the instant the poison
+  // lands, exactly like they do on the player. The troll's own turn-start
+  // regen tick still runs; this just brings the cancel forward to apply time.
+  if (isPlayerTurn && enemy && enemy.isAlive) {
+    reconcileAllCreatureRegenVsDots();
+  }
 
   // Pause music while the player is in the pause-menu cluster (in-game
   // menu + its sub-screens save/load/options spawned from there) OR
