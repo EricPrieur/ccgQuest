@@ -408,6 +408,7 @@ export function createBloodiedFury() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'While Bloodied: +2 Rage',
+    gamePlusOffset: { rage: 1 }, // +1 Rage per monster offset (applied in code)
   });
 }
 
@@ -425,6 +426,7 @@ export function createPlagueSpawn() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Spawn 1/1\nCockroach',
+    noTierOffset: true, // spawned cockroaches stay 1/1 across ccgQuest+
   });
 }
 

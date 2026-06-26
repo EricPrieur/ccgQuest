@@ -972,6 +972,19 @@ function applyGamePlusOffsetInPlace(c, offset) {
         c.shortDesc = (c.shortDesc || '').replace(/Draw\s+(\d+)T/i, `Draw ${t}T`);
       }
     }
+    // Troll Blood Vial — the Beverage lasts +1 turn per offset (3 → 4 → …).
+    // The immediate Consume Regen scales via the generic { apply_regen: 1 }
+    // swap; provisionTurns drives the beverage duration here.
+    if (c.id === 'troll_blood_vial' && c.provision && c.gamePlusOffset?.provisionTurns) {
+      const dTurns = Math.floor(c.gamePlusOffset.provisionTurns * offset + 1e-9);
+      if (dTurns > 0) {
+        c.provision.turnsPerCombat = (c.provision.turnsPerCombat || 3) + dTurns;
+        const t = c.provision.turnsPerCombat;
+        c.provision.description = `Gain 2 Regen each turn for ${t} turns.`;
+        c.description = (c.description || '').replace(/for\s+\d+\s+turns/i, `for ${t} turns`);
+        c.shortDesc = (c.shortDesc || '').replace(/Regen\s+\d+t/i, `Regen ${t}t`);
+      }
+    }
     // Magma Tablet — +1 on-play Ignite per offset (handled by the
     // generic gain_ignite swap) + +0.5 turns per offset (floor) on
     // the buff. Per-turn Ignite stays at 1; rebuild the description
@@ -1566,6 +1579,18 @@ const CREATURE_TIER_OFFSET = {
   // spread (apply_ice_all on the card) scales separately via the
   // card's gamePlusOffset.
   'White Dragon Wyrmling':  { attack: 1, hp: 2, armor: 1/3, iceAttack: 1/3 },
+  // Roc Chick (Roc's Nest hatchling — boss-side + player summon) — +2 atk /
+  // +5 hp per offset.
+  'Roc Chick':              { attack: 2, hp: 5 },
+  // Unhatched Roc Egg — +2 hp per offset; the end-of-turn self-damage that
+  // cracks it open raises its MAX by +1 per offset (endTurnSelfDamageMax).
+  'Unhatched Roc Egg':      { hp: 2, endTurnSelfDamageMax: 1 },
+  // The Butcher (summon) — +1 atk / +2 hp per offset.
+  'The Butcher':            { attack: 1, hp: 2 },
+  // Skeleton (Necromancer / Army of the Dead summon) — +1 atk / +1 hp.
+  'Skeleton':               { attack: 1, hp: 1 },
+  // Prison Cart (escort encounter creature) — +15 hp per offset.
+  'Prison Cart':            { hp: 15 },
 };
 function scaleEnemyCreature(creature) {
   if (!creature || !monsterTierOffset || monsterTierOffset <= 0) return;
@@ -1602,6 +1627,7 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   const dODD = step(rule.onDeathDamage);
   const dODF = step(rule.onDeathFireHits);
   const dODDC = step(rule.onDeathDiscardOrDamage);
+  const dSelfDmgMax = step(rule.endTurnSelfDamageMax);
   if (dA) creature.attack = (creature.attack || 0) + dA;
   if (dH) {
     creature.maxHp = (creature.maxHp || 0) + dH;
@@ -1624,6 +1650,12 @@ function scaleCreatureWithOffset(creature, offset, side = 'player') {
   if (dODD) creature.onDeathDamage = (creature.onDeathDamage || 0) + dODD;
   if (dODF) creature.onDeathFireHits = (creature.onDeathFireHits || 0) + dODF;
   if (dODDC) creature.onDeathDiscardOrDamage = (creature.onDeathDiscardOrDamage || 0) + dODDC;
+  // Unhatched Roc Egg — bump the upper end of its self-crack roll so it
+  // hatches harder at higher offsets (the {min,max} object is stamped on
+  // the egg after construction).
+  if (dSelfDmgMax && creature._endTurnSelfDamage) {
+    creature._endTurnSelfDamage.max = (creature._endTurnSelfDamage.max || 0) + dSelfDmgMax;
+  }
   // Obsidian-family vs Armor/Shield bonus — base is 2 in
   // applyObsidianAllyBonus when armorBonusOverride isn't set.
   // Layer the offset bump on top of that baseline.
@@ -17112,14 +17144,13 @@ function setupEnemyForCombat(enemyId) {
     // Play order (priority desc): Fan of Blades FIRST (whole-party Drow
     // Poison spray), then the Poisoned Daggers (cheated into hand below),
     // then the rest of the kit.
-    addK(createFanOfBlades,          30, 10);
+    addK(createFanOfBlades,          30, 8);
     addK(createAdamantineRapier,     26, 10);
     addK(createBackstab,             24, 4);
-    addK(createDarkwoodHandCrossbow, 20, 6);
+    addK(createDarkwoodHandCrossbow, 20, 8);
     addK(createDrowParryingDagger,   16, 8);
-    addK(createSprintEnemy,           8, 2);
-    addK(createAdamantineChainShirt,  6, 6);
-    addK(createPiwafwi,               6, 6);
+    addK(createAdamantineChainShirt,  6, 4);
+    addK(createPiwafwi,               6, 8);
     enemy.addPower(createRipostePower());
     // Drow Sleep Poison power — Turn Start: his next swing applies +1 Drow
     // Sleep Poison (replaces the old in-deck Drow Sleep Poison vials).
@@ -17425,17 +17456,27 @@ function setupEnemyForCombat(enemyId) {
       player.addCreature(rampart);
       cbs.push(makeCrossbowman()); player.addCreature(cbs[2]);
       cbs.push(makeCrossbowman()); player.addCreature(cbs[3]);
-      // A Dwarven Battle Cleric joins the line (fills a back-row cell).
-      const cleric = new Creature({
-        name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
-        description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
-      });
-      cleric.endTurnHealRandomAlly = 2;
-      cleric._sourceRarity = 'uncommon';
-      cleric._sourceSubtype = 'allies';
+      // Two Dwarven Battle Clerics flank the line: the first auto-anchors to
+      // the bottom-left back-row cell, the second is pinned to the
+      // bottom-right of the ramparts (row 1, col 6 = slot 11).
+      const makeCleric = () => {
+        const cl = new Creature({
+          name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
+          description: '+2 vs Armor/Shield.\nTurn End: Heal an ally 2.',
+        });
+        cl.endTurnHealRandomAlly = 2;
+        cl._sourceRarity = 'uncommon';
+        cl._sourceSubtype = 'allies';
+        return cl;
+      };
+      const cleric = makeCleric();
       player.addCreature(cleric);
       cbs.push(cleric);
-      // Crossbowmen + cleric can act on turn 1 (clear summon sickness).
+      const cleric2 = makeCleric();
+      cleric2.slot = 11; // bottom-right of the rampart line
+      player.creatures.push(cleric2);
+      cbs.push(cleric2);
+      // Crossbowmen + clerics can act on turn 1 (clear summon sickness).
       for (const cb of cbs) { cb.exhausted = false; cb.justSummoned = false; }
     }
   };
@@ -20322,7 +20363,9 @@ function collectForgeMetals() {
 function openForgeMetalSelect() {
   const metals = collectForgeMetals();
   if (metals.length === 0) {
-    showStickyToast('You have no Mithril or Adamantine to reforge with.');
+    // Timed (not sticky) — a sticky toast here hung on the map forever
+    // when the player revisited the forge with no ore left.
+    showToast('You have no Mithril or Adamantine to reforge with.');
     return false;
   }
   _forgeActiveMetal = null;
@@ -20340,7 +20383,7 @@ function enterMetalGearPick(oreCard) {
   if (!metal) return;
   const eligible = collectMetalEligibleGear();
   if (eligible.cards.length === 0) {
-    showStickyToast('No eligible armor or shield to reforge (already enchanted?).');
+    showToast('No eligible armor or shield to reforge (already enchanted?).');
     return;
   }
   _forgeActiveMetal = metal;
@@ -21333,13 +21376,20 @@ function startCombat() {
   // start buff that should have hit every turn. Mid-combat buffs (Ale,
   // Dwarven Brew, Scroll of Potency, Regrowth) are added by card play, so
   // they're never present at startCombat and won't trip this call.
-  const startBuffLogs = player.processCombatBuffs(enemy);
-  playBuffTickSfxQueue(startBuffLogs);
-  for (const log of startBuffLogs) {
-    if (log.text) addLog(log.text, log.color, log.card || null, log.buff || null);
-    if (log.healed) spawnHealOnTarget(player, log.healed);
-    if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
-    if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
+  // On a surprise (the enemy acts first), SKIP this turn-1 player buff tick —
+  // otherwise a persistent food/meal buff burns a turn during the ambush
+  // before the player can act. It ticks on the player's first real turn (the
+  // start-of-player-turn processCombatBuffs) instead, so they get its full
+  // duration. Non-surprise fights tick here as turn 1 as before.
+  if (!(enemy && enemy._enemy_surprise)) {
+    const startBuffLogs = player.processCombatBuffs(enemy);
+    playBuffTickSfxQueue(startBuffLogs);
+    for (const log of startBuffLogs) {
+      if (log.text) addLog(log.text, log.color, log.card || null, log.buff || null);
+      if (log.healed) spawnHealOnTarget(player, log.healed);
+      if (log.token) spawnTokenOnTarget(player, log.tokenAmount, log.token, log.tokenColor);
+      if (log.summonTreant) summonRegrowthTreants(log.summonTreant);
+    }
   }
   // Turn-1 Rampart shield (the wall protects the line from the opening turn).
   applyTurnStartAllyShields();
@@ -33250,8 +33300,8 @@ function resolveEffect(eff, caster, target) {
     case 'summon_goblin_spike_trap': {
       // 1-2 stationary spike traps (player allies). Can't attack; they
       // Riposte — deal their attack to anything that strikes them. Game+
-      // raises the MAX by +1 per offset (1-3, 1-4, …); the traps stay 3/1.
-      const num = 1 + Math.floor(Math.random() * (2 + (playerTierOffset || 0)));
+      // raises the MAX by +0.5 per offset (so +1 trap every 2 offsets).
+      const num = 1 + Math.floor(Math.random() * (2 + 0.5 * (playerTierOffset || 0)));
       let last = null;
       for (let i = 0; i < num; i++) {
         const trap = new Creature({
@@ -33293,8 +33343,8 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_random_goblins': {
       // 1-4 random goblins (Minion / Sapper / Warrior) on the PLAYER side;
-      // Game+ raises the MAX by +1 per offset (1-5, 1-6, …).
-      const num = 1 + Math.floor(Math.random() * (4 + (playerTierOffset || 0)));
+      // Game+ raises the MAX by +0.5 per offset (so +1 goblin every 2 offsets).
+      const num = 1 + Math.floor(Math.random() * (4 + 0.5 * (playerTierOffset || 0)));
       let last = null;
       for (let i = 0; i < num; i++) {
         const g = makePlayerGoblin();
@@ -40343,11 +40393,13 @@ function startEnemyTurn() {
   // Binary / non-stacking; the boar's only Rage source is this power.
   if (enemy && Array.isArray(enemy.powers) && enemy.powers.some(p => p && p.id === 'bloodied_fury')) {
     const wasRaging = (enemy.rage || 0) > 0;
+    // +1 Rage per ccgQuest+ monster offset on top of the base +2.
+    const furyRage = 2 + (monsterTierOffset || 0);
     if (isBloodied(enemy)) {
-      enemy.rage = 2;
+      enemy.rage = furyRage;
       if (!wasRaging) {
-        addLog(`  Bloodied Fury! ${enemy.name} enrages (+2 Rage).`, Colors.RED);
-        spawnTokenOnTarget(enemy, 2, 'Rage', Colors.RED);
+        addLog(`  Bloodied Fury! ${enemy.name} enrages (+${furyRage} Rage).`, Colors.RED);
+        spawnTokenOnTarget(enemy, furyRage, 'Rage', Colors.RED);
       }
     } else if (wasRaging) {
       enemy.rage = 0;
@@ -40686,20 +40738,28 @@ function updateEnemyTurn(dt) {
         } else {
           // multiAttack (The Butcher, 2x2 hulk) — strike up to N DISTINCT
           // player-side targets at once, like the player's Wooden Axe:
-          // never the same target twice. Pool is the player + every alive
-          // ally; shuffle and take N. Riders (Bleed) apply per target via
+          // never the same target twice. Riders (Bleed) apply per target via
           // the shared loop below, so each victim eats the swing + Bleed.
-          const pool = [];
-          for (const ally of (player.creatures || [])) {
-            if (ally.isAlive) pool.push(ally);
-          }
-          pool.push(player);
-          for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-          }
-          const n = Math.min(c.multiAttack, pool.length);
-          for (let i = 0; i < n; i++) targets.push(pool[i]);
+          //
+          // Sentinel rule — Sentinels must be hit FIRST (up to N), then the
+          // remaining swings spill onto the rest of the row. So 1 Sentinel +
+          // a 2-target swing lands once on the Sentinel AND once elsewhere,
+          // mirroring the player-side multi-target rule (a Sentinel only
+          // blocks the slots it can actually occupy, not the whole swing).
+          const shuffleArr = (arr) => {
+            for (let i = arr.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+          };
+          const multiAlive = (player.creatures || []).filter(a => a.isAlive);
+          const multiSentinels = multiAlive.filter(a => a.sentinel);
+          const multiRest = [...multiAlive.filter(a => !a.sentinel), player];
+          shuffleArr(multiSentinels);
+          shuffleArr(multiRest);
+          const orderedPool = [...multiSentinels, ...multiRest];
+          const n = Math.min(c.multiAttack, orderedPool.length);
+          for (let i = 0; i < n; i++) targets.push(orderedPool[i]);
         }
         // Arrow batch — one segment per target from the swinger's rect.
         const srcRect = (() => {
@@ -52429,6 +52489,11 @@ function getWeaponSfxKeys(card = null, creature = null) {
     }
     // Valdrisa Emberforge (companion ally) — standard 1H mace family.
     if (name === 'valdrisa') {
+      return { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' };
+    }
+    // Dwarven Battle Cleric (Dwarven Tavern recruit) — swings a mace,
+    // standard 1H blunt family.
+    if (name === 'dwarven battle cleric') {
       return { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' };
     }
     // Huffer (Animal Companion boar) — pig grunt on the same beats.

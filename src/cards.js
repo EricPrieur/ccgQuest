@@ -1303,6 +1303,7 @@ export function createBagOfHerbs() {
     ],
     rarity: 'uncommon',
     tier: 2,
+    gamePlusOffset: { gain_random_herbs: 1/3 }, // +1 herb every 3 offsets
   });
   // Side preview — show the three herbs it can draw from.
   card.previewCards = [createGoodberry(), createCaveShroom(), createFrostbloom()];
@@ -1324,6 +1325,7 @@ export function createFrostbloom() {
     ],
     rarity: 'rare',
     tier: 2,
+    gamePlusOffset: { heal_n_negative_effects: 0.5, heal: 0.5 }, // +0.5 each per offset
   });
 }
 
@@ -2844,6 +2846,7 @@ export function createSkitterBite() {
         new CardEffect('apply_poison_on_damage', 1, TargetType.SINGLE_ENEMY),
       ]),
     ],
+    noTierOffset: true, // monster card — stays flat across ccgQuest+
   });
 }
 
@@ -2878,6 +2881,7 @@ export function createOldSpectralHand() {
         new CardEffect('draw', 1, TargetType.SELF),
       ]),
     ],
+    noTierOffset: true, // monster card — stays flat across ccgQuest+
   });
 }
 
@@ -2904,6 +2908,7 @@ export function createDeathSickle() {
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('mark_deathly_strike', 1, TargetType.SELF),
     ],
+    noTierOffset: true, // monster card — stays flat across ccgQuest+
   });
 }
 
@@ -4371,6 +4376,7 @@ export function createLuringSong() {
     effects: [
       new CardEffect('luring_song', 1, TargetType.ALL_ENEMIES),
     ],
+    noTierOffset: true, // stays flat across ccgQuest+
   });
 }
 
@@ -5940,6 +5946,7 @@ export function createGoblinSpikeTrap() {
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_goblin_spike_trap', 2, TargetType.SUMMON)],
     rarity: 'uncommon', tier: 2,
+    noTierOffset: true, // trap-count scaling lives in the summon handler
     previewCreature: (() => {
       const c = new Creature({
         name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
@@ -5962,6 +5969,7 @@ export function createGoblinWarBanner() {
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_goblin_war_banner', 1, TargetType.SUMMON)],
     rarity: 'uncommon', tier: 2,
+    noTierOffset: true, // the item is unchanged; the summoned banner scales
     previewCreature: (() => {
       const c = new Creature({
         name: 'Goblin War Banner', attack: 0, maxHp: 5,
@@ -6002,6 +6010,7 @@ export function createGoblinBossWhistle() {
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random_goblins', 2, TargetType.SUMMON)],
     rarity: 'rare', tier: 2,
+    noTierOffset: true, // goblin-count scaling lives in the summon handler
   });
 }
 
@@ -6078,6 +6087,9 @@ export function createTrollBloodVial() {
       description: 'Gain 2 Regen each turn for 3 turns.',
     },
     rarity: 'common', tier: 2,
+    // +1 immediate Regen per offset; the beverage gains +1 turn per offset
+    // (provision.turnsPerCombat scaled in applyGamePlusOffsetInPlace).
+    gamePlusOffset: { apply_regen: 1, provisionTurns: 1 },
   });
 }
 
@@ -6092,6 +6104,7 @@ export function createSeveredTrollArm() {
     subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_severed_troll_arm', 1, TargetType.SUMMON)],
     rarity: 'rare', tier: 2,
+    noTierOffset: true, // always summons exactly 1 arm — no ccgQuest+ scaling
     previewCreature: (() => {
       const c = new Creature({
         name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
@@ -6110,12 +6123,13 @@ export function createLongTrollTeeth() {
     id: 'long_troll_teeth', name: 'Long Troll Teeth',
     description: 'Deal X.\n(2 + swings this combat)\nStays in hand.',
     shortDesc: 'Deal X\n2+swings, Stays',
-    subtype: 'item', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    subtype: 'simple', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('troll_teeth_attack', 2, TargetType.SINGLE_ENEMY),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'uncommon', tier: 2,
+    gamePlusOffset: { troll_teeth_attack: 1 }, // +1 base damage per offset
   });
 }
 
@@ -7447,7 +7461,7 @@ export function createDwarvenBattleClericCard() {
     previewCreature: (() => {
       const c = new Creature({
         name: 'Dwarven Battle Cleric', attack: 2, maxHp: 5, armor: 1,
-        description: '+2 vs Armor/Shield.\nEnd Turn: Heal an ally 2.',
+        description: '+2 vs Armor/Shield.\nTurn End: Heal an ally 2.',
       });
       c.endTurnHealRandomAlly = 2;
       return c;
