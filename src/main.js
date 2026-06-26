@@ -13960,6 +13960,11 @@ function startPart2Chapter1() {
 function transitionToGrandHallSideEntry(fromNodeId) {
   if (currentMap) _mapCache[currentMap.id] = currentMap;
   currentMap = getOrCreateMap('tharnag_interior', createTharnagInteriorMap);
+  // Re-hydrate even when the map was already cached: getOrCreateMap only
+  // hydrates on first creation, so a tharnag_interior cached BEFORE Part 2
+  // started would keep the "To the Tunnels" stair locked. Re-running the
+  // hydrate re-applies the part2Started unlock so the side tunnels open.
+  hydrateMapFromGlobalState(currentMap);
   visitedNodes = new Set();
   visitedNodes.add('grand_hall_side_entry');
   const target = currentMap.getNode('grand_hall_side_entry');

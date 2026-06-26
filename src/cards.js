@@ -2218,12 +2218,10 @@ export function createPoisonedDagger() {
 export function createSprint() {
   return new Card({
     id: 'sprint', name: 'Sprint',
-    description: 'Discard ->\nNo cards in hand: Draw 2.',
-    shortDesc: 'Discard->No cards\nDraw 2', subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.DISCARD,
-    // Draw 2 only if Sprint is the last card in hand when played
-    // (handler in main.js — `draw_if_empty_hand`).
-    effects: [new CardEffect('draw_if_empty_hand', 2, TargetType.SELF)],
+    description: 'Draw 2.',
+    shortDesc: 'Draw 2', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [new CardEffect('draw', 2, TargetType.SELF)],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
     noTierOffset: true,
   });
