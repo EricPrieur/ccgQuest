@@ -386,7 +386,7 @@ export class Character {
     this._pendingRiposteLash = 0;
     if (amount > 0 && !this._noRiposte && Array.isArray(this.powers)
         && this.powers.some(p => p && p.id === 'riposte')) {
-      const roll = 1 + Math.floor(Math.random() * 3); // 1-3
+      const roll = 1 + Math.floor(Math.random() * 2); // 1-2
       const parry = Math.min(roll, amount);
       amount -= parry;
       this._pendingRiposteParry = parry;

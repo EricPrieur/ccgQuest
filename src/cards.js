@@ -4145,10 +4145,9 @@ export function createAdamantineOre() {
 export function createDrowParryingDagger() {
   return new Card({
     id: 'drow_parrying_dagger', name: 'Drow Parrying Dagger',
-    // Plain text (capital "Hand" so it does NOT trigger the inline
-    // "Stays in hand" pill — that pill mid-damage-line rendered the
-    // "Deal 3" oddly). No Atk:/Def: labels.
-    description: 'Deal 3, Stays in Hand\nBlock 3, Deal 3 Randomly, Draw',
+    // "Stays in hand" on its own line so it renders as the inline pill
+    // cleanly (mid-damage-line it crowded "Deal 3"). No Atk:/Def: labels.
+    description: 'Deal 3.\nStays in hand\nBlock 3, Deal 3 Randomly, Draw',
     shortDesc: '3, Stays\nBlk3, 3 Rand, Draw',
     subtype: 'simple',
     cardType: CardType.ATTACK, costType: CostType.FREE,

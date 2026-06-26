@@ -17168,6 +17168,9 @@ function setupEnemyForCombat(enemyId) {
     const pd = createPoisonedDagger();
     pd.priority = 28;
     enemy.deck.hand.push(pd);
+    // Ambush turn = ONLY the Poisoned Dagger (attacks twice). No opening
+    // draw; his real hand is drawn at end-of-turn like every other enemy.
+    enemy._ambushOpeningHandOnly = true;
   };
   ENEMY_HAND_SIZE.khydhani = 3;
 
@@ -21362,7 +21365,12 @@ function startCombat() {
       }
     }
   }
-  const enemyStartHand = enemy._handSize || 2;
+  // Ambush openers (Khydhani) keep ONLY their cheated opening card(s) on the
+  // surprise turn — start the combat with no fresh draw so the ambush is just
+  // that one play; the normal hand fills at end-of-turn via finishEnemyTurn.
+  const enemyStartHand = enemy._ambushOpeningHandOnly
+    ? enemy.deck.hand.length
+    : (enemy._handSize || 2);
   enemy.deck.startCombat(enemyStartHand, 10);
 
   addLog('--- Combat Start ---', Colors.GOLD);
@@ -22641,12 +22649,6 @@ function measurePerkBadgeWidth(label, fontSize) {
 // (measurePerkBadgeWidth); u.width may be wider to provide extra
 // trailing spacing (left-aligned tooltips bump this to keep an icon
 // from butting right against the badge).
-// Hover explanations for inline pills (badge labels are UPPERCASE). When a
-// pill carries an entry here, drawPerkBadge registers a hover area and
-// drawIconTooltip surfaces the description — same UX as the keyword icons.
-const BADGE_DESCRIPTIONS = {
-  'FIRST STRIKE': 'First Strike: this attack deals its bonus damage only when it is your FIRST attack of the turn.',
-};
 function drawPerkBadge(u, cx, lineTop, lineH, fontSize) {
   const badgeFont = Math.max(9, Math.floor(fontSize * 0.8));
   const padX = 5;
@@ -22666,10 +22668,6 @@ function drawPerkBadge(u, cx, lineTop, lineH, fontSize) {
   ctx.textBaseline = 'middle';
   ctx.fillText(u.label, pillX + padX, cy - 1);
   ctx.font = `${fontSize}px sans-serif`;
-  // Surface a hover tooltip for pills that have an explanation.
-  if (BADGE_DESCRIPTIONS[u.label]) {
-    iconHitAreas.push({ x: pillX, y: pillY, w: pillW, h: pillH, badgeLabel: u.label });
-  }
 }
 
 // Count how many lines text would wrap to (matches drawIconText layout)
@@ -22898,41 +22896,6 @@ function drawIconText(text, centerX, startY, maxWidth, fontSize, color = '#eee',
 function drawIconTooltip() {
   for (const area of iconHitAreas) {
     if (!hitTest(mouseX, mouseY, area)) continue;
-    // Inline pill (badge) explanation — e.g. the First Strike pill.
-    if (area.badgeLabel) {
-      const desc = BADGE_DESCRIPTIONS[area.badgeLabel];
-      if (!desc) return;
-      const padX = 8, padY = 6, lineH = 15;
-      ctx.font = '12px sans-serif';
-      const lines = wrapTextLong(desc, 240, 12);
-      let boxW = 0;
-      for (const ln of lines) boxW = Math.max(boxW, ctx.measureText(ln).width);
-      ctx.font = 'bold 12px sans-serif';
-      boxW = Math.max(boxW, ctx.measureText(area.badgeLabel).width) + padX * 2;
-      const boxH = padY * 2 + 16 + lines.length * lineH;
-      let bx = area.x + area.w / 2 - boxW / 2;
-      let by = area.y - boxH - 6;
-      if (bx + boxW > SCREEN_WIDTH) bx = SCREEN_WIDTH - boxW - 4;
-      if (bx < 4) bx = 4;
-      if (by < 4) by = area.y + area.h + 6;
-      ctx.fillStyle = 'rgba(10,10,30,0.95)';
-      ctx.fillRect(bx, by, boxW, boxH);
-      ctx.strokeStyle = Colors.GOLD;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(bx, by, boxW, boxH);
-      ctx.fillStyle = Colors.GOLD;
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(area.badgeLabel, bx + padX, by + padY);
-      ctx.fillStyle = '#ddd';
-      ctx.font = '12px sans-serif';
-      let ty = by + padY + 16;
-      for (const ln of lines) { ctx.fillText(ln, bx + padX, ty); ty += lineH; }
-      ctx.textBaseline = 'alphabetic';
-      ctx.textAlign = 'left';
-      return;
-    }
     // Debug: enemy hand contents tooltip — flat list of card names
     // for behavior verification.
     if (area.enemyHandList && area.enemyHandList.length) {
@@ -23110,6 +23073,7 @@ const PILL_DESCRIPTIONS = {
   'HIT': 'Triggers only when this swing actually deals damage (not fully absorbed by block/shield/armor).',
   '2 TARGETS': 'Triggers when you pick 2 distinct targets — no damage needed, just the second pick.',
   'FIRST SHIELD': 'Triggers only when you had 0 Shield BEFORE playing this card — the first shield card in a sequence pays off, follow-ups do not.',
+  'FIRST STRIKE': 'The bonus damage applies ONLY when this card is the FIRST attack of the turn. Once anything else has already attacked this turn, it deals just its base damage.',
   'STAYS IN HAND': 'The card never leaves your hand — no recharge or discard pile. You can keep using it every turn at its normal cost.',
   'OVERHEAL': 'Healing past the target’s max HP is not wasted — each overflow point is converted, one for one, into the bonus the card names instead.',
   'ON KILL': 'Fires when this swing drops a creature to 0 HP. Works on both sides — if an enemy plays a kill-rider card and slays one of your allies, they get the benefit too.',
@@ -29131,8 +29095,8 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
     // blow lands. If damage still remains after the reserve, blocks play.
     if (enemy.powers && enemy.powers.some(p => p && p.id === 'riposte')) {
       // The parry (now pre-mitigation in takeDamageWithDefense) absorbs up
-      // to 3, so don't burn block cards on that slice.
-      landingDmg = Math.max(0, landingDmg - 3);
+      // to 2, so don't burn block cards on that slice.
+      landingDmg = Math.max(0, landingDmg - 2);
     }
     if (landingDmg <= 0) return; // fully absorbed (or Riposte will cover it)
   }
@@ -42549,6 +42513,9 @@ function updateEnemyTurn(dt) {
               tDmg = Math.max(0, tDmg);
               addLog(`  Poisoned Dagger ${s + 1}:`, Colors.GRAY);
               routeEnemyDamageToTarget(t, tDmg, card.name, null, daggerArrow);
+              attacksThisTurn++; // each throw is an attack — so a later
+                                 // Adamantine Rapier no longer reads as the
+                                 // turn's First Strike.
               if (t instanceof Creature) t.poisonStacks = (t.poisonStacks || 0) + 1;
               else if (t && typeof t.applyStatus === 'function') t.applyStatus('POISON', 1);
               spawnTokenOnTarget(t, 1, 'Poison', Colors.GREEN);

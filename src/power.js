@@ -740,17 +740,17 @@ export function createEthereal() {
 // extra damage, and Ruga draws a card whenever he's hit. Mirrors PY
 // power.py:create_brute.
 // Riposte — Khydhani's defensive power. When an attack lands, he parries
-// 1-3 of it (reduces the damage taken) and lashes the parried amount back
+// 1-2 of it (reduces the damage taken) and lashes the parried amount back
 // at the attacker. Resolved in triggerSplitPower (damage-landed gated).
 export function createRipostePower() {
   return new Power({
     id: 'riposte',
     name: 'Riposte',
     costDescription: 'Passive',
-    effectDescription: 'On Hit: parry 1-3 of the damage and deal that much back to the attacker.',
+    effectDescription: 'On Hit: parry 1-2 of the damage and deal that much back to the attacker.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'On Hit:\nParry 1-3 +\nRiposte',
+    shortDesc: 'On Hit:\nParry 1-2 +\nRiposte',
     noTierOffset: true,
   });
 }
