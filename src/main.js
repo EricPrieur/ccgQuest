@@ -17359,7 +17359,7 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_HAND_SIZE.varimatras = 2;
 
   // Part 2 — Tharnag tunnels random encounter: Goblin Swarm. Invulnerable
-  // 0-card boss-shell that opens with 3-7 random goblins (Sappers /
+  // 0-card boss-shell that opens with 5-7 random goblins (Sappers /
   // Minions / Warriors common, Spike Trap / War Banner rare) and carries the "They're in the
   // Walls!" passive — every slain goblin has a 40% chance to be replaced
   // (resummon in countAndRemoveDeadCreatures). Win by clearing the field
@@ -17370,7 +17370,7 @@ function setupEnemyForCombat(enemyId) {
     enemy._invulnerable = true;
     enemy._clearFieldToWin = true;
     enemy.addPower(createGoblinsInTheWalls());
-    const numGoblins = 3 + Math.floor(Math.random() * 5); // 3..7
+    const numGoblins = 5 + Math.floor(Math.random() * 3); // 5..7
     // Fight-start summons skip the Minion on-summon damage (combat state
     // isn't initialised yet); fireGoblinSwarmEntryDamage runs it right
     // after startCombat instead. Resummons (during combat) deal it inline.
