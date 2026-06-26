@@ -6403,7 +6403,7 @@ function drawPart2Setup() {
     const anyExist = hasPart1CompleteSave();
     const msg = anyExist
       ? 'Every Part 1 save has already been consumed by a ccgQuest+ run. Finish Part 1 again to unlock one.'
-      : 'No Part 1 completion saves found yet. Slay Varimatras and rest to create one.';
+      : 'No Part 1 completion saves found yet. Finish Part 1 to seamlessly continue into Part 2.';
     ctx.fillText(msg, SCREEN_WIDTH / 2, listY + 40);
   } else {
     const totalH = saves.length * (rowH + rowGap) - rowGap;
@@ -20254,6 +20254,8 @@ const FORGE_METALS = {
   mithril_ore:    { oreId: 'mithril_ore',    mode: 'mithril',    enchant: 'mithril_alloy', label: 'Mithril' },
   adamantine_ore: { oreId: 'adamantine_ore', mode: 'adamantine', enchant: 'adamantine',    label: 'Adamantine' },
 };
+// Gold cost to reforge a piece (either metal), on top of consuming the ore.
+const FORGE_REFORGE_COST = 500;
 // The metal whose gear-pick is currently open (set when an ore card is
 // clicked in the metal-select step; read by confirmForgeWeapon).
 let _forgeActiveMetal = null;
@@ -26316,6 +26318,44 @@ function drawCombatLog() {
     ctx.fillStyle = 'rgba(255,215,0,0.5)';
     ctx.fillRect(sbX, thumbY, sbW, thumbH);
   }
+
+  // Debug-only "Copy" button — drawn last so it sits above the log text.
+  _combatLogCopyRect = null;
+  if (debugMode) {
+    const bw = 50, bh = 16;
+    const bx = logX + logW - bw - sbW - 4, by = logY + 3;
+    _combatLogCopyRect = { x: bx, y: by, w: bw, h: bh };
+    const hov = hitTest(mouseX, mouseY, _combatLogCopyRect);
+    ctx.fillStyle = hov ? 'rgba(60,60,90,0.95)' : 'rgba(30,30,45,0.9)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#8a8aa0';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#d8d8e8';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⧉ Copy', bx + bw / 2, by + bh / 2);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+  }
+}
+
+let _combatLogCopyRect = null;
+// Debug helper — copy the whole battle log (plain text) to the clipboard.
+function copyCombatLogToClipboard() {
+  const text = combatLog.map(e => e.text).join('\n');
+  const ok = () => { try { showToast('Battle log copied to clipboard.'); } catch (_) {} };
+  const fallback = () => { console.log(text); try { showToast('Clipboard blocked — log dumped to console (F12).'); } catch (_) {} };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else {
+      fallback();
+    }
+  } catch (_) {
+    fallback();
+  }
 }
 
 // --- Combat right-column buttons ---
@@ -26721,6 +26761,12 @@ function drawEnemyPowerArea() {
 
 // --- Combat click handling ---
 function handleCombatClick(x, y) {
+  // Debug-only: copy the battle log to the clipboard.
+  if (debugMode && _combatLogCopyRect && hitTest(x, y, _combatLogCopyRect)) {
+    playSound('click');
+    copyCombatLogToClipboard();
+    return;
+  }
   // End Turn warning modal — eat every click while the confirm is up.
   if (_endTurnConfirmOpen) {
     const m = getEndTurnConfirmRects();
@@ -28598,6 +28644,8 @@ function finishBarrage() {
       const drawn = player.deck.draw(barrageDrawOnFinish, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       player.deck.placeByCost(card);
+      // RECHARGE-cost barrage weapons fire their on_recharge enchants too.
+      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
     }
   }
   barrageBonusPoison = 0;
@@ -34049,7 +34097,14 @@ function resolveEffect(eff, caster, target) {
       // worth more than the default +1 damage by setting heroismDamageMult
       // (Consecration: +2). Default 1 leaves the standard behavior.
       const _splitHeroMult = (_activePlayCard && _activePlayCard.heroismDamageMult) || 1;
-      let pool = eff.value + (caster.heroism * _splitHeroMult) + (caster.rage || 0) + getDamageModifier(caster);
+      // Capture each contribution so the log can break the pool down. A
+      // Shock / Drow Sleep sap (getDamageModifier < 0) is otherwise invisible
+      // — Shock isn't logged at all — and reads as "Heroism didn't apply".
+      const _splitBaseDmg = eff.value;
+      const _splitHeroBonus = caster.heroism * _splitHeroMult;
+      const _splitRageBonus = caster.rage || 0;
+      const _splitDmgMod = getDamageModifier(caster);
+      let pool = _splitBaseDmg + _splitHeroBonus + _splitRageBonus + _splitDmgMod;
       if (caster.heroism > 0) { caster.heroism = 0; }
       pool = Math.max(0, pool);
       pool = consumeIceForAttack(caster, pool);
@@ -34061,7 +34116,11 @@ function resolveEffect(eff, caster, target) {
       const splitSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
       spawnPlayerArrowBatch(splitSrc, splitTargets, 550);
       screenFlashTimer = 200;
-      addLog(`  Consecration: ${pool} dmg split across ${splitTargets.length} → ${perShare} each`, Colors.GOLD);
+      let _splitBreakdown = `${_splitBaseDmg} base`;
+      if (_splitHeroBonus) _splitBreakdown += ` +${_splitHeroBonus} Heroism`;
+      if (_splitRageBonus) _splitBreakdown += ` +${_splitRageBonus} Rage`;
+      if (_splitDmgMod) _splitBreakdown += ` ${_splitDmgMod >= 0 ? '+' : ''}${_splitDmgMod} mods`;
+      addLog(`  Consecration: ${_splitBreakdown} = ${pool} split across ${splitTargets.length} → ${perShare} each`, Colors.GOLD);
       let anyLanded = false;
       let lastTaken = 0;
       if (enemy && enemy.isAlive && !enemy._invulnerable) {
@@ -34508,6 +34567,10 @@ function playCardSelf(handIndex) {
     delete card._routeToPlayPile;
   } else if (!stays) {
     player.deck.placeByCost(card);
+    // RECHARGE-cost cards self-recharge into the recharge pile when played
+    // — fire their on_recharge enchants (Mithril shield / Adamantine
+    // heroism / Wolf Fang) here, mirroring the attack + defense paths.
+    if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
   }
   _activePlayCard = null;
 
@@ -34551,6 +34614,8 @@ function playCardOnAlly(handIndex, target) {
     delete card._routeToPlayPile;
   } else {
     player.deck.placeByCost(card);
+    // RECHARGE-cost cards fire their on_recharge enchants on play.
+    if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
   }
   _activePlayCard = null;
   selectedCardIndex = -1;
@@ -34627,6 +34692,11 @@ function playCardOnEnemy(handIndex) {
       delete card._routeToPlayPile;
     } else {
       player.deck.placeByCost(card);
+      // RECHARGE-cost cards land in the recharge pile when played — fire
+      // their on_recharge enchants (Adamantine heroism / Mithril shield /
+      // Wolf Fang) AFTER the strike so the swing doesn't eat the buff.
+      // Mirrors the enemy Rapier flow + the defense-play path.
+      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
     }
   }
 
@@ -34705,6 +34775,10 @@ function playCardOnCreature(handIndex, creature) {
       delete card._routeToPlayPile;
     } else {
       player.deck.placeByCost(card);
+      // RECHARGE-cost cards land in the recharge pile — fire their
+      // on_recharge enchants (Adamantine heroism / Mithril shield) after
+      // the strike. Mirrors playCardOnEnemy / playCardSelf.
+      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
     }
   }
 
@@ -36091,6 +36165,7 @@ function resolveMultiTargeting() {
       _activePlayCard = null;
       countAndRemoveDeadCreatures();
       player.deck.placeByCost(card);
+      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
       for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
       pendingRechargeNames = [];
       cardRechargedCards = [];
@@ -36206,6 +36281,7 @@ function resolveMultiTargeting() {
   countAndRemoveDeadCreatures();
 
   player.deck.placeByCost(card);
+  if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
 
   for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
   pendingRechargeNames = [];
@@ -45394,6 +45470,8 @@ function handleModalSelectClick(x, y) {
         delete card._routeToPlayPile;
       } else {
         player.deck.placeByCost(card);
+        // RECHARGE-cost modal weapons/armor fire their on_recharge enchants.
+        if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
       }
 
       modalCard = null;
@@ -45750,6 +45828,13 @@ function confirmForgeWeapon(card) {
   // step back to the metal-select for more reforges.
   if ((forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') && _forgeActiveMetal) {
     const metal = _forgeActiveMetal;
+    // Reforging costs gold on top of the ore.
+    if (gold < FORGE_REFORGE_COST) {
+      showStickyToast(`Not enough gold — reforging costs ${FORGE_REFORGE_COST}g.`);
+      playSound('click');
+      return;
+    }
+    gold -= FORGE_REFORGE_COST;
     applyCardEnchant(card, metal.enchant);
     propagateEnchantToActivePiles(card, metal.enchant);
     consumeOneOre(metal.oreId);
@@ -45915,7 +46000,7 @@ function drawForgeWeaponOverlay() {
   if (reforgeMode && metalEnchant) {
     // Plain instruction, then the enchant in the SAME rich pill+icon format
     // the game uses for card text (drawIconText is centered).
-    ctx.fillText(`The smiths fold the ${metalLabel} in — costs 1 ${metalLabel} Ore:`, SCREEN_WIDTH / 2, 94);
+    ctx.fillText(`The smiths fold the ${metalLabel} in — costs 1 ${metalLabel} Ore + ${FORGE_REFORGE_COST}g (you have ${gold}g):`, SCREEN_WIDTH / 2, 94);
     drawIconText(metalEnchant.tooltip, SCREEN_WIDTH / 2, 104, 700, 15, '#eaeaea');
   } else {
     ctx.fillText(metalSelect

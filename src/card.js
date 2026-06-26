@@ -193,6 +193,10 @@ export class Card {
       gamePlusOffset: this.gamePlusOffset,
       noTierOffset: this.noTierOffset,
       sellable: this.sellable,
+      // Carry the Heroism multiplier (Consecration: 2) — without it a
+      // drawn/recharged copy fell back to the default 1, so Heroism only
+      // added +1 each instead of +2.
+      heroismDamageMult: this.heroismDamageMult,
     });
     if (preserveUid) c.uid = this.uid;
     // Preserve the on-card enchant tags (Obsidian Forge, Dwarven
