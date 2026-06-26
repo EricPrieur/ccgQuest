@@ -5947,7 +5947,7 @@ export function createGoblinSpikeTrap() {
     noTierOffset: true, // trap-count scaling lives in the summon handler
     previewCreature: (() => {
       const c = new Creature({
-        name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+        name: 'Goblin Spike Trap', attack: 2, maxHp: 1,
         description: "Can't Attack. Riposte.", noTierOffset: true,
       });
       c._cantAttack = true;
@@ -5957,7 +5957,7 @@ export function createGoblinSpikeTrap() {
   });
 }
 
-// Goblin War Banner — summons a 0/5 banner that can't attack but buffs
+// Goblin War Banner — summons a 0/4 banner that can't attack but buffs
 // every player ally's damage by +1 while it stands.
 export function createGoblinWarBanner() {
   return new Card({
@@ -5970,7 +5970,7 @@ export function createGoblinWarBanner() {
     noTierOffset: true, // the item is unchanged; the summoned banner scales
     previewCreature: (() => {
       const c = new Creature({
-        name: 'Goblin War Banner', attack: 0, maxHp: 5,
+        name: 'Goblin War Banner', attack: 0, maxHp: 4,
         description: "Can't Attack.\nAllies deal +1 Damage.", noTierOffset: true,
       });
       c._cantAttack = true;

@@ -15779,10 +15779,8 @@ function advanceEncounterPhase() {
       } else {
         startCombat();
       }
-      // Goblin Swarm — the opening Minions land their on-summon 1 random
-      // damage now that combat state is initialised (deferred from the
-      // fight-start summon in ENEMY_DECKS.goblin_swarm).
-      if (phase.enemyId === 'goblin_swarm') fireGoblinSwarmEntryDamage();
+      // (Goblin Minions now deal their 1 random hit On Attack, so there's no
+      // fight-start on-summon volley to fire here anymore.)
       break;
     case EncounterPhase.LOOT: {
       // Loot-pick mode: phase carries lootPickCards (ids) +
@@ -17358,9 +17356,9 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_HAND_SIZE.varimatras = 2;
 
   // Part 2 — Tharnag tunnels random encounter: Goblin Swarm. Invulnerable
-  // 0-card boss-shell that opens with 4-8 random goblins (Sappers /
-  // Minions / Warriors, equal weight) and carries the "They're in the
-  // Walls!" passive — every slain goblin has a 50% chance to be replaced
+  // 0-card boss-shell that opens with 3-7 random goblins (Sappers /
+  // Minions / Warriors common, Spike Trap / War Banner rare) and carries the "They're in the
+  // Walls!" passive — every slain goblin has a 40% chance to be replaced
   // (resummon in countAndRemoveDeadCreatures). Win by clearing the field
   // (_clearFieldToWin). Mirrors the Army of the Dead shell pattern.
   ENEMY_DECKS.goblin_swarm = () => {
@@ -17369,7 +17367,7 @@ function setupEnemyForCombat(enemyId) {
     enemy._invulnerable = true;
     enemy._clearFieldToWin = true;
     enemy.addPower(createGoblinsInTheWalls());
-    const numGoblins = 4 + Math.floor(Math.random() * 5); // 4..8
+    const numGoblins = 3 + Math.floor(Math.random() * 5); // 3..7
     // Fight-start summons skip the Minion on-summon damage (combat state
     // isn't initialised yet); fireGoblinSwarmEntryDamage runs it right
     // after startCombat instead. Resummons (during combat) deal it inline.
@@ -33355,7 +33353,7 @@ function resolveEffect(eff, caster, target) {
       let last = null;
       for (let i = 0; i < num; i++) {
         const trap = new Creature({
-          name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+          name: 'Goblin Spike Trap', attack: 2, maxHp: 1,
           description: "Can't Attack. Riposte.",
         });
         trap._cantAttack = true;
@@ -33372,7 +33370,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_goblin_war_banner': {
       const banner = new Creature({
-        name: 'Goblin War Banner', attack: 0, maxHp: 5,
+        name: 'Goblin War Banner', attack: 0, maxHp: 4,
         description: "Can't Attack.\nAllies deal +1 Damage.",
       });
       banner._cantAttack = true;
@@ -33400,8 +33398,7 @@ function resolveEffect(eff, caster, target) {
         const g = makePlayerGoblin();
         if (caster.addCreature(g)) {
           last = g;
-          // Minion's on-summon hit lands on a random enemy.
-          if (g.name === 'Goblin Minion') dealRandomDamageToEnemySide(1, 'Goblin Minion');
+          // (Goblin Minion now deals its random hit On Attack, not on summon.)
         }
       }
       addLog(`  ${num} goblin${num === 1 ? '' : 's'} answer the whistle!`, Colors.ORANGE);
@@ -36619,6 +36616,11 @@ function resolveAllyAttack(ally, target) {
       if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
     }
   }
+  // Goblin Minion — "On Attack: 1 Random Damage." After its swing it also
+  // flings a random hit at the enemy side (mirrors the enemy-side rider).
+  if (ally._onAttackRandomDamage > 0 && targets.length > 0) {
+    dealRandomDamageToEnemySide(ally._onAttackRandomDamage, ally.name);
+  }
   // Sound-only padding for multiAttack allies (Raena's double bow shot
   // etc.) when fewer targets were available than the planned strikes —
   // the double-attack still reads audibly. Captures sfx before
@@ -39240,9 +39242,9 @@ function enemyHasPower(id) {
 const GOBLIN_SWARM_NAMES = new Set(['Goblin Sapper', 'Goblin Minion', 'Goblin Warrior', 'Goblin War Banner', 'Goblin Spike Trap']);
 function makeSwarmGoblin() {
   // Weighted pick: Sapper / Minion / Warrior at 1.0 each; Spike Trap at
-  // 0.5; War Banner at 1/3 (the rarest piece — it pumps the whole swarm's
-  // damage, so it stays uncommon). Total weight 3 + 0.5 + 1/3.
-  const r = Math.random() * (3 + 0.5 + 1 / 3);
+  // 0.25; War Banner at 0.2 (both kept rare — the banner pumps the whole
+  // swarm's damage, the trap ripostes). Total weight 3 + 0.25 + 0.2 = 3.45.
+  const r = Math.random() * (3 + 0.25 + 0.2);
   if (r < 1.0) {
     return new Creature({
       name: 'Goblin Sapper', attack: 1, maxHp: 2,
@@ -39251,10 +39253,12 @@ function makeSwarmGoblin() {
     });
   }
   if (r < 2.0) {
-    return new Creature({
+    const m = new Creature({
       name: 'Goblin Minion', attack: 1, maxHp: 1,
-      description: 'On Summon: Deal 1 Random Damage.',
+      description: 'On Attack: 1 Random Damage.',
     });
+    m._onAttackRandomDamage = 1; // also flings 1 random hit when it swings
+    return m;
   }
   if (r < 3.0) {
     return new Creature({
@@ -39263,9 +39267,9 @@ function makeSwarmGoblin() {
       description: 'End of Turn: Deal 1 Random Damage.',
     });
   }
-  if (r < 3.5) {
+  if (r < 3.25) {
     const trap = new Creature({
-      name: 'Goblin Spike Trap', attack: 3, maxHp: 1,
+      name: 'Goblin Spike Trap', attack: 2, maxHp: 1,
       description: "Can't Attack. Riposte.",
     });
     trap._cantAttack = true;
@@ -39273,7 +39277,7 @@ function makeSwarmGoblin() {
     return trap;
   }
   const banner = new Creature({
-    name: 'Goblin War Banner', attack: 0, maxHp: 5,
+    name: 'Goblin War Banner', attack: 0, maxHp: 4,
     description: "Can't Attack.\nAllies deal +1 Damage.",
   });
   banner._cantAttack = true;
@@ -39292,8 +39296,8 @@ function summonSwarmGoblin(avoidSlots = null) {
   g._codexSide = 'enemy';
   g._sourceRarity = 'common';
   g._sourceSubtype = 'allies';
-  // Game+ scaling — Sapper/Minion/Warrior +1/+1, War Banner +0/+2 (via
-  // CREATURE_TIER_OFFSET). Spike Trap has no entry so it stays 3/1.
+  // Game+ scaling — Sapper/Minion/Warrior +1/+1, War Banner +0/+2,
+  // Spike Trap +1/+1 (via CREATURE_TIER_OFFSET).
   const off = monsterTierOffset || 0;
   scaleCreatureWithOffset(g, off, 'enemy');
   // War Banner aura scales +0.5 damage-to-all per offset (1 → 1.5 → 2 …).
@@ -39314,21 +39318,8 @@ function summonSwarmGoblin(avoidSlots = null) {
       && state === GameState.COMBAT && !_codexSandboxRunning) {
     playSound('monster_snort_01', 0.6);
   }
-  if (g.name === 'Goblin Minion' && state === GameState.COMBAT && !_codexSandboxRunning) {
-    dealRandomDamageToPlayerSide(1, 'Goblin Minion');
-  }
+  // (Goblin Minion now deals its 1 random hit On Attack, not on summon.)
   return g;
-}
-// Fight-start Minion on-summon damage — runs once right after startCombat
-// so the opening minions each land their 1 random damage with combat
-// state ready.
-function fireGoblinSwarmEntryDamage() {
-  if (!enemy || !Array.isArray(enemy.creatures)) return;
-  for (const c of enemy.creatures) {
-    if (c && c.isAlive && c.name === 'Goblin Minion') {
-      dealRandomDamageToPlayerSide(1, 'Goblin Minion');
-    }
-  }
 }
 // Deal `amount` damage to a random player-side target (player or a live
 // ally), through the standard defense flow. Used by the Goblin Minion's
@@ -39369,29 +39360,15 @@ function dealRandomDamageToPlayerSide(amount, sourceName, color = Colors.ORANGE)
 // hook; Minion's on-summon + Sapper's on-death route through the
 // enemy-side helpers/handlers).
 function makePlayerGoblin() {
-  const roll = Math.floor(Math.random() * 3);
-  let g;
-  if (roll === 0) {
-    g = new Creature({
-      name: 'Goblin Sapper', attack: 1, maxHp: 2,
-      selfDestruct: true, onDeathDamage: 2,
-      description: 'On Attack: Explode. On Death: Deal 1-2 damage to a random enemy.',
-    });
-  } else if (roll === 1) {
-    g = new Creature({
-      name: 'Goblin Minion', attack: 1, maxHp: 1,
-      description: 'On Summon: Deal 1 Random Damage.',
-    });
-  } else {
-    g = new Creature({
-      name: 'Goblin Warrior', attack: 2, maxHp: 3,
-      endTurnDamage: 1,
-      description: 'End of Turn: Deal 1 Random Damage.',
-    });
-  }
-  // Game+ — player-summoned goblins scale +1/+1 per offset (same
-  // CREATURE_TIER_OFFSET rules as the enemy swarm goblins).
+  // Same weighted pool as the enemy swarm (Sapper/Minion/Warrior common,
+  // Spike Trap / War Banner rare) so the Boss Whistle summons the same
+  // goblins. makeSwarmGoblin returns a bare creature; we apply the
+  // player-side scaling + source tags here.
+  const g = makeSwarmGoblin();
   scaleCreatureWithOffset(g, playerTierOffset || 0, 'player');
+  if (g.name === 'Goblin War Banner' && (playerTierOffset || 0) > 0) {
+    g._allyDamageAura = 1 + 0.5 * (playerTierOffset || 0);
+  }
   g._sourceRarity = 'rare';
   g._sourceSubtype = 'item';
   return g;
@@ -41092,6 +41069,11 @@ function updateEnemyTurn(dt) {
           addLog(`  +1 Poison on ${target.name || 'you'}`, Colors.GREEN);
         }
         if (target) spawnTokenOnTarget(target, 1, 'Poison', Colors.GREEN);
+      }
+      // Goblin Minion — "On Attack: 1 Random Damage." After its normal
+      // single-target swing it also flings a random hit at the player side.
+      if (c._onAttackRandomDamage > 0) {
+        dealRandomDamageToPlayerSide(c._onAttackRandomDamage, c.name);
       }
       // Kraken Tentacle snag — on every swing that targets the player,
       // splice 1 random hand card off and park it on the creature
@@ -44477,8 +44459,8 @@ function triggerOnAttackedPowers(character, creatureTarget) {
     // Rampaging Troll — Loathsome Limbs. For every 10 damage the troll
     // has taken (cumulative missing HP in 10-card chunks, same accounting
     // as Zhost's Revenge) it tears off a Loathsome Limb the instant the
-    // damage lands during the player's turn: discard a random hand card
-    // and summon a wounded 5/10 limb (3 Atk + Bleed, Regen 3). NOT hasted
+    // damage lands during the player's turn: summon a wounded 5/10 limb
+    // (3 Atk + Bleed, Regen 3) — no card discard. NOT hasted
     // — it appears on the player's turn and acts on the troll's next turn.
     // Latched on _loathsomeLimbsSpawned so the troll's own Regeneration
     // (which restores curHp) can't un-spawn limbs.
@@ -44490,13 +44472,7 @@ function triggerOnAttackedPowers(character, creatureTarget) {
       let spawned = character._loathsomeLimbsSpawned || 0;
       while (spawned < targetLimbs) {
         spawned++;
-        if (character.deck.hand.length > 0) {
-          const idx = Math.floor(Math.random() * character.deck.hand.length);
-          const [lost] = character.deck.hand.splice(idx, 1);
-          if (typeof character.deck.discardCard === 'function') character.deck.discardCard(lost);
-          else character.deck.discardPile.push(lost);
-          addLog(`  Loathsome Limbs! ${character.name} sloughs off ${lost.name}.`, Colors.ORANGE);
-        }
+        // (No longer discards a card from the troll when an arm tears off.)
         const limb = new Creature({
           name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
           bleedAttack: 1,
@@ -45086,7 +45062,7 @@ function countAndRemoveDeadCreatures() {
   }
   // Goblin Swarm — "They're in the Walls!": collect the slots of the
   // goblins that died this sweep BEFORE they're removed, then (after
-  // removal) give each a 50% chance to be replaced by a fresh random
+  // removal) give each a 40% chance to be replaced by a fresh random
   // goblin — placed AWAY from the just-vacated slot so it's obviously a
   // new goblin, not the same one refusing to die.
   const deadGoblinSlots = enemyHasPower('goblins_in_the_walls')
@@ -45094,8 +45070,10 @@ function countAndRemoveDeadCreatures() {
     : [];
   enemy.removeDeadCreatures();
   player.removeDeadCreatures();
-  // Respawn chance: 50% base, +5% per monster offset (55%, 60% …), capped.
-  const respawnChance = Math.min(1, 0.5 + 0.05 * (monsterTierOffset || 0));
+  // Respawn chance: 40% base, +5% per monster offset (45%, 50% …), capped.
+  // Applied PER goblin that died this sweep — so the expected number of
+  // replacements is 0.4 × (goblins killed this turn).
+  const respawnChance = Math.min(1, 0.4 + 0.05 * (monsterTierOffset || 0));
   for (let i = 0; i < deadGoblinSlots.length; i++) {
     if (Math.random() < respawnChance) {
       const g = summonSwarmGoblin(deadGoblinSlots);
@@ -56365,7 +56343,7 @@ function buildCodexSourceCache() {
   addCreature(goblinSapperSummon, swarmSrc);
   const goblinMinionSummon = new Creature({
     name: 'Goblin Minion', attack: 1, maxHp: 1,
-    description: 'On Summon: Deal 1 Random Damage.',
+    description: 'On Attack: 1 Random Damage.',
   });
   goblinMinionSummon._codexSide = 'enemy';
   goblinMinionSummon._sourceRarity = 'common';
