@@ -34429,7 +34429,10 @@ function resolveEffect(eff, caster, target) {
           // out while the blocking card that triggered this scry resolved).
           // Opening the overlay then strands the player in SCRY_SELECT on a
           // finished fight — bail and return the peeked cards to the draw pile.
-          if (state !== GameState.COMBAT) {
+          // COMBAT (own turn) and DEFENDING (reactive defense, e.g. Shadow
+          // Cloak's scry on a missed block) are both valid; anything else
+          // means the fight is over.
+          if (state !== GameState.COMBAT && state !== GameState.DEFENDING) {
             while (scryCards.length) player.deck.drawPile.push(scryCards.pop());
             return;
           }
@@ -34460,7 +34463,7 @@ function resolveEffect(eff, caster, target) {
         const openScry = () => {
           // Bail if combat ended during the delay (see scry_pick above) —
           // return the peeked cards to the discard pile they came from.
-          if (state !== GameState.COMBAT) {
+          if (state !== GameState.COMBAT && state !== GameState.DEFENDING) {
             while (scryCards.length) player.deck.discardPile.push(scryCards.pop());
             return;
           }
