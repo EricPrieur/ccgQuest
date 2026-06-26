@@ -22643,6 +22643,12 @@ function measurePerkBadgeWidth(label, fontSize) {
 // (measurePerkBadgeWidth); u.width may be wider to provide extra
 // trailing spacing (left-aligned tooltips bump this to keep an icon
 // from butting right against the badge).
+// Hover explanations for inline pills (badge labels are UPPERCASE). When a
+// pill carries an entry here, drawPerkBadge registers a hover area and
+// drawIconTooltip surfaces the description — same UX as the keyword icons.
+const BADGE_DESCRIPTIONS = {
+  'FIRST STRIKE': 'First Strike: this attack deals its bonus damage only when it is your FIRST attack of the turn.',
+};
 function drawPerkBadge(u, cx, lineTop, lineH, fontSize) {
   const badgeFont = Math.max(9, Math.floor(fontSize * 0.8));
   const padX = 5;
@@ -22662,6 +22668,10 @@ function drawPerkBadge(u, cx, lineTop, lineH, fontSize) {
   ctx.textBaseline = 'middle';
   ctx.fillText(u.label, pillX + padX, cy - 1);
   ctx.font = `${fontSize}px sans-serif`;
+  // Surface a hover tooltip for pills that have an explanation.
+  if (BADGE_DESCRIPTIONS[u.label]) {
+    iconHitAreas.push({ x: pillX, y: pillY, w: pillW, h: pillH, badgeLabel: u.label });
+  }
 }
 
 // Count how many lines text would wrap to (matches drawIconText layout)
@@ -22890,6 +22900,41 @@ function drawIconText(text, centerX, startY, maxWidth, fontSize, color = '#eee',
 function drawIconTooltip() {
   for (const area of iconHitAreas) {
     if (!hitTest(mouseX, mouseY, area)) continue;
+    // Inline pill (badge) explanation — e.g. the First Strike pill.
+    if (area.badgeLabel) {
+      const desc = BADGE_DESCRIPTIONS[area.badgeLabel];
+      if (!desc) return;
+      const padX = 8, padY = 6, lineH = 15;
+      ctx.font = '12px sans-serif';
+      const lines = wrapTextLong(desc, 240, 12);
+      let boxW = 0;
+      for (const ln of lines) boxW = Math.max(boxW, ctx.measureText(ln).width);
+      ctx.font = 'bold 12px sans-serif';
+      boxW = Math.max(boxW, ctx.measureText(area.badgeLabel).width) + padX * 2;
+      const boxH = padY * 2 + 16 + lines.length * lineH;
+      let bx = area.x + area.w / 2 - boxW / 2;
+      let by = area.y - boxH - 6;
+      if (bx + boxW > SCREEN_WIDTH) bx = SCREEN_WIDTH - boxW - 4;
+      if (bx < 4) bx = 4;
+      if (by < 4) by = area.y + area.h + 6;
+      ctx.fillStyle = 'rgba(10,10,30,0.95)';
+      ctx.fillRect(bx, by, boxW, boxH);
+      ctx.strokeStyle = Colors.GOLD;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, boxW, boxH);
+      ctx.fillStyle = Colors.GOLD;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(area.badgeLabel, bx + padX, by + padY);
+      ctx.fillStyle = '#ddd';
+      ctx.font = '12px sans-serif';
+      let ty = by + padY + 16;
+      for (const ln of lines) { ctx.fillText(ln, bx + padX, ty); ty += lineH; }
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+      return;
+    }
     // Debug: enemy hand contents tooltip — flat list of card names
     // for behavior verification.
     if (area.enemyHandList && area.enemyHandList.length) {
@@ -34419,6 +34464,14 @@ function resolveEffect(eff, caster, target) {
         // pass — no floats ⇒ scry was the only effect (Small Pouch), so
         // we open immediately and skip the awkward dead pause.
         const openScry = () => {
+          // Combat may have ended during the 450ms delay (e.g. the enemy bled
+          // out while the blocking card that triggered this scry resolved).
+          // Opening the overlay then strands the player in SCRY_SELECT on a
+          // finished fight — bail and return the peeked cards to the draw pile.
+          if (state !== GameState.COMBAT) {
+            while (scryCards.length) player.deck.drawPile.push(scryCards.pop());
+            return;
+          }
           state = GameState.SCRY_SELECT;
           showStyledToast(`Scry ${revealed.length}: pick 1 card to draw, the rest are recharged`, 'scry');
         };
@@ -34444,6 +34497,12 @@ function resolveEffect(eff, caster, target) {
         scryCards = revealed;
         _scryFromDiscard = true;
         const openScry = () => {
+          // Bail if combat ended during the delay (see scry_pick above) —
+          // return the peeked cards to the discard pile they came from.
+          if (state !== GameState.COMBAT) {
+            while (scryCards.length) player.deck.discardPile.push(scryCards.pop());
+            return;
+          }
           state = GameState.SCRY_SELECT;
           showStyledToast(`Scry ${revealed.length} (discard): pick 1 card to draw, the rest stay in discard`, 'scry');
         };
