@@ -6026,17 +6026,16 @@ export function createBagOfStolenTeeth() {
 
 // === Rampaging Troll loot drops (Part 2 tunnels) ===
 
-// Ring of Regeneration — stays-in-hand relic; gain 2 Regen each time
-// it's played.
+// Ring of Regeneration — recharge relic; gain 2 Regen and draw a card.
 export function createRingOfRegeneration() {
   return new Card({
     id: 'ring_of_regeneration', name: 'Ring of Regeneration',
-    description: 'Gain 2 Regen.\nStays in hand.',
-    shortDesc: '+2 Regen\nStays in hand',
-    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.FREE,
+    description: 'Gain 2 Regen, Draw.',
+    shortDesc: '+2 Regen, Draw',
+    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_regen', 2, TargetType.SELF),
-      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic', tier: 2,
     gamePlusOffset: { apply_regen: 1 },
@@ -7855,6 +7854,236 @@ export function createDireHide() {
   });
 }
 
+// Giant Hyena — the Gnoll Hunter's summon (East Mountain random encounter).
+// 3 Atk + 1 Bleed on hit, 6 HP, and a fixed Riposte 1 (reflects 1 to whoever
+// strikes it, regardless of its 3 attack — see maybeEnemyRiposte's riposteAmount).
+export function createGiantHyenaCreature() {
+  const c = new Creature({
+    name: 'Giant Hyena', attack: 3, maxHp: 6, bleedAttack: 1,
+    description: 'Riposte 1.',
+  });
+  c.riposte = true;
+  c.riposteAmount = 1;
+  return c;
+}
+
+export function createSummonGiantHyena() {
+  return new Card({
+    id: 'summon_giant_hyena', name: 'Summon Giant Hyena',
+    description: 'Summon a Giant Hyena (3 + Bleed, 6 HP, Riposte 1).',
+    shortDesc: 'Summon\nGiant Hyena',
+    subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_giant_hyena', 1, TargetType.SUMMON)],
+    previewCreature: createGiantHyenaCreature(),
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+// Gnoll Hunter weapons (East Mountain). Enemy-played attacks — their effects
+// (first_strike_poison_attack / bone_javelin_attack / bite_attack) resolve in
+// the enemy attack loop in main.js and each bumps attacksThisTurn so Bone Bow's
+// First Strike reads correctly.
+export function createBoneBow() {
+  return new Card({
+    id: 'bone_bow', name: 'Bone Bow',
+    description: 'Recharge a Card -> Deal 6, Draw.\nFirst Strike: Poison',
+    shortDesc: 'R-Card->6, Draw\nFirst Strike: Poison',
+    subtype: 'ranged', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('first_strike_poison_attack', 6, TargetType.SINGLE_ENEMY, 1),
+      new CardEffect('draw', 1, TargetType.SELF),
+      // "Recharge a Card" — costs an extra card, so the Draw offsets the
+      // recharge instead of net-growing the turn (no infinite draw chain).
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    priority: 25,
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+export function createBoneJavelin() {
+  return new Card({
+    id: 'bone_javelin', name: 'Bone Javelin',
+    description: 'Deal 5 + Poison.\n+5 Against Summons.',
+    shortDesc: '5 + Poison\n+5 vs Summons',
+    subtype: 'martial_2h', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('bone_javelin_attack', 5, TargetType.SINGLE_ENEMY, 5),
+    ],
+    priority: 15,
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+export function createGnollBite() {
+  return new Card({
+    id: 'gnoll_bite', name: 'Bite',
+    description: 'Deal 4 + Bleed.',
+    shortDesc: '4 + Bleed',
+    subtype: 'simple', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('bite_attack', 4, TargetType.SINGLE_ENEMY),
+    ],
+    priority: 12,
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+// Gnoll Hunter loot (East Mountain). Beast Collar's Riposte 1 + Beastmaster
+// Horn's summon resolve in main.js; Pack Hyena scales +1 Atk per ally.
+export function createPackHyenaCreature() {
+  const c = new Creature({
+    name: 'Pack Hyena', attack: 1, maxHp: 4,
+    description: '+1 Atk per ally.',
+  });
+  c.packTactics = true;
+  return c;
+}
+
+export function createBeastCollar() {
+  return new Card({
+    id: 'beast_collar', name: 'Beast Collar',
+    description: 'Riposte 1.\nBlock 5, Heal 2 Bleed, Draw.',
+    shortDesc: 'Riposte 1\nBlk 5, Heal 2 Bleed, Draw',
+    subtype: 'light_armor', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('heal_bleed', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'common', tier: 2,
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+export function createBeastmasterHorn() {
+  return new Card({
+    id: 'beastmaster_horn', name: 'Beastmaster Horn',
+    description: 'Summon 1 Giant Hyena,\nor a pack of 2-4 Hyenas.',
+    shortDesc: 'Summon Giant Hyena\nor 2-4 Pack Hyenas',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_beastmaster_horn', 0, TargetType.SELF),
+    ],
+    previewCreature: createPackHyenaCreature(),
+    rarity: 'rare', tier: 2,
+  });
+}
+
+export function createHuntersRecurveBow() {
+  return new Card({
+    id: 'hunters_recurve_bow', name: "Hunter's Recurve Bow",
+    description: 'Recharge 2 Cards -> Deal 12, Draw.\nMark the target.',
+    shortDesc: 'R2 Cards->12, Draw\nMark',
+    subtype: 'ranged', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 12, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 2, TargetType.SELF),
+    ],
+    rarity: 'epic', tier: 2,
+    gamePlusOffset: { damage: 3 },
+  });
+}
+
+// Crag Cat cards (East Mountain). Pounce + Cat Reflexes resolve their custom
+// effects (pounce_attack / reflexes_dodge) in main.js — the cat plays Pounce
+// proactively and Cat Reflexes reactively (it's a DEFENSE card).
+export function createPounce() {
+  return new Card({
+    id: 'pounce', name: 'Pounce',
+    description: 'Deal 4 + Bleed.\nIts damage hits your hand first.',
+    shortDesc: '4 + Bleed\nDmg hits hand first',
+    subtype: 'weapon', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('pounce_attack', 4, TargetType.SINGLE_ENEMY),
+    ],
+    priority: 8,
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+export function createCatReflexes() {
+  return new Card({
+    id: 'cat_reflexes', name: 'Cat Reflexes',
+    description: '50% to avoid all damage from the attack.\n+2 Heroism. Draw.',
+    shortDesc: '50% dodge\n+2 Heroism, Draw',
+    subtype: 'ability', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('reflexes_dodge', 50, TargetType.SELF),
+      new CardEffect('gain_heroism', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+// Crag Cat loot (East Mountain). Dropped 50% of the time (crag_cat_loot).
+export function createMountainPredatorFang() {
+  return new Card({
+    id: 'mountain_predator_fang', name: 'Mountain Predator Fang',
+    description: 'Heal 1 Ailment, Heroism, Draw.',
+    shortDesc: 'Heal 1 Ailment\nHeroism, Draw',
+    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('heal_n_negative_effects', 1, TargetType.SELF),
+      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'common', tier: 2,
+    gamePlusOffset: { gain_heroism: 1 },
+  });
+}
+
+export function createCloakOfTheSilentProwler() {
+  return new Card({
+    id: 'cloak_silent_prowler', name: 'Cloak of the Silent Prowler',
+    description: 'Block 3, Heal 6 Ailments, Scry 2.',
+    shortDesc: 'Block 3\nHeal 6 Ailments, Scry 2',
+    subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('heal_n_negative_effects', 6, TargetType.SELF),
+      new CardEffect('scry_pick', 2, TargetType.SELF),
+    ],
+    rarity: 'uncommon', tier: 2,
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+// Snow Paws — clothing armor. "First Attack: +3" is a passive keyed by card id
+// in main.js (mirrors Boarhide Bracers); the effects array is its Defense mode.
+export function createSnowPaws() {
+  return new Card({
+    id: 'snow_paws', name: 'Snow Paws',
+    description: 'First Attack: +3.\nDefense: Block 2, Clear 2 Ice, Draw.',
+    shortDesc: 'First Atk: +3\nDef: Blk 2, Clear Ice, Draw',
+    subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 2, TargetType.SELF),
+      new CardEffect('clear_ice', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon', tier: 2,
+    gamePlusOffset: { block: 1 },
+  });
+}
+
+export function createCatsEyePendant() {
+  return new Card({
+    id: 'cats_eye_pendant', name: "Cat's Eye Pendant",
+    description: 'Heal half your Ailments,\nRemove all Marks, Draw.',
+    shortDesc: 'Heal 1/2 Ailments\nRemove Marks, Draw',
+    subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('cats_eye_cleanse', 0, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'rare', tier: 2,
+  });
+}
+
 // Rend — Rampaging Troll's signature claw attack (Part 2 tunnels).
 // Picks up to 2 random player-side targets and rakes each for 4 damage
 // plus 1 Bleed (the bleed rider rides the damage_random_split handler).
@@ -8166,16 +8395,16 @@ export function createWinterheartPelt() {
 // the enemy egg/chick relationship from the fight itself.
 // ============================================================
 
-// Playable relic. FREE cost: 1 Shock on a random enemy, then draws.
+// Playable relic. Recharge cost: 1 Shock on a random enemy, then draws.
 export function createStormwingFeather() {
   return new Card({
     id: 'stormwing_feather',
     name: 'Stormwing Feather',
-    description: 'Discard -> Shock Randomly, Draw.',
-    shortDesc: 'D->Shock rand\nDraw',
+    description: 'Deal Shock Randomly, Draw.',
+    shortDesc: 'Shock rand\nDraw',
     subtype: 'relic',
     cardType: CardType.RELIC,
-    costType: CostType.DISCARD,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('apply_shock', 1, TargetType.RANDOM_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
@@ -8258,22 +8487,20 @@ export function createRocEggshellShield() {
   });
 }
 
-// Lost Adventurer's Ring — relic-style item. Stays in hand and
-// every turn the player can play it for a free Heal 1 + Heroism
-// stack. The stays_in_hand exhaust gate means once per turn only.
+// Lost Adventurer's Ring — recharge relic: Heal 1 + 1 Heroism, then draw.
 export function createLostAdventurersRing() {
   return new Card({
     id: 'lost_adventurers_ring',
     name: "Lost Adventurer's Ring",
-    description: 'Heal 1, Gain 1 Heroism.\nStays in hand.',
-    shortDesc: 'Heal 1\n+1 Heroism, Stays',
+    description: 'Heal 1, Gain 1 Heroism, Draw.',
+    shortDesc: 'Heal 1, +1 Heroism\nDraw',
     subtype: 'relic',
     cardType: CardType.ITEM,
-    costType: CostType.FREE,
+    costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heal', 1, TargetType.SELF),
       new CardEffect('gain_heroism', 1, TargetType.SELF),
-      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,

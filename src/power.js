@@ -755,6 +755,38 @@ export function createRipostePower() {
   });
 }
 
+// Patient Hunter (Gnoll Hunter) — the hunter culls the prey's pack before the
+// prey itself: it never chooses to attack the player while any of the player's
+// summons are alive to be targeted. Logic lives in pickEnemyAttackTarget.
+export function createPatientHunterPower() {
+  return new Power({
+    id: 'patient_hunter',
+    name: 'Patient Hunter',
+    costDescription: 'Passive',
+    effectDescription: 'The hunter and its beasts strike your summons first — never you while a summon stands.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Targets your\nsummons first',
+    noTierOffset: true,
+  });
+}
+
+// Spell Turning (Crag Cat) — each negative effect (Poison/Bleed/Fire/Ice/
+// Shock/Mark) applied to the cat has a 50% chance to be turned aside. Logic
+// lives in Character.applyStatus (the single choke-point for all six).
+export function createSpellTurningPower() {
+  return new Power({
+    id: 'spell_turning',
+    name: 'Spell Turning',
+    costDescription: 'Passive',
+    effectDescription: 'Each Poison / Bleed / Fire / Ice / Shock / Mark applied has a 50% chance to be turned aside.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: '50% to negate\neach ailment',
+    noTierOffset: true,
+  });
+}
+
 // Drow Sleep Poison (Khydhani) — Turn Start: coats his next swing with
 // +1 Drow Sleep Poison (the same buff the player's Drow Sleep Poison vial
 // grants). Effect logic lives in startEnemyTurn.

@@ -109,6 +109,10 @@ import {
   createSahuaginPriestStaffLoot, createWhirlpool, createSwimmingShowcase,
   createGnikansStaff,
   createEnragedStrike, createDireClaws, createDireBite, createDireHide, createBearRoar,
+  createSummonGiantHyena, createGiantHyenaCreature, createBoneBow, createBoneJavelin, createGnollBite,
+  createPounce, createCatReflexes,
+  createMountainPredatorFang, createCloakOfTheSilentProwler, createSnowPaws, createCatsEyePendant,
+  createPackHyenaCreature, createBeastCollar, createBeastmasterHorn, createHuntersRecurveBow,
   createAStormIsComing,
   createBearTeethNecklace, createBearClaw, createBearHideArmor, createBearFatRations,
   createRoaringHelm, createWinterheartPelt,
@@ -131,8 +135,8 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter } from './encounter.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createGnollHunterEncounter, createCragCatEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -143,7 +147,7 @@ import {
   createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
-  createObsidianOracleBodyPower, createVanish, createRipostePower, createDrowSleepPoisonPower, createBrute, createEthereal,
+  createObsidianOracleBodyPower, createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createBrute, createEthereal,
 } from './power.js';
 import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, markSlotConsumedForGamePlus, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
@@ -249,6 +253,13 @@ let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
 // on a hit it resets. Goblin Swarm / Rampaging Troll, 50/50.
 const TUNNEL_ENC_STEP = 0.04;
 let tunnelEncounterChance = TUNNEL_ENC_STEP;
+// East Mountain (trail + crags) random-encounter chance. Armed once the
+// Windbreak Ledge gnoll-tracks dialog has fired (so it begins at Cairn Bend);
+// every walked-onto east-mountain node with no scripted encounter then rolls
+// this, climbing by EAST_ENC_STEP on a miss and resetting on a hit. 50/50
+// Gnoll Hunter / Crag Cat.
+const EAST_ENC_STEP = 0.04;
+let eastEncounterChance = EAST_ENC_STEP;
 // ccgQuest+ progression — highest monster tier offset the player has
 // ever finished a run at. Persisted to localStorage so the unlock
 // survives across sessions. Finishing the base game (offset 0)
@@ -2350,6 +2361,24 @@ const NO_FOG_MAPS = new Set([
   // Temple of Moradin — small 2-node side map; the player sees the
   // whole layout (entry + altar) at a glance.
   'temple_of_moradin',
+  // East Mountain Trail — small exterior climb (3 nodes) east of the South
+  // Outpost; show the whole open trail at a glance. Its four continuation
+  // segments are exterior trail maps too.
+  'east_mountain_trail',
+  'east_mountain_trail_01',
+  'east_mountain_trail_02',
+  'east_mountain_trail_03',
+  'east_mountain_trail_04',
+  'east_mountain_crags_chasm_01',
+  'east_mountain_crags_chasm_02',
+  'east_mountain_crags_chasm_03',
+  'east_mountain_crags_chasm_04',
+  'east_mountain_crags_chasm_05',
+  'east_mountain_crags_chasm_06',
+  'east_mountain_crags_chasm_07',
+  'east_mountain_crags_chasm_08',
+  'east_mountain_crags_chasm_09',
+  'east_mountain_crags_chasm_10',
   // Path of the Necromancer — Master Mortain's Study is a single
   // small room; the whole layout (door + desk) reads at a glance.
   'necromancer_study',
@@ -3573,6 +3602,10 @@ let enemyTurnNumber = 0;
 // current enemy turn. Incremented just before each card's effect
 // loop runs; reset in startEnemyTurn. PY's "cards_committed".
 let _enemyCardsThisTurn = 0;
+// Pounce (Crag Cat): set true when a Pounce swing targets the PLAYER. If that
+// swing actually deals damage, the player discards their hand at the end of the
+// defensive phase (finishIncomingDamage). Reset per damage event + enemy turn.
+let _pounceHitPlayer = false;
 // Sentinel UX state — when the player tries to attack a non-sentinel while
 // at least one living sentinel guards the row, briefly flash the sentinel
 // creatures (gold pulse) and show a "Must target Sentinel" toast.
@@ -3730,6 +3763,10 @@ const CARD_REGISTRY = {
   boar_tusk: createBoarTusk,
   boarhide_bracers: createBoarhideBracers, frenzy_blood_vial: createFrenzyBloodVial,
   boarhide_bandage: createBoarhideBandage,
+  mountain_predator_fang: createMountainPredatorFang, cloak_silent_prowler: createCloakOfTheSilentProwler,
+  snow_paws: createSnowPaws, cats_eye_pendant: createCatsEyePendant,
+  beast_collar: createBeastCollar, beastmaster_horn: createBeastmasterHorn,
+  hunters_recurve_bow: createHuntersRecurveBow,
   wooden_greatsword: createWoodenGreatsword, rock_mace: createRockMace,
   cracked_buckler: createCrackedBuckler, buckler: createBuckler, short_bow: createShortBow,
   // Path of the Necromancer — dining-room cockroach loot.
@@ -4261,6 +4298,22 @@ const LOOT_TABLES = {
     { creator: createSeveredTrollArm,     weight: 0.25 },
     { creator: createRingOfRegeneration,  weight: 0.10 },
   ],
+  // Gnoll Hunter drop (East Mountain). 50%-gated (see GATED_LOOT); on a drop,
+  // pick ONE — Bone Bow or Bone Javelin at equal weight.
+  gnoll_hunter_loot: [
+    { creator: createBoneBow,            weight: 0.75 },
+    { creator: createBoneJavelin,        weight: 0.75 },
+    { creator: createBeastCollar,        weight: 1.00 },
+    { creator: createBeastmasterHorn,    weight: 0.50 },
+    { creator: createHuntersRecurveBow,  weight: 0.25 },
+  ],
+  // Crag Cat drop (East Mountain). 50%-gated; on a drop, pick ONE by weight.
+  crag_cat_loot: [
+    { creator: createMountainPredatorFang,    weight: 1.00 },
+    { creator: createCloakOfTheSilentProwler, weight: 0.75 },
+    { creator: createSnowPaws,                weight: 0.75 },
+    { creator: createCatsEyePendant,          weight: 0.50 },
+  ],
   // The Assassin (Khydhani) — the drow at the Great Forge. NOT in
   // GATED_LOOT, so killing him ALWAYS drops loot — TWO distinct picks by
   // weight. Drow-themed gear + the Underdark venom item.
@@ -4368,6 +4421,8 @@ const LOOT_TABLE_LABELS = {
   ore_cache:              'Ore Vein',
   goblin_swarm_loot:      'Goblin Swarm',
   rampaging_troll_loot:   'Rampaging Troll',
+  gnoll_hunter_loot:      'Gnoll Hunter',
+  crag_cat_loot:          'Crag Cat',
   khydhani_loot:          'The Assassin',
   drake_rider_loot:       'Kobold Drake Rider',
   magma_mephit_loot:      'Magma Mephit',
@@ -4402,6 +4457,8 @@ const LOOT_TABLE_NOTES = {
   ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
   rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
+  gnoll_hunter_loot: 'Dropped after killing a Gnoll Hunter (50% chance). Pick-one, weighted: Beast Collar common; Bone Bow / Bone Javelin uncommon; Beastmaster Horn rare; Hunter\'s Recurve Bow epic.',
+  crag_cat_loot: 'Dropped after killing a Crag Cat (50% chance). Pick-one, weighted: Mountain Predator Fang common; Cloak of the Silent Prowler / Snow Paws uncommon; Cat\'s Eye Pendant rare.',
   khydhani_loot: 'Dropped after killing The Assassin (Khydhani) at the Great Forge. Guaranteed (100%) — TWO distinct picks by weight: Drow Sleep Poison most common; Drow Parrying Dagger / Adamantine Rapier / Adamantine Chain Shirt / Darkwood Hand Crossbow rare; Piwafwi epic (rarest).',
   sahuagin_sentinel_loot: 'Dropped after defeating a Sahuagin Sentinel. Pick one — Trident, Scale Armor or Fresh Fish common; Fish Scale Boots / Jar of Piranhas rare; Sahuagin Eye epic.',
   sahuagin_priest_loot:   'Dropped after defeating the Sahuagin Priest at the Flooded Altar. Always Sahuagin Priest Staff.',
@@ -4559,6 +4616,21 @@ async function loadAssets() {
     loadImage('map_arriving_city', `${BASE}assets/Maps/ArrivingAtTheCity.jpg`),
     loadImage('map_south_of_qualibaf', `${BASE}assets/Maps/SouthOfQualibaf.jpg`),
     loadImage('map_south_outpost', `${BASE}assets/Maps/SouthOutpostMap.jpg`),
+    loadImage('map_east_mountain_trail', `${BASE}assets/Maps/EastMountainTrailMap.jpg`),
+    loadImage('map_east_mountain_trail_01', `${BASE}assets/Maps/EastMountainTrail_01.jpg`),
+    loadImage('map_east_mountain_trail_02', `${BASE}assets/Maps/EastMountainTrail_02.jpg`),
+    loadImage('map_east_mountain_trail_03', `${BASE}assets/Maps/EastMountainTrail_03.jpg`),
+    loadImage('map_east_mountain_trail_04', `${BASE}assets/Maps/EastMountainTrail_04.jpg`),
+    loadImage('map_east_mountain_crags_chasm_01', `${BASE}assets/Maps/EastMountainCragsChasm_01.jpg`),
+    loadImage('map_east_mountain_crags_chasm_02', `${BASE}assets/Maps/EastMountainCragsChasm_02.jpg`),
+    loadImage('map_east_mountain_crags_chasm_03', `${BASE}assets/Maps/EastMountainCragsChasm_03.jpg`),
+    loadImage('map_east_mountain_crags_chasm_04', `${BASE}assets/Maps/EastMountainCragsChasm_04.jpg`),
+    loadImage('map_east_mountain_crags_chasm_05', `${BASE}assets/Maps/EastMountainCragsChasm_05.jpg`),
+    loadImage('map_east_mountain_crags_chasm_06', `${BASE}assets/Maps/EastMountainCragsChasm_06.jpg`),
+    loadImage('map_east_mountain_crags_chasm_07', `${BASE}assets/Maps/EastMountainCragsChasm_07.jpg`),
+    loadImage('map_east_mountain_crags_chasm_08', `${BASE}assets/Maps/EastMountainCragsChasm_08.jpg`),
+    loadImage('map_east_mountain_crags_chasm_09', `${BASE}assets/Maps/EastMountainCragsChasm_09.jpg`),
+    loadImage('map_east_mountain_crags_chasm_10', `${BASE}assets/Maps/EastMountainCragsChasm_10.jpg`),
     loadImage('map_river_cave_mouth', `${BASE}assets/Maps/RiverCaveMouth.jpg`),
     loadImage('map_shipwreck_deck', `${BASE}assets/Maps/ShipwreckDeckMap.jpg`),
     loadImage('map_qualibaf', `${BASE}assets/Maps/QualibafMap.jpg`),
@@ -4683,6 +4755,13 @@ async function loadAssets() {
     loadImage('creature_rat', `${BASE}assets/Cards/SummonRat.jpg`),
     loadImage('creature_tamed_rat', `${BASE}assets/Cards/TamedRatAbility.jpg`),
     loadImage('creature_kobold_guard', `${BASE}assets/Cards/KoboldGuard.jpg`),
+    loadImage('creature_gnoll_hunter', `${BASE}assets/Cards/GnollHunter.jpg`),
+    loadImage('creature_crag_cat', `${BASE}assets/Cards/CragCat.jpg`),
+    loadImage('creature_giant_hyena', `${BASE}assets/Cards/GiantHyena.jpg`),
+    // Patient Hunter power icon reuses the Gnoll Hunter portrait (powers render
+    // via images['power_<id>']).
+    loadImage('power_patient_hunter', `${BASE}assets/Cards/GnollHunter.jpg`),
+    loadImage('power_spell_turning', `${BASE}assets/Cards/CragCat.jpg`),
     loadImage('creature_thorb', `${BASE}assets/Cards/ThorbAlly.jpg`),
     loadImage('creature_slime', `${BASE}assets/Cards/SlimeSummon.jpg`),
     loadImage('creature_restless_bone', `${BASE}assets/Cards/RestlessBoneSummon.jpg`),
@@ -5224,6 +5303,14 @@ canvas.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 // === Utility ===
+// Spell Turning (Crag Cat) — character.js calls this whenever the holder turns
+// aside a negative-status application; `stacks` is the amount that was negated.
+Character._onSpellTurned = (char, status, stacks) => {
+  const label = status ? status[0] + status.slice(1).toLowerCase() : 'effect';
+  const who = (char && char.name) ? char.name : 'It';
+  addLog(`  Spell Turning! ${who} turns aside ${stacks} ${label}.`, Colors.GOLD);
+};
+
 function addLog(text, color = Colors.WHITE, card = null, buff = null, creature = null) {
   // Effect sub-lines (indented with two spaces) get a → prefix.
   // The arrow is rendered in orange and the rest in the entry color
@@ -6599,6 +6686,25 @@ const MUSIC_FOR_AREA = {
   // outpost itself sits in scrub-and-trees country.
   south_of_qualibaf: 'Music/ambience_forest_01',
   south_outpost:    'Music/ambience_forest_01',
+  // East Mountain Trail — the climb east of the outpost into gnoll country;
+  // same scrub-and-stone forest bed for now (all five trail segments).
+  east_mountain_trail: 'Music/ambience_forest_01',
+  east_mountain_trail_01: 'Music/ambience_forest_01',
+  east_mountain_trail_02: 'Music/ambience_forest_01',
+  east_mountain_trail_03: 'Music/ambience_forest_01',
+  east_mountain_trail_04: 'Music/ambience_forest_01',
+  // The crags switch to a bleaker mountain-wind bed once the party climbs in
+  // off the forest trail.
+  east_mountain_crags_chasm_01: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_02: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_03: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_04: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_05: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_06: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_07: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_08: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_09: 'Music/ambience_mountain_wind_01',
+  east_mountain_crags_chasm_10: 'Music/ambience_mountain_wind_01',
   // River Cave Mouth — lake nestled in low cliffs, same forest bed
   // as the south arm. Per-node overrides below swap the rocks-in-the-
   // water nodes to a rushing-water bed so the swim-across reads
@@ -7221,6 +7327,7 @@ function resetStoryFlags() {
   _tunnelExitLocked = false;
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
+  eastEncounterChance = EAST_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -7344,6 +7451,7 @@ function startNewGame() {
   _tunnelExitLocked = false;
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
+  eastEncounterChance = EAST_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -8818,6 +8926,7 @@ function setWellRested() {
   if (!_tunnelExitLocked) _tunnelExitNode = null;
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
+  eastEncounterChance = EAST_ENC_STEP;
   // Full rest clears active Provisions (Ale, food/drink buffs) + the Frenzy
   // Blood Vial's Bloodied Frenzy — these are "until next full rest".
   clearActiveProvisions();
@@ -8929,6 +9038,28 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // node per tunnel session.
   if (!skipEncounter && typeof currentMap.id === 'string' && currentMap.id.startsWith('tharnag_tunnels')) {
     if (nodeId === _tunnelExitNode && TUNNEL_EXIT_NODES.includes(nodeId)) {
+      // Chapter 2 — the Pour sealed the front: the exit no longer crosses to
+      // the Gate of the Deep, a wall of frozen lava blocks it. First arrival
+      // plays the "find another underdark entrance" dialog (Thorb's theory +
+      // Raena → Elarion / Kar-Eden); after that it's simply impassable.
+      if (chapter2Started) {
+        if (!completedEncounters.has('chapter2_lava_wall')) {
+          const lwFactory = ENCOUNTER_REGISTRY['chapter2_lava_wall'];
+          if (lwFactory) {
+            currentEncounter = lwFactory();
+            encounterTextIndex = 0;
+            encounterChoiceResult = null;
+            _encounterHadCombat = false;
+            advanceEncounterPhase();
+            autosaveNow();
+            return;
+          }
+        }
+        showToast('A wall of frozen lava seals the way to the front.');
+        state = GameState.MAP;
+        autosaveNow();
+        return;
+      }
       const firstTime = !_tunnelExitLocked;
       _tunnelExitLocked = true;
       if (currentMap) _mapCache[currentMap.id] = currentMap;
@@ -9210,6 +9341,42 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   if (!skipEncounter && nodeId === 'river_trail_south' && currentMap.id === 'south_of_qualibaf') {
     transitionToRiverCaveMouth(nodeId);
     return;
+  }
+  // East Mountain Trail gate → East Mountain Trail map (Chapter 2 forward
+  // cross-map jump). The gate node carries no in-area encounter, so walking
+  // onto it (once Gontran's talk has unlocked it) hops to the trail head.
+  if (!skipEncounter && nodeId === 'east_mountain_trail_gate' && currentMap.id === 'south_of_qualibaf') {
+    transitionToEastMountainTrail(nodeId);
+    return;
+  }
+  // East Mountain Trail head → back to the gate on south_of_qualibaf.
+  // Click-on-self on the trail head (once landed/isDone) returns the party.
+  if (!skipEncounter && nodeId === 'emt_entry' && currentMap.id === 'east_mountain_trail' && node.isDone) {
+    transitionFromEastMountainTrailBack(nodeId);
+    return;
+  }
+  // East Mountain Trail linear chain (High Crags → 01 → 02 → 03 → 04): a
+  // segment's last node hops forward, an entry node hops back.
+  if (handleEastTrailChainArrival(nodeId, node, skipEncounter)) return;
+  // East Mountain random encounter — armed by the Windbreak Ledge gnoll-tracks
+  // dialog (so it begins at Cairn Bend). Every walked-onto east-mountain node
+  // with no scripted encounter rolls a cumulative 4% chance; on a hit it resets
+  // and fires a 50/50 Gnoll Hunter / Crag Cat fight. (Teleport gates returned
+  // above; landings come in with skipEncounter, so only mid-trail nodes roll.)
+  if (!skipEncounter && EAST_TRAIL_FACTORIES[currentMap.id]
+      && completedEncounters.has('east_trail_gnoll_tracks') && !node.encounterId) {
+    if (Math.random() < eastEncounterChance) {
+      eastEncounterChance = EAST_ENC_STEP;
+      currentEncounter = Math.random() < 0.5
+        ? createGnollHunterEncounter()
+        : createCragCatEncounter();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+    eastEncounterChance = Math.min(1.0, eastEncounterChance + EAST_ENC_STEP);
   }
   // Lake Shore back-teleport — click-on-self on lake_shore hops back
   // to river_trail_south once the arrival dialog has played. The
@@ -11236,7 +11403,23 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       && greatPourActivated && completedEncounters && completedEncounters.has('durgan_vault')
       && !chapter2Started) {
     chapter2Started = true;
-    _lastMusicArea = null; // revert Tharnag to the tense thriller-brass bed
+    _lastMusicArea = null; // revert Tharnag + tunnels to the tense thriller-brass bed
+    if (debugMode) {
+      // Debug build: play the Thorb/Valdrisa "search the front" dialog
+      // instead of the To-Be-Continued card. Completing it drops the party
+      // into the tunnels (handled in advanceEncounterPhase's completion hook).
+      const factory = ENCOUNTER_REGISTRY['chapter2_search'];
+      if (factory) {
+        currentMap.currentNodeId = 'grand_hall_to_tunnels';
+        currentEncounter = factory();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        autosaveNow();
+        return;
+      }
+    }
     startFade(() => {
       showTitleCard('Chapter 2: The Search', 'To Be Continued…', () => {
         // Land in the tunnels (same as the normal entry below).
@@ -12463,6 +12646,13 @@ function handleMapClick(x, y) {
         (r.nodeId === 'river_trail_south' && currentMap.id === 'south_of_qualibaf') ||
         // Lake Shore → River Trail South (back, after dialog).
         (r.nodeId === 'lake_shore' && currentMap.id === 'river_cave_mouth' && node.isDone) ||
+        // East Mountain Trail ↔ gate pair (Chapter 2): clicking the gate
+        // (once Gontran's talk unlocks it) hops to the trail head; clicking
+        // the trail head hops back to the gate on south_of_qualibaf.
+        (r.nodeId === 'east_mountain_trail_gate' && currentMap.id === 'south_of_qualibaf' && !node.isLocked) ||
+        (r.nodeId === 'emt_entry' && currentMap.id === 'east_mountain_trail' && node.isDone) ||
+        // East Mountain Trail linear chain (segment last/entry nodes).
+        isEastTrailChainGate(r.nodeId, node) ||
         // Filibaf ↔ Tharnag pair: clicking the current entrance/entry
         // node hops to the other side.
         (r.nodeId === 'filibaf_entrance' && forestCleared && currentMap.id === 'north_qualibaf') ||
@@ -13301,6 +13491,16 @@ function hydrateMapFromGlobalState(map) {
       td.hiddenDescription = '';
     }
   }
+  // Chapter 2 — once Gontran has pointed the party east toward the gnoll
+  // chasms, the road east opens on the SouthOfQualibaf overland map: high_meadow
+  // reveals by name; east_mountain_trail_gate stays `discoverable` (draws as
+  // ??? until walked onto) and teleports to the East Mountain Trail map.
+  if (map.id === 'south_of_qualibaf' && completedEncounters.has('gontran_gnoll_territories')) {
+    for (const id of ['high_meadow', 'east_mountain_trail_gate']) {
+      const n = map.getNode(id);
+      if (n) n.isLocked = false;
+    }
+  }
   // Mithril Remedies — separate gate. The shop's dialog references
   // Valdrisa by name + assumes she's in the party, so the unlock waits
   // for valdrisaJoined (Personal Quarters rest → valdrisa_encounter)
@@ -13713,11 +13913,131 @@ function transitionFromRiverCaveMouthBack(fromNodeId) {
 function transitionFromSouthOutpostBack(fromNodeId) {
   if (currentMap) _mapCache[currentMap.id] = currentMap;
   currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+  // Re-apply story-flag unlocks in case the overland map was cached from
+  // before Gontran's gnoll talk — keeps the east road (high_meadow +
+  // east_mountain_trail_gate) revealed on the trip back out of the outpost.
+  hydrateMapFromGlobalState(currentMap);
   visitedNodes = new Set(['outpost']);
   const target = currentMap.getNode('outpost');
   if (target) target.isDone = true;
   arriveAtNode('outpost', fromNodeId, true);
   autosaveNow();
+}
+
+// East Mountain Trail forward/back teleport pair (Chapter 2). Forward lands the
+// party at the trail head with skipEncounter=true so the back-branch in
+// arriveAtNode can't bounce them straight out; emt_entry is marked done so a
+// later click-on-self returns to south_of_qualibaf.
+function transitionToEastMountainTrail(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('east_mountain_trail', createEastMountainTrailMap);
+  const entry = currentMap.getNode('emt_entry');
+  if (entry) entry.isDone = true;
+  visitedNodes = new Set(['emt_entry']);
+  currentMap.currentNodeId = 'emt_entry';
+  arriveAtNode('emt_entry', fromNodeId, true);
+  updateMusicForCurrentScene();
+  autosaveNow();
+}
+
+function transitionFromEastMountainTrailBack(fromNodeId) {
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap('south_of_qualibaf', createSouthOfQualibafMap);
+  hydrateMapFromGlobalState(currentMap);
+  visitedNodes = new Set(['east_mountain_trail_gate']);
+  const target = currentMap.getNode('east_mountain_trail_gate');
+  if (target) { target.isLocked = false; target.isDone = true; target.hiddenName = ''; target.hiddenDescription = ''; }
+  arriveAtNode('east_mountain_trail_gate', fromNodeId, true);
+  autosaveNow();
+}
+
+// East Mountain Trail linear chain (Chapter 2): a single line of exterior
+// segments. Each segment's LAST node teleports on to the next segment's ENTRY
+// node, and that entry teleports back. The first row is the base trail map (its
+// emt_entry ↔ gate teleport is handled separately above); the chain only owns
+// emt_deep (High Crags) → segment 01 from here on.
+// East Mountain Trail + crags teleport graph. Each LINK is bidirectional:
+// walking onto (or clicking) the `a` node hops to the `b` node, and vice versa.
+// The trail is a string of links; the crags add a fork off crags_chasm_02
+// (Dead Drop → 03, Black Chasm → 04). `aGate` (optional) holds the forward hop
+// until a condition is met — Chasm Overlook waits for its one-time dialog so the
+// teleport doesn't pre-empt the encounter. (emt_entry ↔ the SouthOfQualibaf gate
+// is handled separately by transitionToEastMountainTrail.)
+const EAST_TRAIL_FACTORIES = {
+  east_mountain_trail: createEastMountainTrailMap,
+  east_mountain_trail_01: createEastMountainTrail01Map,
+  east_mountain_trail_02: createEastMountainTrail02Map,
+  east_mountain_trail_03: createEastMountainTrail03Map,
+  east_mountain_trail_04: createEastMountainTrail04Map,
+  east_mountain_crags_chasm_01: createEastMountainCragsChasm01Map,
+  east_mountain_crags_chasm_02: createEastMountainCragsChasm02Map,
+  east_mountain_crags_chasm_03: createEastMountainCragsChasm03Map,
+  east_mountain_crags_chasm_04: createEastMountainCragsChasm04Map,
+  east_mountain_crags_chasm_05: createEastMountainCragsChasm05Map,
+  east_mountain_crags_chasm_06: createEastMountainCragsChasm06Map,
+  east_mountain_crags_chasm_07: createEastMountainCragsChasm07Map,
+  east_mountain_crags_chasm_08: createEastMountainCragsChasm08Map,
+  east_mountain_crags_chasm_09: createEastMountainCragsChasm09Map,
+  east_mountain_crags_chasm_10: createEastMountainCragsChasm10Map,
+};
+const EAST_TRAIL_LINKS = [
+  { aMap: 'east_mountain_trail',          aNode: 'emt_deep', bMap: 'east_mountain_trail_01',       bNode: 'emt01_1' },
+  { aMap: 'east_mountain_trail_01',       aNode: 'emt01_4',  bMap: 'east_mountain_trail_02',       bNode: 'emt02_1' },
+  { aMap: 'east_mountain_trail_02',       aNode: 'emt02_5',  bMap: 'east_mountain_trail_03',       bNode: 'emt03_1' },
+  { aMap: 'east_mountain_trail_03',       aNode: 'emt03_5',  bMap: 'east_mountain_trail_04',       bNode: 'emt04_1' },
+  { aMap: 'east_mountain_trail_04',       aNode: 'emt04_5',  bMap: 'east_mountain_crags_chasm_01', bNode: 'c1_1', aGate: () => completedEncounters.has('east_trail_chasm_crags') },
+  { aMap: 'east_mountain_crags_chasm_01', aNode: 'c1_8',     bMap: 'east_mountain_crags_chasm_02', bNode: 'c2_1' },
+  { aMap: 'east_mountain_crags_chasm_02', aNode: 'c2_5',     bMap: 'east_mountain_crags_chasm_03', bNode: 'c3_1' },
+  { aMap: 'east_mountain_crags_chasm_02', aNode: 'c2_9',     bMap: 'east_mountain_crags_chasm_04', bNode: 'c4_1' },
+  { aMap: 'east_mountain_crags_chasm_03', aNode: 'c3_6',     bMap: 'east_mountain_crags_chasm_05', bNode: 'c5_1' },
+  { aMap: 'east_mountain_crags_chasm_04', aNode: 'c4_5',     bMap: 'east_mountain_crags_chasm_06', bNode: 'c6_1' },
+  { aMap: 'east_mountain_crags_chasm_06', aNode: 'c6_7',     bMap: 'east_mountain_crags_chasm_07', bNode: 'c7_1' },
+  { aMap: 'east_mountain_crags_chasm_05', aNode: 'c5_9',     bMap: 'east_mountain_crags_chasm_08', bNode: 'c8_1' },
+  { aMap: 'east_mountain_crags_chasm_05', aNode: 'c5_7',     bMap: 'east_mountain_crags_chasm_09', bNode: 'c9_1' },
+  { aMap: 'east_mountain_crags_chasm_08', aNode: 'c8_6',     bMap: 'east_mountain_crags_chasm_10', bNode: 'c10_1' },
+];
+
+// Land on a link node, marking it done + revealing it + passing skipEncounter so
+// the just-fired teleport can't immediately bounce back.
+function transitionTrailLink(targetMapId, targetNode, fromNodeId) {
+  const factory = EAST_TRAIL_FACTORIES[targetMapId];
+  if (!factory) return;
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap(targetMapId, factory);
+  const land = currentMap.getNode(targetNode);
+  if (land) { land.isDone = true; land.hiddenName = ''; land.hiddenDescription = ''; }
+  visitedNodes = new Set([targetNode]);
+  currentMap.currentNodeId = targetNode;
+  arriveAtNode(targetNode, fromNodeId, true);
+  updateMusicForCurrentScene();
+  autosaveNow();
+}
+
+// Walk-onto dispatch — forward (a→b, optional gate) or back (b→a, once landed).
+function handleEastTrailChainArrival(nodeId, node, skipEncounter) {
+  if (skipEncounter || !currentMap) return false;
+  for (const link of EAST_TRAIL_LINKS) {
+    if (currentMap.id === link.aMap && nodeId === link.aNode && (!link.aGate || link.aGate())) {
+      transitionTrailLink(link.bMap, link.bNode, nodeId);
+      return true;
+    }
+    if (currentMap.id === link.bMap && nodeId === link.bNode && node.isDone) {
+      transitionTrailLink(link.aMap, link.aNode, nodeId);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Click-on-self gate test (mirrors the walk-onto dispatch) — fed into the
+// isCrossMapGate ladder in handleMapClick.
+function isEastTrailChainGate(nodeId, node) {
+  if (!currentMap) return false;
+  for (const link of EAST_TRAIL_LINKS) {
+    if (currentMap.id === link.aMap && nodeId === link.aNode && (!link.aGate || link.aGate())) return true;
+    if (currentMap.id === link.bMap && nodeId === link.bNode && node.isDone) return true;
+  }
+  return false;
 }
 
 
@@ -14370,6 +14690,15 @@ function startNodeEncounter(nodeId) {
     // the post-Kraken flag re-arms it).
     const variant = krakenDefeated ? 'post_kraken' : 'pre_kraken';
     currentEncounter = factory(variant);
+  } else if (node.encounterId === 'watchtower_check'
+      && completedEncounters.has('chapter2_elarion')
+      && !completedEncounters.has('gontran_gnoll_territories')) {
+    // Chapter 2 — Elarion sent the party here to ask Gontran the way toward
+    // the gnoll chasms / the eastern underdark entrance. Fires whether or not
+    // the Kraken quest was ever finished (the kraken beats live on the outpost
+    // ENTRY node, which the party clears before reaching the tower), so the
+    // dialog assumes only that they've met Gontran, never that the kraken died.
+    currentEncounter = ENCOUNTER_REGISTRY.gontran_gnoll_territories();
   } else if (node.encounterId === 'watchtower_check') {
     // Swap to the gnoll-watch variant once the Kraken Letter has been
     // delivered (krakenLevelUpClaimed latches when the outpost report
@@ -14391,6 +14720,16 @@ function startNodeEncounter(nodeId) {
       ...sampleShopCardIds('city_square', 1),
     ];
     currentEncounter = factory(picker1, picker2);
+  } else if (node.encounterId === 'arcane_emporium'
+      && completedEncounters.has('arcane_emporium')
+      && completedEncounters.has('chapter2_lava_wall')
+      && !completedEncounters.has('chapter2_elarion')) {
+    // Chapter 2 — the party returns to ask Elarion about another underdark
+    // entrance. Gated on `arcane_emporium` already being completed so the
+    // generic/necromancer WELCOME always fires first (a never-visited
+    // necromancer still gets the Mortain/cellar intro; this talk waits for
+    // the next visit). No preemption of the necromancer storyline.
+    currentEncounter = ENCOUNTER_REGISTRY.chapter2_elarion();
   } else if (node.encounterId === 'arcane_emporium'
       && selectedClass === 'Necromancer' && _necromancerMainGame) {
     // Master Elarion's necromancer welcome — recognizes the late Master
@@ -14763,6 +15102,29 @@ function advanceEncounterPhase() {
     if (completedEncounterId === 'mithril_forge') {
       currentEncounter = null;
       if (openForgeMetalSelect()) return;
+    }
+    // Chapter 2 — the Chasm Overlook "we enter the crags" dialog hands the
+    // party straight on into the crags (crags_chasm_01 / Chasm Mouth). The
+    // emt04_5↔c1_1 link's aGate is now satisfied, so later trips teleport on
+    // click/walk too.
+    if (completedEncounterId === 'east_trail_chasm_crags') {
+      currentEncounter = null;
+      transitionTrailLink('east_mountain_crags_chasm_01', 'c1_1', 'emt04_5');
+      state = GameState.MAP;
+      return;
+    }
+    // Chapter 2 (debug) — the Thorb/Valdrisa search dialog hands the party
+    // down into the tunnels, same landing as the To-Be-Continued card.
+    if (completedEncounterId === 'chapter2_search') {
+      currentEncounter = null;
+      if (currentMap) _mapCache[currentMap.id] = currentMap;
+      currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
+      revealLandingNode('tunnels_entry');
+      currentMap.currentNodeId = 'tunnels_entry';
+      chooseTunnelExitIfNeeded();
+      state = GameState.MAP;
+      autosaveNow();
+      return;
     }
     // Giant Frog ambush — prune the rock the player just cleared from
     // the active list so the same stone doesn't keep firing the
@@ -15842,6 +16204,7 @@ function advanceEncounterPhase() {
         'drake_rider_loot', 'magma_mephit_loot',
         'kobold_slyblade_loot', 'dwarven_specter_loot',
         'goblin_swarm_loot', 'rampaging_troll_loot',
+        'gnoll_hunter_loot', 'crag_cat_loot',
       ]);
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
       // Phase opt-out from the 50% gate (Gate of the Deep front fights —
@@ -17511,6 +17874,52 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.rampaging_troll = 2;
 
+  // East Mountain random encounters (placeholder decks for now). Deck size =
+  // HP, per the standard rule.
+  ENEMY_DECKS.gnoll_hunter = () => {
+    enemy = new Character('Gnoll Hunter');
+    enemy.deck = new Deck();
+    // Deck = HP. Play priority: Hunter's Mark (30) > Bone Bow (25) > Bone
+    // Javelin (15) > Bite (12) > Giant Hyena (10) > Dire Hide (reactive).
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneBow());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneJavelin());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createGnollBite());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createHeroicTumble()); // reactive: banks Heroism for Aimed Shot
+    // Aimed Shot — base priority 20 (below Bone Bow's 25), but planHandPlays
+    // bumps it ABOVE Bone Bow when the hunter has Heroism banked (so it fires
+    // to cash the doubled Heroism bonus). See effPriority in planHandPlays.
+    for (let i = 0; i < 6; i++) { const a = createAimedShotCard(); a.priority = 20; enemy.deck.addCard(a); }
+    // 3 Hunter's Marks in the master deck (pad HP + recharge back in to
+    // re-mark you), at the top play priority.
+    for (let i = 0; i < 3; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.addCard(m); }
+    for (let i = 0; i < 10; i++) { const h = createSummonGiantHyena(); h.priority = 10; enemy.deck.addCard(h); }
+    // Patient Hunter — never swings at the player while a summon stands
+    // (see pickEnemyAttackTarget). Ambush: he gets the surprise turn, and the
+    // opening hand is ONLY the 3 cheated Marks (no fresh draw) so no random
+    // attack fires on the ambush; the hand fills to 4 from end-of-turn on.
+    enemy.addPower(createPatientHunterPower());
+    enemy._enemy_surprise = true;
+    enemy._ambushOpeningHandOnly = true;
+    // Cheat the 3 Marks (priority 30) into the opening hand so the ambush opens
+    // by marking. startCombat pulls the matching deck copies out of the draw
+    // pile (one per held id), so they're held — not duplicated.
+    for (let i = 0; i < 3; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.hand.push(m); }
+  };
+  ENEMY_HAND_SIZE.gnoll_hunter = 4;
+
+  ENEMY_DECKS.crag_cat = () => {
+    enemy = new Character('Crag Cat');
+    enemy.deck = new Deck();
+    for (let i = 0; i < 20; i++) enemy.deck.addCard(createPounce());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createCatReflexes());
+    // Spell Turning — 50% to turn aside each ailment applied to the cat
+    // (Character.applyStatus enforces it).
+    enemy.addPower(createSpellTurningPower());
+  };
+  ENEMY_HAND_SIZE.crag_cat = 3;
+
   if (ENEMY_DECKS[enemyId]) {
     ENEMY_DECKS[enemyId]();
   } else {
@@ -18039,6 +18448,19 @@ function drawMapDebugOverlay() {
     const mapLabel = currentMap.id.replace(/_/g, ' ');
     lines.push(`[${mapLabel}]`);
     lines.push(`tunnel encounter chance: ${pct}% (step ${stepPct}%)`);
+    lines.push(`current node: ${node ? node.id : '?'}`);
+  }
+  // Part 2 — East Mountain (trail + crags) random-encounter chance (Gnoll
+  // Hunter / Crag Cat). Armed once the Windbreak Ledge gnoll-tracks dialog has
+  // fired (so it begins at Cairn Bend); cumulative EAST_ENC_STEP per node.
+  if (currentMap && EAST_TRAIL_FACTORIES[currentMap.id]) {
+    const node = currentMap.getCurrentNode && currentMap.getCurrentNode();
+    const armed = completedEncounters.has('east_trail_gnoll_tracks');
+    const mapLabel = currentMap.id.replace(/_/g, ' ');
+    lines.push(`[${mapLabel}]`);
+    lines.push(armed
+      ? `east mtn encounter chance: ${Math.round(eastEncounterChance * 100)}% (step ${Math.round(EAST_ENC_STEP * 100)}%)`
+      : `east mtn encounter chance: armed at Windbreak Ledge`);
     lines.push(`current node: ${node ? node.id : '?'}`);
   }
   // Debug node-position editor — selected node id + live position.
@@ -22604,7 +23026,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // "unpreventable damage, bypasses Shield/Armor/Block" explainer.
   const keywordList = ['DrowPoison', 'First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
-    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte',
+    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte',
     'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
@@ -25928,6 +26350,10 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
     const aliveAllies = creature.owner.creatures.filter(a => a.isAlive).length;
     displayAttack += Math.floor(aliveAllies / 5);
   }
+  // Pack Hyena — +1 Atk per OTHER ally on the field (Pack Tactics).
+  if (creature.packTactics && creature.owner && Array.isArray(creature.owner.creatures)) {
+    displayAttack += Math.max(0, creature.owner.creatures.filter(a => a && a.isAlive).length - 1);
+  }
   ctx.fillStyle = displayAttack > creature.attack ? Colors.GOLD : Colors.WHITE;
   ctx.textAlign = 'left';
   const smallAtkStr = variableStatsSmall ? 'X' : `${displayAttack}`;
@@ -28592,11 +29018,13 @@ function resolveBarrageShot(target) {
     // attacksThisTurn is still 0 (it's bumped just below), then applied
     // to EVERY shot of the barrage. Be generous like heroism: the whole
     // volley counts as the "first attack" for the bracer bonus.
-    barrageBracerBonus = (attacksThisTurn === 0 && player.deck
-        && Array.isArray(player.deck.hand)
-        && player.deck.hand.some(c => c && c.id === 'boarhide_bracers')) ? 2 : 0;
+    barrageBracerBonus = 0;
+    if (attacksThisTurn === 0 && player.deck && Array.isArray(player.deck.hand)) {
+      if (player.deck.hand.some(c => c && c.id === 'boarhide_bracers')) barrageBracerBonus += 2;
+      if (player.deck.hand.some(c => c && c.id === 'snow_paws')) barrageBracerBonus += 3;
+    }
     if (barrageBracerBonus > 0) {
-      addLog(`  Boarhide Bracers: +${barrageBracerBonus} per shot (First Attack)`, Colors.GOLD);
+      addLog(`  First Attack: +${barrageBracerBonus} per shot`, Colors.GOLD);
     }
     // consumeIceForAttack applies the reduction AND burns 1 stack.
     // We just need the reduction amount to reapply per shot; the
@@ -28922,6 +29350,7 @@ function cancelBeamMode() {
 
 let attacksThisTurn = 0; // for sneak_attack scaling
 let _bracerBonusLogged = false; // Boarhide Bracers +2-first-attack log guard (per player turn)
+let _snowPawsBonusLogged = false; // Snow Paws +3-first-attack log guard (per player turn)
 let _swiftAssaultLogged = false; // Swift Assault perk +first-attack log guard (per player turn)
 // Tracks how much damage the most recent damage effect actually
 // landed on its target. Stamped inside every damage path (creature
@@ -29020,6 +29449,7 @@ function needsTarget(card) {
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
      e.effectType === 'careful_strike' || e.effectType === 'damage_draw_on_hit' ||
      e.effectType === 'first_strike_attack' ||
+     e.effectType === 'first_strike_poison_attack' || e.effectType === 'bone_javelin_attack' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
      e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
      e.effectType === 'apply_bleed' ||
@@ -29111,7 +29541,11 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
     (Array.isArray(c.modes) && c.modes[0]
       && (c.modes[0].effects || []).some(e => e && e.effectType === 'block'))
   );
+  let _catFullyDodged = false; // Cat Reflexes: a successful dodge ends defense
+  let _catReflexTried = false; // ...and only one dodge attempt per attack
   for (const card of defenseCards) {
+    if (_catFullyDodged) break;
+    if (_catReflexTried && (card.currentEffects || []).some(e => e && e.effectType === 'reflexes_dodge')) continue;
     const usingMode = card.cardType !== CardType.DEFENSE
       && Array.isArray(card.modes) && card.modes[0];
     const defEffects = usingMode ? (card.modes[0].effects || []) : card.currentEffects;
@@ -29182,6 +29616,24 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
           }
         } else {
           addLog(`  ${card.name}: tumble failed.`, Colors.GRAY);
+        }
+      } else if (eff.effectType === 'reflexes_dodge') {
+        // Cat Reflexes (Crag Cat) — eff.value% to avoid ALL damage from the
+        // incoming attack. On success, soak the whole landing hit by granting
+        // Block equal to it (the calling attack's takeDamageWithDefense then
+        // absorbs the swing), and end defense for this attack. The +2 Heroism
+        // and Draw on this card resolve via their own sibling effects below.
+        _catReflexTried = true;
+        playSound('lion_roar_01', 0.7); // roar as the cat twists away
+        const chance = Math.max(0, Math.min(100, eff.value));
+        if (Math.random() * 100 < chance) {
+          const incoming = (landingDmg !== null) ? landingDmg : 0;
+          if (incoming > 0) enemy.addBlock(incoming);
+          if (landingDmg !== null) landingDmg = 0;
+          _catFullyDodged = true;
+          addLog(`  Cat Reflexes! Dodged the attack. (${Math.round(chance)}%)`, Colors.GOLD);
+        } else {
+          addLog(`  Cat Reflexes: failed to dodge.`, Colors.GRAY);
         }
       } else if (eff.effectType === 'draw' || eff.effectType === 'scry_pick') {
         // Varimatras Scale's draw rider. Defense cards play during
@@ -29756,6 +30208,7 @@ function resolveEffect(eff, caster, target) {
           const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
           addLog(`  ${target.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         }
+        maybeEnemyRiposte(target, caster); // Giant Hyena (riposte 1) — this case was missing the call
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
       } else {
         if (fsUnpreventable) {
@@ -29771,6 +30224,75 @@ function resolveEffect(eff, caster, target) {
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
+      consumePoisonBuff(caster, target, dmg);
+      consumeIgniteOnAttack(caster, target, dmg);
+      attacksThisTurn++;
+      break;
+    }
+    case 'first_strike_poison_attack': {
+      // Bone Bow (player loot): Deal eff.value. FIRST STRIKE — on the turn's
+      // opening attack, also apply eff.maxTargets Poison. (Draw rides on a
+      // sibling 'draw' effect.) Same pipeline as first_strike_attack.
+      const fspFirst = (attacksThisTurn === 0);
+      const fspHeroism = caster.heroism;
+      if (fspHeroism > 0) { addLog(`  (Heroism +${fspHeroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + fspHeroism + caster.rage + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      const fspObs = consumeObsidianBuff(caster, target);
+      if (fspObs > 0) dmg += fspObs;
+      dmg = Math.max(0, dmg + getIncomingDamageModifier(target));
+      dmg = applyMarkBonus(target, dmg);
+      const fspUnp = consumeUnpreventableBuff(caster);
+      if (!fspUnp && !(target instanceof Creature) && target === enemy) enemyAutoPlayDefenses(dmg);
+      if (target instanceof Creature) {
+        if (fspUnp) { target.takeUnpreventableDamage(dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE); addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE); }
+        else { const sb = target.shield || 0; const a = target.takeDamage(dmg); if (a > 0) spawnDamageOnTarget(target, a); playAttackHitSfx(dmg, a); addLog(`  ${target.name}: ${a} dmg${creatureAbsorbSuffix(dmg, a, sb, target.shield || 0)}`, Colors.RED); }
+        maybeEnemyRiposte(target, caster);
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (fspUnp) { target.takeDamageFromDeck(dmg); triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE); addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE); }
+        else { const [bl, tk] = target.takeDamageWithDefense(dmg); triggerSplitPower(target, tk); if (tk > 0) spawnDamageOnTarget(target, tk); playAttackHitSfx(dmg, tk); addLog(`  ${target.name}: ${tk} dmg${bl > 0 ? ` (blocked ${bl})` : ''}`, Colors.RED); if (caster === player && target === enemy) onPlayerHitEnemy(tk); }
+      }
+      if (fspFirst) {
+        const pz = eff.maxTargets || 1;
+        if (target instanceof Creature) target.poisonStacks = (target.poisonStacks || 0) + pz;
+        else if (target && target.applyStatus) target.applyStatus('POISON', pz);
+        spawnTokenOnTarget(target, pz, 'Poison', Colors.GREEN);
+        addLog(`  First Strike! +${pz} Poison`, Colors.GREEN);
+      }
+      consumePoisonBuff(caster, target, dmg);
+      consumeIgniteOnAttack(caster, target, dmg);
+      attacksThisTurn++;
+      break;
+    }
+    case 'bone_javelin_attack': {
+      // Bone Javelin (player loot): Deal eff.value + 1 Poison; +eff.maxTargets
+      // when the target is a summon (an enemy creature, not the main monster).
+      const bjSummon = (target instanceof Creature);
+      const bjBonus = bjSummon ? (eff.maxTargets || 0) : 0;
+      if (bjBonus > 0) addLog(`  +${bjBonus} vs Summon!`, Colors.GOLD);
+      const bjHeroism = caster.heroism;
+      if (bjHeroism > 0) { addLog(`  (Heroism +${bjHeroism})`, Colors.GOLD); caster.heroism = 0; }
+      let dmg = Math.max(0, eff.value + bjBonus + bjHeroism + caster.rage + getDamageModifier(caster));
+      dmg = consumeIceForAttack(caster, dmg);
+      const bjObs = consumeObsidianBuff(caster, target);
+      if (bjObs > 0) dmg += bjObs;
+      dmg = Math.max(0, dmg + getIncomingDamageModifier(target));
+      dmg = applyMarkBonus(target, dmg);
+      const bjUnp = consumeUnpreventableBuff(caster);
+      if (!bjUnp && !(target instanceof Creature) && target === enemy) enemyAutoPlayDefenses(dmg);
+      if (target instanceof Creature) {
+        if (bjUnp) { target.takeUnpreventableDamage(dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE); addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE); }
+        else { const sb = target.shield || 0; const a = target.takeDamage(dmg); if (a > 0) spawnDamageOnTarget(target, a); playAttackHitSfx(dmg, a); addLog(`  ${target.name}: ${a} dmg${creatureAbsorbSuffix(dmg, a, sb, target.shield || 0)}`, Colors.RED); }
+        maybeEnemyRiposte(target, caster);
+        if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+      } else {
+        if (bjUnp) { target.takeDamageFromDeck(dmg); triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE); addLog(`  ${target.name}: ${dmg} true dmg`, Colors.ORANGE); }
+        else { const [bl, tk] = target.takeDamageWithDefense(dmg); triggerSplitPower(target, tk); if (tk > 0) spawnDamageOnTarget(target, tk); playAttackHitSfx(dmg, tk); addLog(`  ${target.name}: ${tk} dmg${bl > 0 ? ` (blocked ${bl})` : ''}`, Colors.RED); if (caster === player && target === enemy) onPlayerHitEnemy(tk); }
+      }
+      if (target instanceof Creature) target.poisonStacks = (target.poisonStacks || 0) + 1;
+      else if (target && target.applyStatus) target.applyStatus('POISON', 1);
+      spawnTokenOnTarget(target, 1, 'Poison', Colors.GREEN);
       consumePoisonBuff(caster, target, dmg);
       consumeIgniteOnAttack(caster, target, dmg);
       attacksThisTurn++;
@@ -32159,6 +32681,51 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'heal_bleed': {
+      // Beast Collar — remove up to N Bleed stacks off the picked ally (for
+      // SINGLE_ALLY) or the caster.
+      const hbTgt = (eff.target === TargetType.SINGLE_ALLY && target) ? target : caster;
+      const hbBleed = (hbTgt && hbTgt.getStatus) ? (hbTgt.getStatus('BLEED') || 0) : 0;
+      if (hbBleed > 0) {
+        const hbCleared = Math.min(hbBleed, Math.max(1, eff.value || 1));
+        hbTgt.removeStatus('BLEED', hbCleared);
+        addLog(`  Cleared ${hbCleared} Bleed`, Colors.RED);
+      }
+      break;
+    }
+    case 'clear_ice': {
+      // Remove up to N Ice stacks off the caster (Snow Paws / White Wolf Cloak
+      // played proactively; the reactive defend path has its own handler).
+      const ciTgt = caster;
+      const ciIce = (ciTgt && ciTgt.getStatus) ? (ciTgt.getStatus('ICE') || 0) : 0;
+      if (ciIce > 0) {
+        const ciCleared = Math.min(ciIce, eff.value || 0);
+        ciTgt.removeStatus('ICE', ciCleared);
+        addLog(`  Cleared ${ciCleared} Ice`, Colors.ICE_BLUE);
+      }
+      break;
+    }
+    case 'cats_eye_cleanse': {
+      // Cat's Eye Pendant — heal HALF (rounded up) of each ailment type the
+      // caster carries (Bleed/Poison/Fire/Ice/Shock), then remove ALL Marks.
+      const ceTgt = caster;
+      if (ceTgt && ceTgt.getStatus && ceTgt.removeStatus) {
+        for (const ail of ['BLEED', 'POISON', 'FIRE', 'ICE', 'SHOCK']) {
+          const have = ceTgt.getStatus(ail) || 0;
+          if (have > 0) {
+            const healed = Math.ceil(have / 2);
+            ceTgt.removeStatus(ail, healed);
+            addLog(`  Healed ${healed} ${ail[0] + ail.slice(1).toLowerCase()}`, Colors.GREEN);
+          }
+        }
+        const ceMarks = ceTgt.getStatus('MARK') || 0;
+        if (ceMarks > 0) {
+          ceTgt.removeStatus('MARK', ceMarks);
+          addLog(`  Removed ${ceMarks} Mark${ceMarks > 1 ? 's' : ''}`, Colors.GREEN);
+        }
+      }
+      break;
+    }
     case 'heal_draw_if_healed': {
       // Specter Ectoplasm: heal N (player-only), then draw 1 ONLY if the
       // heal actually restored damage (i.e. discardPile shrunk). Poison /
@@ -32827,6 +33394,30 @@ function resolveEffect(eff, caster, target) {
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(scout);
       addLog(`  Dwarven Scout joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_beastmaster_horn': {
+      // Beastmaster Horn — 50% to call ONE Giant Hyena (3/6, Bleed, Riposte 1),
+      // else a pack of 2-4 Pack Hyenas (1/4, +1 Atk per ally). Player allies,
+      // capped by the field (addCreature returns false when full).
+      playSound('wolf_howl_distant_01', 0.7); // the horn's distant howl
+      const bmOff = playerTierOffset || 0;
+      if (Math.random() < 0.5) {
+        const gh = createGiantHyenaCreature();
+        scaleCreatureWithOffset(gh, bmOff);
+        if (player.addCreature(gh)) addLog(`  A Giant Hyena answers the horn!`, Colors.GREEN);
+        else addLog(`  No room for the Giant Hyena.`, Colors.GRAY);
+      } else {
+        const bmCount = 2 + Math.floor(Math.random() * 3); // 2..4
+        let bmSummoned = 0;
+        for (let i = 0; i < bmCount; i++) {
+          const ph = createPackHyenaCreature();
+          scaleCreatureWithOffset(ph, bmOff);
+          if (!player.addCreature(ph)) break;
+          bmSummoned++;
+        }
+        addLog(`  A pack of ${bmSummoned} Hyena${bmSummoned !== 1 ? 's' : ''} answers the horn!`, Colors.GREEN);
+      }
       break;
     }
     case 'summon_dwarven_battle_cleric': {
@@ -34629,11 +35220,13 @@ function playCardSelf(handIndex) {
   // resolves as a pure no-target play (Raena summons even when her
   // Called arrow had no valid target to land on).
   const skipOptional = !!card._skipOptionalEffects;
+  const ripCtx = beginRiposteSweep();
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'stays_in_hand') continue;
     if (skipOptional && eff.optional) continue;
     resolveEffect(eff, player, enemy);
   }
+  endRiposteSweep(ripCtx);
   delete card._skipOptionalEffects;
 
   // Companion summon cards go to the play pile (not recharge/discard).
@@ -34750,10 +35343,12 @@ function playCardOnEnemy(handIndex) {
     ? consumeInkCloudForAttack(player, 'You')
     : false;
   if (!inkMiss) {
+    const ripCtx = beginRiposteSweep();
     for (const eff of effects) {
       if (eff.effectType === 'stays_in_hand') continue;
       resolveEffect(eff, player, enemy);
     }
+    endRiposteSweep(ripCtx);
   }
 
   // Companion-summon cards route to playPile so the deck count
@@ -36474,7 +37069,9 @@ function resolveAllyAttack(ally, target) {
   // getDamageModifier folds in the War Banner aura (+1 per banner) for
   // any player-side attacker, plus the shock penalty.
   const dmgMod = getDamageModifier(ally); // folds in Shock, Drow Sleep, banner, bracer
-  let dmg = Math.max(0, ally.attack + rageBonus + heroismBonus + dmgMod);
+  const packBonus = (ally.packTactics && ally.owner && Array.isArray(ally.owner.creatures))
+    ? Math.max(0, ally.owner.creatures.filter(a => a && a.isAlive).length - 1) : 0; // Pack Hyena
+  let dmg = Math.max(0, ally.attack + packBonus + rageBonus + heroismBonus + dmgMod);
   if (heroismBonus > 0) ally.heroism = 0;
   if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
   if (heroismBonus > 0) addLog(`  Heroism! +${heroismBonus} damage`, Colors.GOLD);
@@ -37431,7 +38028,9 @@ function enterTakeDamagePhase() {
   // Pain cue is fired in handleDamageSourceClick (when the player
   // actually clicks "take from deck" or a hand card to discard) so it
   // lands with the floating damage number, not when the prompt opens.
-  if (deckAvail === 0) {
+  if (_pounceHitPlayer && player.deck.hand.length > 0) {
+    showStyledToast(`Pounce! Discard ${pendingIncomingDamage} from your hand (deck locked).`, 'damage');
+  } else if (deckAvail === 0) {
     showStyledToast(`Deck empty! Discard ${pendingIncomingDamage} from hand.`, 'damage');
   } else {
     showStyledToast(`${pendingIncomingDamage} damage — discard from hand or take from deck`, 'damage');
@@ -37450,6 +38049,10 @@ function finishIncomingDamage() {
   const deathlyStrike = _specterDeathlyStrike;
   const deathlyLanded = _playerDamageLandedThisEvent;
   _specterDeathlyStrike = false;
+  // Pounce (Crag Cat) — the hand-first payment was enforced during the
+  // DAMAGE_SOURCE phase (the deck stayed locked until the hand emptied), so
+  // there's nothing to do here but clear the flag for the next event.
+  _pounceHitPlayer = false;
   // Ice Shatter on the player — fires if any deck/hand pay actually
   // happened this event. Skipped on fully blocked / fully shielded
   // hits since the flag never flipped.
@@ -37498,6 +38101,12 @@ function handleDamageSourceClick(x, y) {
     _painPlayedForCurrentDamageEvent = true;
   };
   if (hitTest(x, y, deckBtn) && deckAvail > 0) {
+    // Pounce (Crag Cat) — the player must spend their HAND first; the deck is
+    // locked until the hand is empty (then this branch opens normally).
+    if (_pounceHitPlayer && player.deck.hand.length > 0) {
+      showStyledToast('Pounce! Discard from your hand first.', 'damage');
+      return;
+    }
     firePainOnce();
     const toTake = Math.min(pendingIncomingDamage, deckAvail);
     const milled = [];
@@ -37592,8 +38201,10 @@ function drawDamageSourceOverlay() {
   const r = getTakeFromDeckBtnRect();
   const deckAvail = player.deck.deckDamageAvailable();
   const deckEmpty = deckAvail === 0;
-  const hov = !deckEmpty && hitTest(mouseX, mouseY, r);
-  ctx.fillStyle = deckEmpty ? '#444' : (hov ? '#9a2828' : '#641818');
+  // Pounce locks the deck until the hand is empty (hand-first payment).
+  const pounceLock = _pounceHitPlayer && player.deck.hand.length > 0;
+  const hov = !deckEmpty && !pounceLock && hitTest(mouseX, mouseY, r);
+  ctx.fillStyle = (deckEmpty || pounceLock) ? '#444' : (hov ? '#9a2828' : '#641818');
   ctx.fillRect(r.x, r.y, r.w, r.h);
   ctx.strokeStyle = Colors.RED;
   ctx.lineWidth = 2;
@@ -37602,9 +38213,11 @@ function drawDamageSourceOverlay() {
   ctx.font = 'bold 16px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const label = deckEmpty
-    ? `Discard ${pendingIncomingDamage} from hand`
-    : `Take ${pendingIncomingDamage} from Deck`;
+  const label = pounceLock
+    ? 'Pounce: hand first'
+    : (deckEmpty
+      ? `Discard ${pendingIncomingDamage} from hand`
+      : `Take ${pendingIncomingDamage} from Deck`);
   ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2);
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
@@ -38418,6 +39031,17 @@ function getDamageModifier(character) {
       addLog(`  Boarhide Bracers: +2 First Attack`, Colors.GOLD);
     }
   }
+  // Snow Paws — same passive as Boarhide Bracers, +3 on the turn's first swing
+  // while it sits in hand. Stacks with the bracers if both are held.
+  if (character === player && attacksThisTurn === 0 && player.deck
+      && Array.isArray(player.deck.hand)
+      && player.deck.hand.some(c => c && c.id === 'snow_paws')) {
+    mod += 3;
+    if (!_snowPawsBonusLogged) {
+      _snowPawsBonusLogged = true;
+      addLog(`  Snow Paws: +3 First Attack`, Colors.GOLD);
+    }
+  }
   // Swift Assault perk (tier-2 rare) — +1 damage per stack on the FIRST
   // attack of the turn (same window as Boarhide Bracers; stacks with it).
   if (character === player && attacksThisTurn === 0 && player.getPerkStacks) {
@@ -38628,7 +39252,9 @@ function processPlayerAllyAttacks() {
     // Apply rage (persistent) and heroism (consumed on attack), matching Python.
     const rageBonus = ally.rage || 0;
     const heroismBonus = ally.heroism || 0;
-    let dmg = ally.attack + rageBonus + heroismBonus;
+    const packBonus = (ally.packTactics && ally.owner && Array.isArray(ally.owner.creatures))
+      ? Math.max(0, ally.owner.creatures.filter(a => a && a.isAlive).length - 1) : 0; // Pack Hyena
+    let dmg = ally.attack + packBonus + rageBonus + heroismBonus;
     if (heroismBonus > 0) ally.heroism = 0;
     if (rageBonus > 0) addLog(`  ${ally.name}: Rage! +${rageBonus} damage`, Colors.RED);
     if (heroismBonus > 0) addLog(`  ${ally.name}: Heroism! +${heroismBonus} damage`, Colors.GOLD);
@@ -38996,6 +39622,12 @@ function pickEnemyAttackTarget() {
   const sentinels = aliveAllies.filter(a => a.sentinel);
   if (sentinels.length > 0) {
     return sentinels[Math.floor(Math.random() * sentinels.length)];
+  }
+  // Patient Hunter (Gnoll Hunter) — never swing at the player while any summon
+  // stands; always pick one of the player's allies instead.
+  if (enemy && Array.isArray(enemy.powers)
+      && enemy.powers.some(p => p && p.id === 'patient_hunter')) {
+    return aliveAllies[Math.floor(Math.random() * aliveAllies.length)];
   }
   // Even weighting: player + each ally get the same chance. With 1
   // ally the split is 50/50, with 2 allies it's 33/33/33, with 3 it's
@@ -39387,6 +40019,11 @@ function dealRandomDamageToEnemySide(amount, sourceName, color = Colors.RED) {
 // (the on-attacked power hook isn't reliably invoked for creature targets,
 // and the target is often swept before it could run). Idempotent per hit:
 // each damage site calls it exactly once.
+// Set to a fresh Set at the top of a player card play (playCardOnEnemy); each
+// inline maybeEnemyRiposte that fires records its target here so the post-card
+// riposte sweep doesn't double-hit creatures the effect cases already handled.
+let _ripostedThisCardPlay = null;
+
 function maybeEnemyRiposte(target, attacker) {
   if (!target || !target.riposte || (target.attack || 0) <= 0 || !attacker) return;
   // Enemy-side creatures only (don't double-fire with the ally-side path
@@ -39394,7 +40031,10 @@ function maybeEnemyRiposte(target, attacker) {
   const isEnemyCreature = target.owner === enemy
     || (enemy && Array.isArray(enemy.creatures) && enemy.creatures.includes(target));
   if (!isEnemyCreature) return;
-  const rip = target.attack;
+  if (_ripostedThisCardPlay) _ripostedThisCardPlay.add(target);
+  // Fixed-amount riposte (Giant Hyena: riposteAmount 1) overrides the default
+  // "reflect full attack" so a 3-attack beast can still riposte for just 1.
+  const rip = (target.riposteAmount != null) ? target.riposteAmount : target.attack;
   if (attacker === player && player) {
     const [, tk] = player.takeDamageWithDefense(rip);
     if (tk > 0) spawnDamageOnTarget(player, tk, Colors.GOLD);
@@ -39408,6 +40048,34 @@ function maybeEnemyRiposte(target, attacker) {
   playSound('sword_light_1h_flesh_01', 0.6);
 }
 
+// Riposte sweep — wraps a player card's effect resolution. begin… snapshots
+// each enemy creature's HP and arms the _ripostedThisCardPlay marker (the
+// inline maybeEnemyRiposte calls add to it); end… then reflects the riposte of
+// any creature that LOST HP and wasn't already handled inline. This catches the
+// many attack effect types whose damage sites lack an inline riposte AND
+// creatures the swing killed (removed from enemy.creatures, found via the snap).
+function beginRiposteSweep() {
+  _ripostedThisCardPlay = new Set();
+  const snap = [...(enemy && enemy.creatures || [])];
+  return { snap, hp: new Map(snap.map(c => [c, c.currentHp])) };
+}
+function endRiposteSweep(ctx) {
+  if (ctx) {
+    for (const c of ctx.snap) {
+      if (!c || !c.riposte || _ripostedThisCardPlay.has(c)) continue;
+      const before = ctx.hp.get(c);
+      if (before == null || (c.currentHp ?? 0) >= before) continue; // took no damage
+      const rip = (c.riposteAmount != null) ? c.riposteAmount : (c.attack || 0);
+      if (rip <= 0) continue;
+      const [, tk] = player.takeDamageWithDefense(rip);
+      if (tk > 0) spawnDamageOnTarget(player, tk, Colors.GOLD);
+      addLog(`  Riposte! ${tk} damage to you`, Colors.GOLD);
+      playSound('sword_light_1h_flesh_01', 0.6);
+    }
+  }
+  _ripostedThisCardPlay = null;
+}
+
 // Effect types that ALREADY register as an attack (they deal damage and
 // bump attacksThisTurn / fire Riposte at their damage sites). Used to tell
 // a damage-LESS poison/bleed card (Plague) — which IS its own attack —
@@ -39417,7 +40085,7 @@ const DAMAGE_EFFECT_TYPES = new Set([
   'damage_all', 'damage_split_all', 'damage_all_twice', 'damage_range', 'damage_draw_on_hit',
   'sneak_attack', 'careful_strike', 'charge_attack', 'shield_bash', 'shield_bash_half',
   'armor_bonus_damage', 'unpreventable_damage', 'troll_teeth_attack', 'feral_swipe',
-  'first_strike_attack',
+  'first_strike_attack', 'first_strike_poison_attack', 'bone_javelin_attack',
   'dragon_bow_barrage', 'magic_missile_barrage', 'poison_dagger_barrage', 'blade_flurry_barrage',
 ]);
 
@@ -39570,6 +40238,11 @@ function routeEnemyDamage(dmg, sourceLabel, sourceCreature = null) {
 // Callers use the return to gate per-swing rider effects (e.g. the
 // "no damage, no poison" rule on Deathjump Spider).
 function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = null, arrowDurationMs = null) {
+  // Hunter's Mark — if the target carries a Mark, consume one and DOUBLE the
+  // swing here, BEFORE any block/shield/armor mitigation. Routing it here
+  // covers every enemy attack: the Gnoll Hunter's weapons AND his summoned
+  // Hyenas all funnel through this function. No-op on unmarked / 0-dmg swings.
+  dmg = applyMarkBonus(target, dmg);
   // Always draw the swing animation, even at 0 damage. Ice can fully
   // cancel an attacker's swing — the creature should still SWING
   // visually so the player sees the chill kicking in. We just skip
@@ -39603,6 +40276,24 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
   dmg = applyEnemyFeralWrathSplit(target, dmg);
 
   if (target === player) {
+    // Beast Collar — while it sits in the player's hand, every enemy attack
+    // that connects with the player reflects 1 to the attacker (the swinging
+    // creature if one, else the boss).
+    if (player.deck && Array.isArray(player.deck.hand)
+        && player.deck.hand.some(c => c && c.id === 'beast_collar')) {
+      const bcAtkr = sourceCreature || enemy;
+      if (bcAtkr) {
+        if (bcAtkr instanceof Creature) {
+          const bcHit = bcAtkr.takeDamage(1);
+          if (bcHit > 0) spawnDamageOnTarget(bcAtkr, bcHit, Colors.GOLD);
+          addLog(`  Beast Collar Riposte! 1 to ${bcAtkr.name}`, Colors.GOLD);
+          if (!bcAtkr.isAlive) { addLog(`  ${bcAtkr.name} destroyed!`, Colors.GOLD, null, null, bcAtkr); countAndRemoveDeadCreatures(); }
+        } else if (typeof bcAtkr.takeDamageFromDeck === 'function') {
+          bcAtkr.takeDamageFromDeck(1);
+          addLog(`  Beast Collar Riposte! 1 to ${bcAtkr.name}`, Colors.GOLD);
+        }
+      }
+    }
     // Play the attacker's flesh cue right here — the arrow is firing
     // visually NOW, even though the actual damage gets aggregated and
     // resolved later in startIncomingDamage. This makes the audio
@@ -39811,6 +40502,11 @@ function ownerUsedCells(owner) {
 function placeButcherCentered(owner, butcher) {
   if (!owner) return false;
   if (ownerUsedCells(owner) > 8) return false; // no room for the 2x2
+  // A multi-cell ally (e.g. the 2x2 Rampart) can't be relocated to a single
+  // flank slot without corrupting its footprint — and it may already occupy
+  // the centre cells. Bail so the caller's addCreature fallback drops the
+  // Butcher in free space and leaves the big unit exactly where it is.
+  if (owner.creatures.some(c => (c.slotW || 1) > 1 || (c.slotH || 1) > 1)) return false;
   const centre = new Set([2, 3, 8, 9]);
   const flank = [];
   for (let s = 0; s < Character.MAX_CREATURES; s++) if (!centre.has(s)) flank.push(s);
@@ -39841,6 +40537,7 @@ function raiseEnemyButcher() {
 function startEnemyTurn() {
   enemyTurnNumber++;
   _enemyCardsThisTurn = 0;
+  _pounceHitPlayer = false; // Pounce (Crag Cat) — reset per enemy turn
   // Reset the shared "attacks this turn" counter for the enemy's turn.
   // The player's attacks bumped it during their turn; without this reset
   // the enemy's first swing never sees attacksThisTurn === 0, so First
@@ -40492,11 +41189,21 @@ function startEnemyTurn() {
     // back to priority.
     const extraCostOf = (c) => (c.effects || [])
       .reduce((n, e) => n + (e.effectType === 'recharge_extra' ? (e.value || 0) : 0), 0);
+    // Effective priority — usually the static card.priority, but a couple of
+    // cards want situational ordering. Aimed Shot (Gnoll Hunter) sits below
+    // Bone Bow by default and jumps above it (27, still under Hunter's Mark's
+    // 30) when the hunter has Heroism banked, so it fires to cash the doubled
+    // Heroism bonus instead of letting it sit.
+    const effPriority = (c) => {
+      let p = c.priority || 0;
+      if (c.id === 'aimed_shot_card' && (enemy.heroism || 0) > 0) p += 7;
+      return p;
+    };
     const local = [...enemy.deck.hand];
     local.sort((a, b) => {
       const ax = extraCostOf(a), bx = extraCostOf(b);
       if (ax !== bx) return bx - ax;
-      return (b.priority || 0) - (a.priority || 0);
+      return effPriority(b) - effPriority(a);
     });
     for (const card of local) {
       if (card.cardType === CardType.DEFENSE) continue;
@@ -41385,6 +42092,70 @@ function updateEnemyTurn(dt) {
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
         consumePoisonBuff(enemy, cardTarget, dmg); // Vial / Drow Sleep buff
+        attacksThisTurn++;
+      } else if (eff.effectType === 'bite_attack') {
+        // Gnoll Bite — Deal eff.value + 1 Bleed.
+        let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        if (cardTarget instanceof Creature) cardTarget.bleedStacks = (cardTarget.bleedStacks || 0) + 1;
+        else if (cardTarget && cardTarget.applyStatus) cardTarget.applyStatus('BLEED', 1);
+        spawnTokenOnTarget(cardTarget, 1, 'Bleed', Colors.RED);
+        attacksThisTurn++;
+      } else if (eff.effectType === 'first_strike_poison_attack') {
+        // Bone Bow (Gnoll Hunter) — Deal eff.value (Draw lives on a sibling
+        // effect). FIRST STRIKE: on the turn's opening attack, also apply
+        // eff.maxTargets Poison to the target.
+        const fsFirst = (attacksThisTurn === 0);
+        let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        if (fsFirst) {
+          const pz = eff.maxTargets || 1;
+          if (cardTarget instanceof Creature) cardTarget.poisonStacks = (cardTarget.poisonStacks || 0) + pz;
+          else if (cardTarget && cardTarget.applyStatus) cardTarget.applyStatus('POISON', pz);
+          spawnTokenOnTarget(cardTarget, pz, 'Poison', Colors.GREEN);
+          addLog(`  First Strike! +${pz} Poison`, Colors.GREEN);
+        }
+        attacksThisTurn++;
+      } else if (eff.effectType === 'bone_javelin_attack') {
+        // Bone Javelin (Gnoll Hunter) — Deal eff.value + 1 Poison; +eff.maxTargets
+        // when the target is a summon (a player creature, not the player itself).
+        const vsSummon = cardTarget instanceof Creature;
+        const bonus = vsSummon ? (eff.maxTargets || 0) : 0;
+        if (bonus > 0) addLog(`  +${bonus} vs Summon!`, Colors.GOLD);
+        let dmg = Math.max(0, eff.value + bonus + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        if (cardTarget instanceof Creature) cardTarget.poisonStacks = (cardTarget.poisonStacks || 0) + 1;
+        else if (cardTarget && cardTarget.applyStatus) cardTarget.applyStatus('POISON', 1);
+        spawnTokenOnTarget(cardTarget, 1, 'Poison', Colors.GREEN);
+        attacksThisTurn++;
+      } else if (eff.effectType === 'pounce_attack') {
+        // Pounce (Crag Cat) — Deal eff.value + 1 Bleed. If this swing hits the
+        // PLAYER (not a summon/ally), arm _pounceHitPlayer; if the player then
+        // takes damage, they discard their hand after the defensive phase
+        // (finishIncomingDamage). A summon/ally taking the hit does nothing.
+        playSound('lion_roar_01', 0.7); // roar as the cat pounces
+        let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        routeEnemyDamageToTarget(cardTarget, dmg, card.name);
+        if (cardTarget === player) _pounceHitPlayer = true;
+        if (cardTarget instanceof Creature) cardTarget.bleedStacks = (cardTarget.bleedStacks || 0) + 1;
+        else if (cardTarget && cardTarget.applyStatus) cardTarget.applyStatus('BLEED', 1);
+        spawnTokenOnTarget(cardTarget, 1, 'Bleed', Colors.RED);
         attacksThisTurn++;
       } else if (eff.effectType === 'mark_deathly_strike') {
         // Death Sickle's "Hit: Death" rider. Stamps a module flag the
@@ -42636,6 +43407,15 @@ function updateEnemyTurn(dt) {
         enemy.shield += eff.value;
         addLog(`  +${eff.value} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
         spawnTokenOnTarget(enemy, eff.value, 'Shield', Colors.ALLY_BLUE);
+      } else if (eff.effectType === 'apply_mark') {
+        // Hunter's Mark (Gnoll Hunter) — stack Mark on the player (the hunted).
+        // apply_mark has no enemy-side branch anywhere else, so handle it here.
+        if (player) {
+          if (typeof player.applyStatus === 'function') player.applyStatus('MARK', eff.value);
+          else player.markStacks = (player.markStacks || 0) + eff.value;
+          spawnTokenOnTarget(player, eff.value, 'Mark', Colors.RED);
+          addLog(`  Hunter's Mark: +${eff.value} Mark on you`, Colors.RED);
+        }
       } else if (eff.effectType === 'draw_if_no_shield') {
         // Buckler's "First Shield: Draw" — the enemy draws 1 if it
         // had no shield when the card started. Uses the pre-play
@@ -42987,6 +43767,14 @@ function updateEnemyTurn(dt) {
         playSound('boulder_flesh', 0.7);
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry) lastEntry.creature = boulder;
+      } else if (eff.effectType === 'summon_giant_hyena') {
+        // Gnoll Hunter's beast summon — a 3/6 bleeder with a fixed Riposte 1.
+        const hyena = createGiantHyenaCreature();
+        enemy.addCreature(hyena);
+        addLog(`  Giant Hyena summoned!`, Colors.ORANGE);
+        playSound('monster_snort_01', 0.6);
+        const lastHyenaEntry = combatLog[combatLog.length - 1];
+        if (lastHyenaEntry) lastHyenaEntry.creature = hyena;
       } else if (eff.effectType === 'summon_boulders_random') {
         // Stone Giant Boulder card — randomized payload.
         //   50% → 2-4 Small Boulders (2/2 self-destruct).
@@ -43270,6 +44058,7 @@ function completePlayerTurnTransition() {
 
   addLog('--- Your Turn ---', Colors.GREEN);
   isPlayerTurn = true;
+  _pounceHitPlayer = false; // clear any leftover Pounce lock (e.g. fully-blocked hit)
   player.clearBlock();
   player.readyPowers();
   player.readyCreatures();
@@ -43277,6 +44066,7 @@ function completePlayerTurnTransition() {
   for (const c of player.deck.hand) c.exhausted = false;
   attacksThisTurn = 0;
   _bracerBonusLogged = false; // re-arm the Boarhide Bracers first-attack log
+  _snowPawsBonusLogged = false; // re-arm the Snow Paws first-attack log
   _swiftAssaultLogged = false; // re-arm the Swift Assault first-attack log
   // Frenzy Blood Vial — apply the Bloodied Frenzy Rage for the turn (announce).
   updateFrenzyRage(true);
@@ -44449,8 +45239,8 @@ function triggerOnAttackedPowers(character, creatureTarget) {
     // Rampaging Troll — Loathsome Limbs. For every 10 damage the troll
     // has taken (cumulative missing HP in 10-card chunks, same accounting
     // as Zhost's Revenge) it tears off a Loathsome Limb the instant the
-    // damage lands during the player's turn: summon a wounded 5/10 limb
-    // (3 Atk + Bleed, Regen 3) — no card discard. NOT hasted
+    // damage lands during the player's turn: discard a random hand card
+    // and summon a wounded 5/10 limb (3 Atk + Bleed, Regen 3). NOT hasted
     // — it appears on the player's turn and acts on the troll's next turn.
     // Latched on _loathsomeLimbsSpawned so the troll's own Regeneration
     // (which restores curHp) can't un-spawn limbs.
@@ -44462,7 +45252,13 @@ function triggerOnAttackedPowers(character, creatureTarget) {
       let spawned = character._loathsomeLimbsSpawned || 0;
       while (spawned < targetLimbs) {
         spawned++;
-        // (No longer discards a card from the troll when an arm tears off.)
+        if (character.deck.hand.length > 0) {
+          const idx = Math.floor(Math.random() * character.deck.hand.length);
+          const [lost] = character.deck.hand.splice(idx, 1);
+          if (typeof character.deck.discardCard === 'function') character.deck.discardCard(lost);
+          else character.deck.discardPile.push(lost);
+          addLog(`  Loathsome Limbs! ${character.name} sloughs off ${lost.name}.`, Colors.ORANGE);
+        }
         const limb = new Creature({
           name: 'Loathsome Limbs', attack: 2, maxHp: 6, currentHp: 3,
           bleedAttack: 1,
@@ -44568,6 +45364,8 @@ function getDeathSfxKey(c) {
   // Animal Companion summons — same growl/grunt sample as their
   // attack so the family is sonically consistent across the fight.
   if (name === 'misha') return 'bear_growl';
+  if (name === 'gnoll hunter') return 'monster_alien_scream_01'; // East Mountain ambush — scream bookends the fight
+  if (name === 'crag cat') return 'lion_roar_01'; // East Mountain — roar bookends the fight
   if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   // Bone-family death rattle (Bone Pile boss, Bone Amalgam boss + the
   // 3/3 amalgam creatures it summons, Restless Bone summons).
@@ -44728,6 +45526,8 @@ function getDeathSfxKey(c) {
 function getFightStartSfxKey(rawName) {
   const name = (rawName || '').toLowerCase();
   if (name === 'slime') return 'ooze_attack';
+  if (name === 'gnoll hunter') return 'monster_alien_scream_01'; // East Mountain ambush
+  if (name === 'crag cat') return 'lion_roar_01'; // East Mountain
   if (name === 'giant rat' || name === 'dire rat') return 'rat_screech';
   if (name === 'bone pile' || name === 'bone amalgam') return 'bones_clatter';
   if (name === 'kobold warden') return 'warden_hiss';
@@ -46343,7 +47143,12 @@ function applyStartOfCombatBuffs() {
     // combat). All other PersistentBuffs run unlimited (turnsRemaining
     // 0 = no decrement). Multi-effect provisions (Bad Rations) also
     // forward their effects array so each tick resolves both halves.
-    const turnsCap = pb._provisionTurnsPerCombat || 0;
+    let turnsCap = pb._provisionTurnsPerCombat || 0;
+    if (turnsCap > 0 && player.getPerkStacks) {
+      // Brewmaster (Beverages) / Gourmand (Meals) — +1 turn of duration each.
+      if (pb._provisionSlot === 'beverage') turnsCap += player.getPerkStacks('beverage_extra_turn');
+      else if (pb._provisionSlot === 'meal') turnsCap += player.getPerkStacks('meal_extra_turn');
+    }
     const projected = new CombatBuff({
       id: pb.id,
       name: pb.name,
@@ -50373,6 +51178,21 @@ function restoreFromSave(data) {
     // standing anywhere south of Qualibaf.
     south_of_qualibaf: createSouthOfQualibafMap,
     south_outpost: createSouthOutpostMap,
+    east_mountain_trail: createEastMountainTrailMap,
+    east_mountain_trail_01: createEastMountainTrail01Map,
+    east_mountain_trail_02: createEastMountainTrail02Map,
+    east_mountain_trail_03: createEastMountainTrail03Map,
+    east_mountain_trail_04: createEastMountainTrail04Map,
+    east_mountain_crags_chasm_01: createEastMountainCragsChasm01Map,
+    east_mountain_crags_chasm_02: createEastMountainCragsChasm02Map,
+    east_mountain_crags_chasm_03: createEastMountainCragsChasm03Map,
+    east_mountain_crags_chasm_04: createEastMountainCragsChasm04Map,
+    east_mountain_crags_chasm_05: createEastMountainCragsChasm05Map,
+    east_mountain_crags_chasm_06: createEastMountainCragsChasm06Map,
+    east_mountain_crags_chasm_07: createEastMountainCragsChasm07Map,
+    east_mountain_crags_chasm_08: createEastMountainCragsChasm08Map,
+    east_mountain_crags_chasm_09: createEastMountainCragsChasm09Map,
+    east_mountain_crags_chasm_10: createEastMountainCragsChasm10Map,
     river_cave_mouth: createRiverCaveMouthMap,
     filibaf_forest: createFilibafForestMap,
     tharnag: createTharnagMap,
@@ -52055,6 +52875,12 @@ const CARD_SFX_OVERRIDES = {
   // landed / blocked hit, so each Rend reads as the troll roaring as its
   // claws rake home.
   rend:                     { play: 'ogre_groan_02', flesh: 'sword_light_1h_flesh_01', blocked: 'sword_light_1h_flesh_01' },
+  // Gnoll Hunter weapons (East Mountain). Bite chews, Bone Bow looses an
+  // arrow, Bone Javelin stabs (rock-wall clang when blocked).
+  gnoll_bite:               { flesh: 'monster_chew_02', blocked: 'monster_chew_02' },
+  bone_bow:                 { flesh: 'bow_flesh', blocked: 'bow_blocked' },
+  bone_javelin:             { flesh: 'spear_stab_flesh_01', blocked: 'sword_rock_wall_01' },
+  hunters_recurve_bow:      { flesh: 'bow_flesh', blocked: 'bow_blocked' },
   // Skitter Bite — Plague Cockroach's dual-mode card. Leg-rustle
   // scuttle on cast, on swing hit, and on a blocked swing — the
   // bug sounds the same whether it's attacking or counter-biting.
@@ -52413,6 +53239,11 @@ const CARD_SFX_OVERRIDES = {
 const CARD_SFX_HINTS = {
   // splash_fire (Explosive Shot) stutters fire_flesh per affected enemy.
   explosive_shot:   ['fire_flesh'],
+  // Crag Cat — pounce_attack / reflexes_dodge play a lion roar on cast.
+  pounce:           ['lion_roar_01'],
+  cat_reflexes:     ['lion_roar_01'],
+  // Beastmaster Horn — summon_beastmaster_horn blows a distant wolf howl.
+  beastmaster_horn: ['wolf_howl_distant_01'],
   // Obsidian Slime ally card — summon plays the layered burst
   // (playObsidianSlimeBurst): ooze_attack + rocks_impact_small.
   obsidian_slime_card: ['ooze_attack', 'rocks_impact_small'],
@@ -52503,6 +53334,11 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // getDeathSfxKey, so the same family stays consistent).
     if (name === 'misha') {
       return { flesh: 'bear_growl', blocked: 'bear_growl', play: 'bear_growl' };
+    }
+    // Giant Hyena (Gnoll Hunter summon) — chews on every bite, same cue as
+    // the hunter's own Bite card.
+    if (name === 'giant hyena') {
+      return { flesh: 'monster_chew_02', blocked: 'monster_chew_02', play: 'monster_chew_02' };
     }
     // Roc Chick — every screech is a swing. Same monster_scream_01
     // sample bookends fight start, every attack, and death so the
@@ -53605,7 +54441,7 @@ const ALL_POWER_CREATORS = [
   createLavaFloor, createBlizzard, createAncientWhite,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower,
-  createVanish, createRipostePower, createDrowSleepPoisonPower, createBrute, createEthereal,
+  createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createBrute, createEthereal,
   // Path of the Necromancer — Plague Cockroach + Necromancer's Power
   // + Army of the Dead (Worn Floor boss) + Endless Dead (Gravekeeper).
   createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
@@ -55847,6 +56683,8 @@ function getCodexMonsterIds() {
     // Part 2 Tharnag tunnels random encounters — Goblin Swarm
     // (invulnerable shell + goblin pack) and Rampaging Troll (Regen 10).
     'goblin_swarm', 'rampaging_troll',
+    // Part 2 East Mountain random encounters — Gnoll Hunter and Crag Cat.
+    'gnoll_hunter', 'crag_cat',
     // Part 2 Gate of the Deep — the flank fight (Goblin Front + Armored
     // Trolls) and Khydhani the drow assassin ("The Assassin") at the Forge.
     'goblin_front', 'khydhani',
@@ -56545,6 +57383,8 @@ function buildCodexSourceCache() {
     'forest_spiders','obsidian_golem','obsidian_slime','siege_gauntlet_1',
     // Part 2 Tharnag tunnels random encounters + Gate of the Deep fronts.
     'goblin_swarm','goblin_front','rampaging_troll','khydhani',
+    // Part 2 East Mountain random encounters.
+    'gnoll_hunter','crag_cat',
     'kobold_drake_rider','piranhas_swarm','general_zhost','general_zhost_boss',
     'wolf_pack','stone_giant','mimic','ruga_slave_master','zhost_revenge','ancestor_spirits',
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',

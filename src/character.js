@@ -476,6 +476,23 @@ export class Character {
     { key: 'SHOCK',      label: 'Shock',             color: '#ffe650' },
   ];
   applyStatus(status, stacks) {
+    // Spell Turning (Crag Cat power) — each negative-status application has a
+    // 50% chance to be turned aside entirely (one roll per application,
+    // all-or-nothing for its stacks). Gated on the holder carrying the power,
+    // so it only ever protects that enemy.
+    if (stacks > 0
+        && (status === 'POISON' || status === 'BLEED' || status === 'FIRE'
+          || status === 'ICE' || status === 'SHOCK' || status === 'MARK')
+        && Array.isArray(this.powers)
+        && this.powers.some(p => p && p.id === 'spell_turning')
+        && Math.random() < 0.5) {
+      this._spellTurned = status;
+      // Let the host log it (character.js is log-agnostic — main.js installs
+      // Character._onSpellTurned). `stacks` is the amount that was negated.
+      if (typeof Character._onSpellTurned === 'function') Character._onSpellTurned(this, status, stacks);
+      return;
+    }
+    this._spellTurned = null;
     let n = stacks;
     this._lastStatusCancel = null;
     if (n > 0) {
@@ -1576,6 +1593,27 @@ export function createSwiftAssaultPerk() {
   });
 }
 
+// Tier-2 Unique Epic provision perks — Beverages / Meals last 1 extra turn.
+// Wired in applyStartOfCombatBuffs (the projected provision's turn cap reads
+// these perk stacks per slot).
+export function createBrewmasterPerk() {
+  return new Perk({
+    id: 'brewmaster', name: 'Brewmaster',
+    description: 'Beverages last 1 additional turn.',
+    imageId: 'brewmaster_perk', effectType: 'beverage_extra_turn', effectValue: 1,
+    unique: true, tier: 2, rarity: 'epic',
+  });
+}
+
+export function createGourmandPerk() {
+  return new Perk({
+    id: 'gourmand', name: 'Gourmand',
+    description: 'Meals last 1 additional turn.',
+    imageId: 'gourmand_perk', effectType: 'meal_extra_turn', effectValue: 1,
+    unique: true, tier: 2, rarity: 'epic',
+  });
+}
+
 // Per-class perk weights at each level-up tier. Mirrors PY's
 // `CLASS_PERK_WEIGHTS` dict. Tier 2 is currently empty (reserved for
 // future expansion) — falls back to tier 1 if empty for a class.
@@ -1596,36 +1634,43 @@ export const CLASS_PERK_WEIGHTS = {
       very_tough: 0.75, well_prepared: 0.50, very_gritty: 0.75, prospector: 0.75,
       readiness: 0.50, third_wind: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.50,
       cleansing_armor: 0.25, swift_assault: 0.25,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Ranger: {
       very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.75, prospector: 0.75,
       readiness: 0.50, first_volley: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
       cleansing_armor: 0.25, swift_assault: 0.50,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Paladin: {
       very_tough: 1.00, well_prepared: 0.50, very_gritty: 0.75, prospector: 0.75,
       readiness: 0.50, divine_protection: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
       cleansing_armor: 0.50, swift_assault: 0.25,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Rogue: {
       very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.50, prospector: 0.75,
       readiness: 0.75, poisoners_ambush: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
       cleansing_armor: 0.25, swift_assault: 0.50,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Druid: {
       very_tough: 0.75, well_prepared: 0.75, very_gritty: 0.75, prospector: 0.75,
       readiness: 0.75, grand_harvest: 0.25, troll_ancestry: 0.50, bloodied_rage: 0.25,
       cleansing_armor: 0.25, swift_assault: 0.25,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Wizard: {
       very_tough: 0.50, well_prepared: 1.00, very_gritty: 0.50, prospector: 0.75,
       readiness: 1.00, power_infusion: 0.25, troll_ancestry: 0.25, bloodied_rage: 0.25,
       cleansing_armor: 0.50, swift_assault: 0.25,
+      brewmaster: 0.125, gourmand: 0.125,
     },
     Necromancer: {
       very_tough: 0.75, well_prepared: 0.75, very_gritty: 0.75, prospector: 0.75,
       readiness: 0.75, empowered_skeletons: 0.25, troll_ancestry: 0.50, bloodied_rage: 0.25,
       cleansing_armor: 0.25, swift_assault: 0.25,
+      brewmaster: 0.125, gourmand: 0.125,
     },
   },
 };
@@ -1657,6 +1702,8 @@ export const PERK_REGISTRY = {
   bloodied_rage:       createBloodiedRagePerk,
   cleansing_armor:     createCleansingArmorPerk,
   swift_assault:       createSwiftAssaultPerk,
+  brewmaster:          createBrewmasterPerk,
+  gourmand:            createGourmandPerk,
   arsenal:         createArsenalPerk,
   talented:        createTalentedPerk,
   second_wind:     createSecondWindPerk,

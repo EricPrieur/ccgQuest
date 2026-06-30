@@ -381,6 +381,7 @@ export const SOUND_MAP = {
   whip_flesh:        'Weapons/whip_crack_01',
   staff_flesh:       'Weapons/baton_hit_01',
   spear_flesh:       'Weapons/spear_stab_flesh_01',
+  spear_stab_flesh_01: 'Weapons/spear_stab_flesh_01', // Bone Javelin (Gnoll Hunter)
   spear_throw_flesh: 'Weapons/spear_throw_flesh_01',
   // Spear / trident blocked — same sword-on-rock-wall clang used for
   // 1H sword blocks. Mounts to a hard target rather than the generic
@@ -513,6 +514,7 @@ export const SOUND_MAP = {
   wolf_attack:    'Monster/monster_chew_02',
   // Wolf Pack — distant pack howl for fight start AND end.
   wolf_howl:      'Monster/wolf_howl_distant_01',
+  wolf_howl_distant_01: 'Monster/wolf_howl_distant_01', // Beastmaster Horn
   // Piranha creature attack — quick chew when a piranha bites.
   piranha_attack: 'Monster/monster_chew_01',
   // Piranhas Swarm — bubbly fast pass-by for fight start AND end.
@@ -556,6 +558,7 @@ export const SOUND_MAP = {
   // frost_drake_scream, hiding the drake from a name search).
   magma_drake_scream:        'Monster/monster_alien_scream_01',
   monster_alien_scream_01:   'Monster/monster_alien_scream_01',
+  monster_chew_02:           'Monster/monster_chew_02', // Gnoll Bite + Giant Hyena
   monster_demon_screech_01:  'Monster/monster_demon_screech_01',
   monster_scream_01:         'Monster/monster_scream_01',
   // Sahuagin Sentinel + Priest — same cave-monster scream bookends
@@ -607,6 +610,7 @@ export const SOUND_MAP = {
   // Druid wild-shape attack cues.
   bear_form_attack: 'Misc/bear_growl_01',
   cat_form_attack:  'Misc/lion_roar_01',
+  lion_roar_01:     'Misc/lion_roar_01', // Crag Cat — fight start / death / Pounce / Cat Reflexes
   // Animal Companion summons — Misha (bear) shares the druid bear
   // growl, Huffer (boar) gets a pig grunt for summon / attack / death.
   bear_growl:       'Misc/bear_growl_01',

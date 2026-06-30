@@ -349,7 +349,7 @@ export function createSouthOfQualibafMap() {
     // (Gontran the Guard) which then teleports into the south_outpost
     // map. Subsequent visits hop straight into south_outpost via the
     // post-isDone gate dispatch.
-    { id: 'outpost', name: 'South Outpost', description: 'A small fortified tower rises out of the plain.', encounterId: 'outpost_meeting', connections: ['outpost_approach', 'south_bend'], position: [802, 470], mapArea: 'south_of_qualibaf' },
+    { id: 'outpost', name: 'South Outpost', description: 'A small fortified tower rises out of the plain.', encounterId: 'outpost_meeting', connections: ['outpost_approach', 'south_bend', 'high_meadow'], position: [802, 470], mapArea: 'south_of_qualibaf' },
     // South Bend — the road south of the outpost. Discoverable too:
     // hidden until the party walks out of the outpost via the south
     // gate (transitionToSouthBend then reveals it). South Bend also
@@ -367,12 +367,321 @@ export function createSouthOfQualibafMap() {
     // Same discoverable rules so the player only sees it once they
     // reach Cozy Spot.
     { id: 'river_trail_south', name: 'River Trail South', description: 'The trail bends back along the water, heading deeper south.', encounterId: '', connections: ['cozy_spot'], position: [1050, 760], mapArea: 'south_of_qualibaf', canRevisit: true, discoverable: true, hiddenName: '???' },
+    // Chapter 2 — the road east toward the gnoll chasms. Both nodes start
+    // LOCKED (hidden) and reveal only after the gnoll-territories talk with
+    // Gontran (gontran_gnoll_territories) — see hydrateMapFromGlobalState + the
+    // re-hydrate in transitionFromSouthOutpostBack. high_meadow links back to
+    // the outpost; east_mountain_trail_gate is `discoverable` (draws as ???
+    // until walked onto) and teleports to the East Mountain Trail map.
+    // (Positions are placeholders to tune against SouthOfQualibaf.jpg.)
+    { id: 'high_meadow', name: 'High Meadow', description: 'Open grassland rising east of the outpost, where Gontran\'s trappers run their circuit toward the foothills.', encounterId: '', connections: ['outpost', 'east_mountain_trail_gate'], position: [1010, 510], mapArea: 'south_of_qualibaf', canRevisit: true, isLocked: true },
+    { id: 'east_mountain_trail_gate', name: 'East Mountain Trail', description: 'Where the meadow gives out, a climbing track cuts east into the mountains — and gnoll country.', encounterId: '', connections: ['high_meadow'], position: [1120, 460], mapArea: 'south_of_qualibaf', canRevisit: true, isLocked: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A track climbing east, out past the meadow.' },
   ];
 
   for (const data of nodes) {
     map.addNode(new MapNode(data));
   }
   map.currentNodeId = 'outpost_approach';
+  return map;
+}
+
+// East Mountain Trail — Chapter 2 climb east of the South Outpost toward gnoll
+// country. Reached by teleport from south_of_qualibaf's east_mountain_trail_gate
+// (see transitionToEastMountainTrail). Small exterior trail of three nodes: a
+// trail head (the way back), a pass, and the high crags. In NO_FOG_MAPS (no
+// dark fog overlay), but every node past the Trail Head is `discoverable`, so
+// they reveal one hop at a time (??? until the party gets close).
+export function createEastMountainTrailMap() {
+  const map = new GameMap('east_mountain_trail', 'East Mountain Trail');
+  map.mapImages = {
+    east_mountain_trail: 'Maps/EastMountainTrailMap.jpg',
+  };
+  const nodes = [
+    { id: 'emt_entry', name: 'Trail Head', description: 'The trail crests out of the high meadow; the South Outpost road falls away behind you to the west.', encounterId: '', connections: ['emt_pass'], position: [570, 920], mapArea: 'east_mountain_trail', canRevisit: true },
+    { id: 'emt_pass', name: 'Mountain Pass', description: 'The track narrows between shoulders of grey stone, climbing steadily east.', encounterId: '', connections: ['emt_entry', 'emt_deep'], position: [410, 660], mapArea: 'east_mountain_trail', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'The trail climbs on, into the rock.' },
+    { id: 'emt_deep', name: 'High Crags', description: 'The path levels onto a broken shelf high in the crags — and somewhere ahead, gnoll country.', encounterId: '', connections: ['emt_pass'], position: [430, 570], mapArea: 'east_mountain_trail', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Higher still, where the crags break the sky.' },
+  ];
+  for (const data of nodes) {
+    map.addNode(new MapNode(data));
+  }
+  map.currentNodeId = 'emt_entry';
+  return map;
+}
+
+// East Mountain Trail continuation — a linear climb in four exterior segments
+// (EastMountainTrail_01..04), chained High Crags → 01 → 02 → 03 → 04 toward the
+// gnoll chasms. Each map's ENTRY node teleports back to the previous segment and
+// its LAST node teleports on to the next (see EAST_TRAIL_CHAIN in main.js). In
+// NO_FOG_MAPS (no dark overlay) but every node is `discoverable`, so the trail
+// reveals one hop at a time; the deeper segments seed gnoll sign + the chasm.
+export function createEastMountainTrail01Map() {
+  const map = new GameMap('east_mountain_trail_01', 'East Mountain Trail');
+  map.mapImages = { east_mountain_trail_01: 'Maps/EastMountainTrail_01.jpg' };
+  const nodes = [
+    { id: 'emt01_1', name: 'Lower Switchbacks', description: 'The trail doubles back on itself up the first shoulder of rock, the meadow shrinking below.', encounterId: '', connections: ['emt01_2'], position: [580, 950], mapArea: 'east_mountain_trail_01', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt01_2', name: 'The Narrows', description: 'The path pinches to single file between a sheer wall and a long drop.', encounterId: '', connections: ['emt01_1', 'emt01_3'], position: [440, 690], mapArea: 'east_mountain_trail_01', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt01_3', name: 'Windbreak Ledge', description: 'A flat shelf in the lee of a crag — a natural place to catch your breath.', encounterId: 'east_trail_gnoll_tracks', connections: ['emt01_2', 'emt01_4'], position: [600, 540], mapArea: 'east_mountain_trail_01', discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt01_4', name: 'Cairn Bend', description: 'An old stone cairn marks where the trail bends and climbs on.', encounterId: '', connections: ['emt01_3'], position: [450, 480], mapArea: 'east_mountain_trail_01', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'emt01_1';
+  return map;
+}
+
+export function createEastMountainTrail02Map() {
+  const map = new GameMap('east_mountain_trail_02', 'East Mountain Trail');
+  map.mapImages = { east_mountain_trail_02: 'Maps/EastMountainTrail_02.jpg' };
+  const nodes = [
+    { id: 'emt02_1', name: 'Scree Slope', description: 'Loose stone shifts underfoot; the climb steepens.', encounterId: '', connections: ['emt02_2'], position: [500, 950], mapArea: 'east_mountain_trail_02', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt02_2', name: 'The Hogback', description: 'The trail rides a knife-edge ridge with open sky on either hand.', encounterId: '', connections: ['emt02_1', 'emt02_3'], position: [680, 670], mapArea: 'east_mountain_trail_02', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt02_3', name: 'Eagle\'s Rest', description: 'A wind-scoured notch where raptors nest in the cliffs above.', encounterId: '', connections: ['emt02_2', 'emt02_4'], position: [500, 540], mapArea: 'east_mountain_trail_02', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt02_4', name: 'Frostgrass Shelf', description: 'Pale grass clings to a high terrace, stiff with cold even now.', encounterId: '', connections: ['emt02_3', 'emt02_5'], position: [740, 370], mapArea: 'east_mountain_trail_02', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt02_5', name: 'The Saddle', description: 'The path crosses a low saddle between two peaks and starts down the far side.', encounterId: '', connections: ['emt02_4'], position: [870, 310], mapArea: 'east_mountain_trail_02', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'emt02_1';
+  return map;
+}
+
+export function createEastMountainTrail03Map() {
+  const map = new GameMap('east_mountain_trail_03', 'East Mountain Trail');
+  map.mapImages = { east_mountain_trail_03: 'Maps/EastMountainTrail_03.jpg' };
+  const nodes = [
+    { id: 'emt03_1', name: 'Boulder Field', description: 'A chaos of fallen rock the trail threads between.', encounterId: '', connections: ['emt03_2'], position: [670, 910], mapArea: 'east_mountain_trail_03', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt03_2', name: 'The Cleft', description: 'The way drops into a narrow cleft, walls close enough to touch.', encounterId: '', connections: ['emt03_1', 'emt03_3'], position: [580, 590], mapArea: 'east_mountain_trail_03', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt03_3', name: 'Goat Path', description: 'A faint track scored into the slope — and, pressed in the mud, prints that are not a goat\'s.', encounterId: '', connections: ['emt03_2', 'emt03_4'], position: [670, 490], mapArea: 'east_mountain_trail_03', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt03_4', name: 'Wind Gap', description: 'A gap in the ridge funnels a constant, moaning wind.', encounterId: '', connections: ['emt03_3', 'emt03_5'], position: [670, 390], mapArea: 'east_mountain_trail_03', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt03_5', name: 'Shattered Steps', description: 'Broken stairs, ancient and dwarf-cut, climb on into the heights.', encounterId: '', connections: ['emt03_4'], position: [810, 310], mapArea: 'east_mountain_trail_03', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'emt03_1';
+  return map;
+}
+
+export function createEastMountainTrail04Map() {
+  const map = new GameMap('east_mountain_trail_04', 'East Mountain Trail');
+  map.mapImages = { east_mountain_trail_04: 'Maps/EastMountainTrail_04.jpg' };
+  const nodes = [
+    { id: 'emt04_1', name: 'High Traverse', description: 'The trail edges across an exposed face, the valley a dizzying drop below.', encounterId: '', connections: ['emt04_2'], position: [560, 950], mapArea: 'east_mountain_trail_04', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt04_2', name: 'The Spine', description: 'A long rib of bare rock runs east toward the deep peaks.', encounterId: 'east_trail_battle_site', connections: ['emt04_1', 'emt04_3'], position: [650, 730], mapArea: 'east_mountain_trail_04', discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt04_3', name: 'Vulture Roost', description: 'Carrion birds wheel over a ledge littered with old bones.', encounterId: '', connections: ['emt04_2', 'emt04_4'], position: [410, 500], mapArea: 'east_mountain_trail_04', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt04_4', name: 'Bonepile Bend', description: 'A heap of gnawed bones marks a bend in the trail — a kill-site, or a warning.', encounterId: '', connections: ['emt04_3', 'emt04_5'], position: [390, 360], mapArea: 'east_mountain_trail_04', canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+    { id: 'emt04_5', name: 'Chasm Overlook', description: 'The trail ends at the lip of a vast chasm cut into the mountains — gnoll country, and somewhere below, the deep.', encounterId: 'east_trail_chasm_crags', connections: ['emt04_4'], position: [420, 200], mapArea: 'east_mountain_trail_04', discoverable: true, hiddenName: '???', hiddenDescription: 'A stretch of trail further up the mountain.' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'emt04_1';
+  return map;
+}
+
+// East Mountain Crags & Chasm — the cave-and-chasm wilderness past the trail's
+// end. Chained Chasm Overlook → crags_chasm_01 (8 nodes, one line) →
+// crags_chasm_02 (a Y: a 4-node stem that forks into a 1-node dead drop and a
+// 4-node gallery). NO_FOG (no dark overlay) + every node `discoverable`.
+export function createEastMountainCragsChasm01Map() {
+  const map = new GameMap('east_mountain_crags_chasm_01', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_01: 'Maps/EastMountainCragsChasm_01.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the crags and chasms.' };
+  const nodes = [
+    { id: 'c1_1', name: 'Chasm Mouth', description: 'The way drops off the overlook into a maze of crags and fissures.', encounterId: '', connections: ['c1_2'], position: [670, 90], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_2', name: 'Crumbling Ledge', description: 'A narrow ledge sketched along a sheer drop; loose stone skitters away underfoot.', encounterId: '', connections: ['c1_1', 'c1_3'], position: [830, 320], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_3', name: 'Hollow Rock', description: 'A low dark mouth yawns in the rock — one of many cave entrances pocking the crags.', encounterId: '', connections: ['c1_2', 'c1_4'], position: [550, 540], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_4', name: 'Boulder Choke', description: 'Fallen slabs nearly seal the way; you squeeze through the gap.', encounterId: '', connections: ['c1_3', 'c1_5'], position: [830, 880], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_5', name: 'Wind-Cut Notch', description: 'A slot in the rock where the wind screams through.', encounterId: '', connections: ['c1_4', 'c1_6'], position: [300, 920], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_6', name: 'Hanging Path', description: 'The path clings to the chasm wall, nothing but air to the left.', encounterId: '', connections: ['c1_5', 'c1_7'], position: [150, 690], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_7', name: 'Bone Scatter', description: 'Cracked bones lie scattered across the stone — old gnoll leavings.', encounterId: '', connections: ['c1_6', 'c1_8'], position: [290, 580], mapArea: 'east_mountain_crags_chasm_01', ...D },
+    { id: 'c1_8', name: 'Deep Fissure', description: 'The crags open onto a deeper rift, the way pressing on into shadow.', encounterId: '', connections: ['c1_7'], position: [140, 480], mapArea: 'east_mountain_crags_chasm_01', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c1_1';
+  return map;
+}
+
+export function createEastMountainCragsChasm02Map() {
+  const map = new GameMap('east_mountain_crags_chasm_02', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_02: 'Maps/EastMountainCragsChasm_02.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the crags and chasms.' };
+  const nodes = [
+    // Stem (4 nodes).
+    { id: 'c2_1', name: 'Lower Gully', description: 'You descend into a narrow gully, walls rising sheer on either side.', encounterId: '', connections: ['c2_2'], position: [530, 80], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    { id: 'c2_2', name: 'The Cleft', description: 'The gully tightens to a cleft you turn sideways to pass.', encounterId: '', connections: ['c2_1', 'c2_3'], position: [440, 240], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    { id: 'c2_3', name: 'Slick Stone', description: 'Water seeps down the rock here, the footing treacherous.', encounterId: '', connections: ['c2_2', 'c2_4'], position: [600, 420], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    // Branch point — forks to the dead drop (c2_5 → crags_chasm_03) and the
+    // gallery (c2_6); the gallery ends at Black Chasm (c2_9 → crags_chasm_04).
+    { id: 'c2_4', name: 'The Branching', description: 'The way splits — a steep drop down to one side, a long gallery sinking deeper on the other.', encounterId: '', connections: ['c2_3', 'c2_5', 'c2_6'], position: [420, 610], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    // Branch A (1 node) — teleports on to crags_chasm_03.
+    { id: 'c2_5', name: 'Dead Drop', description: 'The side passage drops away into the dark — but old hand-holds and a knotted rope mark a way down.', encounterId: '', connections: ['c2_4'], position: [330, 360], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    // Branch B (4 nodes) — ends at Black Chasm, which teleports to crags_chasm_04.
+    { id: 'c2_6', name: 'Lower Gallery', description: 'A long cave gallery runs on, the ceiling lost in dark.', encounterId: '', connections: ['c2_4', 'c2_7'], position: [720, 760], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    { id: 'c2_7', name: 'Bat Roost', description: 'The reek of guano; unseen wings stir in the blackness overhead.', encounterId: '', connections: ['c2_6', 'c2_8'], position: [480, 810], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    { id: 'c2_8', name: 'The Squeeze', description: 'The passage pinches to a crawl through cold stone.', encounterId: '', connections: ['c2_7', 'c2_9'], position: [130, 860], mapArea: 'east_mountain_crags_chasm_02', ...D },
+    { id: 'c2_9', name: 'Black Chasm', description: 'The crawl opens above a vast black chasm — and far below, the breath of the deep.', encounterId: '', connections: ['c2_8'], position: [90, 710], mapArea: 'east_mountain_crags_chasm_02', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c2_1';
+  return map;
+}
+
+// Crags & Chasm 03 — the lower passage reached by dropping from Dead Drop
+// (crags_chasm_02 c2_5). 6 nodes, one line, deeper into gnoll country and the
+// threshold of the deep.
+export function createEastMountainCragsChasm03Map() {
+  const map = new GameMap('east_mountain_crags_chasm_03', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_03: 'Maps/EastMountainCragsChasm_03.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the crags and chasms.' };
+  const nodes = [
+    { id: 'c3_1', name: 'Rope Descent', description: 'The rope brings you down into a cold lower passage.', encounterId: '', connections: ['c3_2'], position: [590, 80], mapArea: 'east_mountain_crags_chasm_03', ...D },
+    { id: 'c3_2', name: 'Dripping Hall', description: 'Water drips steadily from unseen heights; the dark drinks the sound.', encounterId: '', connections: ['c3_1', 'c3_3'], position: [710, 260], mapArea: 'east_mountain_crags_chasm_03', ...D },
+    { id: 'c3_3', name: 'Gnoll Sign', description: 'Crude markings are daubed on the wall in something dark — a warning, or a border.', encounterId: '', connections: ['c3_2', 'c3_4'], position: [390, 440], mapArea: 'east_mountain_crags_chasm_03', ...D },
+    { id: 'c3_4', name: 'Bone Midden', description: 'A reeking heap of cracked bones and gnawed leavings clogs the passage.', encounterId: '', connections: ['c3_3', 'c3_5'], position: [700, 780], mapArea: 'east_mountain_crags_chasm_03', ...D },
+    { id: 'c3_5', name: 'Den Mouth', description: 'The passage widens; the stink of gnoll is thick here. A den, and close.', encounterId: '', connections: ['c3_4', 'c3_6'], position: [140, 830], mapArea: 'east_mountain_crags_chasm_03', ...D },
+    { id: 'c3_6', name: 'The Lower Dark', description: 'The way bottoms out into a black, echoing void, and the gnoll-sign leads on down into it.', encounterId: '', connections: ['c3_5'], position: [280, 550], mapArea: 'east_mountain_crags_chasm_03', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c3_1';
+  return map;
+}
+
+// Crags & Chasm 04 — the descent reached from Black Chasm (crags_chasm_02 c2_9).
+// 5 nodes, one line, down toward an old dwarf-worked gate into the deep.
+export function createEastMountainCragsChasm04Map() {
+  const map = new GameMap('east_mountain_crags_chasm_04', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_04: 'Maps/EastMountainCragsChasm_04.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the crags and chasms.' };
+  const nodes = [
+    { id: 'c4_1', name: 'Chasm Ledge', description: 'A narrow ledge switchbacks down the chasm wall into the dark.', encounterId: '', connections: ['c4_2'], position: [560, 60], mapArea: 'east_mountain_crags_chasm_04', ...D },
+    { id: 'c4_2', name: 'The Long Fall', description: 'The ledge skirts a drop with no visible bottom.', encounterId: '', connections: ['c4_1', 'c4_3'], position: [430, 430], mapArea: 'east_mountain_crags_chasm_04', ...D },
+    { id: 'c4_3', name: 'Old Diggings', description: 'Pick-marks scar the stone — dwarf-work, ancient and long abandoned.', encounterId: '', connections: ['c4_2', 'c4_4'], position: [200, 710], mapArea: 'east_mountain_crags_chasm_04', ...D },
+    { id: 'c4_4', name: 'The Warren', description: 'Side-tunnels branch off in the gloom, rank with the smell of gnoll.', encounterId: '', connections: ['c4_3', 'c4_5'], position: [720, 840], mapArea: 'east_mountain_crags_chasm_04', ...D },
+    { id: 'c4_5', name: 'Gate of the Lower Deep', description: 'A worked archway, half-collapsed, opens onto a deeper, gnoll-held dark beyond.', encounterId: '', connections: ['c4_4'], position: [760, 410], mapArea: 'east_mountain_crags_chasm_04', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c4_1';
+  return map;
+}
+
+// Crags & Chasm 05 — the deepest gnoll-held crags, reached
+// from The Lower Dark (crags_chasm_03 c3_6). A 6-node line that forks at its end
+// (c5_6) into a 1-node dead gallery and a 2-node stair to a sealed black gate.
+export function createEastMountainCragsChasm05Map() {
+  const map = new GameMap('east_mountain_crags_chasm_05', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_05: 'Maps/EastMountainCragsChasm_05.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c5_1', name: 'Threshold of the Deep', description: 'Past the lower dark the air turns colder and older — the gnoll-warrens run deep here indeed.', encounterId: '', connections: ['c5_2'], position: [530, 90], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_2', name: 'The Pale Road', description: 'A worked road, dust-grey and ancient, runs on through the black.', encounterId: '', connections: ['c5_1', 'c5_3'], position: [620, 230], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_3', name: 'Fungal Hollow', description: 'Pallid fungus glows faintly across a wide cavern, lighting nothing.', encounterId: '', connections: ['c5_2', 'c5_4'], position: [470, 350], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_4', name: 'Gnoll Spoor', description: 'Fresh tracks and dropped gnaw-bones — the pack came this way, and not long ago.', encounterId: '', connections: ['c5_3', 'c5_5'], position: [660, 550], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_5', name: 'The Crossing', description: 'A natural span of stone bridges a rushing underground stream.', encounterId: '', connections: ['c5_4', 'c5_6'], position: [340, 810], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    // Fork — dead gallery (c5_7) and the stair down to the black gate (c5_8/c5_9).
+    { id: 'c5_6', name: 'The Fork', description: 'The road splits — a dead gallery to one hand, a longer way curving down to the other.', encounterId: 'east_trail_deep_gnoll', connections: ['c5_5', 'c5_7', 'c5_8'], position: [670, 950], mapArea: 'east_mountain_crags_chasm_05', ...D, canRevisit: false },
+    { id: 'c5_7', name: 'Sealed Gallery', description: 'A wall of fused stone seals the gallery — but a crack at its base has been worried wide, and a cold draft breathes through from the dark beyond.', encounterId: '', connections: ['c5_6'], position: [870, 950], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_8', name: 'Deepening Stair', description: 'Dwarf-cut stairs spiral down into deeper dark.', encounterId: '', connections: ['c5_6', 'c5_9'], position: [910, 630], mapArea: 'east_mountain_crags_chasm_05', ...D },
+    { id: 'c5_9', name: 'The Black Gate', description: 'A great sealed door of black iron, worked with old dwarf-runes — it grinds open onto deeper dark beyond.', encounterId: '', connections: ['c5_8'], position: [840, 430], mapArea: 'east_mountain_crags_chasm_05', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c5_1';
+  return map;
+}
+
+// Crags & Chasm 06 — the lower deep reached from the Gate of the Lower Deep
+// (crags_chasm_04 c4_5). 7 nodes, one line, through a gnoll war-camp toward an
+// old sunken dwarf road running on into deeper dark.
+export function createEastMountainCragsChasm06Map() {
+  const map = new GameMap('east_mountain_crags_chasm_06', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_06: 'Maps/EastMountainCragsChasm_06.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c6_1', name: 'The Lower Deep', description: 'Through the broken arch the crags open into a vast, lightless, cold gulf the gnolls have made their own.', encounterId: '', connections: ['c6_2'], position: [620, 30], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_2', name: 'Cavern of Pillars', description: 'A forest of stone pillars marches off into the dark.', encounterId: '', connections: ['c6_1', 'c6_3'], position: [190, 250], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_3', name: 'The Gnoll Camp', description: 'Cook-fires and crude hide tents — a gnoll war-camp, sprawled across the cavern floor.', encounterId: '', connections: ['c6_2', 'c6_4'], position: [790, 470], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_4', name: 'Slave Pens', description: 'Rough cages of bone and sinew line the wall — some of them recently emptied.', encounterId: '', connections: ['c6_3', 'c6_5'], position: [810, 750], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_5', name: 'The War-Drum', description: 'A great drum of stretched hide stands silent at the camp\'s heart.', encounterId: '', connections: ['c6_4', 'c6_6'], position: [150, 880], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_6', name: 'Deep Tunnel Mouth', description: 'A worked tunnel bores away from the camp, deeper still.', encounterId: '', connections: ['c6_5', 'c6_7'], position: [170, 540], mapArea: 'east_mountain_crags_chasm_06', ...D },
+    { id: 'c6_7', name: 'The Sunken Road', description: 'An old dwarf road, half-flooded, runs on into the deeper dark.', encounterId: '', connections: ['c6_6'], position: [50, 70], mapArea: 'east_mountain_crags_chasm_06', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c6_1';
+  return map;
+}
+
+// Crags & Chasm 07 — the flooded dwarf road on from The Sunken Road
+// (crags_chasm_06 c6_7). 8 nodes, one line, deep in gnoll country; the last
+// node bores underground, deeper into gnoll country.
+export function createEastMountainCragsChasm07Map() {
+  const map = new GameMap('east_mountain_crags_chasm_07', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_07: 'Maps/EastMountainCragsChasm_07.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c7_1', name: 'The Flooded Road', description: 'The old road runs on, ankle-deep in cold black water.', encounterId: '', connections: ['c7_2'], position: [410, 30], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_2', name: 'Sunken Pillars', description: 'Drowned pillars break the water\'s surface, marching off into the dark.', encounterId: '', connections: ['c7_1', 'c7_3'], position: [710, 200], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_3', name: 'The Gnoll Ford', description: 'A shallows where the pack crosses — the mud churned with countless prints.', encounterId: '', connections: ['c7_2', 'c7_4'], position: [320, 380], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_4', name: 'Drowned Hall', description: 'A great flooded hall, its dwarf-carved galleries swallowed to the waist.', encounterId: '', connections: ['c7_3', 'c7_5'], position: [500, 570], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_5', name: 'The Reek', description: 'The water gives way to a fouler stretch — the stink of gnoll thick as fog.', encounterId: '', connections: ['c7_4', 'c7_6'], position: [830, 710], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_6', name: 'Bone Weir', description: 'A dam of bones and debris chokes the channel; you climb over it.', encounterId: '', connections: ['c7_5', 'c7_7'], position: [570, 910], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_7', name: 'The Descent', description: 'The road tilts down, the water draining away into deeper dark ahead.', encounterId: '', connections: ['c7_6', 'c7_8'], position: [290, 820], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    { id: 'c7_8', name: 'Into the Dark', description: 'The dwarf road bores down into true blackness, deeper into the gnoll-held dark — with no end to it in sight.', encounterId: '', connections: ['c7_7'], position: [350, 600], mapArea: 'east_mountain_crags_chasm_07', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c7_1';
+  return map;
+}
+
+// Crags & Chasm 08 — beyond The Black Gate (crags_chasm_05 c5_9). 6 nodes, one
+// line, a long-sealed dwarf stair sinking into deeper dark.
+export function createEastMountainCragsChasm08Map() {
+  const map = new GameMap('east_mountain_crags_chasm_08', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_08: 'Maps/EastMountainCragsChasm_08.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c8_1', name: 'Beyond the Gate', description: 'The black gate groans open onto a long-sealed stair, the air beyond dead and ancient.', encounterId: '', connections: ['c8_2'], position: [610, 950], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_2', name: 'The Sealed Stair', description: 'Dwarf-cut steps spiral down, untrodden for an age.', encounterId: '', connections: ['c8_1', 'c8_3'], position: [710, 760], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_3', name: 'Cracked Vault', description: 'A vaulted chamber, its ceiling split, rubble strewn across the floor.', encounterId: '', connections: ['c8_2', 'c8_4'], position: [200, 530], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_4', name: 'The Still Water', description: 'A black pool fills the lower chamber, perfectly still.', encounterId: '', connections: ['c8_3', 'c8_5'], position: [540, 320], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_5', name: 'Drowned Doorway', description: 'A dwarf archway stands half-submerged, the way pressing on beneath the water.', encounterId: '', connections: ['c8_4', 'c8_6'], position: [440, 160], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_6', name: 'The Deep Stair', description: 'Stairs descend into the flood and the dark, sinking deeper still.', encounterId: '', connections: ['c8_5'], position: [590, 40], mapArea: 'east_mountain_crags_chasm_08', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c8_1';
+  return map;
+}
+
+// Crags & Chasm 09 — through the crack in the Sealed Gallery (crags_chasm_05
+// c5_7). 7 nodes, one line, old diggings + a gnoll-held junction down to a lower
+// sealed gate.
+export function createEastMountainCragsChasm09Map() {
+  const map = new GameMap('east_mountain_crags_chasm_09', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_09: 'Maps/EastMountainCragsChasm_09.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c9_1', name: 'Through the Crack', description: 'You worm through the gap in the fused stone into a cramped passage beyond.', encounterId: '', connections: ['c9_2'], position: [590, 180], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_2', name: 'The Old Diggings', description: 'Tool-marks and a collapsed shaft — dwarves mined here once, long ago.', encounterId: '', connections: ['c9_1', 'c9_3'], position: [380, 300], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_3', name: 'Spider Hollow', description: 'Thick webs choke a side-cavern; something large shifts in the dark.', encounterId: '', connections: ['c9_2', 'c9_4'], position: [700, 420], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_4', name: 'The Narrow Way', description: 'The passage squeezes down to a crawl over cold stone.', encounterId: '', connections: ['c9_3', 'c9_5'], position: [540, 550], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_5', name: 'Gnoll Outpost', description: 'A crude barricade and a cold watch-fire — the gnolls hold this junction.', encounterId: '', connections: ['c9_4', 'c9_6'], position: [880, 740], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_6', name: 'The Underway', description: 'A wide worked tunnel runs off level and straight into the deep.', encounterId: '', connections: ['c9_5', 'c9_7'], position: [630, 910], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_7', name: 'The Lower Gate', description: 'Another sealed dwarf gate bars the way down — locked fast, with no opening it from this side.', encounterId: '', connections: ['c9_6'], position: [260, 760], mapArea: 'east_mountain_crags_chasm_09', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c9_1';
+  return map;
+}
+
+// Crags & Chasm 10 — the drowned deep below The Deep Stair (crags_chasm_08
+// c8_6). 6 nodes, one line, ending at a great collapse with no way past for now.
+export function createEastMountainCragsChasm10Map() {
+  const map = new GameMap('east_mountain_crags_chasm_10', 'The Crags');
+  map.mapImages = { east_mountain_crags_chasm_10: 'Maps/EastMountainCragsChasm_10.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
+  const nodes = [
+    { id: 'c10_1', name: 'The Flooded Stair', description: 'The stair plunges on beneath the black water, step by drowned step.', encounterId: '', connections: ['c10_2'], position: [580, 970], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_2', name: 'Sunken Vault', description: 'A flooded vault, its dwarf-treasures long since looted or lost.', encounterId: '', connections: ['c10_1', 'c10_3'], position: [660, 800], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_3', name: 'Gnoll Shrine', description: 'A crude shrine of bone and hide — the gnolls worship something down here.', encounterId: '', connections: ['c10_2', 'c10_4'], position: [170, 610], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_4', name: 'Drowned Crossroad', description: 'Flooded passages branch off in the dark; the gnoll-trail holds to one.', encounterId: '', connections: ['c10_3', 'c10_5'], position: [770, 370], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_5', name: 'The Deep Pool', description: 'A still, deep pool fills the cavern wall to wall; the trail skirts its edge.', encounterId: '', connections: ['c10_4', 'c10_6'], position: [420, 200], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_6', name: 'The Sealed Deep', description: 'The way ends at a great collapse of stone and water — no passing it, not without finding another road.', encounterId: '', connections: ['c10_5'], position: [510, 110], mapArea: 'east_mountain_crags_chasm_10', ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'c10_1';
   return map;
 }
 

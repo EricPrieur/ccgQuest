@@ -274,6 +274,27 @@ export const CARD_ART_MAP = {
   khydhani: 'KhydaniTheDarkElf.jpg',
   rampaging_troll: 'TrollRegen.jpg',
   regeneration: 'TrollRegen.jpg',
+  // East Mountain random-encounter monsters — keyed by enemy-name slug so the
+  // fight-start showcase, combat portrait, and codex all resolve the art.
+  gnoll_hunter: 'GnollHunter.jpg',
+  crag_cat: 'CragCat.jpg',
+  giant_hyena: 'GiantHyena.jpg',
+  summon_giant_hyena: 'GiantHyena.jpg',
+  pounce: 'CragCatPounce.jpg',
+  cat_reflexes: 'CragCat.jpg',
+  mountain_predator_fang: 'MountainPredatorFang.jpg',
+  cloak_silent_prowler: 'CloakoftheSilentProwler.jpg',
+  snow_paws: 'SnowPaws.jpg',
+  cats_eye_pendant: 'CatsEyePendant.jpg',
+  beast_collar: 'BeastCollar.jpg',
+  beastmaster_horn: 'BeastmasterHorn.jpg',
+  hunters_recurve_bow: 'HuntersRecurveBow.jpg',
+  pack_hyena: 'PackHyena.jpg',
+  bone_bow: 'BoneBow.jpg',
+  bone_javelin: 'BoneJavelin.jpg',
+  gnoll_bite: 'GnollBite.jpg',
+  // Patient Hunter power reuses the Gnoll Hunter portrait.
+  patient_hunter: 'GnollHunter.jpg',
   // Rend — the troll's claw attack reuses the troll portrait art.
   rend: 'TrollRegen.jpg',
   // Loathsome Limb — torn-off limb creature (Loathsome Limbs power).
@@ -711,6 +732,8 @@ export const CARD_ART_MAP = {
   bloodied_rage:       'GiantBoar.jpg',
   cleansing_armor:     'Frostbloom.jpg',
   swift_assault:       'SwiftAssault.png',
+  brewmaster:          'BrewMasterPerk.png',
+  gourmand:            'GourmandPerk.png',
 
   // === Enemy Encounter Portraits ===
   kobold_patrol:   'KoboldPatrolEncounter.jpg',

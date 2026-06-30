@@ -5616,6 +5616,169 @@ export function createDurganReturnEncounter() {
   ]);
 }
 
+// Chapter 2: The Search — debug-only intro that REPLACES the "To Be
+// Continued" title card. Thorb is set on going back down to the front to
+// learn what the Pour wrought (and whether the King got out); Valdrisa
+// pushes back hard that there's nothing left to find. Completing it drops
+// the party into the tunnels (handled in advanceEncounterPhase).
+export function createChapter2SearchEncounter() {
+  return new Encounter('chapter2_search', 'The Search', 'The head of the deep stair.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'The Search',
+      texts: [
+        new EncounterText('You stand again at the head of the deep stair — the one that drops to the drowned galleries. Thorb has not slept. His pack is already on his back.', '!', 'bg_grand_hall'),
+        new EncounterText("\"I am going back down. To the front — the Gate of the Deep.\" Thorb's jaw is set. \"I have to SEE it. Whether the Pour held the breach, whether the line broke... whether my father walked out of that mountain alive, the way Durgan swears he did. I'll not sit in a warm hall and wonder for the rest of my days.\"", 'Thorb', 'bg_grand_hall'),
+        new EncounterText("Valdrisa steps in front of him — not to bar the way, but to make him look at her. \"Thorbadin. Hear me, and hear me plain, for I will say it only once.\" Her voice is iron. \"We DROWNED those tunnels. In molten rock. There is no front down there anymore — no line, no Gate, no garrison. There is a sealed tomb full of fire and ash, and we will find NOTHING in it. Nothing but the ruin we made with our own hands.\"", 'Valdrisa', 'bg_grand_hall'),
+        new EncounterText("\"Then I will find nothing,\" Thorb says. \"But I will find it with my own eyes.\" He starts down the stair without waiting. After a long breath, Valdrisa curses low in old Dwarven — and follows.", 'Thorb', 'bg_grand_hall'),
+      ],
+    }),
+  ]);
+}
+
+// Chapter 2 — reaching the run's tunnel exit AFTER the Pour: the way to the
+// front is buried under a wall of frozen lava. Thorb reasons his father fled
+// DOWN into the underdark ahead of the flood, so the party needs ANOTHER way
+// into the deep to backtrack under Tharnag. Raena points them first at
+// Elarion (the Arcane Emporium elf in Qualibaf), then her home wood Kar-Eden.
+// Fires once at the sealed exit (chapter2Started + first visit).
+export function createChapter2LavaWallEncounter() {
+  return new Encounter('chapter2_lava_wall', 'A Wall of Lava', 'The way to the front is sealed.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'A Wall of Lava',
+      texts: [
+        new EncounterText('You round the last bend toward the front — and stop short. Where the passage should open onto the Gate of the Deep, there is only a wall: a frozen cataract of black lava, spilled back up the gallery when the Pour broke loose and cooled into a glassy barrier taller than a troll. The Gate, the front, everything beyond — sealed.'),
+        new EncounterText("\"...There is no breaking that. Not with a hundred picks and a year.\" Thorb lays a gloved hand on the cold black glass, thinking it through. \"But hear me. When the Pour came down, that camp was pure panic — goblins and trolls boiling over one another to flee the fire. My father is no fool. If the gate was lost and the lava coming, he'd not have stood and drowned. He'd have gone DOWN. Deeper. Into the underdark, ahead of the flood.\"", 'Thorb'),
+        new EncounterText('"That is a great many ifs, Thorbadin," Valdrisa says, low.', 'Valdrisa'),
+        new EncounterText("\"It is. A long shot.\" Thorb's jaw sets. \"But it is a shot. If he went down into the Deep Roads, I can follow him — find ANOTHER way into the underdark, and backtrack the galleries from below. Come up under Tharnag from the far side. He will be there. He has to be.\" He turns. \"Raena — you have walked the Deep Roads with your folk. Is there another mouth into the dark? Anywhere near?\"", 'Thorb'),
+        new EncounterText("\"Not one I would wager your father's life on, no.\" Raena frowns, thinking north. \"The elders of Kar-Eden would know — my home wood keeps the old maps, the buried doors. But that is a long road for a maybe.\" A beat, and her eyes sharpen. \"Quicker: Elarion. The elf who keeps the Arcane Emporium, back in Qualibaf. If anyone this side of the Silverwood knows a hidden way into the deep, it is him. We start with him.\"", 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// Chapter 2 — the party comes to Elarion's Arcane Emporium (Qualibaf) to ask
+// after another way into the underdark, the lava wall having sealed Tharnag's
+// deep tunnels. Gated to fire only AFTER the player has already met Elarion
+// (the generic or necromancer welcome — `arcane_emporium` in completedEncounters)
+// so it never preempts that intro. Points the party south to Gontran's South
+// Outpost and the gnoll chasms beyond.
+export function createChapter2ElarionEncounter() {
+  return new Encounter('chapter2_elarion', 'The Arcane Emporium', 'Asking Elarion about the deep roads.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      phaseTitle: 'Elarion',
+      texts: [
+        new EncounterText('The bell over the door chimes, and Elarion looks up from his ledger — and for once the careful merchant\'s mask slips into a genuine smile. "Raena. And not alone." His pale eyes take in Thorb\'s grief-worn face and Valdrisa beside him, and the smile gentles into something graver. "You have the look of people who need rather more than scrolls and charms. Ask, and plainly."', 'Elarion', 'bg_arcane_emporium'),
+        new EncounterText('Raena does not waste the welcome. "Tharnag\'s deep tunnels are sealed — drowned in stone and fire, the whole front lost behind a wall of cooled lava. We need another way down into the underdark, anywhere in the region, that still opens. Do you know of one?"', 'Raena', 'bg_arcane_emporium'),
+        new EncounterText('The elf is quiet a long moment, fingers steepled. "There was a mouth beneath the volcano once. But after what that mountain has done these past months, I would not stake a copper on it still standing." He frowns. "And there are old tales of a way down within the Bottomless Lake, south of Qualibaf — but that is a fool\'s errand, and I\'ll not be the one who sends Raena\'s friends to drown chasing it."', 'Elarion', 'bg_arcane_emporium'),
+        new EncounterText('"No. If a door yet stands, it is the eastern one — southeast of here, deep in the mountains. They have shifted and groaned in the late quakes, but that passage was carved to outlast kingdoms." His mouth tightens. "The trouble is where it lies: well within Gnoll Territory. Go south to the South Outpost and find Gontran — he keeps that frontier, and he will know the path toward the gnoll chasms. Search deep within them. If any entrance to the deep survives, child of the forge, it is there."', 'Elarion', 'bg_arcane_emporium'),
+      ],
+    }),
+  ]);
+}
+
+// Chapter 2 — Gontran at the South Outpost watchtower, after Elarion sends the
+// party south. Fires whether or not the Kraken quest was ever finished, so the
+// dialog assumes only that the party has MET Gontran (the outpost-gate meeting),
+// never that the kraken was slain. Points them east into the gnoll chasms and
+// seeds the missing-scout-party thread.
+export function createGontranGnollTerritoriesEncounter() {
+  return new Encounter('gontran_gnoll_territories', 'On the Watchtower', 'Gontran, and the road east into gnoll country.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Gontran turns from the parapet as your boots hit the platform — and there is recognition in the weathered face now, the wary courtesy he keeps for people who have proven they can handle themselves. "You lot." His eyes move over Thorb and Raena and Valdrisa in turn. "A long way from wherever I last saw you, and grimmer for it. What is it you need?"', 'Gontran'),
+        new EncounterText('"The gnoll territories," Thorb says. "We are told there is an old way down into the deep mountains out east — past your frontier. We need the path toward the chasms."', 'Thorb'),
+        new EncounterText('Gontran\'s face darkens. "East. Aye, there\'s a path — it climbs up toward the mountains past the high meadow. But I\'ll tell you plainly, I don\'t love the thought of sending anyone up it just now." He lowers his voice. "A scouting party of mine went east not ten days past. Four good men. They have not come back. No word, no sign, nothing."', 'Gontran'),
+        new EncounterText('"I fear the gnolls have pushed their borders down the mountain again — further than they\'ve dared in years. If they keep on, it will be my outpost they hit first, and Qualibaf behind it." His grip closes hard on your shoulder. "If you are truly going up there — keep your eyes open for my scouts, any trace of them at all. And for the love of the gods, be careful of the gnolls. They are not the foothill scavengers the old songs make of them."', 'Gontran'),
+      ],
+    }),
+  ]);
+}
+
+// East Mountain Trail beats (Chapter 2) — three one-time TEXT nodes seeded
+// along the climb. Each fires once ever (its node carries the encounter id and
+// no canRevisit, so completedEncounters latches it).
+export function createEastTrailGnollTracksEncounter() {
+  return new Encounter('east_trail_gnoll_tracks', 'Tracks', 'Sign on the trail.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Raena throws out an arm and stops the party cold. She crouches at the lip of the ledge, fingers hovering just over the dirt without touching it.'),
+        new EncounterText('"Tracks. Here — and here." Her voice drops low. "Gnolls. A good many, moving in file, and not long past. This is their ground now." She rises, bow already in hand. "Step soft from here on, and eyes up. Let us be careful."', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+export function createEastTrailBattleSiteEncounter() {
+  return new Encounter('east_trail_battle_site', 'The Spine', 'Something happened here.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The bare rib of rock is scarred and littered with the leavings of a fight — a snapped spear, a torn strap of leather, dark stains soaked deep into the stone. A few days old, no more.'),
+        new EncounterText('Raena moves through it without a word, reading the ground. She stoops, works something free of a crack in the rock, and turns to hold it up where all of you can see it: a guard\'s insignia, bent and crusted with old blood.'),
+        new EncounterText('She says nothing. She does not need to. It does not look good for Gontran\'s scouts.'),
+      ],
+    }),
+  ]);
+}
+
+export function createEastTrailChasmCragsEncounter() {
+  return new Encounter('east_trail_chasm_crags', 'The Crags', 'The edge of gnoll country.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The trail gives out at the lip of the crags — a wilderness of steep grey rock, knife-edged ridges, and chasms that drop away into shadow. Somewhere down there is the deep, and a way into it.'),
+        new EncounterText('"There will be caves," Raena says, scanning the broken slopes. "A great many, in country like this. Some will be empty." She nocks an arrow. "Some will not. Tread carefully — and do not expect whatever dwells up here to be glad of company."', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+export function createEastTrailDeepGnollEncounter() {
+  return new Encounter('east_trail_deep_gnoll', 'Deep in Gnoll Country', 'The sign is everywhere now.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Raena crouches at the fork, and this time she does not trouble to keep her voice down — there is no clean stone left to read. The tracks are everywhere: laid over one another, fresh on old, churning the dust in every direction.'),
+        new EncounterText('"There is no counting them now," she says quietly. "Dozens. Scores. We are not at the edge of gnoll country any longer — we are deep in its heart." She looks back the way you came, then on into the dark. "Whatever waits down here, we meet it on their ground."', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// East Mountain random encounters (Chapter 2) — fired by the cumulative
+// chance roll in arriveAtNode once past Windbreak Ledge. Text intro → combat →
+// a little gold.
+export function createGnollHunterEncounter() {
+  return new Encounter('gnoll_hunter', 'Gnoll Hunter', 'A hunter on the trail.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('A lean gnoll rises from cover ahead, bow already bent and an arrow on the string. To it, you are the game.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_hunter' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_hunter_loot'] }),
+  ]);
+}
+
+export function createCragCatEncounter() {
+  return new Encounter('crag_cat', 'Crag Cat', 'Something stalks the rocks.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('A grey shape uncoils from a ledge above — a crag cat, all muscle and claw. It has already chosen its angle of attack.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'crag_cat' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['crag_cat_loot'] }),
+  ]);
+}
+
 // Part 2 — the first sleep in the Quarters after the Great Pour. Sleep →
 // tier-2 level-up (empty LOOT phase routes into ABILITY_SELECT, then the
 // perk + stat steps) → wake the next morning. Same shape as the post-Roc
@@ -7179,6 +7342,16 @@ export const ENCOUNTER_REGISTRY = {
   great_pour_rest: createGreatPourRestEncounter,
   durgan_vault: createDurganVaultEncounter,
   mithril_forge: createMithrilForgeEncounter,
+  chapter2_search: createChapter2SearchEncounter,
+  chapter2_lava_wall: createChapter2LavaWallEncounter,
+  chapter2_elarion: createChapter2ElarionEncounter,
+  gontran_gnoll_territories: createGontranGnollTerritoriesEncounter,
+  east_trail_gnoll_tracks: createEastTrailGnollTracksEncounter,
+  east_trail_battle_site: createEastTrailBattleSiteEncounter,
+  east_trail_chasm_crags: createEastTrailChasmCragsEncounter,
+  east_trail_deep_gnoll: createEastTrailDeepGnollEncounter,
+  gnoll_hunter: createGnollHunterEncounter,
+  crag_cat: createCragCatEncounter,
   dwarven_specter: createDwarvenSpecterEncounter,
   // Tharnag Interior
   grand_hall_arrival: createGrandHallArrivalEncounter,

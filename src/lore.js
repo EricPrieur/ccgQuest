@@ -52,12 +52,17 @@ export const LORE_ENTRIES = [
   { name: 'River Cutin', type: 'Place', description: 'The valley’s river, born in the Border Mountains north of Parícutin; below Qualibaf it splits — west into the Bottomless Lake, east toward the Nacutin.' },
   { name: 'Nacutin River', type: 'Place', description: 'The River Cutin grown to a great river east of Qualibaf, carving the Nacutin Canyon as it sinks into the land.' },
   { name: 'Bottomless Lake', type: 'Place', description: 'The deep lake south of the Parícutin valley, fed by the western fork of the River Cutin. (Old: Lac Sans Fond.)' },
+  { name: 'South Outpost', type: 'Place', description: 'Qualibaf’s southern watch-post on the river road, held by the guard Gontran — the staging point for the road east into gnoll country.' },
+  { name: 'Gnoll Territory', type: 'Place', description: 'Gnoll-held highlands and chasms in the shifted mountains southeast of the South Outpost; an old underdark entrance is rumored to survive deep within.' },
+  { name: 'Gnolls', type: 'Creature', description: 'Hyena-headed raiders pressing down from the eastern foothills; their borders have crept toward the South Outpost and Qualibaf in recent years.' },
+  { name: 'Gontran', type: 'Person', description: 'The guard who holds Qualibaf’s South Outpost on the river road; warns the party of gnolls expanding east and a scouting party gone missing.' },
   { name: 'Obsidian Tunnels', type: 'Place', description: 'Razor-walled tunnels deep beneath the volcano, a hub linking the buried obsidian districts.' },
   { name: 'Obsidian Forge', type: 'Place', description: 'A deep underground crafting district where dark smithing techniques are practiced.' },
   { name: 'Obsidian Plaza', type: 'Place', description: 'A vast subterranean plaza of obsidian pillars and a long-dry fountain.' },
   { name: 'Obsidian Cathedral', type: 'Place', description: 'A ruined cathedral in the deep places, haunt of the Obsidian Oracle and an ancient shrine.' },
   { name: 'Deep Roads', type: 'Place', description: 'Ancient passages beneath the kingdoms, stalked by goblin warbands and drow scouts — a gathering threat.' },
   { name: 'Silverwood', type: 'Place', description: 'The elven homeland, home of Raena and the elves driven out by kobold ambushes.' },
+  { name: 'Kar-Eden', type: 'Place', description: 'Raena’s home settlement deep in the Silverwood — its elders keep the old maps and the buried doors that lead down into the Deep Roads.' },
   { name: 'Chapel of Light', type: 'Place', description: 'A small church in Qualibaf offering blessings and healing in exchange for an offering.' },
 
   // ---- People ----
