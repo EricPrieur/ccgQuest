@@ -110,7 +110,7 @@ import {
   createGnikansStaff,
   createEnragedStrike, createDireClaws, createDireBite, createDireHide, createBearRoar,
   createSummonGiantHyena, createGiantHyenaCreature, createBoneBow, createBoneJavelin, createGnollBite,
-  createPounce, createCatReflexes,
+  createPounce, createCatReflexes, createCatClaws,
   createMountainPredatorFang, createCloakOfTheSilentProwler, createSnowPaws, createCatsEyePendant,
   createPackHyenaCreature, createBeastCollar, createBeastmasterHorn, createHuntersRecurveBow,
   createAStormIsComing,
@@ -2451,6 +2451,11 @@ let _shopEquipPillRect = null;  // last-drawn rect for the shop title's Equip? p
 // When set, blocks all other shop-mode clicks until the user confirms or cancels.
 // Shape: { mode: 'buy'|'sell', card, price, creator? }
 let _shopConfirm = null;
+// Debug: click-to-remove a perk on the character sheet. _perkClickRects is
+// rebuilt each frame while drawing the perk list; _perkRemoveConfirm holds the
+// perk pending a yes/no confirmation.
+let _perkClickRects = [];
+let _perkRemoveConfirm = null;
 
 // Class equip rules (only enforced during deck rebalancing, not gameplay loot)
 const ARMOR_SUBTYPES = new Set(['heavy_armor', 'light_armor', 'clothing']);
@@ -4866,12 +4871,12 @@ async function loadAssets() {
     // same first-skeleton beat.
     loadImage('skeletal_strength_perk', `${BASE}assets/Cards/NecromancerPower.jpg`),
     // Divine Protection (tier-2 Paladin perk) — its own PNG (alpha kept).
-    loadImage('divine_protection_perk', `${BASE}assets/Cards/DivineProtection.png`),
+    loadImage('divine_protection_perk', `${BASE}assets/Cards/DivineProtection.jpg`),
     // Tier-2 rare perks.
-    loadImage('troll_ancestry_perk',  `${BASE}assets/Cards/TrollAncestryPerk.png`),
+    loadImage('troll_ancestry_perk',  `${BASE}assets/Cards/TrollAncestryPerk.jpg`),
     loadImage('bloodied_rage_perk',   `${BASE}assets/Cards/GiantBoar.jpg`),
     loadImage('cleansing_armor_perk', `${BASE}assets/Cards/Frostbloom.jpg`),
-    loadImage('swift_assault_perk',   `${BASE}assets/Cards/SwiftAssault.png`),
+    loadImage('swift_assault_perk',   `${BASE}assets/Cards/SwiftAssault.jpg`),
   ];
   // Track first-load progress for the boot loading bar, then await the
   // whole critical batch. loadImage never rejects (a 404 resolves null),
@@ -17912,13 +17917,17 @@ function setupEnemyForCombat(enemyId) {
     enemy = new Character('Crag Cat');
     enemy.deck = new Deck();
     for (let i = 0; i < 20; i++) enemy.deck.addCard(createPounce());
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createCatClaws());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createDireHide());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createCatReflexes());
     // Spell Turning — 50% to turn aside each ailment applied to the cat
     // (Character.applyStatus enforces it).
     enemy.addPower(createSpellTurningPower());
+    // Vanish — On Hit: 50% to vanish after the swing, invulnerable until its
+    // next turn (matches the evasive Cat Reflexes theme).
+    enemy.addPower(createVanish());
   };
-  ENEMY_HAND_SIZE.crag_cat = 3;
+  ENEMY_HAND_SIZE.crag_cat = 4;
 
   if (ENEMY_DECKS[enemyId]) {
     ENEMY_DECKS[enemyId]();
@@ -38323,6 +38332,46 @@ function drawEndTurnConfirm() {
   ctx.textAlign = 'left';
 }
 
+// Debug perk-remove confirmation modal (character sheet).
+function getPerkRemoveConfirmRects() {
+  const panelW = 420, panelH = 180;
+  const px = (SCREEN_WIDTH - panelW) / 2;
+  const py = (SCREEN_HEIGHT - panelH) / 2;
+  const btnW = 150, btnH = 48, gap = 30;
+  const btnsX = px + (panelW - (btnW * 2 + gap)) / 2;
+  const btnsY = py + panelH - btnH - 24;
+  return {
+    panel: { x: px, y: py, w: panelW, h: panelH },
+    yes: { x: btnsX, y: btnsY, w: btnW, h: btnH },
+    no: { x: btnsX + btnW + gap, y: btnsY, w: btnW, h: btnH },
+  };
+}
+
+function drawPerkRemoveConfirm() {
+  if (!_perkRemoveConfirm) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  const r = getPerkRemoveConfirmRects();
+  ctx.fillStyle = 'rgba(45,45,55,0.96)';
+  ctx.fillRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  ctx.strokeStyle = Colors.GOLD;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(r.panel.x, r.panel.y, r.panel.w, r.panel.h);
+  ctx.fillStyle = Colors.GOLD;
+  ctx.font = 'bold 22px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Remove Perk? (debug)', r.panel.x + r.panel.w / 2, r.panel.y + 44);
+  ctx.fillStyle = '#ddd';
+  ctx.font = '16px Georgia, serif';
+  ctx.fillText(`Remove "${_perkRemoveConfirm.name}"?`, r.panel.x + r.panel.w / 2, r.panel.y + 84);
+  // Click is eaten in handleInventoryClick, so pop the auto-wired hit areas.
+  drawStyledButton(r.yes.x, r.yes.y, r.yes.w, r.yes.h, 'Remove', null, 'large', 18);
+  menuButtons.pop();
+  drawStyledButton(r.no.x, r.no.y, r.no.w, r.no.h, 'Cancel', null, 'large', 18);
+  menuButtons.pop();
+  ctx.textAlign = 'left';
+}
+
 function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   if (!isPlayerTurn) return;
   if (powerRechargeMode) return;
@@ -41234,14 +41283,14 @@ function startEnemyTurn() {
 
   let hasAttackOrSummon = planHandPlays();
 
-  // Stuck-hand safeguard — fires ONCE per enemy turn. If the planning
-  // pass queued nothing AND the hand still has at least 2 cards, the
-  // enemy recharges half the hand (rounded up, defense cards first so
-  // reactive duds rotate out) and draws the same number to refill,
-  // then re-runs the planner. Without this, a hand full of Block /
-  // Tentacle Block / Defensive Formation could leave the enemy with
-  // zero attacks all turn.
-  if (!hasAttackOrSummon && !skipHandPlays && enemy.deck && enemy.deck.hand.length >= 2) {
+  // Stuck-hand safeguard — loops (capped at 8 cycles) until the planner finds a
+  // play OR the deck can't surface one. Each cycle the enemy recharges half the
+  // hand (rounded up, defense cards first so reactive duds rotate out) and
+  // draws the same number to refill, then re-runs the planner. Without this, a
+  // hand of only DEFENSE cards (e.g. a Crag Cat that drew Dire Hide + Cat
+  // Reflexes but no Pounce) leaves the enemy doing nothing on its turn.
+  let _stuckCycles = 0;
+  while (!hasAttackOrSummon && !skipHandPlays && enemy.deck && enemy.deck.hand.length >= 2 && _stuckCycles < 8) {
     const handLen = enemy.deck.hand.length;
     const toRecharge = Math.ceil(handLen / 2);
     // Sort hand so defense cards rotate out first; ties keep priority
@@ -41263,11 +41312,13 @@ function startEnemyTurn() {
     }
     const cap = enemy._uncappedHand ? 999 : (enemy._handSize || 10);
     const drawn = enemy.deck.draw(recharged.length, cap);
-    addLog(`${enemy.name} can't act — recycles ${recharged.length} card${recharged.length > 1 ? 's' : ''}.`, Colors.GRAY);
+    if (_stuckCycles === 0) addLog(`${enemy.name} can't act — recycles its hand for an opening.`, Colors.GRAY);
     if (debugMode) {
       for (const c of recharged) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
       for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
     }
+    _stuckCycles++;
+    if (recharged.length === 0) break; // nothing left to recycle — stop spinning
     hasAttackOrSummon = planHandPlays();
   }
 
@@ -48625,12 +48676,35 @@ function exitInventory() {
 function handleInventoryClick(x, y) {
   const sections = getInvSections();
 
+  // Debug perk-remove confirm modal — eats every click while open.
+  if (_perkRemoveConfirm) {
+    const m = getPerkRemoveConfirmRects();
+    if (hitTest(x, y, m.yes)) {
+      const i = player.perks.indexOf(_perkRemoveConfirm);
+      if (i !== -1) {
+        addLog(`Removed perk: ${_perkRemoveConfirm.name} (debug)`, Colors.GRAY);
+        player.perks.splice(i, 1);
+      }
+      _perkRemoveConfirm = null;
+      return;
+    }
+    if (hitTest(x, y, m.no) || !hitTest(x, y, m.panel)) { _perkRemoveConfirm = null; return; }
+    return;
+  }
+
   // Debug-only Level Up button — works in shop, rest, or backpack mode.
   if (debugMode) {
     const luBtn = getDebugLevelUpBtnRect();
     if (luBtn && hitTest(x, y, luBtn)) {
       triggerDebugLevelUp();
       return;
+    }
+    // Debug-only: click a perk on the character sheet to remove it (confirm).
+    for (const pr of _perkClickRects) {
+      if (hitTest(x, y, pr.rect)) {
+        _perkRemoveConfirm = pr.perk;
+        return;
+      }
     }
   }
 
@@ -48793,8 +48867,8 @@ function handleInventoryClick(x, y) {
     }
   }
 
-  // Equip/unequip only allowed in rest mode
-  if (!restMode) return;
+  // Equip/unequip allowed in rest mode — or freely while debug is on.
+  if (!restMode && !debugMode) return;
 
   // Click backpack cards to equip (move one from the stack to deck).
   // IMPORTANT: r.group.card is the REFERENCE to the actual card object,
@@ -49440,6 +49514,8 @@ function drawInventory() {
     mouseY = _realMouseY;
     drawShopConfirmModal();
   }
+  // Debug perk-remove confirmation — on top of everything.
+  drawPerkRemoveConfirm();
 }
 
 function drawShopConfirmModal() {
@@ -50038,6 +50114,7 @@ function drawInventoryCharacter(rect) {
   }
   nextY += 16;
 
+  _perkClickRects = []; // rebuilt each frame for debug click-to-remove
   if (player.perks && player.perks.length > 0) {
     ctx.font = '11px sans-serif';
     // Group by id for x2 display, build comma-separated list.
@@ -50066,7 +50143,9 @@ function drawInventoryCharacter(rect) {
       if (nextY > rect.y + rect.h - 20) break;
       // Highlight on hover. Resting color is a muted gold to read as
       // interactive vs. plain body text.
-      const isHov = hitTest(mouseX, mouseY, { x: cx, y: nextY - 10, w: tw, h: 14 });
+      const perkHitRect = { x: cx, y: nextY - 10, w: tw, h: 14 };
+      _perkClickRects.push({ rect: perkHitRect, perk });
+      const isHov = hitTest(mouseX, mouseY, perkHitRect);
       ctx.fillStyle = isHov ? Colors.GOLD : '#d4b673';
       ctx.fillText(text, cx, nextY);
       // Dotted underline under the perk name (not the comma) — a visual
@@ -53110,6 +53189,7 @@ const CARD_SFX_OVERRIDES = {
   // Dire Claws — Dire Bear multi-target swipe. Same clawed-weapon
   // family as Varimatras Claw (sword_1h_flesh / sword_blocked).
   dire_claws:               { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' },
+  cat_claws:                { flesh: 'sword_1h_flesh', blocked: 'sword_blocked' }, // same as Dire Claws
   // Dire Bite — chunky chew-rip on the impact, no cast cue.
   dire_bite:                { flesh: 'monster_chew_rip_04', blocked: 'monster_chew_rip_04' },
   // Bear Roar — the cast IS the audio beat (no damage swing), so

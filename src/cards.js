@@ -1214,7 +1214,7 @@ export function createLambasBread() {
     id: 'lambas_bread',
     name: 'Lambas Bread',
     description: 'Consume + Recharge 1 -> Heal 6.\nMeal: Heal 1 or Heroism for 3 turns.',
-    shortDesc: 'C+R1->Heal 6\nMeal: Heal/Hero 3T',
+    shortDesc: 'C+R1->Heal 6\nMeal: Heal/Heroism 3T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -2293,7 +2293,7 @@ export function createBattleShout() {
   return new Card({
     id: 'battle_shout', name: 'Battle Shout',
     description: 'You and allies gain Heroism now and at the start of your turn.',
-    shortDesc: 'Hero now\n& per turn (stacks)', subtype: 'ability',
+    shortDesc: 'Heroism now\n& per turn (stacks)', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     // gain_heroism + buff_allies_heroism = the "now" half (player +
     // ally creatures). grant_battle_shout_buff stacks a per-turn
@@ -2413,7 +2413,7 @@ export function createNaturesHealing() {
   return new Card({
     id: 'natures_healing', name: "Nature's Healing",
     description: 'Heal all Ailments.\nGain Heroism per Ailment healed.\nHeal 5.',
-    shortDesc: 'Heal Ailments\n+H per healed\nHeal 5', subtype: 'ability',
+    shortDesc: 'Heal Ailments\n+Heroism per healed\nHeal 5', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heal_all_negative_effects', 0, TargetType.SELF),
@@ -2823,7 +2823,7 @@ export function createSkitterBite() {
     id: 'skitter_bite',
     name: 'Skitter Bite',
     description: 'Atk: Deal 2 Damage.\nDef: Block 1, Deal 1 Damage, Draw.\nHit: +Poison.',
-    shortDesc: 'Atk: 2 Dmg\nDef: Blk1 +1 Dmg, Draw\nHit: +Poison',
+    shortDesc: 'Atk: 2 Dmg\nDef: Block 1 +1 Dmg, Draw\nHit: +Poison',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -2865,7 +2865,7 @@ export function createOldSpectralHand() {
     id: 'old_spectral_hand',
     name: 'Old Spectral Hand',
     description: 'Atk: Deal 1 to 3 Damage.\nDef: Block 5, Heal 5, Draw.',
-    shortDesc: 'Atk: 1-3 Dmg\nDef: Blk5 +Heal5\nDraw',
+    shortDesc: 'Atk: 1-3 Dmg\nDef: Block 5 +Heal 5\nDraw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -3967,7 +3967,7 @@ export function createKrakenWhip() {
     id: 'kraken_whip',
     name: 'Tentacle Whip',
     description: 'Recharge ->\nDeal 1 Damage to all enemies.\nAllies gain 1 Heroism.',
-    shortDesc: 'R->1 Dmg All\nAllies +1 H',
+    shortDesc: 'R->1 Dmg All\nAllies +1 Heroism',
     subtype: 'spell',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -3993,7 +3993,7 @@ export function createBloodyEyePatch() {
     id: 'bloody_eye_patch',
     name: 'Bloody Eye Patch',
     description: 'Block 1, Gain 2 Heroism\nfor each Damaged Enemy, Draw.',
-    shortDesc: 'Block 1\n+2H/Damaged\nDraw',
+    shortDesc: 'Block 1\n+2 Heroism/Damaged\nDraw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -4043,7 +4043,7 @@ export function createTentacleWhip() {
     // numeric tokens it finds, so a digitless description stays put
     // while the underlying values still scale at runtime.
     description: 'Deal Bleed to all enemies.\nAllies gain Heroism.',
-    shortDesc: 'Bleed All\nAllies +H',
+    shortDesc: 'Bleed All\nAllies +Heroism',
     subtype: 'simple',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -4148,7 +4148,7 @@ export function createDrowParryingDagger() {
     // "Stays in hand" on its own line so it renders as the inline pill
     // cleanly (mid-damage-line it crowded "Deal 3"). No Atk:/Def: labels.
     description: 'Deal 3.\nStays in hand\nBlock 3, Deal 3 Randomly, Draw',
-    shortDesc: '3, Stays\nBlk3, 3 Rand, Draw',
+    shortDesc: '3, Stays\nBlock 3, 3 Rand, Draw',
     subtype: 'simple',
     cardType: CardType.ATTACK, costType: CostType.FREE,
     effects: [
@@ -4179,7 +4179,7 @@ export function createAdamantineRapier() {
     // "First Strike" and "On Recharge" both auto-render as pills. Drop
     // the "1" — when it's a single Heroism we don't spell the count out.
     description: 'Deal 6 First Strike: +4\nOn Recharge: Heroism',
-    shortDesc: '6, First Strike +4\nOnRech: Hero',
+    shortDesc: '6, First Strike +4\nOnRech: Heroism',
     subtype: 'martial',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
@@ -4199,7 +4199,7 @@ export function createAdamantineChainShirt() {
   return new Card({
     id: 'adamantine_chain_shirt', name: 'Adamantine Chain Shirt',
     description: 'Block 6, 2 Heroism, Draw\nOn Recharge: Heroism',
-    shortDesc: 'Blk6, 2 Hero, Draw\nOnRech: Hero',
+    shortDesc: 'Block 6, 2 Heroism, Draw\nOnRech: Heroism',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
@@ -4242,7 +4242,7 @@ export function createPiwafwi() {
   return new Card({
     id: 'piwafwi', name: 'Piwafwi',
     description: 'Enemies target you less.\nBlock 3, Gain 3 Shield, Scry 3',
-    shortDesc: 'Foes target you less\nBlk3, +3 Shld, Scry3',
+    shortDesc: 'Foes target you less\nBlock 3, +3 Shield, Scry 3',
     subtype: 'clothing',
     cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
@@ -4458,7 +4458,7 @@ export function createBoarhideBracers() {
     id: 'boarhide_bracers',
     name: 'Boarhide Bracers',
     description: 'First Attack: +2.\nDefense: Block 2, 2 Heroism, Draw.',
-    shortDesc: 'First Atk: +2\nDef: Blk 2, 2H, Draw',
+    shortDesc: 'First Atk: +2\nDef: Block 2, 2 Heroism, Draw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
@@ -4712,7 +4712,7 @@ export function createBuffMagmaTablet() {
     id: 'buff_magma_tablet',
     name: 'Magma Tablet',
     description: 'Turn Start: +1 Ignite.\nBurning: +1 Ignite and Draw.',
-    shortDesc: '+Ignite/turn\nBurning: +Ign,Draw',
+    shortDesc: '+Ignite/turn\nBurning: +Ignite, Draw',
     subtype: 'buff',
     cardType: CardType.ABILITY,
     costType: CostType.FREE,
@@ -5368,7 +5368,7 @@ export function createAle() {
     id: 'ale',
     name: 'Ale',
     description: 'Consume -> Heal 1, Gain 1 Heroism.\nBeverage: +Heroism for 2 turns.',
-    shortDesc: 'C->Heal 1, +1H\nBeverage: +Hero/2T',
+    shortDesc: 'C->Heal 1, +1 Heroism\nBeverage: +Heroism/2T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -5860,24 +5860,24 @@ export function createSummonAncestor() {
 // Specter Ectoplasm — rare relic. PY: Discard → grant Ethereal
 // (reduce all damage taken to 1) until next turn. JS doesn't have
 // the grant_ethereal effect or a 1-turn invuln buff yet — for now
-// the card heals 4 + draws 1 as a placeholder consumable. TODO:
+// the card heals 1-2 + draws 1 as a placeholder consumable. TODO:
 // proper Ethereal grant when the buff exists.
 export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'Heal 1, Draw.',
-    shortDesc: 'Heal 1, Draw',
+    description: 'Heal 1-2, Draw.',
+    shortDesc: 'Heal 1-2, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('heal_random', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal: 1 },
+    gamePlusOffset: { heal_random: 1 },
   });
 }
 
@@ -6030,11 +6030,11 @@ export function createBagOfStolenTeeth() {
 export function createRingOfRegeneration() {
   return new Card({
     id: 'ring_of_regeneration', name: 'Ring of Regeneration',
-    description: 'Gain 2 Regen, Draw.',
-    shortDesc: '+2 Regen, Draw',
+    description: 'Gain Regen, Draw.',
+    shortDesc: 'Regen, Draw',
     subtype: 'relic', cardType: CardType.ITEM, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('apply_regen', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic', tier: 2,
@@ -6046,12 +6046,12 @@ export function createRingOfRegeneration() {
 export function createTrollSkinJacket() {
   return new Card({
     id: 'troll_skin_jacket', name: 'Troll Skin Jacket',
-    description: 'Block 3, Gain 2 Regen, Scry 2.',
-    shortDesc: 'Block 3, +2 Regen\nScry 2',
+    description: 'Block 3, Gain Regen, Scry 2.',
+    shortDesc: 'Block 3, Regen\nScry 2',
     subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 3, TargetType.SELF),
-      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('apply_regen', 1, TargetType.SELF),
       new CardEffect('scry_pick', 2, TargetType.SELF),
     ],
     rarity: 'rare', tier: 2,
@@ -6059,16 +6059,16 @@ export function createTrollSkinJacket() {
   });
 }
 
-// Troll Blood Vial — Consume for an immediate 3 Regen; also slots as a
-// Beverage that grants 2 Regen each turn for 3 turns.
+// Troll Blood Vial — Consume for an immediate 2 Regen; also slots as a
+// Beverage that grants 2 Regen each turn for 2 turns.
 export function createTrollBloodVial() {
   return new Card({
     id: 'troll_blood_vial', name: 'Troll Blood Vial',
-    description: 'Consume -> Gain 3 Regen.\nBeverage: Gain 2 Regen for 3 turns.',
-    shortDesc: 'C->+3 Regen\nBeverage:\n+2 Regen 3t',
+    description: 'Gain 2 Regen, Gain 2 Regen for 2 turns.',
+    shortDesc: '+2 Regen\n+2 Regen 2t',
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
     effects: [
-      new CardEffect('apply_regen', 3, TargetType.SELF),
+      new CardEffect('apply_regen', 2, TargetType.SELF),
       new CardEffect('grant_provision', 0, TargetType.SELF),
     ],
     provision: {
@@ -6079,8 +6079,8 @@ export function createTrollBloodVial() {
       // from the vial → 4 Regen, heal 4, decay to 3, etc.
       effectType: 'regen',
       value: 2,
-      turnsPerCombat: 3,
-      description: 'Gain 2 Regen each turn for 3 turns.',
+      turnsPerCombat: 2,
+      description: 'Gain 2 Regen each turn for 2 turns.',
     },
     rarity: 'common', tier: 2,
     // +1 immediate Regen per offset; the beverage gains +1 turn per offset
@@ -6170,7 +6170,7 @@ export function createRockyAppendage() {
     id: 'rocky_appendage',
     name: 'Rocky Appendage',
     description: 'Recharge -> Deal 2 Damage.\n(+2 vs Armor/Shield)',
-    shortDesc: 'R->2 Dmg\n+2 vs Arm/Shd',
+    shortDesc: 'R->2 Dmg\n+2 vs Armor/Shield',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -6222,7 +6222,7 @@ export function createDrakeRiderCharge() {
     id: 'drake_rider_charge',
     name: 'Drake Rider Charge!',
     description: 'Recharge +1 -> You and allies gain 1 Heroism. Deal 3 Damage. A random drake attacks.',
-    shortDesc: 'R+1->+1 Hero\n3 Dmg, Drake',
+    shortDesc: 'R+1->+1 Heroism\n3 Dmg, Drake',
     subtype: 'weapon',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -7471,7 +7471,7 @@ export function createDwarvenBrew() {
     id: 'dwarven_brew',
     name: 'Dwarven Brew',
     description: 'Consume -> Heal 2, Gain Shield.\nBeverage: +Shield for 4 turns.',
-    shortDesc: 'C->Heal 2, +Shield\nBeverage: +Shld/4T',
+    shortDesc: 'C->Heal 2, +Shield\nBeverage: +Shield/4T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -7506,7 +7506,7 @@ export function createWhitescaleBrew() {
     id: 'whitescale_brew',
     name: 'Whitescale Brew',
     description: 'Consume -> Heal 2, Gain 1 Heroism, Gain 1 Ice.\nBeverage: +Heroism, Deal Ice Randomly for 4 turns.',
-    shortDesc: 'C->Heal 2, +1H\n+1 Ice self\nBev: H+Ice/4T',
+    shortDesc: 'C->Heal 2, +1 Heroism\n+1 Ice self\nBev: Heroism+Ice/4T',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.BANISH,
@@ -7944,7 +7944,7 @@ export function createBeastCollar() {
   return new Card({
     id: 'beast_collar', name: 'Beast Collar',
     description: 'Riposte 1.\nBlock 5, Heal 2 Bleed, Draw.',
-    shortDesc: 'Riposte 1\nBlk 5, Heal 2 Bleed, Draw',
+    shortDesc: 'Riposte 1\nBlock 5, Heal 2 Bleed, Draw',
     subtype: 'light_armor', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 5, TargetType.SELF),
@@ -7993,11 +7993,11 @@ export function createHuntersRecurveBow() {
 export function createPounce() {
   return new Card({
     id: 'pounce', name: 'Pounce',
-    description: 'Deal 4 + Bleed.\nIts damage hits your hand first.',
-    shortDesc: '4 + Bleed\nDmg hits hand first',
+    description: 'Deal 5 + Bleed.\nIts damage hits your hand first.',
+    shortDesc: '5 + Bleed\nDmg hits hand first',
     subtype: 'weapon', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('pounce_attack', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('pounce_attack', 5, TargetType.SINGLE_ENEMY),
     ],
     priority: 8,
     tier: 2, rarity: 'uncommon', noTierOffset: true,
@@ -8015,6 +8015,22 @@ export function createCatReflexes() {
       new CardEffect('gain_heroism', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
+    tier: 2, rarity: 'uncommon', noTierOffset: true,
+  });
+}
+
+// Cat Claws — Dire Claws (2 dmg to up to 2 targets) plus a Draw. Crag Cat deck.
+export function createCatClaws() {
+  return new Card({
+    id: 'cat_claws', name: 'Cat Claws',
+    description: 'Recharge -> Deal 2 to up to 2 Targets, Draw.',
+    shortDesc: 'R->2 Dmg x2\nDraw',
+    subtype: 'weapon', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_random_split', 2, TargetType.ALL_ENEMIES),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    priority: 6,
     tier: 2, rarity: 'uncommon', noTierOffset: true,
   });
 }
@@ -8058,7 +8074,7 @@ export function createSnowPaws() {
   return new Card({
     id: 'snow_paws', name: 'Snow Paws',
     description: 'First Attack: +3.\nDefense: Block 2, Clear 2 Ice, Draw.',
-    shortDesc: 'First Atk: +3\nDef: Blk 2, Clear Ice, Draw',
+    shortDesc: 'First Atk: +3\nDef: Block 2, Clear Ice, Draw',
     subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('block', 2, TargetType.SELF),
@@ -8073,8 +8089,8 @@ export function createSnowPaws() {
 export function createCatsEyePendant() {
   return new Card({
     id: 'cats_eye_pendant', name: "Cat's Eye Pendant",
-    description: 'Heal half your Ailments,\nRemove all Marks, Draw.',
-    shortDesc: 'Heal 1/2 Ailments\nRemove Marks, Draw',
+    description: 'Heal half your Ailments,\nRemove all Mark, Draw.',
+    shortDesc: 'Heal 1/2 Ailments\nRemove Mark, Draw',
     subtype: 'relic', cardType: CardType.RELIC, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('cats_eye_cleanse', 0, TargetType.SELF),
@@ -8350,7 +8366,7 @@ export function createRoaringHelm() {
     id: 'roaring_helm',
     name: 'Roaring Helm',
     description: 'Recharge -> Gain 1 Block for each enemy, Gain Heroism for each enemy, Draw.',
-    shortDesc: 'R->Block/enemy\n+H/enemy, Draw',
+    shortDesc: 'R->Block/enemy\n+Heroism/enemy, Draw',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
