@@ -5866,18 +5866,18 @@ export function createSpecterEctoplasm() {
   return new Card({
     id: 'specter_ectoplasm',
     name: 'Specter Ectoplasm',
-    description: 'Heal 1-2, Draw.',
-    shortDesc: 'Heal 1-2, Draw',
+    description: 'Heal 1, Draw.',
+    shortDesc: 'Heal 1, Draw',
     subtype: 'relic',
     cardType: CardType.RELIC,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('heal_random', 2, TargetType.SELF),
+      new CardEffect('heal', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal_random: 1 },
+    gamePlusOffset: { heal: 1 },
   });
 }
 
@@ -5996,15 +5996,15 @@ export function createSpikedGoblinHelmet() {
   });
 }
 
-// Goblin Boss's Whistle — summons 2-4 random goblins (Minion / Sapper /
+// Goblin Boss's Whistle — summons 1-4 random goblins (Minion / Sapper /
 // Warrior) to fight on the player's side. Game+ raises the MAX by +1 per
-// offset (2-5, 2-6, …) — handled in the summon_random_goblins effect.
+// offset (1-5, 1-6, …) — handled in the summon_random_goblins effect.
 export function createGoblinBossWhistle() {
   return new Card({
     id: 'goblin_bosss_whistle', name: "Goblin Boss's Whistle",
-    description: 'Summon 2 to 4 Random Goblins.',
-    shortDesc: 'Summon 2-4\nRandom Goblins',
-    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    description: 'Summon 1 to 4 Random Goblins.',
+    shortDesc: 'Summon 1-4\nRandom Goblins',
+    subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random_goblins', 2, TargetType.SUMMON)],
     rarity: 'rare', tier: 2,
     noTierOffset: true, // goblin-count scaling lives in the summon handler
@@ -6030,12 +6030,12 @@ export function createBagOfStolenTeeth() {
 export function createRingOfRegeneration() {
   return new Card({
     id: 'ring_of_regeneration', name: 'Ring of Regeneration',
-    description: 'Gain Regen, Draw.',
-    shortDesc: 'Regen, Draw',
-    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    description: 'Gain 2 Regen.\nStays in hand.',
+    shortDesc: '+2 Regen\nStays in hand',
+    subtype: 'relic', cardType: CardType.ITEM, costType: CostType.FREE,
     effects: [
-      new CardEffect('apply_regen', 1, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'epic', tier: 2,
     gamePlusOffset: { apply_regen: 1 },
@@ -6046,11 +6046,11 @@ export function createRingOfRegeneration() {
 export function createTrollSkinJacket() {
   return new Card({
     id: 'troll_skin_jacket', name: 'Troll Skin Jacket',
-    description: 'Block 3, Gain Regen, Scry 2.',
-    shortDesc: 'Block 3, Regen\nScry 2',
+    description: 'Block 2, Gain Regen, Scry 2.',
+    shortDesc: 'Block 2, Regen\nScry 2',
     subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('block', 2, TargetType.SELF),
       new CardEffect('apply_regen', 1, TargetType.SELF),
       new CardEffect('scry_pick', 2, TargetType.SELF),
     ],
@@ -7959,13 +7959,14 @@ export function createBeastCollar() {
 export function createBeastmasterHorn() {
   return new Card({
     id: 'beastmaster_horn', name: 'Beastmaster Horn',
-    description: 'Summon 1 Giant Hyena,\nor a pack of 2-4 Hyenas.',
-    shortDesc: 'Summon Giant Hyena\nor 2-4 Pack Hyenas',
-    subtype: 'item', cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    description: 'Summon 1-2 Hyenas.\n25%: a Giant Hyena instead.',
+    shortDesc: 'Summon 1-2 Hyenas\n25%: Giant Hyena',
+    subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('summon_beastmaster_horn', 0, TargetType.SELF),
     ],
-    previewCreature: createPackHyenaCreature(),
+    // Both possible summons shown side-by-side in the mini showcase.
+    previewCreatures: [createGiantHyenaCreature(), createPackHyenaCreature()],
     rarity: 'rare', tier: 2,
   });
 }
@@ -8503,24 +8504,24 @@ export function createRocEggshellShield() {
   });
 }
 
-// Lost Adventurer's Ring — recharge relic: Heal 1 + 1 Heroism, then draw.
+// Lost Adventurer's Ring — stays-in-hand relic: Heal 1-2 + 1-2 Heroism.
 export function createLostAdventurersRing() {
   return new Card({
     id: 'lost_adventurers_ring',
     name: "Lost Adventurer's Ring",
-    description: 'Heal 1, Gain 1 Heroism, Draw.',
-    shortDesc: 'Heal 1, +1 Heroism\nDraw',
+    description: 'Heal 1-2, Gain 1-2 Heroism.\nStays in hand.',
+    shortDesc: 'Heal 1-2, 1-2 Heroism\nStays',
     subtype: 'relic',
     cardType: CardType.ITEM,
-    costType: CostType.RECHARGE,
+    costType: CostType.FREE,
     effects: [
-      new CardEffect('heal', 1, TargetType.SELF),
-      new CardEffect('gain_heroism', 1, TargetType.SELF),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('heal_random', 2, TargetType.SELF),
+      new CardEffect('gain_heroism_random', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     rarity: 'rare',
     tier: 2,
-    gamePlusOffset: { heal: 1, gain_heroism: 1 },
+    gamePlusOffset: { heal_random: 1, gain_heroism_random: 1 },
   });
 }
 
@@ -8576,14 +8577,14 @@ export function createUnhatchedRocEggCard() {
   return new Card({
     id: 'unhatched_roc_egg',
     name: 'Unhatched Roc Egg',
-    description: 'Recharge a Card -> Call an Unhatched Roc Egg to the battle!\nDraw.',
-    shortDesc: 'R+1->Call\nRoc Egg\nDraw',
+    description: 'Recharge 2 Cards -> Call an Unhatched Roc Egg to the battle!\nDraw.',
+    shortDesc: 'R+2->Call\nRoc Egg\nDraw',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('summon_unhatched_roc_egg', 1, TargetType.SUMMON),
-      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic',

@@ -260,6 +260,33 @@ let tunnelEncounterChance = TUNNEL_ENC_STEP;
 // Gnoll Hunter / Crag Cat.
 const EAST_ENC_STEP = 0.04;
 let eastEncounterChance = EAST_ENC_STEP;
+// Deep gnoll country — the three deepest crags/chasm maps (past the Sealed
+// Gallery / Deepening Stairs). These use their OWN random-encounter chance,
+// climbing by a steeper DEEP_GNOLL_ENC_STEP per node, and for now spawn ONLY
+// the Gnoll Hunter (no Crag Cats this deep). Kept separate from
+// eastEncounterChance so crossing the threshold doesn't inherit the shallow
+// zone's accumulated roll.
+const DEEP_GNOLL_MAPS = new Set([
+  'east_mountain_crags_chasm_08',
+  'east_mountain_crags_chasm_09',
+  'east_mountain_crags_chasm_10',
+]);
+const DEEP_GNOLL_ENC_STEP = 0.06;
+let deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
+// Crag Cat flee — set when a wounded cat escapes: the next East encounter is
+// forced to be a Crag Cat, and it returns at this HP fraction (healed half its
+// missing HP). Consumed on the next crag_cat setup.
+let _forceCragCatNext = false;
+let _fledCragCatReturnFrac = 0;
+// The east encounter chance sampled at the moment an encounter fired (BEFORE it
+// was reset to EAST_ENC_STEP). A fled Crag Cat restores the chance to this so it
+// keeps climbing from where it triggered (e.g. 40% -> 44% -> 48% …) instead of
+// snapping to a guaranteed 100% re-engage on the very next node.
+let _eastEncounterChanceAtTrigger = EAST_ENC_STEP;
+// While a Crag Cat is fleeing, hold the combat view for a beat (toast + the
+// cat still on screen) before dropping back to the map. Ticked in gameLoop.
+let _fleePending = false;
+let _fleeTimer = 0;
 // ccgQuest+ progression — highest monster tier offset the player has
 // ever finished a run at. Persisted to localStorage so the unlock
 // survives across sessions. Finishing the base game (offset 0)
@@ -3772,6 +3799,7 @@ const CARD_REGISTRY = {
   snow_paws: createSnowPaws, cats_eye_pendant: createCatsEyePendant,
   beast_collar: createBeastCollar, beastmaster_horn: createBeastmasterHorn,
   hunters_recurve_bow: createHuntersRecurveBow,
+  bone_bow: createBoneBow, bone_javelin: createBoneJavelin,
   wooden_greatsword: createWoodenGreatsword, rock_mace: createRockMace,
   cracked_buckler: createCrackedBuckler, buckler: createBuckler, short_bow: createShortBow,
   // Path of the Necromancer — dining-room cockroach loot.
@@ -7333,6 +7361,7 @@ function resetStoryFlags() {
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
+  deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -7457,6 +7486,7 @@ function startNewGame() {
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
+  deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
@@ -8450,9 +8480,12 @@ function handleAbilitySelectClick(x, y) {
         // their tier-2 forms way too early.
         // If level 2+, offer perk selection
         if (player.level >= 2) {
-          // Roll perks at the level-up's tier (tier-2 level-ups → tier-2 pool,
-          // falling back to tier 1 for classes with no tier-2 list yet).
-          perkChoices = getPerkChoices(player.perks, 2, selectedClass, _levelUpTier || 1, playerTierOffset || 0);
+          // Roll perks at the level-up's tier, BUT tier-2 PERKS are gated to
+          // Part 2+ for now — a Part 1 / side-quest level-up (e.g. the Roc
+          // line) always rolls tier-1 perks even on a tier-2 level-up. (This is
+          // separate from tier-1/2 ABILITY picks, which keep their own tier.)
+          const _perkTier = part2Started ? (_levelUpTier || 1) : 1;
+          perkChoices = getPerkChoices(player.perks, 2, selectedClass, _perkTier, playerTierOffset || 0);
           state = GameState.PERK_SELECT;
         } else {
           // Return to encounter
@@ -8932,6 +8965,7 @@ function setWellRested() {
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
+  deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
   // Full rest clears active Provisions (Ale, food/drink buffs) + the Frenzy
   // Blood Vial's Bloodied Frenzy — these are "until next full rest".
   clearActiveProvisions();
@@ -9370,18 +9404,36 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // above; landings come in with skipEncounter, so only mid-trail nodes roll.)
   if (!skipEncounter && EAST_TRAIL_FACTORIES[currentMap.id]
       && completedEncounters.has('east_trail_gnoll_tracks') && !node.encounterId) {
-    if (Math.random() < eastEncounterChance) {
+    // Deep gnoll country (chasm 08/09/10) uses its own steeper chance and, for
+    // now, spawns ONLY the Gnoll Hunter — no Crag Cats this deep, and the Crag
+    // Cat flee latch is ignored here (it re-engages back in the shallow zone).
+    if (DEEP_GNOLL_MAPS.has(currentMap.id)) {
+      if (Math.random() < deepGnollEncounterChance) {
+        deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
+        currentEncounter = createGnollHunterEncounter();
+        encounterTextIndex = 0;
+        encounterChoiceResult = null;
+        _encounterHadCombat = false;
+        advanceEncounterPhase();
+        return;
+      }
+      deepGnollEncounterChance = Math.min(1.0, deepGnollEncounterChance + DEEP_GNOLL_ENC_STEP);
+    } else if (Math.random() < eastEncounterChance) {
+      _eastEncounterChanceAtTrigger = eastEncounterChance;
       eastEncounterChance = EAST_ENC_STEP;
-      currentEncounter = Math.random() < 0.5
-        ? createGnollHunterEncounter()
-        : createCragCatEncounter();
+      // A fled Crag Cat is guaranteed to be the one that catches up.
+      currentEncounter = _forceCragCatNext
+        ? createCragCatEncounter()
+        : (Math.random() < 0.5 ? createGnollHunterEncounter() : createCragCatEncounter());
+      _forceCragCatNext = false;
       encounterTextIndex = 0;
       encounterChoiceResult = null;
       _encounterHadCombat = false;
       advanceEncounterPhase();
       return;
+    } else {
+      eastEncounterChance = Math.min(1.0, eastEncounterChance + EAST_ENC_STEP);
     }
-    eastEncounterChance = Math.min(1.0, eastEncounterChance + EAST_ENC_STEP);
   }
   // Lake Shore back-teleport — click-on-self on lake_shore hops back
   // to river_trail_south once the arrival dialog has played. The
@@ -17886,6 +17938,9 @@ function setupEnemyForCombat(enemyId) {
     enemy.deck = new Deck();
     // Deck = HP. Play priority: Hunter's Mark (30) > Bone Bow (25) > Bone
     // Javelin (15) > Bite (12) > Giant Hyena (10) > Dire Hide (reactive).
+    // Bone Javelin jumps to 28 (above Bone Bow) while a player summon stands —
+    // it deals 10 vs summons, so the hunter throws it to clear the ally (see
+    // effPriority in planHandPlays).
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneBow());
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneJavelin());
     for (let i = 0; i < 8; i++) enemy.deck.addCard(createGnollBite());
@@ -17901,15 +17956,16 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 10; i++) { const h = createSummonGiantHyena(); h.priority = 10; enemy.deck.addCard(h); }
     // Patient Hunter — never swings at the player while a summon stands
     // (see pickEnemyAttackTarget). Ambush: he gets the surprise turn, and the
-    // opening hand is ONLY the 3 cheated Marks (no fresh draw) so no random
+    // opening hand is ONLY the 1 cheated Mark (no fresh draw) so no random
     // attack fires on the ambush; the hand fills to 4 from end-of-turn on.
     enemy.addPower(createPatientHunterPower());
     enemy._enemy_surprise = true;
     enemy._ambushOpeningHandOnly = true;
-    // Cheat the 3 Marks (priority 30) into the opening hand so the ambush opens
-    // by marking. startCombat pulls the matching deck copies out of the draw
-    // pile (one per held id), so they're held — not duplicated.
-    for (let i = 0; i < 3; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.hand.push(m); }
+    // Cheat 1 Mark (priority 30) into the opening hand so the ambush opens by
+    // marking for just Mark(2) (not the old Mark(6) from three). startCombat
+    // pulls the matching deck copy out of the draw pile (one per held id), so
+    // it's held — not duplicated. The other Marks stay in the deck to re-mark.
+    for (let i = 0; i < 1; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.hand.push(m); }
   };
   ENEMY_HAND_SIZE.gnoll_hunter = 4;
 
@@ -17923,11 +17979,8 @@ function setupEnemyForCombat(enemyId) {
     // Spell Turning — 50% to turn aside each ailment applied to the cat
     // (Character.applyStatus enforces it).
     enemy.addPower(createSpellTurningPower());
-    // Vanish — On Hit: 50% to vanish after the swing, invulnerable until its
-    // next turn (matches the evasive Cat Reflexes theme).
-    enemy.addPower(createVanish());
   };
-  ENEMY_HAND_SIZE.crag_cat = 4;
+  ENEMY_HAND_SIZE.crag_cat = 3;
 
   if (ENEMY_DECKS[enemyId]) {
     ENEMY_DECKS[enemyId]();
@@ -18467,9 +18520,15 @@ function drawMapDebugOverlay() {
     const armed = completedEncounters.has('east_trail_gnoll_tracks');
     const mapLabel = currentMap.id.replace(/_/g, ' ');
     lines.push(`[${mapLabel}]`);
-    lines.push(armed
-      ? `east mtn encounter chance: ${Math.round(eastEncounterChance * 100)}% (step ${Math.round(EAST_ENC_STEP * 100)}%)`
-      : `east mtn encounter chance: armed at Windbreak Ledge`);
+    if (DEEP_GNOLL_MAPS.has(currentMap.id)) {
+      lines.push(armed
+        ? `deep gnoll encounter chance: ${Math.round(deepGnollEncounterChance * 100)}% (step ${Math.round(DEEP_GNOLL_ENC_STEP * 100)}%, Gnoll Hunter only)`
+        : `deep gnoll encounter chance: armed at Windbreak Ledge`);
+    } else {
+      lines.push(armed
+        ? `east mtn encounter chance: ${Math.round(eastEncounterChance * 100)}% (step ${Math.round(EAST_ENC_STEP * 100)}%)`
+        : `east mtn encounter chance: armed at Windbreak Ledge`);
+    }
     lines.push(`current node: ${node ? node.id : '?'}`);
   }
   // Debug node-position editor — selected node id + live position.
@@ -18964,7 +19023,7 @@ function handleEncounterChoiceClick(x, y) {
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, seenDialogs, journalChoices, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
-              volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested,
+              volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested,
               volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns,
               cathedralPrayed, cathedralRested, ancestorSpiritsDefeated,
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
@@ -19827,7 +19886,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -21803,6 +21862,14 @@ function startCombat() {
     ? enemy.deck.hand.length
     : (enemy._handSize || 2);
   enemy.deck.startCombat(enemyStartHand, 10);
+  // A fled Crag Cat returns wounded — mill its fresh deck down to its healed HP.
+  if (enemy._enemyId === 'crag_cat' && _fledCragCatReturnFrac > 0 && _fledCragCatReturnFrac < 1) {
+    const catMax = getMaxHP(enemy);
+    const target = Math.max(1, Math.round(_fledCragCatReturnFrac * catMax));
+    const mill = catMax - target;
+    if (mill > 0) enemy.takeDamageFromDeck(mill);
+    _fledCragCatReturnFrac = 0;
+  }
 
   addLog('--- Combat Start ---', Colors.GOLD);
   playSound('card_shuffle');
@@ -27258,6 +27325,7 @@ function drawEnemyPowerArea() {
 
 // --- Combat click handling ---
 function handleCombatClick(x, y) {
+  if (_fleePending) return; // frozen while a Crag Cat is fleeing
   // Debug-only: copy the battle log to the clipboard.
   if (debugMode && _combatLogCopyRect && hitTest(x, y, _combatLogCopyRect)) {
     playSound('click');
@@ -28399,6 +28467,7 @@ function handleDefendingClick(x, y) {
                  || eff.effectType === 'scry_pick_discard'
                  || eff.effectType === 'clear_fire'
                  || eff.effectType === 'heal_random'
+                 || eff.effectType === 'heal_bleed'
                  || eff.effectType === 'block_random'
                  || eff.effectType === 'gain_shield_random'
                  || eff.effectType === 'summon_player_baby_frogs') {
@@ -29361,6 +29430,7 @@ let attacksThisTurn = 0; // for sneak_attack scaling
 let _bracerBonusLogged = false; // Boarhide Bracers +2-first-attack log guard (per player turn)
 let _snowPawsBonusLogged = false; // Snow Paws +3-first-attack log guard (per player turn)
 let _swiftAssaultLogged = false; // Swift Assault perk +first-attack log guard (per player turn)
+let _warBannerBonusLogged = false; // Goblin War Banner +damage-aura log guard (per player turn)
 // Tracks how much damage the most recent damage effect actually
 // landed on its target. Stamped inside every damage path (creature
 // vs character, unpreventable vs normal) and read by on-damage
@@ -32127,6 +32197,14 @@ function resolveEffect(eff, caster, target) {
       spawnTokenOnTarget(caster, rolled, 'Shield', Colors.ALLY_BLUE);
       break;
     }
+    case 'gain_heroism_random': {
+      // Heroism 1..eff.value (random). Sibling to block_random / gain_shield_random.
+      const rolled = 1 + Math.floor(Math.random() * Math.max(1, eff.value));
+      caster.heroism = (caster.heroism || 0) + rolled;
+      addLog(`  +${rolled} Heroism`, Colors.GOLD);
+      spawnTokenOnTarget(caster, rolled, 'Heroism', Colors.GOLD);
+      break;
+    }
     case 'heal_random': {
       // Heal 1..eff.value (random). Used by Barnacle Plate enemy
       // card so the priest/baron can grind out a fight with a soft
@@ -33411,13 +33489,13 @@ function resolveEffect(eff, caster, target) {
       // capped by the field (addCreature returns false when full).
       playSound('wolf_howl_distant_01', 0.7); // the horn's distant howl
       const bmOff = playerTierOffset || 0;
-      if (Math.random() < 0.5) {
+      if (Math.random() < 0.25) {
         const gh = createGiantHyenaCreature();
         scaleCreatureWithOffset(gh, bmOff);
         if (player.addCreature(gh)) addLog(`  A Giant Hyena answers the horn!`, Colors.GREEN);
         else addLog(`  No room for the Giant Hyena.`, Colors.GRAY);
       } else {
-        const bmCount = 2 + Math.floor(Math.random() * 3); // 2..4
+        const bmCount = 1 + Math.floor(Math.random() * 2); // 1..2
         let bmSummoned = 0;
         for (let i = 0; i < bmCount; i++) {
           const ph = createPackHyenaCreature();
@@ -33955,8 +34033,8 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_random_goblins': {
       // 1-4 random goblins (Minion / Sapper / Warrior) on the PLAYER side;
-      // Game+ raises the MAX by +0.5 per offset (so +1 goblin every 2 offsets).
-      const num = 1 + Math.floor(Math.random() * (4 + 0.5 * (playerTierOffset || 0)));
+      // Game+ raises the MAX by +1 per offset (1-5, 1-6, …), matching the card.
+      const num = 1 + Math.floor(Math.random() * (4 + (playerTierOffset || 0)));
       let last = null;
       for (let i = 0; i < num; i++) {
         const g = makePlayerGoblin();
@@ -39110,7 +39188,19 @@ function getDamageModifier(character) {
   // attacker itself, so a banner never buffs its own (non-)attack.
   const isPlayerSide = character === player
     || (player && Array.isArray(player.creatures) && player.creatures.includes(character));
-  if (isPlayerSide) mod += allyDamageAuraBonus(character);
+  if (isPlayerSide) {
+    const bannerBonus = allyDamageAuraBonus(character);
+    if (bannerBonus > 0) {
+      mod += bannerBonus;
+      // Announce the aura once per player turn (first buffed attack), the same
+      // way Snow Paws / Swift Assault surface their bonus — so the player sees
+      // the banner is live even though it can't attack itself.
+      if (!_warBannerBonusLogged) {
+        _warBannerBonusLogged = true;
+        addLog(`  War Banner: +${bannerBonus} Damage`, Colors.GOLD);
+      }
+    }
+  }
   return mod;
 }
 
@@ -39908,11 +39998,15 @@ function enemyHasPower(id) {
 // start (ENEMY_DECKS.goblin_swarm) AND on the "They're in the Walls!"
 // resummon. Equal-weight random pick of the three types.
 const GOBLIN_SWARM_NAMES = new Set(['Goblin Sapper', 'Goblin Minion', 'Goblin Warrior', 'Goblin War Banner', 'Goblin Spike Trap']);
-function makeSwarmGoblin() {
+function makeSwarmGoblin(allowBanner = true) {
   // Weighted pick: Sapper / Minion / Warrior at 1.0 each; Spike Trap at
   // 0.25; War Banner at 0.2 (both kept rare — the banner pumps the whole
   // swarm's damage, the trap ripostes). Total weight 3 + 0.25 + 0.2 = 3.45.
-  const r = Math.random() * (3 + 0.25 + 0.2);
+  // allowBanner=false drops the banner from the pool (total 3.25) — the
+  // Goblin Boss's Whistle uses this since the War Banner has its own loot
+  // card and shouldn't be re-rolled as a random whistle summon.
+  const bannerW = allowBanner ? 0.2 : 0;
+  const r = Math.random() * (3 + 0.25 + bannerW);
   if (r < 1.0) {
     return new Creature({
       name: 'Goblin Sapper', attack: 1, maxHp: 2,
@@ -40029,14 +40123,12 @@ function dealRandomDamageToPlayerSide(amount, sourceName, color = Colors.ORANGE)
 // enemy-side helpers/handlers).
 function makePlayerGoblin() {
   // Same weighted pool as the enemy swarm (Sapper/Minion/Warrior common,
-  // Spike Trap / War Banner rare) so the Boss Whistle summons the same
-  // goblins. makeSwarmGoblin returns a bare creature; we apply the
-  // player-side scaling + source tags here.
-  const g = makeSwarmGoblin();
+  // Spike Trap rare) so the Boss Whistle summons the same goblins — MINUS the
+  // War Banner (allowBanner=false), which has its own loot card and shouldn't
+  // drop out of a random whistle roll. makeSwarmGoblin returns a bare
+  // creature; we apply the player-side scaling + source tags here.
+  const g = makeSwarmGoblin(false);
   scaleCreatureWithOffset(g, playerTierOffset || 0, 'player');
-  if (g.name === 'Goblin War Banner' && (playerTierOffset || 0) > 0) {
-    g._allyDamageAura = 1 + 0.5 * (playerTierOffset || 0);
-  }
   g._sourceRarity = 'rare';
   g._sourceSubtype = 'item';
   return g;
@@ -41243,9 +41335,16 @@ function startEnemyTurn() {
     // Bone Bow by default and jumps above it (27, still under Hunter's Mark's
     // 30) when the hunter has Heroism banked, so it fires to cash the doubled
     // Heroism bonus instead of letting it sit.
+    const playerHasSummon = player && Array.isArray(player.creatures)
+      && player.creatures.some(c => c && c.isAlive);
     const effPriority = (c) => {
       let p = c.priority || 0;
       if (c.id === 'aimed_shot_card' && (enemy.heroism || 0) > 0) p += 7;
+      // Bone Javelin deals 10 vs summons (5 + 5). While a player summon stands
+      // it jumps above Bone Bow (15 -> 28, still under Hunter's Mark's 30) so the
+      // hunter throws it to clear the ally — Patient Hunter is already forcing
+      // him to target the summon, so the javelin lands where its bonus applies.
+      if (c.id === 'bone_javelin' && playerHasSummon) p += 13;
       return p;
     };
     const local = [...enemy.deck.hand];
@@ -43977,6 +44076,30 @@ function applyTurnStartAllyShields() {
 function completePlayerTurnTransition() {
   awaitingEnemyDamage = false;
 
+  // Crag Cat flee — after its turn (its damage to the player has landed), a
+  // wounded cat (below half its HP) has a 50% chance to slip away. It escapes
+  // with no loot, forces the next East encounter to be itself, and returns
+  // having healed half its missing HP.
+  if (enemy && enemy._enemyId === 'crag_cat' && enemy.isAlive) {
+    const hp = getHP(enemy), mx = getMaxHP(enemy);
+    if (mx > 0 && hp * 2 < mx && Math.random() < 0.5) {
+      const frac = hp / mx;
+      _fledCragCatReturnFrac = frac + (1 - frac) / 2; // heals half the missing HP
+      _forceCragCatNext = true;
+      // Resume the climb from where the cat first caught us — NOT a guaranteed
+      // 100% re-engage. It keeps ticking up by EAST_ENC_STEP each node until it
+      // rolls again (and _forceCragCatNext makes that roll be this same cat).
+      eastEncounterChance = _eastEncounterChanceAtTrigger;
+      addLog('The Crag Cat melts back into the rocks — it will hunt you again.', Colors.GRAY);
+      playSound('lion_roar_01', 0.6);
+      // Hold the combat view for a couple of seconds with a toast, then flee.
+      showStyledToast('The Crag Cat flees into the rocks!', 'damage', 2600);
+      _fleePending = true;
+      _fleeTimer = 2200;
+      return;
+    }
+  }
+
   // Resolve a deferred enemy death (mid-attack tick that killed the
   // monster while damage was still queued). The damage has now landed
   // on the player via startIncomingDamage; clear the suppression flag
@@ -44119,6 +44242,7 @@ function completePlayerTurnTransition() {
   _bracerBonusLogged = false; // re-arm the Boarhide Bracers first-attack log
   _snowPawsBonusLogged = false; // re-arm the Snow Paws first-attack log
   _swiftAssaultLogged = false; // re-arm the Swift Assault first-attack log
+  _warBannerBonusLogged = false; // re-arm the War Banner aura log
   // Frenzy Blood Vial — apply the Bloodied Frenzy Rage for the turn (announce).
   updateFrenzyRage(true);
 
@@ -46003,6 +46127,32 @@ function combatVictory() {
   // Clear exhausted flag on all hand cards (daggers etc.)
   for (const c of player.deck.hand) c.exhausted = false;
   state = GameState.VICTORY;
+}
+
+// Crag Cat escapes — no victory, no loot. Mirrors combatVictory's per-combat
+// teardown, then drops straight back to the map at the node the party is on
+// (arriveAtNode already ran, so it won't re-trigger).
+function combatFlee() {
+  stopAmbienceLayer(200);
+  updateMusicForCurrentScene();
+  player.endCombatBuffCleanup();
+  clearObsidianShardsFromDeck();
+  player.deck.endCombat(getPlayerHandSize(), MAX_HAND_SIZE);
+  player.readyPowers();
+  player.creatures = [];
+  player.clearBlock();
+  player.shield = 0;
+  player.heroism = 0;
+  player.rage = 0;
+  player.poisonBuff = 0;
+  player.ignite = 0;
+  player.unpreventableBuff = 0;
+  player.statusEffects = {};
+  attacksThisTurn = 0;
+  swimTarget = 0; swimCount = 0; swimCardsThisTurn = 0; swimFlashTimer = 0;
+  for (const c of player.deck.hand) c.exhausted = false;
+  currentEncounter = null;
+  state = GameState.MAP;
 }
 
 // --- Victory / Game Over screens ---
@@ -50397,7 +50547,7 @@ function commitSaveEditing() {
     completedEncounters,
     seenDialogs,
     journalChoices,
-    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, chapter8SlybladeSeen,
+    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen,
     forgeUsed, forgeRested, volcanoHeartSacrificed,
     volcanoBuffType, volcanoBuffTurns,
     cathedralPrayed, cathedralRested,
@@ -51142,6 +51292,14 @@ function restoreFromSave(data) {
   wastesNorthRestDone = !!data.wastesNorthRestDone;
   volcanoEncounterChance = typeof data.volcanoEncounterChance === 'number' ? data.volcanoEncounterChance : 0.34;
   undergroundEncounterChance = typeof data.undergroundEncounterChance === 'number' ? data.undergroundEncounterChance : 0.07;
+  // Tharnag tunnel + East Mountain random-encounter chances (anti-save-scum)
+  // and the Crag Cat flee state.
+  tunnelEncounterChance = typeof data.tunnelEncounterChance === 'number' ? data.tunnelEncounterChance : TUNNEL_ENC_STEP;
+  eastEncounterChance = typeof data.eastEncounterChance === 'number' ? data.eastEncounterChance : EAST_ENC_STEP;
+  deepGnollEncounterChance = typeof data.deepGnollEncounterChance === 'number' ? data.deepGnollEncounterChance : DEEP_GNOLL_ENC_STEP;
+  _forceCragCatNext = !!data.forceCragCatNext;
+  _fledCragCatReturnFrac = typeof data.fledCragCatReturnFrac === 'number' ? data.fledCragCatReturnFrac : 0;
+  _eastEncounterChanceAtTrigger = typeof data.eastEncTrigger === 'number' ? data.eastEncTrigger : EAST_ENC_STEP;
   forgeUsed = !!data.forgeUsed;
   forgeRested = !!data.forgeRested;
   volcanoHeartSacrificed = !!data.volcanoHeartSacrificed;
@@ -54353,6 +54511,11 @@ function gameLoop(timestamp) {
   // regular swim phase), pause the timer so the showcase card
   // stays visible the whole time the player is recharging — both
   // phases clear the showcase explicitly when they finish.
+  // Crag Cat flee — hold the combat view for a beat, then drop to the map.
+  if (_fleePending) {
+    _fleeTimer -= dt;
+    if (_fleeTimer <= 0) { _fleePending = false; combatFlee(); }
+  }
   if (showcaseTimer > 0) {
     if (state === GameState.SWIMMING) {
       showcaseFadeIn += dt; // still ramp the fade-in alpha
