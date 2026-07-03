@@ -9,7 +9,7 @@ export class MapNode {
     isLocked = false, canRevisit = false, unlocks = [],
     hiddenName = '', hiddenDescription = '',
     passthroughTo = '', repeatableUntil = '',
-    wip = false, discoverable = false,
+    wip = false, discoverable = false, caveEntrance = false,
   }) {
     this.id = id;
     this.name = name;
@@ -47,6 +47,10 @@ export class MapNode {
     // the node stays visible forever. Combine with hiddenName: '???'
     // so the close-but-unexplored render reads as a mystery dot.
     this.discoverable = discoverable;
+    // caveEntrance: marks a node as the mouth of a gnoll cave. Set on the 7
+    // chasm-map nodes that lead into the cave sub-maps. A later pass rolls each
+    // one into a Boss / Guard / generic cave and wires the teleport in.
+    this.caveEntrance = caveEntrance;
   }
 
   get displayName() {
@@ -635,10 +639,14 @@ export function createEastMountainCragsChasm08Map() {
   const nodes = [
     { id: 'c8_1', name: 'Beyond the Gate', description: 'The black gate groans open onto a long-sealed stair, the air beyond dead and ancient.', encounterId: '', connections: ['c8_2'], position: [610, 950], mapArea: 'east_mountain_crags_chasm_08', ...D },
     { id: 'c8_2', name: 'The Sealed Stair', description: 'Dwarf-cut steps spiral down, untrodden for an age.', encounterId: '', connections: ['c8_1', 'c8_3'], position: [710, 760], mapArea: 'east_mountain_crags_chasm_08', ...D },
-    { id: 'c8_3', name: 'Cracked Vault', description: 'A vaulted chamber, its ceiling split, rubble strewn across the floor.', encounterId: '', connections: ['c8_2', 'c8_4'], position: [200, 530], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_3', name: 'Cracked Vault', description: 'A vaulted chamber, its ceiling split, rubble strewn across the floor.', encounterId: '', connections: ['c8_2', 'c8_4', 'c8_cave_a'], position: [200, 530], mapArea: 'east_mountain_crags_chasm_08', ...D },
     { id: 'c8_4', name: 'The Still Water', description: 'A black pool fills the lower chamber, perfectly still.', encounterId: '', connections: ['c8_3', 'c8_5'], position: [540, 320], mapArea: 'east_mountain_crags_chasm_08', ...D },
-    { id: 'c8_5', name: 'Drowned Doorway', description: 'A dwarf archway stands half-submerged, the way pressing on beneath the water.', encounterId: '', connections: ['c8_4', 'c8_6'], position: [440, 160], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    { id: 'c8_5', name: 'Drowned Doorway', description: 'A dwarf archway stands half-submerged, the way pressing on beneath the water.', encounterId: '', connections: ['c8_4', 'c8_6', 'c8_cave_b'], position: [440, 160], mapArea: 'east_mountain_crags_chasm_08', ...D },
     { id: 'c8_6', name: 'The Deep Stair', description: 'Stairs descend into the flood and the dark, sinking deeper still.', encounterId: '', connections: ['c8_5'], position: [590, 40], mapArea: 'east_mountain_crags_chasm_08', ...D },
+    // Gnoll cave mouths — branch off the vault + the drowned doorway. Walk/click
+    // one to drop into its rolled Boss / Guard / generic cave (handleGnollCaveArrival).
+    { id: 'c8_cave_a', name: 'Cave Mouth', description: 'A low cleft gapes in the vault wall, breathing cold, foul air — a gnoll-cave sunk into the dark.', encounterId: '', connections: ['c8_3'], position: [150, 400], mapArea: 'east_mountain_crags_chasm_08', caveEntrance: true, ...D },
+    { id: 'c8_cave_b', name: 'Cave Mouth', description: 'Beside the drowned arch, a black cave mouth cuts back into the rock.', encounterId: '', connections: ['c8_5'], position: [420, 70], mapArea: 'east_mountain_crags_chasm_08', caveEntrance: true, ...D },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'c8_1';
@@ -654,12 +662,16 @@ export function createEastMountainCragsChasm09Map() {
   const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Onward through the deep crags.' };
   const nodes = [
     { id: 'c9_1', name: 'Through the Crack', description: 'You worm through the gap in the fused stone into a cramped passage beyond.', encounterId: '', connections: ['c9_2'], position: [590, 180], mapArea: 'east_mountain_crags_chasm_09', ...D },
-    { id: 'c9_2', name: 'The Old Diggings', description: 'Tool-marks and a collapsed shaft — dwarves mined here once, long ago.', encounterId: '', connections: ['c9_1', 'c9_3'], position: [380, 300], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_2', name: 'The Old Diggings', description: 'Tool-marks and a collapsed shaft — dwarves mined here once, long ago.', encounterId: '', connections: ['c9_1', 'c9_3', 'c9_cave_a'], position: [380, 300], mapArea: 'east_mountain_crags_chasm_09', ...D },
     { id: 'c9_3', name: 'Spider Hollow', description: 'Thick webs choke a side-cavern; something large shifts in the dark.', encounterId: '', connections: ['c9_2', 'c9_4'], position: [700, 420], mapArea: 'east_mountain_crags_chasm_09', ...D },
     { id: 'c9_4', name: 'The Narrow Way', description: 'The passage squeezes down to a crawl over cold stone.', encounterId: '', connections: ['c9_3', 'c9_5'], position: [540, 550], mapArea: 'east_mountain_crags_chasm_09', ...D },
     { id: 'c9_5', name: 'Gnoll Outpost', description: 'A crude barricade and a cold watch-fire — the gnolls hold this junction.', encounterId: '', connections: ['c9_4', 'c9_6'], position: [880, 740], mapArea: 'east_mountain_crags_chasm_09', ...D },
     { id: 'c9_6', name: 'The Underway', description: 'A wide worked tunnel runs off level and straight into the deep.', encounterId: '', connections: ['c9_5', 'c9_7'], position: [630, 910], mapArea: 'east_mountain_crags_chasm_09', ...D },
-    { id: 'c9_7', name: 'The Lower Gate', description: 'Another sealed dwarf gate bars the way down — locked fast, with no opening it from this side.', encounterId: '', connections: ['c9_6'], position: [260, 760], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    { id: 'c9_7', name: 'The Lower Gate', description: 'Another sealed dwarf gate bars the way down — locked fast, with no opening it from this side.', encounterId: '', connections: ['c9_6', 'c9_cave_b'], position: [310, 810], mapArea: 'east_mountain_crags_chasm_09', ...D },
+    // Gnoll cave mouths — branch off the old diggings + the lower gate. Walk/click
+    // one to drop into its rolled Boss / Guard / generic cave (handleGnollCaveArrival).
+    { id: 'c9_cave_a', name: 'Cave Mouth', description: 'The old dig-shaft opens on a natural cave that runs off into the gnoll-dark.', encounterId: '', connections: ['c9_2'], position: [320, 210], mapArea: 'east_mountain_crags_chasm_09', caveEntrance: true, ...D },
+    { id: 'c9_cave_b', name: 'Cave Mouth', description: 'A cave mouth breaks the wall short of the sealed gate, black and low.', encounterId: '', connections: ['c9_7'], position: [220, 680], mapArea: 'east_mountain_crags_chasm_09', caveEntrance: true, ...D },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'c9_1';
@@ -675,13 +687,94 @@ export function createEastMountainCragsChasm10Map() {
   const nodes = [
     { id: 'c10_1', name: 'The Flooded Stair', description: 'The stair plunges on beneath the black water, step by drowned step.', encounterId: '', connections: ['c10_2'], position: [580, 970], mapArea: 'east_mountain_crags_chasm_10', ...D },
     { id: 'c10_2', name: 'Sunken Vault', description: 'A flooded vault, its dwarf-treasures long since looted or lost.', encounterId: '', connections: ['c10_1', 'c10_3'], position: [660, 800], mapArea: 'east_mountain_crags_chasm_10', ...D },
-    { id: 'c10_3', name: 'Gnoll Shrine', description: 'A crude shrine of bone and hide — the gnolls worship something down here.', encounterId: '', connections: ['c10_2', 'c10_4'], position: [170, 610], mapArea: 'east_mountain_crags_chasm_10', ...D },
-    { id: 'c10_4', name: 'Drowned Crossroad', description: 'Flooded passages branch off in the dark; the gnoll-trail holds to one.', encounterId: '', connections: ['c10_3', 'c10_5'], position: [770, 370], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_3', name: 'Gnoll Shrine', description: 'A crude shrine of bone and hide — the gnolls worship something down here.', encounterId: '', connections: ['c10_2', 'c10_4', 'c10_cave_a'], position: [170, 610], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    { id: 'c10_4', name: 'Drowned Crossroad', description: 'Flooded passages branch off in the dark; the gnoll-trail holds to one.', encounterId: '', connections: ['c10_3', 'c10_5', 'c10_cave_b'], position: [770, 370], mapArea: 'east_mountain_crags_chasm_10', ...D },
     { id: 'c10_5', name: 'The Deep Pool', description: 'A still, deep pool fills the cavern wall to wall; the trail skirts its edge.', encounterId: '', connections: ['c10_4', 'c10_6'], position: [420, 200], mapArea: 'east_mountain_crags_chasm_10', ...D },
-    { id: 'c10_6', name: 'The Sealed Deep', description: 'The way ends at a great collapse of stone and water — no passing it, not without finding another road.', encounterId: '', connections: ['c10_5'], position: [510, 110], mapArea: 'east_mountain_crags_chasm_10', ...D },
+    // The Sealed Deep — now a cave mouth: the road-end collapse opens a
+    // gnoll-cave off to one side. Walk/click to drop into the rolled cave.
+    { id: 'c10_6', name: 'Cave Mouth', description: 'The way ends at a great collapse of stone and water — but a low cave mouth gapes in the rock beside it, breathing cold air into the dark.', encounterId: '', connections: ['c10_5'], position: [510, 110], mapArea: 'east_mountain_crags_chasm_10', caveEntrance: true, ...D },
+    // Gnoll cave mouths — branch off the shrine + the drowned crossroad. Walk/click
+    // one to drop into its rolled Boss / Guard / generic cave (handleGnollCaveArrival).
+    { id: 'c10_cave_a', name: 'Cave Mouth', description: 'Behind the bone-shrine, a black cave mouth swallows the gnoll-trail into the deep.', encounterId: '', connections: ['c10_3'], position: [110, 490], mapArea: 'east_mountain_crags_chasm_10', caveEntrance: true, ...D },
+    { id: 'c10_cave_b', name: 'Cave Mouth', description: 'One of the flooded branches narrows to a cave mouth, low and dripping.', encounterId: '', connections: ['c10_4'], position: [860, 270], mapArea: 'east_mountain_crags_chasm_10', caveEntrance: true, ...D },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'c10_1';
+  return map;
+}
+
+// === Gnoll Caves (branch off the deep-chasm cave mouths) ===
+// Three cave layouts, each reached through one of the 7 chasm cave-mouths. The
+// runtime rolls which mouth leads to the (unique) Boss cave, which to the
+// (unique) Guard cave, and the other five to the generic single-room cave.
+// `mapId` is UNIQUE per instance (gnoll_cave_<entranceId>) so each cave caches
+// + tracks state separately; `mapArea` is SHARED per cave TYPE so every
+// instance of a type renders the same art (one preload per type). All interior
+// nodes are `discoverable` (dark: ??? until the party is a hop away).
+
+// Boss cave (unique) — GnollBossCave01 (1456x816). Entry forks in a Y: branch A
+// runs long (Cramped Run → … → Broken Stair → Dead-End Hollow → Corrupted
+// Shrine), branch B is the short pack-leader's ground (Wide Gallery → Cook-Fires
+// → Pack-Leader's Den). The Pack-Leader's Den links back to the Broken Stair, so
+// the two branches loop and the entry is a pure exit (walk onto it → teleport out).
+export function createGnollBossCaveMap(mapId) {
+  const map = new GameMap(mapId, 'Gnoll Cave');
+  const AREA = 'gnoll_boss_cave';
+  map.mapImages = { [AREA]: 'Maps/GnollBossCave01.jpg' };
+  const P = mapId;
+  const F = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the gnoll-dark.', mapArea: AREA };
+  const nodes = [
+    { id: `${P}_entry`, name: 'Cave Mouth', description: 'The cave opens into a low gnoll-warren, the trail forking ahead into the dark.', encounterId: '', connections: [`${P}_a1`, `${P}_b1`], position: [1018, 760], ...F },
+    // Branch A — the long way, ending at the Corrupted Shrine.
+    { id: `${P}_a1`, name: 'Cramped Run', description: 'A cramped gnoll-run twists off to one side.', encounterId: '', connections: [`${P}_entry`, `${P}_a2`], position: [1140, 430], ...F },
+    { id: `${P}_a2`, name: 'Narrow Passage', description: 'The passage narrows, gnawed bones underfoot.', encounterId: '', connections: [`${P}_a1`, `${P}_a3`], position: [900, 280], ...F },
+    { id: `${P}_a3`, name: 'Reeking Den', description: 'A reeking den of hide-scraps and old kills.', encounterId: '', connections: [`${P}_a2`, `${P}_a4`], position: [520, 70], ...F },
+    { id: `${P}_a4`, name: 'Broken Stair', description: 'The run climbs over a fall of broken stone.', encounterId: '', connections: [`${P}_a3`, `${P}_a5`, `${P}_b3`], position: [550, 330], ...F },
+    { id: `${P}_a5`, name: 'Dead-End Hollow', description: 'A deep hollow at the run\'s dead end.', encounterId: '', connections: [`${P}_a4`, `${P}_a6`], position: [280, 370], ...F },
+    { id: `${P}_a6`, name: 'Corrupted Shrine', description: 'A defiled shrine at the hollow\'s end — bones and black ichor heaped where the gnolls worship something worse than themselves.', encounterId: '', connections: [`${P}_a5`], position: [120, 470], ...F },
+    // Branch B — the short pack-leader's ground; loops back to the Broken Stair.
+    { id: `${P}_b1`, name: 'Wide Gallery', description: 'A wider gallery opens off the other fork.', encounterId: '', connections: [`${P}_entry`, `${P}_b2`], position: [790, 420], ...F },
+    { id: `${P}_b2`, name: 'Cook-Fires', description: 'Cold cook-fires and gnoll-sign foul the air.', encounterId: '', connections: [`${P}_b1`, `${P}_b3`], position: [680, 640], ...F },
+    { id: `${P}_b3`, name: "Pack-Leader's Den", description: 'A great den at the gallery\'s end — the pack-leader\'s ground.', encounterId: '', connections: [`${P}_b2`, `${P}_a4`], position: [420, 670], ...F },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = `${P}_entry`;
+  map._caveType = 'boss';
+  return map;
+}
+
+// Generic cave (reused, up to 5 instances) — GnollCave02 (1232x928). A single
+// dead-end room you enter and nothing more.
+export function createGnollCaveMap(mapId) {
+  const map = new GameMap(mapId, 'Gnoll Cave');
+  const AREA = 'gnoll_cave';
+  map.mapImages = { [AREA]: 'Maps/GnollCave02.jpg' };
+  const P = mapId;
+  map.addNode(new MapNode({
+    id: `${P}_entry`, name: 'Gnoll Den', description: 'A single low cave, rank with gnoll-sign — a dead-end warren.', encounterId: '', connections: [], position: [616, 460], mapArea: AREA, canRevisit: true,
+  }));
+  map.currentNodeId = `${P}_entry`;
+  map._caveType = 'generic';
+  return map;
+}
+
+// Guard cave (unique) — GnollCaveGuards03 (1232x928). 4 nodes in a line, a
+// guard-post run down to the Prisoner Hole where a captive is held.
+export function createGnollGuardsCaveMap(mapId) {
+  const map = new GameMap(mapId, 'Gnoll Cave');
+  const AREA = 'gnoll_guards_cave';
+  map.mapImages = { [AREA]: 'Maps/GnollCaveGuards03.jpg' };
+  const P = mapId;
+  const F = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the gnoll-dark.', mapArea: AREA };
+  const nodes = [
+    { id: `${P}_entry`, name: 'Cave Mouth', description: 'The cave opens on a guarded gnoll-run bending away into the dark.', encounterId: '', connections: [`${P}_g2`], position: [1080, 100], ...F },
+    { id: `${P}_g2`, name: 'Guard Post', description: 'A crude barricade and a cold watch-fire block the run.', encounterId: '', connections: [`${P}_entry`, `${P}_g3`], position: [900, 390], ...F },
+    { id: `${P}_g3`, name: 'Inner Run', description: 'The passage presses on past the guard-post.', encounterId: '', connections: [`${P}_g2`, `${P}_g4`], position: [500, 520], ...F },
+    { id: `${P}_g4`, name: 'Prisoner Hole', description: 'A deep pit-den at the run\'s end — a captive is held here, guarded.', encounterId: '', connections: [`${P}_g3`], position: [270, 540], ...F },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = `${P}_entry`;
+  map._caveType = 'guards';
   return map;
 }
 

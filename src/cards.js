@@ -294,13 +294,18 @@ export function createSmallPouch() {
   return new Card({
     id: 'small_pouch',
     name: 'Small Pouch',
-    description: 'Recharge -> Scry 2.',
-    shortDesc: 'R->Scry 2',
+    description: 'Scout 2. Stays in hand.',
+    shortDesc: 'Scout 2\nStays',
     subtype: 'item',
     cardType: CardType.ITEM,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('scry_pick', 2, TargetType.SELF)],
-    gamePlusOffset: { scry_pick: 1 },
+    // FREE cost — the card never leaves the hand, so a recharge cost would let
+    // you pay once and ride it free forever (see Kobold Shield / Bone Dagger).
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('scout', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    gamePlusOffset: { scout: 1 },
   });
 }
 
@@ -1616,8 +1621,10 @@ export function getRogueStarterDeck() {
   for (let i = 0; i < 2; i++) cards.push(createBoneDagger());
   // 3 Leather Armors
   for (let i = 0; i < 3; i++) cards.push(createLeatherArmor());
-  // 3 Scraps
-  for (let i = 0; i < 3; i++) cards.push(createScraps());
+  // 2 Scraps
+  for (let i = 0; i < 2; i++) cards.push(createScraps());
+  // 1 Small Pouch
+  cards.push(createSmallPouch());
   return cards;
 }
 
@@ -1648,8 +1655,10 @@ export function getDruidStarterDeck() {
   for (let i = 0; i < 3; i++) cards.push(createLeatherArmor());
   // 1 Cracked Buckler
   cards.push(createCrackedBuckler());
-  // 3 Scraps
-  for (let i = 0; i < 3; i++) cards.push(createScraps());
+  // 2 Scraps
+  for (let i = 0; i < 2; i++) cards.push(createScraps());
+  // 1 Small Pouch
+  cards.push(createSmallPouch());
   // 1 Wrath
   cards.push(createWrath());
   return cards;
@@ -2337,8 +2346,8 @@ function createTreantCreature() {
 export function createSummonTreants() {
   return new Card({
     id: 'summon_treants', name: 'Summon Treants',
-    description: 'Summon 2-4 Treants.\n(2/1 with Haste)',
-    shortDesc: 'Summon 2-4\nTreants', subtype: 'ability',
+    description: 'Summon or Buff 2-3 Treants.',
+    shortDesc: 'Summon/Buff\n2-3 Treants', subtype: 'ability',
     cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_treants', 1, TargetType.SUMMON)],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
@@ -3327,17 +3336,17 @@ export function createTorch() {
   return new Card({
     id: 'torch',
     name: 'Torch',
-    description: 'Discard -> Deal 1 Fire to all. Scry 3.',
-    shortDesc: 'D->Fire ALL,\nScry 3',
+    description: 'Discard -> Deal Fire to All. Scout 3.',
+    shortDesc: 'D->Fire ALL,\nScout 3',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
     effects: [
       new CardEffect('apply_fire_all', 1, TargetType.ALL_ENEMIES),
-      new CardEffect('scry_pick', 3, TargetType.SELF),
+      new CardEffect('scout', 3, TargetType.SELF),
     ],
     rarity: 'uncommon',
-    gamePlusOffset: { apply_fire_all: 1, scry_pick: 1 },
+    gamePlusOffset: { apply_fire_all: 1, scout: 1 },
   });
 }
 
@@ -4950,14 +4959,18 @@ export function createSack() {
   return new Card({
     id: 'sack',
     name: 'Sack',
-    description: 'Recharge -> Scry 3.',
-    shortDesc: 'R->Scry 3',
+    description: 'Scout 3. Stays in hand.',
+    shortDesc: 'Scout 3\nStays',
     subtype: 'item',
     cardType: CardType.ITEM,
-    costType: CostType.RECHARGE,
-    effects: [new CardEffect('scry_pick', 3, TargetType.SELF)],
+    // FREE cost — never leaves the hand (see Small Pouch / Kobold Shield).
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('scout', 3, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
     rarity: 'uncommon',
-    gamePlusOffset: { scry_pick: 1 },
+    gamePlusOffset: { scout: 1 },
   });
 }
 
@@ -6046,12 +6059,12 @@ export function createRingOfRegeneration() {
 export function createTrollSkinJacket() {
   return new Card({
     id: 'troll_skin_jacket', name: 'Troll Skin Jacket',
-    description: 'Block 2, Gain Regen, Scry 2.',
-    shortDesc: 'Block 2, Regen\nScry 2',
+    description: 'Block 3, Gain 2 Regen, Scry 2.',
+    shortDesc: 'Block 3, Regen 2\nScry 2',
     subtype: 'clothing', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 2, TargetType.SELF),
-      new CardEffect('apply_regen', 1, TargetType.SELF),
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('apply_regen', 2, TargetType.SELF),
       new CardEffect('scry_pick', 2, TargetType.SELF),
     ],
     rarity: 'rare', tier: 2,
@@ -6059,28 +6072,28 @@ export function createTrollSkinJacket() {
   });
 }
 
-// Troll Blood Vial — Consume for an immediate 2 Regen; also slots as a
-// Beverage that grants 2 Regen each turn for 2 turns.
+// Troll Blood Vial — Consume for an immediate 3 Regen; also slots as a
+// Beverage that grants 2 Regen each turn for 3 turns.
 export function createTrollBloodVial() {
   return new Card({
     id: 'troll_blood_vial', name: 'Troll Blood Vial',
-    description: 'Gain 2 Regen, Gain 2 Regen for 2 turns.',
-    shortDesc: '+2 Regen\n+2 Regen 2t',
+    description: 'Gain 3 Regen, Gain 2 Regen for 3 turns.',
+    shortDesc: '+3 Regen\n+2 Regen 3t',
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
     effects: [
-      new CardEffect('apply_regen', 2, TargetType.SELF),
+      new CardEffect('apply_regen', 3, TargetType.SELF),
       new CardEffect('grant_provision', 0, TargetType.SELF),
     ],
     provision: {
       slot: 'beverage',
       name: 'Troll Blood Vial',
       // 'regen' tick ADDS to the Regen stack each turn (merges with
-      // existing Regen) rather than healing separately — so 2 Regen +2
-      // from the vial → 4 Regen, heal 4, decay to 3, etc.
+      // existing Regen) rather than healing separately — so 3 Regen +2
+      // from the vial → 5 Regen, heal 5, decay to 3, etc.
       effectType: 'regen',
       value: 2,
-      turnsPerCombat: 2,
-      description: 'Gain 2 Regen each turn for 2 turns.',
+      turnsPerCombat: 3,
+      description: 'Gain 2 Regen each turn for 3 turns.',
     },
     rarity: 'common', tier: 2,
     // +1 immediate Regen per offset; the beverage gains +1 turn per offset
@@ -7060,8 +7073,8 @@ export function createObsidianEdge() {
 export function createObsidianStaff() {
   return new Card({
     id: 'obsidian_staff', name: 'Obsidian Staff',
-    description: 'Recharge a Card -> Deal 2 (+2 vs Armor/Shield). Summon a 2/5 Obsidian Construct (Sentinel, 1 Armor, +2 vs Armor/Shield).',
-    shortDesc: 'R-Card->2 Dmg (+2)\nSummon Construct',
+    description: 'Recharge a Card -> Deal 2 (+2 vs Armor/Shield). Summon an Obsidian Construct, Draw.',
+    shortDesc: 'R-Card->2 Dmg (+2)\nSummon, Draw',
     subtype: 'staff', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // armor_bonus_damage encodes base * 10 + total. 2 base + 2 vs Armor
     // = 4 total → 24.
@@ -7069,6 +7082,7 @@ export function createObsidianStaff() {
       new CardEffect('armor_bonus_damage', 24, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('summon_obsidian_construct', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'uncommon', tier: 2,
     previewCreature: createObsidianConstructCreature(),
@@ -7729,8 +7743,8 @@ export function createGnikansStaff() {
   return new Card({
     id: 'gnikans_staff',
     name: "Gnikan's Staff",
-    description: 'Recharge a Card -> Gain Ice. Allies lose all Ice -> Summon an Ice Elemental with Atk and HP equal to the Ice lost. Then Deal 3 + Ice.',
-    shortDesc: 'R-Card->Gain Ice\nAllies->N/N\nDeal 3 Dmg + Ice',
+    description: 'Recharge a Card -> Gain Ice. Allies lose all Ice -> Summon an Ice Elemental with Atk and HP equal to the Ice lost. Then Deal 3 + Ice, Draw.',
+    shortDesc: 'R-Card->Gain Ice\nAllies->N/N\nDeal 3+Ice, Draw',
     subtype: 'staff',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -7744,6 +7758,7 @@ export function createGnikansStaff() {
       new CardEffect('summon_ice_burst', 1, TargetType.SUMMON),
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic',
     tier: 2,
@@ -7778,8 +7793,8 @@ export function createSahuaginPriestStaffLoot() {
   return new Card({
     id: 'sahuagin_priest_staff',
     name: 'Sahuagin Priest Staff',
-    description: 'Recharge a Card -> Deal Bleed + Ice, Summon a Shark.',
-    shortDesc: 'R-Card->Bleed+Ice\nSummon Shark',
+    description: 'Recharge a Card -> Deal Bleed + Ice, Summon a Shark, Draw.',
+    shortDesc: 'R-Card->Bleed+Ice\nSummon Shark, Draw',
     subtype: 'staff',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
@@ -7788,6 +7803,7 @@ export function createSahuaginPriestStaffLoot() {
       new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('apply_ice', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('summon_shark', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic',
     previewCreature: new Creature({
@@ -7934,10 +7950,46 @@ export function createGnollBite() {
 export function createPackHyenaCreature() {
   const c = new Creature({
     name: 'Pack Hyena', attack: 1, maxHp: 4,
-    description: '+1 Atk per ally.',
+    description: '+1 Atk per adjacent ally (max 3).',
   });
   c.packTactics = true;
   return c;
+}
+
+// Summon Hyena Pack (Gnoll Warrior, monster-only) — drops 2-4 Pack Hyenas at
+// once. Each Pack Hyena gains +1 Atk per orthogonally adjacent ally (max +3),
+// so a tightly-packed litter hits far above its 1 base attack.
+export function createSummonHyenaPack() {
+  return new Card({
+    id: 'summon_hyena_pack', name: 'Summon Hyena Pack',
+    description: 'Summon 2-4 Pack Hyenas.',
+    shortDesc: 'Summon 2-4\nPack Hyenas',
+    subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_hyena_pack', 3, TargetType.SUMMON)],
+    previewCreature: createPackHyenaCreature(),
+    tier: 2, rarity: 'rare', noTierOffset: true,
+  });
+}
+
+// Bone Cage (Gnoll Warrior) — Tier 2 epic heavy armor. A bigger reactive wall
+// than Dire Hide: Block 5, poison the whole opposing side, and draw. Played
+// reactively when its holder is attacked (works on either side —
+// apply_poison_all_foes is caster-aware).
+export function createBoneCage() {
+  return new Card({
+    id: 'bone_cage', name: 'Bone Cage',
+    description: 'Block 5, Deal Poison to All, Draw.',
+    shortDesc: 'Block 5\nPoison All, Draw',
+    subtype: 'heavy_armor', cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('apply_poison_all_foes', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    priority: 5,
+    tier: 2, rarity: 'epic',
+    gamePlusOffset: { block: 2 },
+  });
 }
 
 export function createBeastCollar() {

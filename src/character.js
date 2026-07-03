@@ -386,7 +386,7 @@ export class Character {
     this._pendingRiposteLash = 0;
     if (amount > 0 && !this._noRiposte && Array.isArray(this.powers)
         && this.powers.some(p => p && p.id === 'riposte')) {
-      const roll = 1 + Math.floor(Math.random() * 2); // 1-2
+      const roll = 1; // fixed 1 (drow riposte, reduced from 1-2)
       const parry = Math.min(roll, amount);
       amount -= parry;
       this._pendingRiposteParry = parry;
@@ -697,6 +697,14 @@ export class Character {
       }
     }
     this.creatures = this.creatures.filter(c => c.isAlive);
+    // Global death hook — main.js registers Character.onCreaturesRemoved to
+    // drive death-triggered effects (the Gnoll Warrior's Rampage). This is the
+    // single choke-point where creatures actually leave the field, so it fires
+    // no matter which of the scattered removeDeadCreatures() call sites swept
+    // them. Guarded so a throw in the hook can't corrupt the sweep.
+    if (dead.length && typeof Character.onCreaturesRemoved === 'function') {
+      try { Character.onCreaturesRemoved(this, dead); } catch (e) { /* non-fatal */ }
+    }
     return dead;
   }
 

@@ -20,6 +20,13 @@ export class Deck {
     this.damagePile = [];
     this.rechargePile = [];
     this.playPile = [];
+    // Opt-in (enemy decks): reshuffle the draw pile whenever the recharge pile
+    // is flushed back in. Player decks leave this false so recharge stays a
+    // predictable "bottom of the pile, seen later" mechanic. Enemies have no
+    // such strategy, and without a reshuffle a small hand-size-1 deck (e.g. the
+    // Stone Giant's 10 Rock Barrage / 10 Large Boulder, drawing 1/turn and
+    // recharging each turn) replays in a fixed order and streaks the same card.
+    this.shuffleAfterRecharge = false;
   }
 
   addCard(card, toHand = false) {
@@ -360,6 +367,9 @@ export class Deck {
       this.drawPile.unshift(card);
     }
     this.rechargePile = [];
+    // Enemy decks re-randomize on flush so recharged cards don't replay in a
+    // fixed order (see shuffleAfterRecharge). No-op for player decks.
+    if (this.shuffleAfterRecharge && count > 0) this.shuffleDrawPile();
     return count;
   }
 

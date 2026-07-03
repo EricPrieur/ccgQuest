@@ -53,6 +53,11 @@ export class EncounterPhaseData {
     lootTitle = '',
     triggersLevelUp = false,
     levelUpTier = 1,
+    // Optional PERK-tier override for this level-up, decoupled from the
+    // ABILITY tier (levelUpTier). When set, the perk-select step rolls perks
+    // at THIS tier regardless of part2Started — lets a side-quest level-up (the
+    // Roc line) grant a tier-2 ability but only tier-1 perks. null = default.
+    perkTier = null,
     choicePrompt = '',
     // Loot-pick mode (Varimatras + future drops): the player is
     // offered `lootPickCards` (array of CARD_REGISTRY ids) and
@@ -92,6 +97,7 @@ export class EncounterPhaseData {
     this.lootTitle = lootTitle;
     this.triggersLevelUp = triggersLevelUp;
     this.levelUpTier = levelUpTier;
+    this.perkTier = perkTier;
     this.choicePrompt = choicePrompt;
     this.lootPickCount = lootPickCount;
     this.lootPickCards = lootPickCards;
@@ -309,7 +315,7 @@ export function createTightOpeningEncounter() {
       phaseType: EncounterPhase.CHOICE,
       choices: [
         new EncounterChoice(
-          'Try to squeeze through',
+          'Try to squeeze through (By Recharging a card from hand)',
           '',
           'try_squeeze', 1,
           { returnToChoices: true, repeatable: true }
@@ -2016,6 +2022,10 @@ export function createLastWatchPostRocEncounter() {
         phaseType: EncounterPhase.LOOT,
         triggersLevelUp: true,
         levelUpTier: 2,
+        // Side quest: tier-2 ability pick, but tier-1 perks (the Roc line
+        // shouldn't hand out a tier-2 perk — those are gated to main Part 2
+        // progression level-ups).
+        perkTier: 1,
       }),
       new EncounterPhaseData({
         phaseType: EncounterPhase.TEXT,
@@ -2545,6 +2555,7 @@ export function createSupplyPileEncounter(picker1Cards = [], picker2Cards = []) 
       phaseType: EncounterPhase.LOOT,
       lootPickCards: picker1Cards,
       lootPickCount: 1,
+      lootTitle: 'Supply Pile',
     }));
   }
   if (picker2Cards.length > 0) {
@@ -2552,6 +2563,7 @@ export function createSupplyPileEncounter(picker1Cards = [], picker2Cards = []) 
       phaseType: EncounterPhase.LOOT,
       lootPickCards: picker2Cards,
       lootPickCount: 1,
+      lootTitle: 'Supply Pile',
     }));
   }
   return new Encounter('supply_pile', 'The Storehouse', 'Gontran said help yourself.', phases);
@@ -4630,7 +4642,7 @@ export function createOverseerGnikanEncounter() {
       phaseType: EncounterPhase.COMBAT,
       enemyId: 'varimatras',
     }),
-    // Varimatras LOOT — five tier-2 epic dragon-loot cards laid
+    // Varimatras LOOT — six tier-2 epic dragon-loot cards laid
     // out for the party to pick two of. Each one leans into a
     // different role / subtype so the choice carries real weight.
     // Gnikan's Staff was already handed off during the rally TEXT
@@ -4646,6 +4658,7 @@ export function createOverseerGnikanEncounter() {
         'white_dragonscale_armor',
         'dragon_bone_bow',
         'dragon_eye_mace',
+        'winterborn_robes',
       ],
     }),
     // Post-Varimatras victory dialog. The background was already
@@ -5763,6 +5776,19 @@ export function createGnollHunterEncounter() {
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_hunter' }),
     new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_hunter_loot'] }),
+  ]);
+}
+
+export function createGnollWarriorEncounter() {
+  return new Encounter('gnoll_warrior', 'Gnoll Warrior', 'A brute blocks the way.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('A hulking gnoll steps into the gap, a cage of bound bones strapped across one shoulder and a pack of hyenas slinking at its heels. It bares its teeth and roars — the beasts answer.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_warrior' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_warrior_loot'] }),
   ]);
 }
 
@@ -7351,6 +7377,7 @@ export const ENCOUNTER_REGISTRY = {
   east_trail_chasm_crags: createEastTrailChasmCragsEncounter,
   east_trail_deep_gnoll: createEastTrailDeepGnollEncounter,
   gnoll_hunter: createGnollHunterEncounter,
+  gnoll_warrior: createGnollWarriorEncounter,
   crag_cat: createCragCatEncounter,
   dwarven_specter: createDwarvenSpecterEncounter,
   // Tharnag Interior

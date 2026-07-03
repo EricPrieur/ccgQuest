@@ -747,10 +747,10 @@ export function createRipostePower() {
     id: 'riposte',
     name: 'Riposte',
     costDescription: 'Passive',
-    effectDescription: 'On Hit: parry 1-2 of the damage and deal that much back to the attacker.',
+    effectDescription: 'On Hit: parry 1 of the damage and deal that much back to the attacker.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'On Hit:\nParry 1-2 +\nRiposte',
+    shortDesc: 'On Hit:\nParry 1 +\nRiposte',
     noTierOffset: true,
   });
 }
@@ -767,6 +767,23 @@ export function createPatientHunterPower() {
     rechargeCost: 0,
     isPassive: true,
     shortDesc: 'Targets your\nsummons first',
+    noTierOffset: true,
+  });
+}
+
+// Rampage (Gnoll Warrior) — the warrior flies into a frenzy on the kill:
+// whenever it or one of its hyenas cuts down one of your units, it gains 1 Rage
+// and heals 1-3. Logic lives in the Character.onCreaturesRemoved hook
+// (main.js), the choke-point where dead creatures are swept from the field.
+export function createRampagePower() {
+  return new Power({
+    id: 'rampage',
+    name: 'Rampage',
+    costDescription: 'Passive',
+    effectDescription: 'When it or an ally kills your unit: gain 1 Rage and Heal 1-3.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'On kill:\n+1 Rage, Heal 1-3',
     noTierOffset: true,
   });
 }

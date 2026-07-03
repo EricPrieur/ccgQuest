@@ -113,6 +113,7 @@ import {
   createPounce, createCatReflexes, createCatClaws,
   createMountainPredatorFang, createCloakOfTheSilentProwler, createSnowPaws, createCatsEyePendant,
   createPackHyenaCreature, createBeastCollar, createBeastmasterHorn, createHuntersRecurveBow,
+  createSummonHyenaPack, createBoneCage,
   createAStormIsComing,
   createBearTeethNecklace, createBearClaw, createBearHideArmor, createBearFatRations,
   createRoaringHelm, createWinterheartPelt,
@@ -135,8 +136,8 @@ import {
   createSummonTreants, createFeralBite, createStarfire, createHealingTouch,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createGnollHunterEncounter, createCragCatEncounter } from './encounter.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createCragCatEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -147,7 +148,7 @@ import {
   createKoboldBackup, createBloodiedFury, createKoboldArmy, createKoboldArmySwarm, createAmalgam, createWolfPack, createLavaFloor, createBlizzard, createAncientWhite, createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
   createPiranhasSwarm, createFromTheDeep,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
-  createObsidianOracleBodyPower, createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createBrute, createEthereal,
+  createObsidianOracleBodyPower, createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createRampagePower, createBrute, createEthereal,
 } from './power.js';
 import { saveToSlot, saveToAutoSlot, loadFromSlot, hasSave, hasAnySave, hasPart1CompleteSave, getSaveInfo, deleteSave, markSlotConsumedForGamePlus, MANUAL_SLOT_COUNT, AUTO_SLOT_COUNT } from './save.js';
 import { initSound, playSound, playSoundFile, playSoundForDuration, stopSoundFile, stopAllSounds, setSoundVolume, getSoundVolume, toggleSound, isSoundEnabled, playMusic, stopMusic, crossfadeMusic, fadeOutMusic, pauseMusic, resumeMusic, setMusicVolume, getMusicVolume, toggleMusic, isMusicEnabled, playAmbienceLayer, stopAmbienceLayer, SOUND_PACKS, SOUND_MAP } from './sound.js';
@@ -242,8 +243,10 @@ const TUNNEL_EXIT_NODE_MAP = {
   mb_4:  ['tharnag_tunnels_middle_bottom', createTharnagTunnelsMiddleBottomMap],
 };
 // Dead-ends that are NEVER an exit — they only roll the placeholder 50%
-// supply search (the remaining MiddleBottom dead-end).
-const TUNNEL_SUPPLY_NODES = ['mb_tr3'];
+// supply search (the remaining MiddleBottom dead-end + the War Camp).
+// mb_right2 (War Camp) isn't in TUNNEL_EXIT_NODES, so it can never be the
+// front; listing it here gives it the same 50% Tunnel Supply Cache roll.
+const TUNNEL_SUPPLY_NODES = ['mb_tr3', 'mb_right2'];
 let _tunnelExitNode = null;          // chosen exit id this run (persisted)
 let _tunnelExitLocked = false;       // true once the gate is reached (persisted)
 let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
@@ -251,7 +254,7 @@ let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
 // that doesn't already have a scripted encounter (not a dead-end / the
 // exit / the gate) rolls this; on a miss it climbs by TUNNEL_ENC_STEP,
 // on a hit it resets. Goblin Swarm / Rampaging Troll, 50/50.
-const TUNNEL_ENC_STEP = 0.04;
+const TUNNEL_ENC_STEP = 0.03;
 let tunnelEncounterChance = TUNNEL_ENC_STEP;
 // East Mountain (trail + crags) random-encounter chance. Armed once the
 // Windbreak Ledge gnoll-tracks dialog has fired (so it begins at Cairn Bend);
@@ -273,6 +276,21 @@ const DEEP_GNOLL_MAPS = new Set([
 ]);
 const DEEP_GNOLL_ENC_STEP = 0.06;
 let deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
+// Gnoll caves — the 7 chasm cave-mouths (see caveEntrance nodes in map.js). One
+// mouth is rolled the (unique) Boss cave, one the (unique) Guard cave, the other
+// five generic single-room caves. The roll is stored here and persisted so it
+// never rerolls across save/load. { entranceNodeId: 'boss'|'guard'|'generic' }.
+const GNOLL_CAVE_ENTRANCES = [
+  { entrance: 'c8_cave_a',  chasmMap: 'east_mountain_crags_chasm_08' },
+  { entrance: 'c8_cave_b',  chasmMap: 'east_mountain_crags_chasm_08' },
+  { entrance: 'c9_cave_a',  chasmMap: 'east_mountain_crags_chasm_09' },
+  { entrance: 'c9_cave_b',  chasmMap: 'east_mountain_crags_chasm_09' },
+  { entrance: 'c10_cave_a', chasmMap: 'east_mountain_crags_chasm_10' },
+  { entrance: 'c10_cave_b', chasmMap: 'east_mountain_crags_chasm_10' },
+  { entrance: 'c10_6',      chasmMap: 'east_mountain_crags_chasm_10' },
+];
+const GNOLL_CAVE_ENTRANCE_MAP = new Map(GNOLL_CAVE_ENTRANCES.map(e => [e.entrance, e.chasmMap]));
+let _gnollCaveTypes = null;
 // Crag Cat flee — set when a wounded cat escapes: the next East encounter is
 // forced to be a Crag Cat, and it returns at this HP fraction (healed half its
 // missing HP). Consumed on the next crag_cat setup.
@@ -587,6 +605,7 @@ const EFFECT_DESC_PATTERNS = {
   apply_poison_self: [/Gain\s+(\d+)\s+Poison/i],
   apply_poison_vs_armor: [/\+(\d+)\s+Poison/i, /(\d+)\s+Poison/i],
   scry_pick: [/Scry\s+(\d+)/i],
+  scout: [/Scout\s+(\d+)/i],
   unpreventable_damage: [/Deal\s+(\d+)\s+Unpreventable/i, /(\d+)\s+True\s+Dmg/i, /(\d+)\s+Unpreventable/i],
   grant_unpreventable_buff: [/next\s+(\d+)\s+attack/i, /Next\s+(\d+)/i],
   // Relic effect types — most have a single "N <noun>" form in the
@@ -937,16 +956,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
       const maxDmg = base + 3 * per;
       c.shortDesc = `R->${base}-${maxDmg} Dmg`;
     }
-    // Summon Treants — "Summon 2-4 Treants.\n(2/1 with Haste)". Max
-    // count bumps +0.5 per offset (4 → 5 at +2 → 6 at +4). Treant
-    // stats bump +1/+1 per offset via CREATURE_TIER_OFFSET['Treant'],
-    // so the stat line in parentheses follows the offset directly.
+    // Summon Treants — "Summon or Buff 2-N Treants". Max count bumps +0.5 per
+    // offset (4 → 5 at +2 → 6 at +4). Treant stats bump +1/+1 per offset via
+    // CREATURE_TIER_OFFSET['Treant']. No stat line — the small preview shows it.
     if (c.id === 'summon_treants') {
-      const maxCount = 4 + Math.floor(0.5 * offset);
-      const tAtk = 2 + offset;
-      const tHp = 1 + offset;
-      c.description = `Recharge -> Summon 2-${maxCount} Treants.\n(${tAtk}/${tHp} with Haste)`;
-      c.shortDesc = `R->Summon 2-${maxCount}\nTreants`;
+      const maxCount = 3 + Math.floor(0.5 * offset);
+      c.description = `Recharge -> Summon or Buff 2-${maxCount} Treants.`;
+      c.shortDesc = `R->Summon/Buff\n2-${maxCount}`;
     }
     if (c.id === 'pet_slime' && c.gamePlusOffset?.pet_slime_summon) {
       // Base 1-2 + offset bump (1-2 → 1-3 → 1-4 …).
@@ -1097,15 +1113,13 @@ function applyGamePlusOffsetInPlace(c, offset) {
     // damage portion is left to the generic armor_bonus_damage swap
     // — only the summon clause needs the rewrite.
     if (c.id === 'obsidian_staff') {
+      // Only the hit numbers are rebuilt here; the construct's scaled stats
+      // show on the side preview, so the summon line stays flavor-light.
       const abd = c.effects.find(e => e.effectType === 'armor_bonus_damage')?.value || 13;
       const hitBase = abd >= 100 ? Math.floor(abd / 100) : Math.floor(abd / 10);
       const hitVs = abd >= 100 ? (abd % 100) : (abd % 10);
       const hitBonus = Math.max(0, hitVs - hitBase);
-      const cAtk = 2 + offset;
-      const cHp = 4 + offset;
-      const cArmor = 1 + Math.floor(offset / 3 + 1e-9);
-      const cBonus = 2 + offset;
-      c.description = `Recharge a Card -> Deal ${hitBase} (+${hitBonus} vs Armor/Shield). Summon a ${cAtk}/${cHp} Obsidian Construct (Sentinel, ${cArmor} Armor, +${cBonus} vs Armor/Shield).`;
+      c.description = `Recharge a Card -> Deal ${hitBase} (+${hitBonus} vs Armor/Shield). Summon an Obsidian Construct, Draw.`;
     }
     // Drain Essence — only the UPPER end of the 1-N random roll bumps
     // (+1 per offset via necrotic_drain); the floor stays at 1, so the
@@ -2120,6 +2134,10 @@ let lastWatchAudienceComplete = false;
 // inventory-rest exit knows to set lastWatchRested + unlock the
 // valley descent. Cleared after the rest finishes.
 let _lastWatchRestPending = false;
+// Latched when the player picks the post-Kraken FULL rest at the outpost tent
+// so exitInventory (after the deck rebalance) respawns the southern monsters
+// for another loop. Cleared after the rest finishes.
+let _outpostTentFullRestPending = false;
 // Tracks whether the barkeep has already handed the post-dragon
 // freebie Whitescale Brew to the player. One-shot: the LOOT phase
 // only fires on the first post-dragon visit; subsequent visits
@@ -2591,6 +2609,12 @@ function canClassEquip(card) {
 // Level-up / Perk state
 let pendingLevelUp = false;
 let pendingLevelUpTier = 1;
+// Optional PERK-tier override for the pending / in-progress level-up, decoupled
+// from the ABILITY tier. null = derive the perk tier the normal way. A phase's
+// perkTier flows in here so a side-quest level-up (the Roc line) can grant a
+// tier-2 ability but only tier-1 perks.
+let pendingLevelUpPerkTier = null;
+let _levelUpPerkTier = null;
 // The tier of the level-up currently in progress — captured when the level-up
 // starts (handleEncounterLootClick) and read by the perk-select step (which
 // runs AFTER pendingLevelUpTier has been reset) so tier-2 level-ups roll from
@@ -2601,6 +2625,11 @@ let _levelUpTier = 1;
 // { name, oldCreature, newCreature }.
 let companionUpgrades = [];
 let perkChoices = [];
+// Tier of the perks currently offered on the PERK_SELECT screen. Drives the
+// gold-reroll cost (tier 1 = 10g, tier 2 = 50g) and gates the reroll button:
+// 0 = no reroll (fixed/hand-picked perk sets like the Stone Door blessing).
+let _perkSelectTier = 0;
+const PERK_REROLL_COSTS = { 1: 10, 2: 50 };
 let restMode = false; // true when inventory opened during level-up rest
 
 // Rest-mode deck-limit bonus: tracks the category the player chose to +1
@@ -3436,6 +3465,43 @@ const JOURNAL_MANIFEST = [
     ],
   },
   {
+    // Part 2 — the post-dragon storyline. Part 1's Tharnag / Obsidian /
+    // Volcano beats live in part_1 above; this part only carries the NEW
+    // Part 2 content (gated by part2Started / chapter2Started). Rows stay
+    // hidden until the player actually reaches each beat (drawJournal skips
+    // any id not in seenDialogs), so listing the whole arc is safe.
+    id: 'part_2',
+    title: 'Part 2: The Search',
+    chapters: [
+      {
+        id: 'p2_chapter_1',
+        title: 'Chapter 1: The Great Pour',
+        // Part 2 opens back in Qualibaf, then returns to Tharnag: the
+        // grand-hall alarm, the drow ambush at the forge, and the Great Pour
+        // that seals the front — ending in Durgan's send-off + a bed rest.
+        encounters: [
+          'part2_epilogue', 'part2_ch1_qualibaf', 'part2_grand_hall_alarm',
+          'forge_floor_ambush', 'the_great_forge', 'durgan_return',
+          'great_pour_rest', 'durgan_vault', 'mithril_forge',
+        ],
+      },
+      {
+        id: 'p2_chapter_2',
+        title: 'Chapter 2: The Gnoll Road',
+        // With the front sealed, the party looks for another way down: the
+        // tunnels' lava wall points to Elarion, who sends them south to
+        // Gontran, who opens the road east into gnoll country.
+        encounters: [
+          'chapter2_search', 'chapter2_lava_wall', 'chapter2_elarion',
+          'gontran_gnoll_territories',
+          'east_trail_gnoll_tracks', 'east_trail_battle_site',
+          'east_trail_chasm_crags', 'east_trail_deep_gnoll',
+          'gnoll_hunter', 'gnoll_warrior', 'crag_cat',
+        ],
+      },
+    ],
+  },
+  {
     // Optional content arcs that branch off the main quest. Listed
     // separately so their dialogs don't bloat the main chapters and
     // the player can find them by quest name.
@@ -3527,6 +3593,11 @@ let saveEditingCursor = 0;     // caret position (0 = before first char)
 let saveEditingAnchor = 0;     // selection anchor (when !== cursor, text between is selected)
 let loadEntries = [];
 let loadScrollY = 0;
+// Save screen sort order for the manual-slot list. Cycles on the Date-column
+// header click: 'date' (newest first, the default so the most recent save is on
+// top for quick re-saving) → 'date_asc' (oldest first) → 'slot' (fixed slot
+// order, no sort) → back to 'date'.
+let saveSortMode = 'date';
 
 // Fade transition state
 let fadeAlpha = 0;
@@ -3652,6 +3723,10 @@ let scryCards = []; // cards revealed for scry_pick
 // scry_pick_discard sets this so unpicked cards return to the discard pile
 // instead of the recharge pile (Kraken's Eye Spyglass).
 let _scryFromDiscard = false;
+// Scout reuses the scry overlay but INVERTS the pick: clicking a card RECHARGES
+// it (no draw), and once a single card is left it's returned to the top of the
+// draw pile. So Scout N = recharge N-1, keep 1 on top. (Torch.)
+let _scoutMode = false;
 
 // Power recharge state
 let powerRechargeMode = false;
@@ -3799,7 +3874,7 @@ const CARD_REGISTRY = {
   snow_paws: createSnowPaws, cats_eye_pendant: createCatsEyePendant,
   beast_collar: createBeastCollar, beastmaster_horn: createBeastmasterHorn,
   hunters_recurve_bow: createHuntersRecurveBow,
-  bone_bow: createBoneBow, bone_javelin: createBoneJavelin,
+  bone_bow: createBoneBow, bone_javelin: createBoneJavelin, bone_cage: createBoneCage,
   wooden_greatsword: createWoodenGreatsword, rock_mace: createRockMace,
   cracked_buckler: createCrackedBuckler, buckler: createBuckler, short_bow: createShortBow,
   // Path of the Necromancer — dining-room cockroach loot.
@@ -4073,6 +4148,7 @@ const LOOT_TABLES = {
     { creator: createSturdyBoots,           weight: 0.5 },
     { creator: createScrollOfPotency,       weight: 0.5 },
     { creator: createWandOfFire,            weight: 0.5 },
+    { creator: createSack,                  weight: 0.5 },
     { creator: createMinorHealingPotion,    weight: 0.25 },
   ],
   // Prison warden gear barrel — matches the Python game's
@@ -4097,6 +4173,7 @@ const LOOT_TABLES = {
     { creator: createKoboldShield,  weight: 1.0 },
     { creator: createChainShirt,    weight: 0.5 },
     { creator: createJaggedChopper, weight: 0.5 },
+    { creator: createSack,          weight: 0.5 },
   ],
   // Giant Boar loot (armorer's-son quest, Pinewood ambush) — boar-themed
   // gear. Drops 2 DISTINCT picks per fight: Rare Boarhide Bracers (first-attack
@@ -4340,6 +4417,16 @@ const LOOT_TABLES = {
     { creator: createBeastmasterHorn,    weight: 0.50 },
     { creator: createHuntersRecurveBow,  weight: 0.25 },
   ],
+  // Gnoll Warrior drop (deep gnoll country). Same shape as the Hunter's table
+  // but the epic slot is the Bone Cage armor instead of the Hunter's Recurve
+  // Bow (same 0.25 epic weight).
+  gnoll_warrior_loot: [
+    { creator: createBoneBow,            weight: 0.75 },
+    { creator: createBoneJavelin,        weight: 0.75 },
+    { creator: createBeastCollar,        weight: 1.00 },
+    { creator: createBeastmasterHorn,    weight: 0.50 },
+    { creator: createBoneCage,           weight: 0.25 },
+  ],
   // Crag Cat drop (East Mountain). 50%-gated; on a drop, pick ONE by weight.
   crag_cat_loot: [
     { creator: createMountainPredatorFang,    weight: 1.00 },
@@ -4455,6 +4542,7 @@ const LOOT_TABLE_LABELS = {
   goblin_swarm_loot:      'Goblin Swarm',
   rampaging_troll_loot:   'Rampaging Troll',
   gnoll_hunter_loot:      'Gnoll Hunter',
+  gnoll_warrior_loot:     'Gnoll Warrior',
   crag_cat_loot:          'Crag Cat',
   khydhani_loot:          'The Assassin',
   drake_rider_loot:       'Kobold Drake Rider',
@@ -4491,6 +4579,7 @@ const LOOT_TABLE_NOTES = {
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
   rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
   gnoll_hunter_loot: 'Dropped after killing a Gnoll Hunter (50% chance). Pick-one, weighted: Beast Collar common; Bone Bow / Bone Javelin uncommon; Beastmaster Horn rare; Hunter\'s Recurve Bow epic.',
+  gnoll_warrior_loot: 'Dropped after killing a Gnoll Warrior (50% chance). Pick-one, weighted: Beast Collar common; Bone Bow / Bone Javelin uncommon; Beastmaster Horn rare; Bone Cage epic.',
   crag_cat_loot: 'Dropped after killing a Crag Cat (50% chance). Pick-one, weighted: Mountain Predator Fang common; Cloak of the Silent Prowler / Snow Paws uncommon; Cat\'s Eye Pendant rare.',
   khydhani_loot: 'Dropped after killing The Assassin (Khydhani) at the Great Forge. Guaranteed (100%) — TWO distinct picks by weight: Drow Sleep Poison most common; Drow Parrying Dagger / Adamantine Rapier / Adamantine Chain Shirt / Darkwood Hand Crossbow rare; Piwafwi epic (rarest).',
   sahuagin_sentinel_loot: 'Dropped after defeating a Sahuagin Sentinel. Pick one — Trident, Scale Armor or Fresh Fish common; Fish Scale Boots / Jar of Piranhas rare; Sahuagin Eye epic.',
@@ -4664,6 +4753,11 @@ async function loadAssets() {
     loadImage('map_east_mountain_crags_chasm_08', `${BASE}assets/Maps/EastMountainCragsChasm_08.jpg`),
     loadImage('map_east_mountain_crags_chasm_09', `${BASE}assets/Maps/EastMountainCragsChasm_09.jpg`),
     loadImage('map_east_mountain_crags_chasm_10', `${BASE}assets/Maps/EastMountainCragsChasm_10.jpg`),
+    // Gnoll caves — one shared background per cave TYPE (the 5 generic instances
+    // all reuse map_gnoll_cave). mapArea drives the lookup, not the instance id.
+    loadImage('map_gnoll_boss_cave', `${BASE}assets/Maps/GnollBossCave01.jpg`),
+    loadImage('map_gnoll_cave', `${BASE}assets/Maps/GnollCave02.jpg`),
+    loadImage('map_gnoll_guards_cave', `${BASE}assets/Maps/GnollCaveGuards03.jpg`),
     loadImage('map_river_cave_mouth', `${BASE}assets/Maps/RiverCaveMouth.jpg`),
     loadImage('map_shipwreck_deck', `${BASE}assets/Maps/ShipwreckDeckMap.jpg`),
     loadImage('map_qualibaf', `${BASE}assets/Maps/QualibafMap.jpg`),
@@ -4789,12 +4883,16 @@ async function loadAssets() {
     loadImage('creature_tamed_rat', `${BASE}assets/Cards/TamedRatAbility.jpg`),
     loadImage('creature_kobold_guard', `${BASE}assets/Cards/KoboldGuard.jpg`),
     loadImage('creature_gnoll_hunter', `${BASE}assets/Cards/GnollHunter.jpg`),
+    loadImage('creature_gnoll_warrior', `${BASE}assets/Cards/GnollWarrior.jpg`),
     loadImage('creature_crag_cat', `${BASE}assets/Cards/CragCat.jpg`),
     loadImage('creature_giant_hyena', `${BASE}assets/Cards/GiantHyena.jpg`),
+    loadImage('creature_pack_hyena', `${BASE}assets/Cards/PackHyena.jpg`),
     // Patient Hunter power icon reuses the Gnoll Hunter portrait (powers render
     // via images['power_<id>']).
     loadImage('power_patient_hunter', `${BASE}assets/Cards/GnollHunter.jpg`),
     loadImage('power_spell_turning', `${BASE}assets/Cards/CragCat.jpg`),
+    // Rampage power icon reuses the Bite art.
+    loadImage('power_rampage', `${BASE}assets/Cards/GnollBite.jpg`),
     loadImage('creature_thorb', `${BASE}assets/Cards/ThorbAlly.jpg`),
     loadImage('creature_slime', `${BASE}assets/Cards/SlimeSummon.jpg`),
     loadImage('creature_restless_bone', `${BASE}assets/Cards/RestlessBoneSummon.jpg`),
@@ -5822,6 +5920,7 @@ function handleKeyDown(key, event) {
       for (const c of player.deck.hand) {
         if (c && c._discardExtraPaid) delete c._discardExtraPaid;
       }
+      clearModalModeSelection();
       selectedCardIndex = -1;
       hideToast();
       state = GameState.COMBAT;
@@ -7362,12 +7461,14 @@ function resetStoryFlags() {
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
   deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
+  _gnollCaveTypes = null; // reroll the cave assignment on a fresh run
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
   lastWatchRested = false;
   lastWatchAudienceComplete = false;
   _lastWatchRestPending = false;
+  _outpostTentFullRestPending = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -7487,12 +7588,14 @@ function startNewGame() {
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
   deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
+  _gnollCaveTypes = null; // reroll the cave assignment on a fresh run
   staircaseTopDragonDialogSeen = false;
   mithrilRemediesVisited = false;
   templeMoradinPrayed = false;
   lastWatchRested = false;
   lastWatchAudienceComplete = false;
   _lastWatchRestPending = false;
+  _outpostTentFullRestPending = false;
   dwarvenTavernFreebieGiven = false;
   dragonEggDamage = 0;
   heroesOfQualibaf = false;
@@ -8481,11 +8584,17 @@ function handleAbilitySelectClick(x, y) {
         // If level 2+, offer perk selection
         if (player.level >= 2) {
           // Roll perks at the level-up's tier, BUT tier-2 PERKS are gated to
-          // Part 2+ for now — a Part 1 / side-quest level-up (e.g. the Roc
-          // line) always rolls tier-1 perks even on a tier-2 level-up. (This is
-          // separate from tier-1/2 ABILITY picks, which keep their own tier.)
-          const _perkTier = part2Started ? (_levelUpTier || 1) : 1;
+          // Part 2+ for now — a Part 1 / side-quest level-up always rolls tier-1
+          // perks even on a tier-2 level-up. A phase can also force the perk
+          // tier explicitly via perkTier (_levelUpPerkTier) — the Roc line does
+          // this to grant a tier-2 ABILITY but only tier-1 perks, since it's a
+          // side quest that happens to live inside Part 2. (This is separate
+          // from tier-1/2 ABILITY picks, which keep their own tier.)
+          const _perkTier = (_levelUpPerkTier != null)
+            ? _levelUpPerkTier
+            : (part2Started ? (_levelUpTier || 1) : 1);
           perkChoices = getPerkChoices(player.perks, 2, selectedClass, _perkTier, playerTierOffset || 0);
+          _perkSelectTier = _perkTier; // enables the gold reroll at this tier's cost
           state = GameState.PERK_SELECT;
         } else {
           // Return to encounter
@@ -9052,6 +9161,13 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     visitedNodes.add(nodeId);
     if (node.hiddenName) node.hiddenName = '';
     if (node.hiddenDescription) node.hiddenDescription = '';
+    // Gnoll-cave interiors carry no encounters, so the usual post-encounter
+    // autosave never fires as the party explores them — persist the reveal
+    // right here (currentNodeId is already set above) so a freshly-uncovered
+    // cave node survives a reload even if the player quits mid-cave before
+    // walking back out. Scoped to cave maps (_caveEntrance) so other
+    // discoverable maps keep their existing encounter/teleport save cadence.
+    if (currentMap._caveEntrance) autosaveNow();
   }
 
   // Part 2 — Gate of the Deep teleports back to whichever tunnel node
@@ -9397,6 +9513,10 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // East Mountain Trail linear chain (High Crags → 01 → 02 → 03 → 04): a
   // segment's last node hops forward, an entry node hops back.
   if (handleEastTrailChainArrival(nodeId, node, skipEncounter)) return;
+  // Gnoll cave mouths — walk/click a chasm cave-mouth to drop into its cave;
+  // self-click the cave's entry node to climb back out (so the entry can still
+  // be walked THROUGH as a Y-junction without ejecting the party).
+  if (!skipEncounter && handleGnollCaveArrival(nodeId, node, fromNodeId)) return;
   // East Mountain random encounter — armed by the Windbreak Ledge gnoll-tracks
   // dialog (so it begins at Cairn Bend). Every walked-onto east-mountain node
   // with no scripted encounter rolls a cumulative 4% chance; on a hit it resets
@@ -9410,7 +9530,10 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     if (DEEP_GNOLL_MAPS.has(currentMap.id)) {
       if (Math.random() < deepGnollEncounterChance) {
         deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
-        currentEncounter = createGnollHunterEncounter();
+        // Deep gnoll country — 50/50 Gnoll Hunter / Gnoll Warrior (no Crag Cats).
+        currentEncounter = Math.random() < 0.5
+          ? createGnollHunterEncounter()
+          : createGnollWarriorEncounter();
         encounterTextIndex = 0;
         encounterChoiceResult = null;
         _encounterHadCombat = false;
@@ -12110,7 +12233,12 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // dispatch above handles fresh ambushes when the rest cycle
   // re-arms babyRocDefeated; the standard pipeline never re-fires
   // the original nest_middle_olbrim once it's been completed.
-  if (canRunEncounter && nodeId === 'nest_interior_middle' && currentMap.id === 'nest_interior' && babyRocDefeated) {
+  // Backstop on completedEncounters (the canonical persisted done-record) so a
+  // save that lost babyRocDefeated / rocRescued — e.g. an older save written
+  // before those fields were persisted — can NEVER re-fire the first-time
+  // nest_middle_olbrim and re-grant its level-up + perk.
+  if (canRunEncounter && nodeId === 'nest_interior_middle' && currentMap.id === 'nest_interior'
+      && (babyRocDefeated || completedEncounters.has('nest_middle_olbrim'))) {
     canRunEncounter = false;
   }
   // Encounter families — multiple entry nodes share the same arrival
@@ -12710,6 +12838,8 @@ function handleMapClick(x, y) {
         (r.nodeId === 'emt_entry' && currentMap.id === 'east_mountain_trail' && node.isDone) ||
         // East Mountain Trail linear chain (segment last/entry nodes).
         isEastTrailChainGate(r.nodeId, node) ||
+        // Gnoll cave mouths ↔ cave entry nodes.
+        isGnollCaveGate(r.nodeId, node) ||
         // Filibaf ↔ Tharnag pair: clicking the current entrance/entry
         // node hops to the other side.
         (r.nodeId === 'filibaf_entrance' && forestCleared && currentMap.id === 'north_qualibaf') ||
@@ -14097,6 +14227,106 @@ function isEastTrailChainGate(nodeId, node) {
   return false;
 }
 
+// === Gnoll cave teleporters ===
+// Roll the 7 chasm cave-mouths into 1 Boss / 1 Guard / 5 generic caves. Fixed
+// once, then persisted (never rerolls). Uses a Fisher-Yates shuffle so which
+// mouth holds the boss is uniform.
+function ensureGnollCaveTypesRolled() {
+  if (_gnollCaveTypes && Object.keys(_gnollCaveTypes).length) return;
+  const ids = GNOLL_CAVE_ENTRANCES.map(e => e.entrance);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  _gnollCaveTypes = {};
+  _gnollCaveTypes[ids[0]] = 'boss';
+  _gnollCaveTypes[ids[1]] = 'guard';
+  for (let i = 2; i < ids.length; i++) _gnollCaveTypes[ids[i]] = 'generic';
+}
+
+// Build the cave map for one entrance from its rolled type. mapId is unique per
+// entrance; the map remembers the entrance + chasm map so its entry node can
+// teleport the party back out.
+function createGnollCaveForEntrance(entranceId, chasmMapId) {
+  ensureGnollCaveTypesRolled();
+  const type = _gnollCaveTypes[entranceId] || 'generic';
+  const mapId = `gnoll_cave_${entranceId}`;
+  const map = type === 'boss' ? createGnollBossCaveMap(mapId)
+    : type === 'guard' ? createGnollGuardsCaveMap(mapId)
+    : createGnollCaveMap(mapId);
+  map._caveEntrance = entranceId;
+  map._caveChasmMap = chasmMapId;
+  return map;
+}
+
+// Walk/click onto a chasm cave-mouth → drop into its cave (land on the entry).
+function enterGnollCave(entranceId) {
+  const chasmMapId = currentMap ? currentMap.id : GNOLL_CAVE_ENTRANCE_MAP.get(entranceId);
+  const mapId = `gnoll_cave_${entranceId}`;
+  if (currentMap) _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap(mapId, () => createGnollCaveForEntrance(entranceId, chasmMapId));
+  const entryId = `${mapId}_entry`;
+  const entry = currentMap.getNode(entryId);
+  if (entry) { entry.isDone = true; entry.hiddenName = ''; entry.hiddenDescription = ''; }
+  visitedNodes = new Set([entryId]);
+  currentMap.currentNodeId = entryId;
+  arriveAtNode(entryId, entranceId, true); // skipEncounter so we don't bounce
+  updateMusicForCurrentScene();
+  autosaveNow();
+}
+
+// Walk/click onto a cave entry node → climb back out to the chasm cave-mouth.
+function exitGnollCave() {
+  if (!currentMap || !currentMap._caveEntrance) return;
+  const entranceId = currentMap._caveEntrance;
+  const chasmMapId = currentMap._caveChasmMap || GNOLL_CAVE_ENTRANCE_MAP.get(entranceId);
+  const factory = EAST_TRAIL_FACTORIES[chasmMapId];
+  if (!factory) return;
+  const fromEntry = `${currentMap.id}_entry`;
+  _mapCache[currentMap.id] = currentMap;
+  currentMap = getOrCreateMap(chasmMapId, factory);
+  const land = currentMap.getNode(entranceId);
+  if (land) { land.isDone = true; land.hiddenName = ''; land.hiddenDescription = ''; }
+  visitedNodes = new Set([entranceId]);
+  currentMap.currentNodeId = entranceId;
+  arriveAtNode(entranceId, fromEntry, true);
+  updateMusicForCurrentScene();
+  autosaveNow();
+}
+
+// Dispatch (called from arriveAtNode). Chasm mouth → into the cave. Cave entry
+// → back out IMMEDIATELY, whether the party walked onto it from a branch node
+// (fromNodeId set) or self-clicked it (fromNodeId == null). The entry is a pure
+// exit: the boss cave's two branches loop via the Pack-Leader's Den ↔ Broken
+// Stair link, so nothing needs to pass THROUGH the entry. (The enter path calls
+// arriveAtNode with skipEncounter=true, so landing on the entry right after
+// entering does NOT bounce — this dispatch only runs on real, non-skip arrivals.)
+function handleGnollCaveArrival(nodeId, node, fromNodeId) {
+  if (!currentMap || !node) return false;
+  if (node.caveEntrance && GNOLL_CAVE_ENTRANCE_MAP.has(nodeId)) {
+    enterGnollCave(nodeId);
+    return true;
+  }
+  if (currentMap._caveEntrance && nodeId === `${currentMap.id}_entry` && node.isDone) {
+    exitGnollCave();
+    return true;
+  }
+  return false;
+}
+
+// Click gate test — fed into the isCrossMapGate ladder in handleMapClick. The
+// chasm mouth is always a gate (enter). The cave entry is a gate ONLY when the
+// party already stands on it (self-click, e.g. the single-room generic cave);
+// clicking the entry from a branch just WALKS there, and the walk-onto arrival
+// (handleGnollCaveArrival) climbs back out.
+function isGnollCaveGate(nodeId, node) {
+  if (!currentMap || !node) return false;
+  if (node.caveEntrance && GNOLL_CAVE_ENTRANCE_MAP.has(nodeId)) return true;
+  if (currentMap._caveEntrance && nodeId === `${currentMap.id}_entry`
+      && node.isDone && currentMap.currentNodeId === nodeId) return true;
+  return false;
+}
+
 
 
 
@@ -15009,14 +15239,15 @@ function startNodeEncounter(nodeId) {
     currentEncounter = factory();
   }
 
-  // Boss music for the General Zhost encounter starts as soon as the
-  // intro dialog opens — overrides the node's forest ambience for the
-  // duration of the fight. Reset _lastMusicNodeId so when the encounter
-  // ends and we return to MAP, updateMusicForCurrentScene reapplies the
-  // forest ambience. Uses the shared "One Last Battle" boss theme so
-  // the intro + combat ride the same track without a mid-swap.
+  // General Zhost — the intro dialog AND Part 1 (the army wave) both use the
+  // normal combat bed; the epic "One Last Battle" theme is reserved for the
+  // Part 2 boss reveal ('general_zhost_boss', still in COMBAT_MUSIC_ONE_LAST_BATTLE).
+  // Crossfade the normal combat track in on the dialog so it carries straight
+  // through into the Part 1 fight (startCombat's getCombatMusicTrack also
+  // returns music_tension_01 for 'general_zhost', so there's no mid-swap).
+  // Reset _lastMusicNodeId so the forest ambience reapplies when it ends.
   if (node.encounterId === 'general_zhost') {
-    crossfadeMusic('Music/music_one_last_battle_01', 1500, 2500);
+    crossfadeMusic('Music/music_tension_01', 1500, 2500);
     _lastMusicArea = null;
     _lastMusicNodeId = null;
   }
@@ -15291,6 +15522,7 @@ function advanceEncounterPhase() {
       // off the Necromancer table. The mini quest always offers
       // exactly Prepared + Skeletal Strength; the player keeps one.
       perkChoices = [createPreparedPerk(), createSkeletalStrengthPerk()];
+      _perkSelectTier = 0; // curated pair — no gold reroll
       _perkSelectReturnToMap = true;
       // Draw the perk pick over the abbey courtyard so the blessing
       // screen reads as "standing at the open threshold" rather than
@@ -16261,7 +16493,7 @@ function advanceEncounterPhase() {
         'drake_rider_loot', 'magma_mephit_loot',
         'kobold_slyblade_loot', 'dwarven_specter_loot',
         'goblin_swarm_loot', 'rampaging_troll_loot',
-        'gnoll_hunter_loot', 'crag_cat_loot',
+        'gnoll_hunter_loot', 'gnoll_warrior_loot', 'crag_cat_loot',
       ]);
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
       // Phase opt-out from the 50% gate (Gate of the Deep front fights —
@@ -16355,6 +16587,7 @@ function advanceEncounterPhase() {
       if (phase.triggersLevelUp) {
         pendingLevelUp = true;
         pendingLevelUpTier = phase.levelUpTier || 1;
+        pendingLevelUpPerkTier = (phase.perkTier != null) ? phase.perkTier : null;
       }
       // Skip the loot-screen render when there's literally nothing to
       // show — no gold, no cards, no title — and we're only here to
@@ -17384,12 +17617,12 @@ function setupEnemyForCombat(enemyId) {
   ENEMY_DECKS.stone_giant = () => {
     enemy = new Character('Stone Giant');
     enemy.deck = new Deck();
-    // 10 Rock Barrage + 10 Large Boulder summons. The giant pelts the
+    // 6 Rock Barrage + 10 Large Boulder summons. The giant pelts the
     // party with 3-shot rock volleys (replacing the old Sharp Rock
     // pick that broke after damage_draw_on_hit got its modifier
     // audit) and summons fresh boulders to replace any the player
     // destroys.
-    for (let i = 0; i < 10; i++) enemy.deck.addCard(createRockBarrage());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createRockBarrage());
     for (let i = 0; i < 10; i++) enemy.deck.addCard(createLargeBoulder());
     enemy._invulnerable = true;
     enemy._survivalRounds = 5;
@@ -17567,13 +17800,15 @@ function setupEnemyForCombat(enemyId) {
     // Play order (priority desc): Fan of Blades FIRST (whole-party Drow
     // Poison spray), then the Poisoned Daggers (cheated into hand below),
     // then the rest of the kit.
-    addK(createFanOfBlades,          30, 8);
-    addK(createAdamantineRapier,     26, 10);
-    addK(createBackstab,             24, 4);
-    addK(createDarkwoodHandCrossbow, 20, 8);
-    addK(createDrowParryingDagger,   16, 8);
+    // Deck = HP (45 cards). Replaced 3 Piwafwi with 3 Backstab off the prior
+    // 45-card build (Piwafwi 7→4, Backstab 4→7); total unchanged.
+    addK(createFanOfBlades,          30, 7);
+    addK(createAdamantineRapier,     26, 9);
+    addK(createBackstab,             24, 7);
+    addK(createDarkwoodHandCrossbow, 20, 7);
+    addK(createDrowParryingDagger,   16, 7);
     addK(createAdamantineChainShirt,  6, 4);
-    addK(createPiwafwi,               6, 8);
+    addK(createPiwafwi,               6, 4);
     enemy.addPower(createRipostePower());
     // Drow Sleep Poison power — Turn Start: his next swing applies +1 Drow
     // Sleep Poison (replaces the old in-deck Drow Sleep Poison vials).
@@ -17790,7 +18025,7 @@ function setupEnemyForCombat(enemyId) {
     enemy._invulnerable = true;
     enemy._clearFieldToWin = true;
     enemy.addPower(createGoblinsInTheWalls());
-    const numGoblins = 5 + Math.floor(Math.random() * 3); // 5..7
+    const numGoblins = 5 + Math.floor(Math.random() * 2); // 5..6
     // Fight-start summons skip the Minion on-summon damage (combat state
     // isn't initialised yet); fireGoblinSwarmEntryDamage runs it right
     // after startCombat instead. Resummons (during combat) deal it inline.
@@ -17824,7 +18059,7 @@ function setupEnemyForCombat(enemyId) {
     enemy.addPower(createGoblinsInTheWalls());
     const makeArmoredTroll = () => {
       const t = new Creature({
-        name: 'Armored Troll', attack: 4, maxHp: 40, armor: 2,
+        name: 'Armored Troll', attack: 4, maxHp: 40, armor: 1,
         bleedAttack: 1, multiAttack: 2, slotW: 2, slotH: 2,
         // Armor + Bleed read off the buff line / Atk icon; keep the text
         // to just Regen + the swing pattern (two swings, 2 targets each).
@@ -17908,21 +18143,21 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.goblin_front = 0;
 
-  // Part 2 — Tharnag tunnels random encounter: Rampaging Troll. 40-card
-  // deck = 28 Rend (claw attack: 4 + Bleed to 2 targets) + 12 Dire Hide
-  // (Block 4 / heal / draw). Regeneration knits it back together — starts
-  // at Regen 8 (the cap) and heals 8/turn via the REGEN status tick;
-  // _regenNoDecay holds the stack from ticking down so it stays pinned at
-  // the cap. Loathsome Limbs tears off a limb per 10 damage taken.
+  // Part 2 — Tharnag tunnels random encounter: Rampaging Troll. 36-card
+  // deck = 29 Rend (claw attack: 4 + Bleed to 2 targets) + 7 Dire Hide
+  // (Block 4 / heal / draw) — Dire Hide is ~20% of the deck. Regeneration
+  // knits it back together — starts at Regen 6 (the cap) and heals 6/turn via
+  // the REGEN status tick; _regenNoDecay holds the stack from ticking down so it
+  // stays pinned at the cap. Loathsome Limbs tears off a limb per 8 damage taken.
   // Counterplay is Fire/Poison/Bleed (cancel Regen 1-for-1) and True
-  // Damage (burns it). NOT invulnerable — kill it by burning all 40 cards.
+  // Damage (burns it). NOT invulnerable — kill it by burning all 36 cards.
   ENEMY_DECKS.rampaging_troll = () => {
     enemy = new Character('Rampaging Troll');
     enemy.deck = new Deck();
-    for (let i = 0; i < 28; i++) enemy.deck.addCard(createRend());
-    for (let i = 0; i < 12; i++) enemy.deck.addCard(createDireHide());
-    // Regen 8 base, +4 per monster offset (Rend scales +2/offset via the card).
-    const trollRegen = 8 + 4 * (monsterTierOffset || 0);
+    for (let i = 0; i < 29; i++) enemy.deck.addCard(createRend());
+    for (let i = 0; i < 7; i++) enemy.deck.addCard(createDireHide());
+    // Regen 6 base, +4 per monster offset (Rend scales +2/offset via the card).
+    const trollRegen = 6 + 4 * (monsterTierOffset || 0);
     enemy.addPower(createRegenerationPower(trollRegen));
     enemy.addPower(createLoathsomeLimbs());
     enemy._regenNoDecay = true;
@@ -17941,19 +18176,21 @@ function setupEnemyForCombat(enemyId) {
     // Bone Javelin jumps to 28 (above Bone Bow) while a player summon stands —
     // it deals 10 vs summons, so the hunter throws it to clear the ally (see
     // effPriority in planHandPlays).
-    for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneBow());
-    for (let i = 0; i < 8; i++) enemy.deck.addCard(createBoneJavelin());
-    for (let i = 0; i < 8; i++) enemy.deck.addCard(createGnollBite());
-    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireHide());
-    for (let i = 0; i < 6; i++) enemy.deck.addCard(createHeroicTumble()); // reactive: banks Heroism for Aimed Shot
+    // Deck = HP (40 cards) — cut ~20% off the prior 50 keeping the ratio, and
+    // dropped 1 Hunter's Mark (3→2).
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createBoneBow());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createBoneJavelin());
+    for (let i = 0; i < 6; i++) enemy.deck.addCard(createGnollBite());
+    for (let i = 0; i < 5; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 4; i++) enemy.deck.addCard(createHeroicTumble()); // reactive: banks Heroism for Aimed Shot
     // Aimed Shot — base priority 20 (below Bone Bow's 25), but planHandPlays
     // bumps it ABOVE Bone Bow when the hunter has Heroism banked (so it fires
     // to cash the doubled Heroism bonus). See effPriority in planHandPlays.
-    for (let i = 0; i < 6; i++) { const a = createAimedShotCard(); a.priority = 20; enemy.deck.addCard(a); }
-    // 3 Hunter's Marks in the master deck (pad HP + recharge back in to
+    for (let i = 0; i < 4; i++) { const a = createAimedShotCard(); a.priority = 20; enemy.deck.addCard(a); }
+    // 2 Hunter's Marks in the master deck (pad HP + recharge back in to
     // re-mark you), at the top play priority.
-    for (let i = 0; i < 3; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.addCard(m); }
-    for (let i = 0; i < 10; i++) { const h = createSummonGiantHyena(); h.priority = 10; enemy.deck.addCard(h); }
+    for (let i = 0; i < 2; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.addCard(m); }
+    for (let i = 0; i < 7; i++) { const h = createSummonGiantHyena(); h.priority = 10; enemy.deck.addCard(h); }
     // Patient Hunter — never swings at the player while a summon stands
     // (see pickEnemyAttackTarget). Ambush: he gets the surprise turn, and the
     // opening hand is ONLY the 1 cheated Mark (no fresh draw) so no random
@@ -17969,13 +18206,35 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.gnoll_hunter = 4;
 
+  ENEMY_DECKS.gnoll_warrior = () => {
+    enemy = new Character('Gnoll Warrior');
+    enemy.deck = new Deck();
+    // Deck = HP (55 cards). A front-line brawler: Bite / Bone Bow / Bone Spear
+    // for pressure, a wall of Bone Cage (reactive Block 5 + Poison-All + Draw)
+    // capped at ~20% of the deck (11/55), and two flavors of hyena summon. Play
+    // priorities match the Gnoll Hunter's weapons (Bone Bow 25 > Bone Spear 15 >
+    // Bite 12 > summons 10); Bone Cage is reactive (DEFENSE), never in the plan.
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createGnollBite());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createBoneBow());
+    for (let i = 0; i < 10; i++) enemy.deck.addCard(createBoneJavelin());
+    for (let i = 0; i < 11; i++) enemy.deck.addCard(createBoneCage());
+    for (let i = 0; i < 7; i++) { const h = createSummonGiantHyena(); h.priority = 10; enemy.deck.addCard(h); }
+    for (let i = 0; i < 7; i++) { const p = createSummonHyenaPack(); p.priority = 10; enemy.deck.addCard(p); }
+    // Rampage — gains 1 Rage + heals 1-3 whenever one of ITS OWN allies (a
+    // hyena) dies. Drives the Character.onCreaturesRemoved hook.
+    enemy.addPower(createRampagePower());
+  };
+  ENEMY_HAND_SIZE.gnoll_warrior = 3;
+
   ENEMY_DECKS.crag_cat = () => {
     enemy = new Character('Crag Cat');
     enemy.deck = new Deck();
-    for (let i = 0; i < 20; i++) enemy.deck.addCard(createPounce());
-    for (let i = 0; i < 5; i++) enemy.deck.addCard(createCatClaws());
-    for (let i = 0; i < 10; i++) enemy.deck.addCard(createDireHide());
-    for (let i = 0; i < 10; i++) enemy.deck.addCard(createCatReflexes());
+    // Deck = HP (35 cards). Cat Reflexes + Dire Hide are each ~20% (7/35); the
+    // rest is Pounce pressure + a few Cat Claws.
+    for (let i = 0; i < 17; i++) enemy.deck.addCard(createPounce());
+    for (let i = 0; i < 4; i++) enemy.deck.addCard(createCatClaws());
+    for (let i = 0; i < 7; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 7; i++) enemy.deck.addCard(createCatReflexes());
     // Spell Turning — 50% to turn aside each ailment applied to the cat
     // (Character.applyStatus enforces it).
     enemy.addPower(createSpellTurningPower());
@@ -18522,7 +18781,7 @@ function drawMapDebugOverlay() {
     lines.push(`[${mapLabel}]`);
     if (DEEP_GNOLL_MAPS.has(currentMap.id)) {
       lines.push(armed
-        ? `deep gnoll encounter chance: ${Math.round(deepGnollEncounterChance * 100)}% (step ${Math.round(DEEP_GNOLL_ENC_STEP * 100)}%, Gnoll Hunter only)`
+        ? `deep gnoll encounter chance: ${Math.round(deepGnollEncounterChance * 100)}% (step ${Math.round(DEEP_GNOLL_ENC_STEP * 100)}%, 50/50 Hunter/Warrior)`
         : `deep gnoll encounter chance: armed at Windbreak Ledge`);
     } else {
       lines.push(armed
@@ -18984,6 +19243,21 @@ function handleEncounterChoiceClick(x, y) {
         currentEncounter = null;
         return;
       }
+      case 'outpost_tent_full_rest': {
+        // Post-Kraken outpost tent — a full rest is a deck rebalance, same as
+        // the inn. exitInventory finishes the rebalance + Well Rested, and its
+        // tail reads _outpostTentFullRestPending to respawn the southern
+        // monsters for another loop.
+        restMode = true;
+        _restBonusCat = null;
+        _levelUpBonusPending = false;
+        _restErrorMsg = '';
+        previousState = state;
+        state = GameState.INVENTORY;
+        encounterChoiceResult = null;
+        currentEncounter = null;
+        return;
+      }
       case 'quarters_rest': {
         // Personal Quarters bed — same flow as the inn rest: drop into
         // inventory rest mode for a free rebalance and full heal. Mirrors
@@ -19023,7 +19297,7 @@ function handleEncounterChoiceClick(x, y) {
               valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen,
               completedEncounters, seenDialogs, journalChoices, labyrinthGenerated, labyrinthSeed,
               labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone,
-              volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested,
+              volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested,
               volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns,
               cathedralPrayed, cathedralRested, ancestorSpiritsDefeated,
               ancestorRested, workbenchRested, workbenchUsed, mapTableCopied,
@@ -19886,7 +20160,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -19908,20 +20182,21 @@ function resolveOutpostTentRest(choice) {
   autosaveNow();
 }
 
-// Post-Kraken full rest at the Outpost tent. Merges hand + discard +
-// recharge back into a single deck, heals all damage, shuffles, and
-// draws a fresh hand — same rebalance the inn / level-up rest does
-// — then fires setWellRested + respawnSouthernMonsters so the
-// southern monsters (Giant Frog ambush rocks, Harpy revisit, Cozy
-// Spot fishing) all respawn for another run.
-function resolveOutpostTentFullRest(_choice) {
-  if (player && player.deck) {
-    player.deck.rebalance(getPlayerHandSize(), MAX_HAND_SIZE);
-  }
-  setWellRested();
-  respawnSouthernMonsters();
-  showStyledToast('Full rest — you wake up ready.', 'heal', 2600);
-  autosaveNow();
+// Post-Kraken full rest at the Outpost tent. A full rest == a deck rebalance:
+// heal the discard here for the result text, latch the pending marker, then the
+// continue handler (case 'outpost_tent_full_rest') drops into INVENTORY rest
+// mode so the player can rebalance their deck — same flow as the inn / Last
+// Watch. exitInventory finalizes (rebalance + Well Rested) and its tail picks
+// up _outpostTentFullRestPending to respawn the southern monsters (Giant Frog
+// ambush rocks, Harpy revisit, Cozy Spot fishing) for another run.
+function resolveOutpostTentFullRest(choice) {
+  if (!player) return;
+  _outpostTentFullRestPending = true;
+  const beforeDiscard = player.deck.discardPile.length;
+  healPlayer(99);
+  const healed = beforeDiscard - player.deck.discardPile.length;
+  const healLine = healed > 0 ? ` (+${healed} healed)` : '';
+  choice.resultText = `You bed down among the crates and sleep deep${healLine}. Adjust your deck before you head out.`;
 }
 
 // Last Watch — pick handler for the Rest choice. The actual
@@ -21481,8 +21756,10 @@ function handleEncounterLootClick() {
   if (pendingLevelUp) {
     const tier = pendingLevelUpTier || 1;
     _levelUpTier = tier; // preserve for the perk-select step (tier-2 pool)
+    _levelUpPerkTier = pendingLevelUpPerkTier; // optional perk-tier override
     pendingLevelUp = false;
     pendingLevelUpTier = 1;
+    pendingLevelUpPerkTier = null;
     levelUpAbilityMode = true;
     playSound('level_up_screen', 0.7);
     // Heroic theme for the level-up flow (matches chapter-end). Reset
@@ -21692,14 +21969,18 @@ function playDrawSounds(count) {
 }
 
 // Bosses that escalate to the "One Last Battle" theme. Keyed by the
-// enemy._enemyId stamped in setupEnemyForCombat. General Zhost has
-// two ids — the army wave (general_zhost) and the boss reveal
-// (general_zhost_boss) — both ride the same track. Roc's invulnerable
-// boss panel uses baby_roc as its id; the actual challenge is the
-// chick swarm but the music plays on the whole encounter.
+// enemy._enemyId stamped in setupEnemyForCombat. General Zhost has two
+// ids — the army wave (general_zhost) and the boss reveal
+// (general_zhost_boss); only the boss reveal escalates, the army wave
+// stays on normal combat music. Roc's invulnerable boss panel uses
+// baby_roc as its id; the actual challenge is the chick swarm but the
+// music plays on the whole encounter.
 const COMBAT_MUSIC_ONE_LAST_BATTLE = new Set([
   'overseer_gnikan_phase_2',
-  'general_zhost', 'general_zhost_boss', 'zhost_revenge',
+  // Part 1 (the army wave, 'general_zhost') uses normal combat music; only the
+  // Part 2 boss reveal ('general_zhost_boss') + the later revenge fight escalate
+  // to the epic "One Last Battle" theme.
+  'general_zhost_boss', 'zhost_revenge',
   'sahuagin_baron',
   'kraken_spawn',
   'ruga_slave_master',
@@ -21862,13 +22143,16 @@ function startCombat() {
     ? enemy.deck.hand.length
     : (enemy._handSize || 2);
   enemy.deck.startCombat(enemyStartHand, 10);
+  enemy.deck.shuffleAfterRecharge = true; // enemies re-randomize on recharge (anti-streak)
   // A fled Crag Cat returns wounded — mill its fresh deck down to its healed HP.
+  // Mark it so it can't flee a SECOND time (this return fight is to the death).
   if (enemy._enemyId === 'crag_cat' && _fledCragCatReturnFrac > 0 && _fledCragCatReturnFrac < 1) {
     const catMax = getMaxHP(enemy);
     const target = Math.max(1, Math.round(_fledCragCatReturnFrac * catMax));
     const mill = catMax - target;
     if (mill > 0) enemy.takeDamageFromDeck(mill);
     _fledCragCatReturnFrac = 0;
+    enemy._cragCatFledBefore = true;
   }
 
   addLog('--- Combat Start ---', Colors.GOLD);
@@ -22103,6 +22387,7 @@ function continueCombatPhase2() {
   // already populated by ENEMY_DECKS.overseer_gnikan_phase_2.
   const enemyStartHand = enemy._handSize || 4;
   enemy.deck.startCombat(enemyStartHand, 10);
+  enemy.deck.shuffleAfterRecharge = true; // enemies re-randomize on recharge (anti-streak)
 
   // Force-inject the scripted opening Cold Breath. The deck itself
   // only carries 2 natural copies (for repeat plays later in the
@@ -22732,13 +23017,14 @@ const KEYWORD_ICONS = {
   // washed Drow Sleep Poison icon (the multi-word status name would
   // otherwise match the green "Poison" keyword). Same status as above.
   drowpoison: { iconKey: 'icon_drow_sleep_poison', label: 'Drow Sleep Poison', desc: 'Deals damage equal to stacks each turn (like Poison) AND reduces the afflicted\'s attack damage by 1 per stack. Stacks never decay; healing removes them DEAD-LAST (after Bleed, Poison, Fire, Ice and Shock).' },
-  regen: { iconKey: 'icon_regen', label: 'Regen', desc: 'Start of your turn: heal equal to stacks, then -1. Cancels 1-for-1 with Fire, Poison and Bleed (and they cancel it). True Damage burns it too.' },
+  regen: { iconKey: 'icon_regen', label: 'Regen', desc: 'Start of turn: heal equal to stacks, then lose half the stacks (rounded down, at least 1). Cancels 1-for-1 with Fire, Poison and Bleed (and they cancel it). True Damage burns it too.' },
   shock: { iconKey: 'icon_shock', label: 'Shock', desc: '-1 dmg dealt and +1 dmg taken per stack' },
-  bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing). Decays by 1 at end of turn. Cleared 1-to-1 by healing.' },
+  bleed: { iconKey: 'icon_bleed', label: 'Bleed', desc: 'Deals damage equal to stacks after every attack the bleeder makes (one tick per attack action — multi-attack creatures still bleed once per swing), then loses 1 stack. Decays by 1 more at end of turn. Cleared 1-to-1 by healing.' },
   ink_cloud: { iconKey: 'icon_ink_cloud', label: 'Ink Cloud', desc: 'Each attack the afflicted character makes has a 50% chance to miss entirely (no damage, no riders). Every attack consumes 1 stack of Ink Cloud whether or not the swing connected.' },
   mark: { iconKey: 'icon_mark', label: 'Mark', desc: 'Each stack is a charge: the next attack on the target consumes 1 stack and deals double damage (before armor / shield). Stacks persist until used up or the target dies.' },
   rage: { iconKey: 'icon_rage', label: 'Rage', desc: 'Permanent bonus damage to all attacks' },
   scry: { isTextKeyword: true, color: '#7ec8ff', label: 'Scry N', desc: 'Look at the top N cards of your draw pile. Pick 1 to draw, recharge the rest. Variant: Scry N from your discard pile — pick 1 to draw, the unpicked cards stay in the discard pile.' },
+  scout: { isTextKeyword: true, color: '#7ec8ff', label: 'Scout N', desc: 'Look at the top N cards of your draw pile, recharge N-1 of your choice, and leave the last 1 on top of the draw pile (no draw). A filter that sets up your next draw without spending it.' },
   // "First Attack" — the opening swing of the turn. Tagged bonuses only
   // fire on that first attack (tracked via attacksThisTurn === 0).
   first: { isTextKeyword: true, color: '#ffd070', label: 'First Attack', desc: 'The first attack the character makes this turn. A "First Attack:" bonus only triggers on that opening swing.' },
@@ -23100,7 +23386,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // 'True' picks up "True Damage" / "True Dmg" — flagged as the
   // True keyword (KEYWORD_ICONS.true) so hover shows the
   // "unpreventable damage, bypasses Shield/Armor/Block" explainer.
-  const keywordList = ['DrowPoison', 'First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
+  const keywordList = ['DrowPoison', 'First Attack', 'Bloodied', 'Scry\\s+\\d+', 'Scout\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte',
     'Ailments?',
@@ -23435,14 +23721,22 @@ function drawIconTooltip() {
     }
     const info = KEYWORD_ICONS[area.keyword];
     if (!info) return;
-    // Draw 2-line tooltip: bold label + description
+    // Bold label + tokenized description. Routing the desc through drawIconText
+    // (not plain fillText) makes status keywords in the blurb — Bleed / Poison /
+    // Fire / Ice / Shock in the Ailment text, etc. — render as their icons, and
+    // long descriptions WRAP to multiple lines instead of running off-screen.
+    const fontSize = 12;
+    const padX = 8, padY = 6;
+    const maxInnerW = 300; // cap so long blurbs wrap rather than stretch the box
     ctx.font = 'bold 13px sans-serif';
     const labelW = ctx.measureText(info.label).width;
-    ctx.font = '12px sans-serif';
-    const descW = ctx.measureText(info.desc).width;
-    const padX = 8, padY = 6;
-    const boxW = Math.max(labelW, descW) + padX * 2;
-    const boxH = 36 + padY * 2;
+    ctx.font = `${fontSize}px sans-serif`;
+    const descFullW = ctx.measureText(info.desc).width;
+    const innerW = Math.min(maxInnerW, Math.max(labelW, descFullW));
+    const descLines = countWrappedLines(info.desc, innerW, fontSize);
+    const lineH = Math.max(fontSize + 4, Math.floor(fontSize * 1.3) + 2);
+    const boxW = innerW + padX * 2;
+    const boxH = padY * 2 + 18 + descLines * lineH;
     let bx = area.x + area.w / 2 - boxW / 2;
     let by = area.y - boxH - 6;
     if (bx + boxW > SCREEN_WIDTH) bx = SCREEN_WIDTH - boxW - 4;
@@ -23460,9 +23754,8 @@ function drawIconTooltip() {
     ctx.textAlign = 'center';
     ctx.fillText(info.label, bx + boxW / 2, by + padY + 12);
 
-    ctx.fillStyle = '#ddd';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(info.desc, bx + boxW / 2, by + padY + 30);
+    // Description below the label — centered, wrapped, with inline keyword icons.
+    drawIconText(info.desc, bx + boxW / 2, by + padY + 18, innerW, fontSize, '#ddd');
 
     ctx.textAlign = 'left';
     return;
@@ -26426,10 +26719,8 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
     const aliveAllies = creature.owner.creatures.filter(a => a.isAlive).length;
     displayAttack += Math.floor(aliveAllies / 5);
   }
-  // Pack Hyena — +1 Atk per OTHER ally on the field (Pack Tactics).
-  if (creature.packTactics && creature.owner && Array.isArray(creature.owner.creatures)) {
-    displayAttack += Math.max(0, creature.owner.creatures.filter(a => a && a.isAlive).length - 1);
-  }
+  // Pack Hyena — +1 Atk per orthogonally adjacent ally (Pack Tactics, max +3).
+  displayAttack += packTacticsBonus(creature);
   ctx.fillStyle = displayAttack > creature.attack ? Colors.GOLD : Colors.WHITE;
   ctx.textAlign = 'left';
   const smallAtkStr = variableStatsSmall ? 'X' : `${displayAttack}`;
@@ -26457,14 +26748,28 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   // Status badges row (above HP/attack): shield, heroism, armor, fire/ice/poison.
   // Aligned with the attack number's left edge (rect.x + 14) instead of the
   // card's bare-left, so buffs sit in the same column as the atk value.
-  const badgeY = hpBarY - 18;
-  let bx = rect.x + 14;
+  let badgeY = hpBarY - 18;
+  const badgeRowStartX = rect.x + 14;
+  let bx = badgeRowStartX;
+  // The buff + debuff icons share one horizontal row. A heavily-debuffed summon
+  // (fire + ice + poison + shock + bleed + mark + …) used to run the row off the
+  // right edge of the card. wrapBadgeRow bumps to a new row STACKED UPWARD (over
+  // the art, clear of the HP bar below) once the next item wouldn't fit.
+  const badgeRightEdge = rect.x + rect.w - 6;
+  const badgeRowH = 17;
+  const wrapBadgeRow = (itemW) => {
+    if (bx > badgeRowStartX && bx + itemW > badgeRightEdge) {
+      bx = badgeRowStartX;
+      badgeY -= badgeRowH;
+    }
+  };
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   // Helper: draw an icon + bold, drop-shadowed count (uses the keyword icon
   // assets for Shield / Heroism / Armor so they read the same as cards).
   const drawCreatureBadgeIcon = (iconKey, stacks, color) => {
     if (stacks <= 0) return;
+    wrapBadgeRow(30); // icon + count
     const img = images[iconKey];
     const ICON = 16;
     if (img) {
@@ -26497,6 +26802,7 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   for (const rb of (Array.isArray(creature.regenBuffs) ? creature.regenBuffs : [])) {
     if (!(rb.turnsRemaining > 0)) continue;
     const RB = 16;
+    wrapBadgeRow(RB + 12);
     const buffArt = getCardArt(rb.imageId || 'regrowth');
     if (buffArt) {
       ctx.drawImage(buffArt, bx, badgeY - 2, RB, RB);
@@ -26520,6 +26826,7 @@ function drawCreatureCard(creature, rect, isPlayer, isPreview = false, isCodex =
   const cIconSize = 14;
   const drawCreatureStatus = (iconKey, stacks, color) => {
     if (stacks <= 0) return;
+    wrapBadgeRow(cIconSize + 10); // icon + count
     const img = images[iconKey];
     if (img) {
       // Ink Cloud — red debuff frame, same as the character-row icon.
@@ -28105,6 +28412,19 @@ function handleCardRechargeClick(x, y) {
         } else if (cardIsMultiTarget(selectedCard)) {
           hideToast();
           enterMultiTargeting(selectedCardIndex);
+        } else if (canSkipOptionalTargeting(selectedCard)) {
+          // Every targeting effect is optional AND there's no valid target
+          // (e.g. Raena's Called arrow with the enemy board cleared /
+          // untargetable) — summon without the attack instead of trapping the
+          // player in an unclickable TARGETING state. Mirrors the no-recharge-
+          // cost path (see canSkipOptionalTargeting call above).
+          _handOrderSnapshot = null;
+          hideToast();
+          selectedCard._skipOptionalEffects = true;
+          playCardSelf(selectedCardIndex);
+          for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
+          pendingRechargeNames = [];
+          cardRechargedCards = [];
         } else {
           state = GameState.TARGETING;
           showStickyToast('Click on an enemy to attack (or click elsewhere to cancel)');
@@ -28460,6 +28780,7 @@ function handleDefendingClick(x, y) {
                  || eff.effectType === 'apply_fire_all'
                  || eff.effectType === 'apply_ice_all'
                  || eff.effectType === 'apply_poison_all'
+                 || eff.effectType === 'apply_poison_all_foes'
                  || eff.effectType === 'damage_random'
                  || eff.effectType === 'destroy_shield_random'
                  || eff.effectType === 'draw_if_no_shield'
@@ -28822,7 +29143,14 @@ function handleTargetingClick(x, y) {
       playCardOnAlly(idx, ally);
       return;
     }
-    // Click missed both player and allies — fall through to cancel below.
+    // Clicking an enemy is rejected outright — heals (Regrowth, Healing Touch,
+    // Bandages, …) only land on YOU or an ally. Keep the card selected so the
+    // player re-picks a friendly instead of the heal silently cancelling.
+    if (getClickedEnemyTarget(x, y)) {
+      showStyledToast('Heals only target you or an ally.', 'multi', 1400);
+      return;
+    }
+    // Click missed player, allies, and enemies — fall through to cancel below.
   }
 
   // Arcane Beam: click hand cards to add bonus damage, click enemy to fire.
@@ -28967,6 +29295,7 @@ function handleTargetingClick(x, y) {
   for (const c of player.deck.hand) {
     if (c && c._discardExtraPaid) delete c._discardExtraPaid;
   }
+  clearModalModeSelection();
   hideToast();
   selectedCardIndex = -1;
   state = GameState.COMBAT;
@@ -29730,6 +30059,10 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
         if (drawn.length > 0 && debugMode) {
           for (const d of drawn) addLog(`  Draws ${d.name}`, Colors.GRAY, d);
         }
+      } else if (eff.effectType === 'apply_poison_all_foes') {
+        // Bone Cage's "Poison to All" — caster-aware, so passing `enemy` as the
+        // caster poisons the player + player summons (not the enemy's own side).
+        resolveEffect(eff, enemy, player);
       } else if (eff.effectType === 'heal'
                  || eff.effectType === 'heal_random'
                  || eff.effectType === 'clear_fire'
@@ -32383,6 +32716,27 @@ function resolveEffect(eff, caster, target) {
       countStatusAttack(caster, (enemy.creatures || []).filter(c => c && c.isAlive));
       break;
     }
+    case 'apply_poison_all_foes': {
+      // Caster-aware "Poison to All" (Bone Cage). Unlike apply_poison_all
+      // (hard-coded to the enemy side for player casts), this stamps N Poison
+      // on every unit OPPOSING the caster — so an enemy holder (Gnoll Warrior)
+      // poisons the player + player summons, and a player holder poisons the
+      // boss + its creatures. Used reactively from both defense loops.
+      const foeBoss = (caster === player) ? enemy : player;
+      const foeCreatures = foeBoss && Array.isArray(foeBoss.creatures) ? foeBoss.creatures : [];
+      if (foeBoss && foeBoss.isAlive && !foeBoss._invulnerable) {
+        foeBoss.applyStatus('POISON', eff.value);
+        addLog(`  +${eff.value} Poison on ${foeBoss.name}`, Colors.GREEN);
+        spawnTokenOnTarget(foeBoss, eff.value, 'Poison', Colors.GREEN);
+      }
+      for (const c of foeCreatures) {
+        if (!c || !c.isAlive || c._invulnerable) continue;
+        c.poisonStacks = (c.poisonStacks || 0) + eff.value;
+        addLog(`  +${eff.value} Poison on ${c.name}`, Colors.GREEN);
+        spawnTokenOnTarget(c, eff.value, 'Poison', Colors.GREEN);
+      }
+      break;
+    }
     case 'apply_all_poison_damage': {
       // Plague (Necromancer Tier 2) — immediately resolve every
       // enemy-side target's standing Poison as damage, on top of the
@@ -33622,27 +33976,41 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'summon_treants': {
-      // Druid Tier 2 — Summon 2-(4+floor(0.5*offset)) Treants (2/1
-      // Haste). +0.5 max per offset (offset 2 → 2-5, offset 4 → 2-6).
-      // Each treant scaled via CREATURE_TIER_OFFSET['Treant'] (+1/+1
-      // per offset). Summons, not companions: card discards normally
-      // and each treant is its own throwaway creature.
+      // Druid Tier 2 — 2-(4+floor(0.5*offset)) actions per play. Each action:
+      // if NO Treant is on the field, summon one; otherwise 50% summon another /
+      // 50% buff a random existing Treant by +1/+1. Treants are 2/1 Haste
+      // summons scaled +1/+1 per offset (CREATURE_TIER_OFFSET['Treant']). If the
+      // field is full when we'd summon, buff instead so the action isn't wasted.
       const off = playerTierOffset || 0;
       const minCount = 2;
-      const maxCount = 4 + Math.floor(0.5 * off);
+      const maxCount = 3 + Math.floor(0.5 * off);
       const range = maxCount - minCount + 1;
       const count = minCount + Math.floor(Math.random() * range);
-      let summoned = 0;
+      const makeTreant = () => {
+        const t = new Creature({ name: 'Treant', attack: 2, maxHp: 1, haste: true, description: 'Haste' });
+        scaleCreatureWithOffset(t, off, 'player');
+        return t;
+      };
+      let summoned = 0, buffed = 0;
       for (let i = 0; i < count; i++) {
-        const treant = new Creature({
-          name: 'Treant', attack: 2, maxHp: 1, haste: true,
-          description: 'Haste',
-        });
-        scaleCreatureWithOffset(treant, off, 'player');
-        if (!player.addCreature(treant)) break;
-        summoned++;
+        const treants = player.creatures.filter(c => c && c.isAlive && c.name === 'Treant');
+        const wantSummon = treants.length === 0 || Math.random() < 0.5;
+        if (wantSummon && player.addCreature(makeTreant())) { summoned++; continue; }
+        // Either we rolled "buff", or the field was full — grow an existing
+        // Treant by +1/+1 (heal the new HP so it stays topped up).
+        if (treants.length > 0) {
+          const t = treants[Math.floor(Math.random() * treants.length)];
+          t.attack += 1;
+          t.maxHp += 1;
+          t.currentHp = (t.currentHp || 0) + 1;
+          spawnHealOnTarget(t, 1);
+          buffed++;
+        }
       }
-      addLog(`  ${summoned} Treant${summoned === 1 ? '' : 's'} join the fight!`, Colors.GREEN);
+      const parts = [];
+      if (summoned > 0) parts.push(`${summoned} Treant${summoned === 1 ? '' : 's'} summoned`);
+      if (buffed > 0) parts.push(`${buffed} grown (+1/+1)`);
+      addLog(`  ${parts.length ? parts.join(', ') + '!' : 'The grove is still.'}`, Colors.GREEN);
       break;
     }
     case 'summon_obsidian_construct': {
@@ -35096,6 +35464,7 @@ function resolveEffect(eff, caster, target) {
       if (revealed.length > 0) {
         scryCards = revealed;
         _scryFromDiscard = false;
+        _scoutMode = false;
         // If the card that triggered this scry already produced visible
         // animations this play (e.g. Torch's "Fire to all" float numbers),
         // pause briefly so the player sees the hit land before the modal
@@ -35125,6 +35494,47 @@ function resolveEffect(eff, caster, target) {
       }
       break;
     }
+    case 'scout': {
+      // Scout N — reveal the top N of the draw pile, recharge N-1 of your
+      // choice, and leave the last 1 on top (no draw). Same overlay as Scry,
+      // but _scoutMode flips the click to recharge-and-remove; when one card
+      // is left it drops back onto the draw pile and the overlay closes.
+      const scoutCount = eff.value || 2;
+      const revealed = [];
+      for (let i = 0; i < scoutCount && player.deck.drawPile.length > 0; i++) {
+        revealed.push(player.deck.drawPile.pop());
+      }
+      if (revealed.length > 0) {
+        scryCards = revealed;
+        _scryFromDiscard = false;
+        _scoutMode = true;
+        const openScout = () => {
+          // Combat may have ended during the delay — return the peeked cards to
+          // the draw pile and bail (mirrors scry_pick).
+          if (state !== GameState.COMBAT && state !== GameState.DEFENDING) {
+            while (scryCards.length) player.deck.drawPile.push(scryCards.pop());
+            _scoutMode = false;
+            return;
+          }
+          // With only 1 revealed (deck nearly empty), nothing to recharge —
+          // just leave it on top and skip the overlay.
+          if (scryCards.length <= 1) {
+            while (scryCards.length) player.deck.drawPile.push(scryCards.pop());
+            _scoutMode = false;
+            return;
+          }
+          state = GameState.SCRY_SELECT;
+          const keep = 1, recharge = scryCards.length - 1;
+          showStyledToast(`Scout ${scryCards.length}: recharge ${recharge}, keep ${keep} on top`, 'scry');
+        };
+        if (damageNumbers.length > 0) {
+          setTimeout(openScout, 450);
+        } else {
+          openScout();
+        }
+      }
+      break;
+    }
     case 'scry_pick_discard': {
       // Kraken's Eye Spyglass — peek the top N of the DISCARD pile, pick 1
       // to draw into hand, leave the rest in the discard pile. Same UI as
@@ -35138,6 +35548,7 @@ function resolveEffect(eff, caster, target) {
       if (revealed.length > 0) {
         scryCards = revealed;
         _scryFromDiscard = true;
+        _scoutMode = false;
         const openScry = () => {
           // Bail if combat ended during the delay (see scry_pick above) —
           // return the peeked cards to the discard pile they came from.
@@ -37156,8 +37567,7 @@ function resolveAllyAttack(ally, target) {
   // getDamageModifier folds in the War Banner aura (+1 per banner) for
   // any player-side attacker, plus the shock penalty.
   const dmgMod = getDamageModifier(ally); // folds in Shock, Drow Sleep, banner, bracer
-  const packBonus = (ally.packTactics && ally.owner && Array.isArray(ally.owner.creatures))
-    ? Math.max(0, ally.owner.creatures.filter(a => a && a.isAlive).length - 1) : 0; // Pack Hyena
+  const packBonus = packTacticsBonus(ally); // Pack Hyena — adjacent allies, max +3
   let dmg = Math.max(0, ally.attack + packBonus + rageBonus + heroismBonus + dmgMod);
   if (heroismBonus > 0) ally.heroism = 0;
   if (rageBonus > 0) addLog(`  Rage! +${rageBonus} damage`, Colors.RED);
@@ -38762,11 +39172,17 @@ function processStatusEffects(character, label) {
       }
       if (healed > 0) spawnHealOnTarget(character, healed);
     }
-    // Most Regen decays 1/turn. A monster flagged _regenNoDecay (the
-    // Rampaging Troll) holds its stack instead — its Regeneration power
-    // tops the stack back toward its cap each turn, so the heal stays
-    // pinned rather than bleeding out.
-    if (!character._regenNoDecay) character.removeStatus('REGEN', 1);
+    // Regen decay — unified for everyone (player AND monsters): lose HALF the
+    // stacks each turn (rounded down, minimum 1), so Regen heals big up front
+    // but winds down fast and can't be parked at a high stack (1→0, 2→1, 3→2,
+    // 4→2, 5→3, …). A character flagged _regenNoDecay (the Rampaging Troll)
+    // holds its stack instead — its Regeneration power tops it back toward the
+    // cap each turn. The creature-level regen system (Loathsome Limbs, the
+    // Armored Troll — _regen/_regenMax below) regains toward a cap and never
+    // decays, so those stay no-decay too.
+    if (!character._regenNoDecay) {
+      character.removeStatus('REGEN', Math.max(1, Math.floor(regen / 2)));
+    }
   }
   // Fire: deal damage equal to stacks (reduced by armor/shield), then reduce by 1.
   // fire_immune characters no-sell the damage but the stack still
@@ -38832,14 +39248,16 @@ function processStatusEffects(character, label) {
     // Regen. The troll cancels at status-apply time; creatures have no
     // status engine, so we reconcile here instead.
     if (c._regenMax) {
-      // 1. DoTs eat Regen and Regen eats DoTs, 1-for-1 (lose regen), in the
-      //    same Bleed → Poison → Drow Sleep → Fire order Regen uses on the
-      //    player. (Usually already reconciled at apply time during the
-      //    player's turn, so this is mostly a no-op by the troll's turn.)
-      reconcileCreatureRegenVsDots(c);
-      // 2. Regain +1 toward the cap at the start of its turn.
+      // 1. Regain +1 toward the cap at the start of its turn.
       if ((c._regen || 0) < c._regenMax) c._regen = (c._regen || 0) + 1;
-      // 3. Heal by the current Regen.
+      // 2. DoTs eat Regen and Regen eats DoTs, 1-for-1, in the same Bleed →
+      //    Poison → Drow Sleep → Fire order Regen uses on the player. Running
+      //    this AFTER the regain means a creature carrying Bleed spends the
+      //    freshly-regained Regen cancelling a Bleed stack instead of healing:
+      //    4 Bleed + regain-1 → 3 Bleed and no heal (NOT "+1 Regen, still 4
+      //    Bleed"). Any Regen that survives the cancel then heals below.
+      reconcileCreatureRegenVsDots(c);
+      // 3. Heal by whatever Regen survived the cancellation.
       const heal = c._regen || 0;
       if (heal > 0 && c.currentHp < c.maxHp) {
         c.currentHp = Math.min(c.maxHp, c.currentHp + heal);
@@ -39005,6 +39423,16 @@ function tickBleedOnAttack(attacker, label) {
   // stacks were sitting on them.
   if (actual > 0) spawnDamageOnTarget(attacker, actual);
   addLog(`  ${label || attacker.name} takes ${actual} Bleed damage!`, Colors.RED);
+  // Each attack the bleeder makes now spends 1 Bleed stack (on top of the
+  // end-of-turn decay in decayBleedAtTurnEnd), so bleed winds down as the
+  // bleeder keeps swinging instead of taxing every swing at full strength.
+  // Same for player-side and enemy-side bleeders (characters via removeStatus,
+  // creatures via bleedStacks).
+  if (typeof attacker.removeStatus === 'function') {
+    attacker.removeStatus('BLEED', 1);
+  } else if (typeof attacker.bleedStacks === 'number') {
+    attacker.bleedStacks = Math.max(0, attacker.bleedStacks - 1);
+  }
   if (!attacker.isAlive && attacker instanceof Creature) {
     spawnDeathAnimation(attacker);
     addLog(`  ${attacker.name} bleeds out!`, Colors.GOLD, null, null, attacker);
@@ -39030,6 +39458,16 @@ function tickBleedOnAttack(attacker, label) {
       if (killTarget > 0) {
         killCount += 1;
         addLog(`  Kill count: ${killCount}/${killTarget}`, Colors.GOLD);
+      }
+      // Kraken Tentacle snag release — this inline removal bypasses the
+      // countAndRemoveDeadCreatures snag-release sweep, so without this a
+      // tentacle that bleeds out after its attack would pocket the stolen
+      // card forever. Return it to hand (over-cap is fine; the snag was forced).
+      if (attacker._snaggedCard && player && player.deck) {
+        const released = attacker._snaggedCard;
+        attacker._snaggedCard = null;
+        player.deck.hand.push(released);
+        addLog(`  ${attacker.name} releases ${released.name} — back in hand.`, Colors.GREEN, released);
       }
       // ONLY remove the attacker, not every dead enemy creature on the
       // field. enemy.removeDeadCreatures() is a broad sweep that would
@@ -39391,8 +39829,7 @@ function processPlayerAllyAttacks() {
     // Apply rage (persistent) and heroism (consumed on attack), matching Python.
     const rageBonus = ally.rage || 0;
     const heroismBonus = ally.heroism || 0;
-    const packBonus = (ally.packTactics && ally.owner && Array.isArray(ally.owner.creatures))
-      ? Math.max(0, ally.owner.creatures.filter(a => a && a.isAlive).length - 1) : 0; // Pack Hyena
+    const packBonus = packTacticsBonus(ally); // Pack Hyena — adjacent allies, max +3
     let dmg = ally.attack + packBonus + rageBonus + heroismBonus;
     if (heroismBonus > 0) ally.heroism = 0;
     if (rageBonus > 0) addLog(`  ${ally.name}: Rage! +${rageBonus} damage`, Colors.RED);
@@ -39998,15 +40435,17 @@ function enemyHasPower(id) {
 // start (ENEMY_DECKS.goblin_swarm) AND on the "They're in the Walls!"
 // resummon. Equal-weight random pick of the three types.
 const GOBLIN_SWARM_NAMES = new Set(['Goblin Sapper', 'Goblin Minion', 'Goblin Warrior', 'Goblin War Banner', 'Goblin Spike Trap']);
-function makeSwarmGoblin(allowBanner = true) {
+function makeSwarmGoblin(allowBanner = true, allowTrap = true) {
   // Weighted pick: Sapper / Minion / Warrior at 1.0 each; Spike Trap at
   // 0.25; War Banner at 0.2 (both kept rare — the banner pumps the whole
   // swarm's damage, the trap ripostes). Total weight 3 + 0.25 + 0.2 = 3.45.
-  // allowBanner=false drops the banner from the pool (total 3.25) — the
-  // Goblin Boss's Whistle uses this since the War Banner has its own loot
-  // card and shouldn't be re-rolled as a random whistle summon.
+  // The Goblin Boss's Whistle passes allowBanner=false AND allowTrap=false so
+  // it only ever rolls the three core goblins (Sapper / Minion / Warrior) —
+  // the War Banner and Spike Trap have their own loot cards and shouldn't drop
+  // out of a random whistle summon.
+  const trapW = allowTrap ? 0.25 : 0;
   const bannerW = allowBanner ? 0.2 : 0;
-  const r = Math.random() * (3 + 0.25 + bannerW);
+  const r = Math.random() * (3 + trapW + bannerW);
   if (r < 1.0) {
     return new Creature({
       name: 'Goblin Sapper', attack: 1, maxHp: 2,
@@ -40029,7 +40468,7 @@ function makeSwarmGoblin(allowBanner = true) {
       description: 'End of Turn: Deal 1 Random Damage.',
     });
   }
-  if (r < 3.25) {
+  if (r < 3 + trapW) {
     const trap = new Creature({
       name: 'Goblin Spike Trap', attack: 2, maxHp: 1,
       description: "Can't Attack. Riposte.",
@@ -40122,12 +40561,12 @@ function dealRandomDamageToPlayerSide(amount, sourceName, color = Colors.ORANGE)
 // hook; Minion's on-summon + Sapper's on-death route through the
 // enemy-side helpers/handlers).
 function makePlayerGoblin() {
-  // Same weighted pool as the enemy swarm (Sapper/Minion/Warrior common,
-  // Spike Trap rare) so the Boss Whistle summons the same goblins — MINUS the
-  // War Banner (allowBanner=false), which has its own loot card and shouldn't
-  // drop out of a random whistle roll. makeSwarmGoblin returns a bare
-  // creature; we apply the player-side scaling + source tags here.
-  const g = makeSwarmGoblin(false);
+  // The Boss Whistle only ever rolls the three CORE goblins (Sapper / Minion /
+  // Warrior) — allowBanner=false AND allowTrap=false drop the War Banner and
+  // Spike Trap from the pool, since both have their own loot cards and
+  // shouldn't fall out of a random whistle summon. makeSwarmGoblin returns a
+  // bare creature; we apply the player-side scaling + source tags here.
+  const g = makeSwarmGoblin(false, false);
   scaleCreatureWithOffset(g, playerTierOffset || 0, 'player');
   g._sourceRarity = 'rare';
   g._sourceSubtype = 'item';
@@ -40309,6 +40748,35 @@ function allyDamageAuraBonus(self) {
   }
   // Auras can be fractional (War Banner +0.5/offset); damage is integer.
   return Math.floor(bonus);
+}
+
+// Pack Hyena "Pack Tactics" — +1 Attack per ORTHOGONALLY adjacent living ally
+// (up / down / left / right on the creature grid; diagonals do NOT count),
+// capped at +3. On the default 6x2 field a cell has at most 3 orthogonal
+// neighbours (2 horizontal + 1 vertical), so the cap only bites on a widened
+// (_gridRows 3) field. Returns 0 for non-pack creatures.
+function packTacticsBonus(creature) {
+  if (!creature || !creature.packTactics || !creature.owner
+      || !Array.isArray(creature.owner.creatures)) return 0;
+  const cols = Character.CREATURE_COLS;
+  const a = creature.slot;
+  if (a == null || a < 0) return 0;
+  const ac = a % cols, ar = Math.floor(a / cols);
+  const neighbours = [[ac - 1, ar], [ac + 1, ar], [ac, ar - 1], [ac, ar + 1]];
+  let count = 0;
+  for (const [nc, nr] of neighbours) {
+    if (nc < 0 || nc >= cols || nr < 0) continue;
+    // Any OTHER living ally whose footprint covers this neighbour cell.
+    const hit = creature.owner.creatures.some(o => {
+      if (!o || o === creature || !o.isAlive) return false;
+      const os = o.slot; if (os == null || os < 0) return false;
+      const oc = os % cols, orow = Math.floor(os / cols);
+      const ow = o.slotW || 1, oh = o.slotH || 1;
+      return nc >= oc && nc < oc + ow && nr >= orow && nr < orow + oh;
+    });
+    if (hit) count++;
+  }
+  return Math.min(3, count);
 }
 
 // Count of "enemies" relative to a caster — the boss character on the
@@ -41353,6 +41821,7 @@ function startEnemyTurn() {
       if (ax !== bx) return bx - ax;
       return effPriority(b) - effPriority(a);
     });
+    const planned = [];
     for (const card of local) {
       if (card.cardType === CardType.DEFENSE) continue;
       const hasBackstabRestriction = (card.effects || []).some(e => e.effectType === 'backstab_restriction');
@@ -41367,16 +41836,22 @@ function startEnemyTurn() {
       availableForCost -= (selfCost + extraCost);
 
       if (card.cardType === CardType.ATTACK) {
-        enemyActions.push({ type: 'play', card, action: 'attack' });
+        planned.push({ type: 'play', card, action: 'attack' });
         any = true;
       } else if (card.cardType === CardType.CREATURE) {
-        enemyActions.push({ type: 'play', card, action: 'summon' });
+        planned.push({ type: 'play', card, action: 'summon' });
         any = true;
       } else if (card.cardType === CardType.ABILITY) {
-        enemyActions.push({ type: 'play', card, action: 'ability' });
+        planned.push({ type: 'play', card, action: 'ability' });
         any = true;
       }
     }
+    // Budget was allocated extraCost-first (above) so recharge-cost cards aren't
+    // starved of fuel — but the PLAY ORDER follows card priority (the designer's
+    // explicit ordering tool). So Gnikan's Ice Block (prio 20) fires before his
+    // Staff (prio 10) even though the recharge-cost staff was budgeted first.
+    planned.sort((a, b) => effPriority(b.card) - effPriority(a.card));
+    for (const act of planned) enemyActions.push(act);
     return any;
   };
 
@@ -42061,6 +42536,25 @@ function updateEnemyTurn(dt) {
     return;
   }
 
+  // One staggered shot of a barrage card (Rock Barrage). Enqueued by the
+  // enemy_damage_succession handler so each shot fires its own arrow on its own
+  // beat (the single global enemyArrow can't show simultaneous shots). Re-rolls
+  // the target per shot so the volley spreads across the player + allies; a
+  // target that died to an earlier shot is naturally skipped by the re-roll.
+  if (action.type === 'succession_shot') {
+    enemyActionTimer = 250 * getEnemySpeedMul();
+    const t = pickEnemyAttackTarget();
+    if (!t) return;
+    _activePlayCard = action.card; // restore per-card swing SFX for this shot
+    let tDmg = consumeIceForAttack(enemy, action.dmg);
+    tDmg += getIncomingDamageModifier(t);
+    tDmg = Math.max(0, tDmg);
+    addLog(`  ${action.card.name} ${action.shotIndex + 1}/${action.shotTotal}:`, Colors.GRAY);
+    routeEnemyDamageToTarget(t, tDmg, action.card.name);
+    _activePlayCard = null;
+    return;
+  }
+
   const card = action.card;
   // Check card is still in hand
   if (!enemy.deck.hand.includes(card)) return;
@@ -42197,7 +42691,14 @@ function updateEnemyTurn(dt) {
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
         consumePoisonBuff(enemy, cardTarget, dmg); // Vial of Poison buff (enemy)
       } else if (eff.effectType === 'damage') {
-        let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        // heroism_double rider (Aimed Shot) — heroism counts (1 + value) times,
+        // same as the player-side 'damage' case. The Gnoll Hunter banks Heroism
+        // via Heroic Tumble, so his Aimed Shot spends it at +2 per stack.
+        const heroismExtra = (_activePlayCard && Array.isArray(_activePlayCard.currentEffects))
+          ? _activePlayCard.currentEffects.filter(e => e.effectType === 'heroism_double').reduce((s, e) => s + (e.value || 0), 0)
+          : 0;
+        const heroismBonus = (enemy.heroism || 0) * (1 + heroismExtra);
+        let dmg = Math.max(0, eff.value + heroismBonus + enemy.rage + getDamageModifier(enemy));
         dmg = consumeIceForAttack(enemy, dmg);
         dmg += getIncomingDamageModifier(player);
         dmg = Math.max(0, dmg);
@@ -42209,6 +42710,24 @@ function updateEnemyTurn(dt) {
         // maybeFireDrawOnKill reads draw_on_kill off _activePlayCard
         // (set to this card above) and only acts on creature kills.
         maybeFireDrawOnKill(enemy, cardTarget);
+      } else if (eff.effectType === 'careful_strike') {
+        // Careful Strike (Kobold Slyblade) — Deal eff.value, gain Shield equal
+        // to the damage dealt. The enemy attack loop hand-rolls each effect, so
+        // the player-side careful_strike handler in resolveEffect never runs
+        // here; without this branch the slyblade's Careful Strike did nothing
+        // (no arrow, no damage, no shield). Route through routeEnemyDamageToTarget
+        // so the swing arrow + hit SFX fire, then shield by what landed.
+        let dmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
+        dmg = consumeIceForAttack(enemy, dmg);
+        dmg += getIncomingDamageModifier(cardTarget);
+        dmg = Math.max(0, dmg);
+        if (enemy.heroism > 0) enemy.heroism = 0;
+        const landed = routeEnemyDamageToTarget(cardTarget, dmg, card.name) || 0;
+        if (landed > 0) {
+          enemy.shield += landed;
+          addLog(`  +${landed} Shield (S:${enemy.shield})`, Colors.ALLY_BLUE);
+          spawnTokenOnTarget(enemy, landed, 'Shield', Colors.ALLY_BLUE);
+        }
       } else if (eff.effectType === 'gore_attack') {
         // Giant Boar Gore — Deal N. First Attack: +N (its opening swing of
         // the turn). The enemy attack path hand-rolls each effect, so the
@@ -42335,28 +42854,33 @@ function updateEnemyTurn(dt) {
         if (enemy.heroism > 0) enemy.heroism = 0;
         routeEnemyDamageToTarget(cardTarget, dmg, card.name);
       } else if (eff.effectType === 'enemy_damage_succession') {
-        // Rock Barrage (Stone Giant) — magic-missile-style barrage:
-        // maxTargets shots at eff.value damage each, each shot rolls
-        // a fresh target via pickEnemyAttackTarget so the barrage may
-        // hit the same enemy multiple times OR spread across allies.
-        // Ice on the caster is consumed PER shot — mirrors Magic
-        // Missile barrage. Each Ice stack chills one shot then the
-        // remaining shots fire at full damage. Heroism is consumed
-        // once on the first shot (matches the standard damage flow).
-        // Shock-on-target adds per shot since each shot is its own hit.
+        // Rock Barrage (Stone Giant) — magic-missile-style barrage: maxTargets
+        // shots at eff.value damage each, each shot re-rolls its own target via
+        // pickEnemyAttackTarget so the barrage may hit the same target twice OR
+        // spread across the player + allies.
+        //
+        // The shots are STAGGERED as their own queued actions rather than a
+        // synchronous loop here: routeEnemyDamageToTarget writes a single global
+        // `enemyArrow`, so a loop overwrote it every iteration and only the last
+        // shot's arrow ever rendered (an ally hit looked "missed"). Each spliced
+        // `succession_shot` action fires on its own beat — updateEnemyTurn gates
+        // the next action on the arrow animation — so every arrow is visible.
+        //
+        // Heroism is consumed once here (matches the standard damage flow);
+        // per-shot Ice/Shock-on-target are applied when each shot resolves.
         const shots = eff.maxTargets || 2;
         let baseDmg = eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy);
         baseDmg = Math.max(0, baseDmg);
         if (enemy.heroism > 0) enemy.heroism = 0;
+        const shotActions = [];
         for (let s = 0; s < shots; s++) {
-          const t = pickEnemyAttackTarget();
-          if (!t) break;
-          let tDmg = consumeIceForAttack(enemy, baseDmg);
-          tDmg += getIncomingDamageModifier(t);
-          tDmg = Math.max(0, tDmg);
-          addLog(`  Rock ${s + 1}:`, Colors.GRAY);
-          routeEnemyDamageToTarget(t, tDmg, card.name);
+          shotActions.push({ type: 'succession_shot', card, dmg: baseDmg, shotIndex: s, shotTotal: shots });
         }
+        // Splice in right after the current action (enemyActionIndex was already
+        // incremented at the top of updateEnemyTurn, so it points at the NEXT
+        // action). Any remaining effects on THIS card (e.g. Rock Barrage's Draw)
+        // still resolve synchronously below; the shots then fire on later beats.
+        enemyActions.splice(enemyActionIndex, 0, ...shotActions);
       } else if (eff.effectType === 'poison_bonus_damage') {
         // Sly Blade (enemy side) — +N damage if the target is
         // Poisoned. Player Poison lives under statusEffects.POISON;
@@ -42808,13 +43332,23 @@ function updateEnemyTurn(dt) {
         for (const ally of (player.creatures || [])) {
           if (ally.isAlive) aliveTargets.push(ally);
         }
+        // Sentinel rule — living sentinels (upgraded Thorb, etc.) must be struck
+        // FIRST, same as single-target pickEnemyAttackTarget. Draw randomly from
+        // the sentinel tier until it's exhausted (or picks are full), THEN spill
+        // onto the player / other allies. Without this, the multi-hit Rend struck
+        // random targets and could skip a guarding sentinel entirely.
+        const isSentinelTarget = (t) => t !== player && !!t.sentinel;
+        const sentinelPool = aliveTargets.filter(isSentinelTarget);
+        const restPool = aliveTargets.filter(t => !isSentinelTarget(t));
         const picks = [];
-        const pool = [...aliveTargets];
         const maxPicks = eff.maxTargets || 2;
-        while (pool.length > 0 && picks.length < maxPicks) {
-          const idx = Math.floor(Math.random() * pool.length);
-          picks.push(pool.splice(idx, 1)[0]);
-        }
+        const drawFrom = (arr) => {
+          while (arr.length > 0 && picks.length < maxPicks) {
+            picks.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
+          }
+        };
+        drawFrom(sentinelPool);
+        drawFrom(restPool);
         if (picks.length === 0) {
           addLog(`  No targets for Claw.`, Colors.GRAY);
         } else {
@@ -43883,14 +44417,15 @@ function updateEnemyTurn(dt) {
         const count = 1 + Math.floor(Math.random() * maxRoll);
         let lastSpider = null;
         for (let i = 0; i < count; i++) {
-          const spider = new Creature({
-            name: 'Pet Spider', attack: 0, maxHp: 1,
-            description: 'Poison Attack.',
-            // Lightweight on-attack poison rider — the existing
-            // routeEnemyDamageToTarget call site honors onAttackApplyPoison
-            // on creature swings.
-            onAttackApplyPoison: 1,
-          });
+          // Identical to the player Pet Spider: 0 Atk, poisonAttack (shows the
+          // poison icon, no description text), scaled by tier offset, and its
+          // swing ALWAYS lands 1 Poison regardless of damage (enemy single-
+          // target path honors poisonAttack mitigation-independently). The old
+          // onAttackApplyPoison rider was never actually read + carried a
+          // "Poison Attack." description, so the slyblade's spider showed game
+          // text and applied no poison at all.
+          const spider = new Creature({ name: 'Pet Spider', attack: 0, maxHp: 1, poisonAttack: true });
+          scaleCreatureWithOffset(spider, monsterTierOffset || 0, 'enemy');
           enemy.addCreature(spider);
           addLog(`  Pet Spider summoned!`, Colors.ORANGE);
           playSound('spider_scuttle', 0.6);
@@ -43925,6 +44460,25 @@ function updateEnemyTurn(dt) {
         playSound('monster_snort_01', 0.6);
         const lastHyenaEntry = combatLog[combatLog.length - 1];
         if (lastHyenaEntry) lastHyenaEntry.creature = hyena;
+      } else if (eff.effectType === 'summon_hyena_pack') {
+        // Gnoll Warrior's pack summon — 2-4 Pack Hyenas (1/4, +1 Atk per
+        // orthogonally adjacent ally, max +3) on the enemy side. The field cap
+        // (addCreature returns false when full) stops the litter early.
+        const packCount = 2 + Math.floor(Math.random() * 3); // 2..4
+        let packSummoned = 0;
+        let lastPack = null;
+        for (let i = 0; i < packCount; i++) {
+          const ph = createPackHyenaCreature();
+          if (!enemy.addCreature(ph)) break;
+          lastPack = ph;
+          packSummoned++;
+        }
+        addLog(`  A pack of ${packSummoned} Hyena${packSummoned !== 1 ? 's' : ''} spills out!`, Colors.ORANGE);
+        if (packSummoned > 0) {
+          playSound('monster_snort_01', 0.6);
+          const lastPackEntry = combatLog[combatLog.length - 1];
+          if (lastPackEntry) lastPackEntry.creature = lastPack;
+        }
       } else if (eff.effectType === 'summon_boulders_random') {
         // Stone Giant Boulder card — randomized payload.
         //   50% → 2-4 Small Boulders (2/2 self-destruct).
@@ -44079,8 +44633,10 @@ function completePlayerTurnTransition() {
   // Crag Cat flee — after its turn (its damage to the player has landed), a
   // wounded cat (below half its HP) has a 50% chance to slip away. It escapes
   // with no loot, forces the next East encounter to be itself, and returns
-  // having healed half its missing HP.
-  if (enemy && enemy._enemyId === 'crag_cat' && enemy.isAlive) {
+  // having healed half its missing HP. A cat that already fled once
+  // (_cragCatFledBefore, set on the return fight) never flees again — the
+  // rematch is to the death.
+  if (enemy && enemy._enemyId === 'crag_cat' && enemy.isAlive && !enemy._cragCatFledBefore) {
     const hp = getHP(enemy), mx = getMaxHP(enemy);
     if (mx > 0 && hp * 2 < mx && Math.random() < 0.5) {
       const frac = hp / mx;
@@ -45423,7 +45979,7 @@ function triggerOnAttackedPowers(character, creatureTarget) {
       const maxHp = (character.deck.masterDeck && character.deck.masterDeck.length) || 50;
       const curHp = character.deck.drawPile.length + character.deck.hand.length
         + character.deck.rechargePile.length + (character.deck.playPile ? character.deck.playPile.length : 0);
-      const targetLimbs = Math.floor(Math.max(0, maxHp - curHp) / 10);
+      const targetLimbs = Math.floor(Math.max(0, maxHp - curHp) / 8);
       let spawned = character._loathsomeLimbsSpawned || 0;
       while (spawned < targetLimbs) {
         spawned++;
@@ -45540,6 +46096,7 @@ function getDeathSfxKey(c) {
   // attack so the family is sonically consistent across the fight.
   if (name === 'misha') return 'bear_growl';
   if (name === 'gnoll hunter') return 'monster_alien_scream_01'; // East Mountain ambush — scream bookends the fight
+  if (name === 'gnoll warrior') return 'monster_alien_scream_01'; // deep gnoll country — scream bookends the fight
   if (name === 'crag cat') return 'lion_roar_01'; // East Mountain — roar bookends the fight
   if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   // Bone-family death rattle (Bone Pile boss, Bone Amalgam boss + the
@@ -45702,6 +46259,7 @@ function getFightStartSfxKey(rawName) {
   const name = (rawName || '').toLowerCase();
   if (name === 'slime') return 'ooze_attack';
   if (name === 'gnoll hunter') return 'monster_alien_scream_01'; // East Mountain ambush
+  if (name === 'gnoll warrior') return 'monster_alien_scream_01'; // deep gnoll country
   if (name === 'crag cat') return 'lion_roar_01'; // East Mountain
   if (name === 'giant rat' || name === 'dire rat') return 'rat_screech';
   if (name === 'bone pile' || name === 'bone amalgam') return 'bones_clatter';
@@ -45793,6 +46351,35 @@ function getFightStartSfxKey(rawName) {
   if (name === 'forest spiders') return 'spider_scuttle';
   return null;
 }
+
+// Rampage (Gnoll Warrior) — the global creature-death hook. Character.
+// removeDeadCreatures() invokes this every time creatures leave the field, on
+// either side. If the boss has the Rampage power, it gains 1 Rage and heals 3-5
+// PER creature that died (its own dying hyenas AND your slain summons feed it).
+// Enemy healing recycles cards discard → recharge, same as the `heal` effect.
+Character.onCreaturesRemoved = (owner, dead) => {
+  if (state !== GameState.COMBAT || _codexSandboxRunning) return;
+  if (!enemy || !enemy.isAlive || !Array.isArray(enemy.powers) || !enemy.deck) return;
+  if (!enemy.powers.some(p => p && p.id === 'rampage')) return;
+  // Rampage feeds on KILLS: it fires when a player-side unit (a summon/ally —
+  // an "enemy unit" from the warrior's view) is cut down. `owner` is the side
+  // whose creature was just swept, so player-side deaths are the trigger. (In
+  // combat a player summon almost always falls to the warrior or its hyenas;
+  // we key off the death rather than tracking the exact killer.)
+  if (owner !== player) return;
+  for (const d of dead) {
+    if (!d) continue;
+    enemy.rage = (enemy.rage || 0) + 1;
+    const healAmt = 1 + Math.floor(Math.random() * 3); // 1..3
+    let healed = 0;
+    for (let i = 0; i < healAmt && enemy.deck.discardPile.length > 0; i++) {
+      enemy.deck.addToRechargePile(enemy.deck.discardPile.pop());
+      healed++;
+    }
+    if (healed > 0) spawnHealOnTarget(enemy, healed);
+    addLog(`  Rampage! ${d.name} falls — +1 Rage${healed > 0 ? `, Heal ${healed}` : ''}`, Colors.RED);
+  }
+};
 
 function countAndRemoveDeadCreatures() {
   const deadBefore = enemy.creatures.filter(c => !c.isAlive).length;
@@ -45897,49 +46484,49 @@ function countAndRemoveDeadCreatures() {
   // phase (so killing a sapper on the player's turn resolves right
   // away). Already-dead-and-exploded creatures get their `onDeathDamage`
   // zeroed below so a subsequent pass doesn't re-fire.
-  for (const c of enemy.creatures) {
-    if (c.isAlive) continue;
-    if (!(c.onDeathDamage > 0)) continue;
+  // Explode one dead sapper toward the side OPPOSING its OWNER — not merely the
+  // array it's iterated from. This is why a player-summoned sapper (Boss
+  // Whistle) can never catch the player's own Shark: ownership, not list
+  // membership, decides the victim side.
+  const explodeCorpse = (c) => {
+    if (!c || c.isAlive || !(c.onDeathDamage > 0)) return;
     const explosion = Math.floor(Math.random() * c.onDeathDamage) + 1;
-    const allies = (player.creatures || []).filter(a => a.isAlive);
-    if (allies.length > 0) {
-      const t = allies[Math.floor(Math.random() * allies.length)];
-      const shieldBefore = t.shield || 0;
-      const actual = t.takeDamage(explosion);
-      if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
-      const absSuffix = creatureAbsorbSuffix(explosion, actual, shieldBefore, t.shield || 0);
-      addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!${absSuffix}`, Colors.ORANGE);
-    } else if (player) {
-      const [absorbed, taken] = player.takeDamageWithDefense(explosion);
-      if (taken > 0) spawnDamageOnTarget(player, taken, Colors.ORANGE);
-      const blockedSuffix = absorbed > 0 ? ` (blocked ${absorbed})` : '';
-      addLog(`  ${c.name} explodes! ${taken} damage to you!${blockedSuffix}`, Colors.ORANGE);
+    c.onDeathDamage = 0; // consume so a later pass can't re-fire
+    const ownerIsPlayer = c.owner ? (c.owner === player) : (player.creatures || []).includes(c);
+    if (ownerIsPlayer) {
+      // Player sapper → a random enemy creature, else the boss. Enemy only.
+      const foes = (enemy && enemy.creatures || []).filter(e => e.isAlive && !e._invulnerable);
+      if (foes.length > 0) {
+        const t = foes[Math.floor(Math.random() * foes.length)];
+        const actual = t.takeDamage(explosion);
+        if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
+        addLog(`  Your ${c.name} explodes! ${actual} damage to ${t.name}!`, Colors.ORANGE);
+      } else if (enemy && enemy.isAlive && !enemy._invulnerable) {
+        const [, taken] = enemy.takeDamageWithDefense(explosion);
+        if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
+        addLog(`  Your ${c.name} explodes! ${taken} damage to ${enemy.name}!`, Colors.ORANGE);
+      }
+    } else {
+      // Enemy sapper → a random player ally, else the player.
+      const allies = (player.creatures || []).filter(a => a.isAlive);
+      if (allies.length > 0) {
+        const t = allies[Math.floor(Math.random() * allies.length)];
+        const shieldBefore = t.shield || 0;
+        const actual = t.takeDamage(explosion);
+        if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
+        const absSuffix = creatureAbsorbSuffix(explosion, actual, shieldBefore, t.shield || 0);
+        addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!${absSuffix}`, Colors.ORANGE);
+      } else if (player) {
+        const [absorbed, taken] = player.takeDamageWithDefense(explosion);
+        if (taken > 0) spawnDamageOnTarget(player, taken, Colors.ORANGE);
+        const blockedSuffix = absorbed > 0 ? ` (blocked ${absorbed})` : '';
+        addLog(`  ${c.name} explodes! ${taken} damage to you!${blockedSuffix}`, Colors.ORANGE);
+      }
     }
-    // Consume the on-death damage so a subsequent pass doesn't re-fire.
-    c.onDeathDamage = 0;
     if (typeof playSound === 'function') playSound('goblin_explosion', 0.7);
-  }
-  // Player-side on-death damage — a player-summoned Goblin Sapper (Goblin
-  // Boss's Whistle) explodes onto a random ENEMY when it dies. Mirror of
-  // the enemy block above.
-  for (const c of (player.creatures || [])) {
-    if (c.isAlive) continue;
-    if (!(c.onDeathDamage > 0)) continue;
-    const explosion = Math.floor(Math.random() * c.onDeathDamage) + 1;
-    const foes = (enemy && enemy.creatures || []).filter(e => e.isAlive && !e._invulnerable);
-    if (foes.length > 0) {
-      const t = foes[Math.floor(Math.random() * foes.length)];
-      const actual = t.takeDamage(explosion);
-      if (actual > 0) spawnDamageOnTarget(t, actual, Colors.ORANGE);
-      addLog(`  ${c.name} explodes! ${actual} damage to ${t.name}!`, Colors.ORANGE);
-    } else if (enemy && enemy.isAlive && !enemy._invulnerable) {
-      const [, taken] = enemy.takeDamageWithDefense(explosion);
-      if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
-      addLog(`  ${c.name} explodes! ${taken} damage to ${enemy.name}!`, Colors.ORANGE);
-    }
-    c.onDeathDamage = 0;
-    if (typeof playSound === 'function') playSound('goblin_explosion', 0.7);
-  }
+  };
+  for (const c of enemy.creatures) explodeCorpse(c);
+  for (const c of (player.creatures || [])) explodeCorpse(c);
   // On-death Poison AoE — The Butcher (either side). When it falls it
   // bursts Poison across the OPPOSING side: a player Butcher poisons
   // the enemy + its creatures; an enemy Butcher poisons the player +
@@ -46218,7 +46805,32 @@ function getPerkRects() {
   }));
 }
 
+// Gold-reroll button, centered just below the perk cards (cards + their
+// stack/"click to select" labels end at y≈556). Sized to the BannerLarge
+// sprite's ~5.8:1 aspect so the graphic isn't distorted.
+function getPerkRerollRect() {
+  const w = 380, h = 64;
+  return { x: Math.round((SCREEN_WIDTH - w) / 2), y: 560, w, h };
+}
+
 function handlePerkSelectClick(x, y) {
+  // Gold reroll — pay to re-draw the perk offer. A fresh, independent roll
+  // (same perks may reappear). Only on the standard level-up screen; curated
+  // sets (Stone Door blessing) leave _perkSelectTier at 0 and skip this.
+  if (_perkSelectTier === 1 || _perkSelectTier === 2) {
+    if (hitTest(x, y, getPerkRerollRect())) {
+      const cost = PERK_REROLL_COSTS[_perkSelectTier];
+      if (gold >= cost) {
+        gold -= cost;
+        perkChoices = getPerkChoices(player.perks, 2, selectedClass, _perkSelectTier, playerTierOffset || 0);
+        playSound('gold', 0.7);
+        addLog(`Rerolled perks for ${cost} gold.`, Colors.GOLD);
+      } else {
+        showStyledToast(`Not enough gold — reroll costs ${cost}g.`, 'damage', 2000);
+      }
+      return;
+    }
+  }
   const rects = getPerkRects();
   for (let i = 0; i < rects.length; i++) {
     if (hitTest(x, y, rects[i])) {
@@ -46349,6 +46961,54 @@ function drawPerkSelect() {
     }
   }
   ctx.textAlign = 'left';
+
+  // Gold reroll button — a separate, independent re-draw of the perk offer.
+  // Shown only on the standard level-up screen (tier 1 = 10g, tier 2 = 50g);
+  // curated perk sets leave _perkSelectTier at 0 and get no button. Rendered on
+  // the BannerLarge sprite (matches the game's other action buttons), dimmed
+  // when unaffordable.
+  if (_perkSelectTier === 1 || _perkSelectTier === 2) {
+    const cost = PERK_REROLL_COSTS[_perkSelectTier];
+    const rr = getPerkRerollRect();
+    const canAfford = gold >= cost;
+    const hov = hitTest(mouseX, mouseY, rr);
+    if (images.banner_large) {
+      ctx.globalAlpha = canAfford ? 1 : 0.4;
+      ctx.drawImage(images.banner_large, rr.x, rr.y, rr.w, rr.h);
+      if (hov && canAfford) {
+        // Brighten on hover, mirroring drawStyledButton.
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.15;
+        ctx.drawImage(images.banner_large, rr.x, rr.y, rr.w, rr.h);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      // Fallback if the sprite hasn't loaded.
+      ctx.fillStyle = !canAfford ? '#2a2a2a' : (hov ? '#5a4a2e' : '#3a2f1e');
+      ctx.fillRect(rr.x, rr.y, rr.w, rr.h);
+      ctx.strokeStyle = canAfford ? Colors.GOLD : '#555';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rr.x, rr.y, rr.w, rr.h);
+    }
+    ctx.fillStyle = !canAfford ? '#999' : (hov ? Colors.GOLD : Colors.WHITE);
+    ctx.font = 'bold 20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(`Reroll Perks — ${cost} g`, rr.x + rr.w / 2, rr.y + rr.h / 2);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = canAfford ? '#cfc090' : '#c86a6a';
+    ctx.fillText(canAfford ? `You have ${gold} gold` : `You have ${gold} gold — not enough`,
+      rr.x + rr.w / 2, rr.y + rr.h + 20);
+    ctx.textAlign = 'left';
+  }
 
   // If the hovered perk has a previewCard (Harvest → Goodberry), pop a
   // small side preview next to it AND stash its rect so
@@ -46590,6 +47250,19 @@ function cancelModalSelect() {
   modalChoiceRects = [];
   modalCancelRect = null;
   state = GameState.COMBAT;
+}
+
+// Clear a modal card's chosen-target-mode state. A modal card (e.g. Wrath) that
+// picks a TARGETED mode (its "Deal 4 Damage" option) hands off to
+// GameState.TARGETING with modalCard + modalCard._chosenMode still set. The
+// targeting-cancel paths (ESC and click-elsewhere) run instead of
+// cancelModalSelect there, so they must call this — otherwise the next weapon
+// attack resolves the modal card's chosen-mode effects instead of its own
+// (playCardOnEnemy / playCardOnCreature prefer modalCard._chosenMode.effects).
+function clearModalModeSelection() {
+  if (modalCard) delete modalCard._chosenMode;
+  modalCard = null;
+  modalTarget = null;
 }
 
 // === REVIVE SELECT ===
@@ -46923,7 +47596,9 @@ function confirmForgeWeapon(card) {
     const metal = _forgeActiveMetal;
     // Reforging costs gold on top of the ore.
     if (gold < FORGE_REFORGE_COST) {
-      showStickyToast(`Not enough gold — reforging costs ${FORGE_REFORGE_COST}g.`);
+      // Expiring toast (not sticky) so it clears on its own instead of hanging
+      // on screen after the player leaves the forge.
+      showStyledToast(`Not enough gold — reforging costs ${FORGE_REFORGE_COST}g.`, 'damage', 2500);
       playSound('click');
       return;
     }
@@ -47606,6 +48281,46 @@ function drawSacrificeOverlay() {
 function handleScrySelectClick(x, y) {
   if (scryCards.length === 0) return;
   const rects = layoutScryCardRects();
+  // Scout — clicking a card RECHARGES it (no draw). Recharge cards one at a
+  // time until a single card remains, then drop that one back on top of the
+  // draw pile and close. Net: Scout N recharges N-1, keeps 1 on top.
+  if (_scoutMode) {
+    for (let i = 0; i < rects.length; i++) {
+      if (!hitTest(x, y, rects[i])) continue;
+      playSound('card_play');
+      const chosen = scryCards.splice(i, 1)[0];
+      player.deck.addToRechargePile(chosen);
+      // Fire on-recharge triggers (Wolf Fang's Heroism, Mithril/Dwarven
+      // on-recharge Shield) — Scout is a real recharge, same as paying a
+      // card as cost, so these must land here too.
+      applyOnRechargeShield(chosen);
+      addLog(`  Scout — recharged: ${chosen.name}`, Colors.GRAY, chosen);
+      if (scryCards.length <= 1) {
+        // Last card stays on top of the draw pile (next to be drawn).
+        while (scryCards.length) {
+          const keep = scryCards.pop();
+          player.deck.drawPile.push(keep);
+          addLog(`  Scout — left on top: ${keep.name}`, Colors.BLUE, keep);
+        }
+        _scoutMode = false;
+        hideToast();
+        if (_deferredFinishAfterScry) {
+          _deferredFinishAfterScry = false;
+          finishIncomingDamage();
+        } else if (pendingIncomingDamage > 0) {
+          state = GameState.DEFENDING;
+          showStyledToast(`Incoming ${pendingIncomingDamage} damage. Play defense cards or pass.`, 'damage');
+        } else {
+          state = GameState.COMBAT;
+        }
+      } else {
+        const recharge = scryCards.length - 1;
+        showStyledToast(`Scout: recharge ${recharge} more, keep 1 on top`, 'scry');
+      }
+      return;
+    }
+    return;
+  }
   for (let i = 0; i < rects.length; i++) {
     if (hitTest(x, y, rects[i])) {
       const picked = scryCards[i];
@@ -47772,6 +48487,8 @@ const SHOP_INVENTORIES = {
     createTravelersClothing,
     createTorch,
     createSturdyBoots,
+    createSmallPouch,
+    createSack,
   ],
   weaponsmith: [
     createSteelDagger,
@@ -48205,7 +48922,10 @@ const CARD_BUY_PRICE_BY_RARITY = {
   legendary: 800,
 };
 
-function getCardBuyPrice(card) {
+// applyArmorerRebate=false yields the pre-rebate BUY price — used by
+// getCardSellPrice so the Armorer's-son discount only lowers what the player
+// PAYS, never what they're paid when selling back.
+function getCardBuyPrice(card, applyArmorerRebate = true) {
   const base = CARD_BUY_PRICE_BY_RARITY[(card.rarity || '').toLowerCase()] || 50;
   let price = base;
   const tier = card.tier || 0;
@@ -48216,8 +48936,9 @@ function getCardBuyPrice(card) {
   if (ct === 'ITEM' && cost === 'BANISH') price = Math.floor(price / 5);
   // Armorer's-son reward — a permanent 25% rebate at Doran's (armorsmith)
   // and Mira's (weaponsmith) shops once the player has earned Armorer's
-  // Training. Only those two storefronts; other shops are unaffected.
-  if (shopMode && (shopMode.id === 'armorsmith' || shopMode.id === 'weaponsmith')
+  // Training. Only those two storefronts; other shops are unaffected. The
+  // rebate is BUY-only — getCardSellPrice passes applyArmorerRebate=false.
+  if (applyArmorerRebate && shopMode && (shopMode.id === 'armorsmith' || shopMode.id === 'weaponsmith')
       && armorerQuestRewardClaimed()) {
     price = Math.floor(price * 0.75);
   }
@@ -48246,7 +48967,8 @@ function getCardSellPrice(card) {
   if (SELLABLE_ORE_IDS.has(card.id) && shopMode && ORE_SELL_SHOPS.has(shopMode.id)) {
     return getOreBaseValue(card);
   }
-  return Math.floor(getCardBuyPrice(card) / 5);
+  // Sell from the pre-rebate buy price: the Armorer's discount is buy-only.
+  return Math.floor(getCardBuyPrice(card, false) / 5);
 }
 
 // Mirrors PY `_shop_can_sell`: rejects unique / class-restricted /
@@ -48737,6 +49459,14 @@ function exitInventory() {
     if (_lastWatchRestPending) {
       _lastWatchRestPending = false;
       lastWatchRested = true;
+      autosaveNow();
+    }
+    // Outpost tent full rest follow-through: respawn the southern monsters
+    // (Giant Frog rocks, Harpy revisit, Cozy Spot fishing) for another loop.
+    // setWellRested already fired above via the shared rebalance path.
+    if (_outpostTentFullRestPending) {
+      _outpostTentFullRestPending = false;
+      respawnSouthernMonsters();
       autosaveNow();
     }
     restMode = false;
@@ -49389,13 +50119,14 @@ function drawInventory() {
       if (r.y + r.h < clipY || r.y > clipY + clipH) continue;
       const hov = allowHover && hitTest(mouseX, mouseY, r);
       drawCard(r.group.card, r.x, r.y, r.w, r.h, false, hov);
-      // Red flashing glow + tint on cards that can't be equipped by
-      // the current class (only in rest mode so the player knows what
-      // to unequip). Faster pulse (140ms period) + red overlay washing
-      // the whole card on top of the bordered glow so a glance across
-      // the equipped column catches it. User-requested: needs to flash
-      // more, not just the border.
-      if (restMode && label === 'deck' && !canClassEquip(r.group.card)) {
+      // Red flashing glow + tint on cards that can't be equipped by the
+      // current class (only in rest mode). In the DECK section it flags
+      // what to unequip; in the BACKPACK section it flags which cards the
+      // class can't move into the deck — same glow in both so the warning
+      // reads consistently across the rebalance screen. Faster pulse (140ms
+      // period) + red overlay washing the whole card on top of the bordered
+      // glow so a glance catches it.
+      if (restMode && (label === 'deck' || label === 'backpack') && !canClassEquip(r.group.card)) {
         const pulse = (Math.sin(performance.now() / 140) + 1) / 2; // 0..1
         const tintAlpha = 0.15 + 0.30 * pulse;
         const glowAlpha = 0.65 + 0.35 * pulse;
@@ -50452,20 +51183,49 @@ function refreshLoadEntries() {
   });
 }
 
+// Sort a manual-slot entry list in place per saveSortMode. 'slot' = fixed slot
+// order; the two date modes float saves-with-data to the top (newest or oldest
+// first) with empty slots trailing in slot order.
+function sortSaveEntries(entries) {
+  if (saveSortMode === 'slot') {
+    entries.sort((a, b) => a.displayNum - b.displayNum);
+    return;
+  }
+  entries.sort((a, b) => {
+    if (a.hasData !== b.hasData) return a.hasData ? -1 : 1;
+    if (a.hasData && b.hasData) {
+      const ta = a.info?.timestamp || 0;
+      const tb = b.info?.timestamp || 0;
+      return saveSortMode === 'date_asc' ? (ta - tb) : (tb - ta); // default: newest first
+    }
+    return a.displayNum - b.displayNum;
+  });
+}
+
 function getSaveSlotRects() {
-  // Used for save mode (manual slots only)
+  // Used for save mode (manual slots only). Rows are ordered by saveSortMode
+  // and positioned by array index (like getLoadSlotRects) so the sort actually
+  // reorders rows on screen. displayNum stays the real slot number for the label.
   const slotW = SL_BOX_W - 60;
   const startX = SL_BOX_X + 30;
-  const startY = SL_BOX_Y + 110 - loadScrollY;
-  const slots = [];
+  const startY = SL_BOX_Y + 140 - loadScrollY;
+  const entries = [];
   for (let i = 1; i <= MANUAL_SLOT_COUNT; i++) {
     const slot = `manual_${i}`;
-    slots.push({
-      x: startX, y: startY + (i - 1) * (SL_SLOT_H + SL_SLOT_GAP), w: slotW, h: SL_SLOT_H,
-      slot, hasData: hasSave(slot), info: getSaveInfo(slot), displayNum: i,
-    });
+    entries.push({ slot, hasData: hasSave(slot), info: getSaveInfo(slot), displayNum: i });
   }
-  return slots;
+  sortSaveEntries(entries);
+  return entries.map((e, i) => ({
+    x: startX, y: startY + i * (SL_SLOT_H + SL_SLOT_GAP), w: slotW, h: SL_SLOT_H, ...e,
+  }));
+}
+
+// Clickable "Date" sort-toggle header, right-aligned over the date column.
+function getSaveSortHeaderRect() {
+  const w = 160, h = 22;
+  const x = SL_BOX_X + SL_BOX_W - 30 - w;
+  const y = SL_BOX_Y + 110;
+  return { x, y, w, h };
 }
 
 function getLoadSlotRects() {
@@ -50480,7 +51240,7 @@ function getLoadSlotRects() {
 function getLoadListBounds(forSave) {
   // Visible area for the slot list (used for clipping and scroll)
   const x = SL_BOX_X + 25;
-  const y = forSave ? SL_BOX_Y + 105 : SL_BOX_Y + 160;
+  const y = forSave ? SL_BOX_Y + 136 : SL_BOX_Y + 160;
   const w = SL_BOX_W - 50;
   const h = SL_SLOT_H * SL_LIST_VISIBLE_ROWS + SL_SLOT_GAP * (SL_LIST_VISIBLE_ROWS - 1) + 10;
   return { x, y, w, h };
@@ -50547,7 +51307,7 @@ function commitSaveEditing() {
     completedEncounters,
     seenDialogs,
     journalChoices,
-    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen,
+    labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen,
     forgeUsed, forgeRested, volcanoHeartSacrificed,
     volcanoBuffType, volcanoBuffTurns,
     cathedralPrayed, cathedralRested,
@@ -50619,6 +51379,14 @@ function cancelSaveEditing() {
 }
 
 function handleSaveClick(x, y) {
+  // Date-column sort toggle: newest → oldest → slot order → newest.
+  if (hitTest(x, y, getSaveSortHeaderRect())) {
+    saveSortMode = saveSortMode === 'date' ? 'date_asc'
+      : saveSortMode === 'date_asc' ? 'slot' : 'date';
+    loadScrollY = 0; // re-sorted list: show the top
+    playSound('book_open', 0.5);
+    return;
+  }
   const rects = getSaveSlotRects();
   // Clip to the visible list area — off-screen slot rects (slot 11+
   // when only 10 fit on screen) used to steal clicks meant for the
@@ -50901,6 +51669,21 @@ function drawSaveLoad(mode) {
       ? 'Edit the name, then press Save (Enter) or ESC to cancel'
       : 'Click a slot to name and save';
     ctx.fillText(prompt, SCREEN_WIDTH / 2, SL_BOX_Y + 92);
+
+    // Sortable "Date" column header — click to cycle newest → oldest → slot order.
+    const sortHdr = getSaveSortHeaderRect();
+    const sortLabel = saveSortMode === 'date' ? 'Date ▼'
+      : saveSortMode === 'date_asc' ? 'Date ▲'
+      : 'Slot order';
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(sortHdr.x, sortHdr.y, sortHdr.w, sortHdr.h);
+    ctx.strokeStyle = 'rgba(212,175,55,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sortHdr.x, sortHdr.y, sortHdr.w, sortHdr.h);
+    ctx.fillStyle = '#d4af37';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(sortLabel, sortHdr.x + sortHdr.w / 2, sortHdr.y + sortHdr.h / 2 + 4);
 
     // Clip the list area
     const listBounds = getLoadListBounds(true);
@@ -51297,6 +52080,7 @@ function restoreFromSave(data) {
   tunnelEncounterChance = typeof data.tunnelEncounterChance === 'number' ? data.tunnelEncounterChance : TUNNEL_ENC_STEP;
   eastEncounterChance = typeof data.eastEncounterChance === 'number' ? data.eastEncounterChance : EAST_ENC_STEP;
   deepGnollEncounterChance = typeof data.deepGnollEncounterChance === 'number' ? data.deepGnollEncounterChance : DEEP_GNOLL_ENC_STEP;
+  _gnollCaveTypes = (data.gnollCaveTypes && typeof data.gnollCaveTypes === 'object') ? data.gnollCaveTypes : null;
   _forceCragCatNext = !!data.forceCragCatNext;
   _fledCragCatReturnFrac = typeof data.fledCragCatReturnFrac === 'number' ? data.fledCragCatReturnFrac : 0;
   _eastEncounterChanceAtTrigger = typeof data.eastEncTrigger === 'number' ? data.eastEncTrigger : EAST_ENC_STEP;
@@ -51318,6 +52102,20 @@ function restoreFromSave(data) {
   shrineReactivated = !!data.shrineReactivated;
   stormwatchersShrineActiveSeen = !!data.stormwatchersShrineActiveSeen;
   babyRocDefeated = !!data.babyRocDefeated;
+  // Belt-and-suspenders latch for the Last Watch / Roc / Shrine arc. Its boolean
+  // flags were added to the save schema after the arc shipped, so an older save
+  // that already finished the quest loads them as false and re-arms the whole
+  // thing — the shrine "resets" and the Roc level-up (+ perk) is granted again.
+  // completedEncounters is the canonical persisted done-record and is never
+  // repeatable for these ids, so derive the permanent latches from it. (Only the
+  // permanent latches — NOT babyRocDefeated, which is a per-rest flag that
+  // legitimately toggles false to allow a fresh nest loot run.)
+  if (completedEncounters.has('nest_middle_olbrim')) rocRescued = true;
+  if (completedEncounters.has('last_watch_post_roc')) lastWatchPostRocClaimed = true;
+  if (completedEncounters.has('stormwatchers_shrine_reactivation')) {
+    shrineReactivated = true;
+    stormwatchersShrineActiveSeen = true;
+  }
   giantBoarDefeated = !!data.giantBoarDefeated;
   mithrilRemediesOlbrimGreeted = !!data.mithrilRemediesOlbrimGreeted;
   _lakeFrogRocks = Array.isArray(data.lakeFrogRocks) ? data.lakeFrogRocks.slice() : null;
@@ -51491,7 +52289,17 @@ function restoreFromSave(data) {
     roc_nest_far: createRocNestFromFarMap,
     nest_interior: createNestInteriorMap,
   };
-  const mapCreator = MAP_CREATORS[data.mapId] || createPrisonCellMap;
+  // Gnoll cave instances have dynamic ids (gnoll_cave_<entranceId>) so they're
+  // not in the static MAP_CREATORS table — resolve them from the saved cave-type
+  // roll instead (the entrance id is encoded in the map id).
+  const resolveMapCreator = (mid) => {
+    if (typeof mid === 'string' && mid.startsWith('gnoll_cave_')) {
+      const eid = mid.slice('gnoll_cave_'.length);
+      return () => createGnollCaveForEntrance(eid, GNOLL_CAVE_ENTRANCE_MAP.get(eid));
+    }
+    return MAP_CREATORS[mid] || null;
+  };
+  const mapCreator = resolveMapCreator(data.mapId) || createPrisonCellMap;
   currentMap = mapCreator();
   currentMap.currentNodeId = data.currentNodeId;
   visitedNodes = new Set(data.visitedNodes);
@@ -51532,7 +52340,7 @@ function restoreFromSave(data) {
   // visited nodes and any unlocks.
   for (const [mid, ms] of Object.entries(data.mapCacheStates || {})) {
     if (mid === data.mapId) continue;
-    const creator = MAP_CREATORS[mid];
+    const creator = resolveMapCreator(mid);
     if (!creator) continue;
     const cached = creator();
     // Obsidian Wastes labyrinth procgen — rebuild the maze before
@@ -51828,11 +52636,11 @@ const HELP_CONTENT = [
   ]},
   { title: 'Status Effects', items: [
     { text: 'Fire: deals damage equal to stacks at start of turn, decays by 1. Applying Fire to a target with Ice cancels the Ice instead (1-for-1).', color: '#dc8c28' },
-    { text: 'Regen: the INVERSE of every damage-over-time. Heal equal to stacks at the start of your turn, then decays by 1. Fire, Poison, and Bleed each cancel Regen 1-for-1 on contact (and Regen cancels them back) — like Fire/Ice — so a Regen-holder is never also Poisoned/Bleeding/Burning. Instant True Damage also burns Regen 1-for-1.', color: '#7cff9c' },
+    { text: 'Regen: the INVERSE of every damage-over-time. Heal equal to stacks at the start of the turn, then it decays by half its stacks (rounded down, at least 1) — same for you and monsters. Fire, Poison, and Bleed each cancel Regen 1-for-1 on contact (and Regen cancels them back) — like Fire/Ice — so a Regen-holder never also carries Fire, Poison, or Bleed. Instant True Damage burns Regen 1-for-1 too.', color: '#7cff9c' },
     { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn. Applying Ice to a target with Fire cancels the Fire instead (1-for-1).', color: '#78c8ff' },
     { text: 'Poison: deals damage equal to stacks each turn. Removed by healing — each point of Heal cancels 1 Poison stack before any actual healing lands (1-for-1).', color: '#3cc83c' },
     { text: 'Shock: -1 damage dealt and +1 damage taken per stack, decays by 1.', color: '#ffe650' },
-    { text: 'Bleed: deals damage equal to stacks AFTER every attack the bleeder makes (so a fatal bleed never robs them of the swing). One tick per attack action — a multi-attack creature bleeds once per swing. Decays by 1 at end of turn. Cleared 1-to-1 by healing, just like Poison.', color: '#ff5050' },
+    { text: 'Bleed: deals damage equal to stacks AFTER every attack the bleeder makes (so a fatal bleed never robs them of the swing), then the bleeder loses 1 stack. One tick per attack action — a multi-attack creature bleeds once per swing. Decays by 1 more at end of turn. Cleared 1-to-1 by healing, just like Poison.', color: '#ff5050' },
   ]},
   { title: 'Allies & Summons', items: [
     { text: 'Summoned creatures and allies are exhausted the turn they come into play and can attack on the next turn.' },
@@ -53186,6 +53994,10 @@ const CARD_SFX_OVERRIDES = {
   // looted weapon sounds like its source weapon.
   rugas_spiked_gauntlets:   { flesh: 'pummel_hit', blocked: 'pummel_hit' },
   bone_club:                { flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
+  // Roc Chick Leg — heavy 2H bludgeon; its id matches no weapon-family branch
+  // in getWeaponSfxKeys, so wire the 2H mace/club cue explicitly (same family
+  // as Greatclub / Bone Club).
+  roc_chick_leg:            { flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
   big_bone:                 { flesh: 'big_bone_hit',   blocked: 'big_bone_hit' },
   partially_digested_bone:  { flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked' },
   magic_missiles:           { flesh: 'missile_flesh', blocked: 'missile_flesh' },
@@ -53573,10 +54385,10 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'misha') {
       return { flesh: 'bear_growl', blocked: 'bear_growl', play: 'bear_growl' };
     }
-    // Giant Hyena (Gnoll Hunter summon) — chews on every bite, same cue as
-    // the hunter's own Bite card.
-    if (name === 'giant hyena') {
-      return { flesh: 'monster_chew_02', blocked: 'monster_chew_02', play: 'monster_chew_02' };
+    // Giant Hyena + Pack Hyena (Gnoll summons) — a distant wolf howl on every
+    // swing so the beasts read as a canine pack.
+    if (name === 'giant hyena' || name === 'pack hyena') {
+      return { flesh: 'wolf_howl_distant_01', blocked: 'wolf_howl_distant_01', play: 'wolf_howl_distant_01' };
     }
     // Roc Chick — every screech is a swing. Same monster_scream_01
     // sample bookends fight start, every attack, and death so the
@@ -54446,9 +55258,13 @@ function gameLoop(timestamp) {
   // Keep creature Regen ↔ DoT reconciled in real time during the player's
   // turn, so a creature (Armored Troll, Loathsome Limbs) never visibly holds
   // both at once — e.g. 8 Poison + 8 Regen cancel the instant the poison
-  // lands, exactly like they do on the player. The troll's own turn-start
-  // regen tick still runs; this just brings the cancel forward to apply time.
-  if (isPlayerTurn && enemy && enemy.isAlive) {
+  // lands, exactly like they do on the player. Include _invulnerable shell
+  // fights (Goblin Front's Armored Trolls, the Goblin Swarm): those bosses
+  // carry no deck, so enemy.isAlive is false even mid-fight — without this the
+  // Armored Trolls' Bleed/Fire/Poison never cancelled their Regen at apply time.
+  // The creatures' own turn-start regen tick still runs; this just brings the
+  // cancel forward to apply time.
+  if (isPlayerTurn && enemy && (enemy.isAlive || enemy._invulnerable)) {
     reconcileAllCreatureRegenVsDots();
   }
 
@@ -54684,7 +55500,7 @@ const ALL_POWER_CREATORS = [
   createLavaFloor, createBlizzard, createAncientWhite,
   createObsidianConstructPower, createObsidianBodyPower, createDarkVisionPower,
   createObsidianOracleBodyPower,
-  createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createBrute, createEthereal,
+  createVanish, createRipostePower, createDrowSleepPoisonPower, createPatientHunterPower, createSpellTurningPower, createRampagePower, createBrute, createEthereal,
   // Path of the Necromancer — Plague Cockroach + Necromancer's Power
   // + Army of the Dead (Worn Floor boss) + Endless Dead (Gravekeeper).
   createPlagueSpawn, createNecromancerPower, createArmyOfTheDead, createEndlessDead,
@@ -54797,8 +55613,6 @@ const LEGACY_CARD_IDS = new Set([
   'piercing_shot',       // Ranger ability — replaced by Elemental Weapon
   'healing_touch',       // Druid ability — replaced by Nature's Healing
   'kobold_lockpick_set', // Pulled from kobold_slyblade_loot (Chapter 7)
-  'sack',                // Retired — was in general_store + drake/slyblade loot
-  'small_pouch',         // Retired — was in general_store + camp/kobold loot + Rogue/Druid starters
   'greater_cleave',      // Retired — no active source
   'multi_shot',          // Retired — no active source
 ]);
@@ -56926,8 +57740,8 @@ function getCodexMonsterIds() {
     // Part 2 Tharnag tunnels random encounters — Goblin Swarm
     // (invulnerable shell + goblin pack) and Rampaging Troll (Regen 10).
     'goblin_swarm', 'rampaging_troll',
-    // Part 2 East Mountain random encounters — Gnoll Hunter and Crag Cat.
-    'gnoll_hunter', 'crag_cat',
+    // Part 2 East Mountain random encounters — Gnoll Hunter, Gnoll Warrior, Crag Cat.
+    'gnoll_hunter', 'gnoll_warrior', 'crag_cat',
     // Part 2 Gate of the Deep — the flank fight (Goblin Front + Armored
     // Trolls) and Khydhani the drow assassin ("The Assassin") at the Forge.
     'goblin_front', 'khydhani',
@@ -57627,7 +58441,7 @@ function buildCodexSourceCache() {
     // Part 2 Tharnag tunnels random encounters + Gate of the Deep fronts.
     'goblin_swarm','goblin_front','rampaging_troll','khydhani',
     // Part 2 East Mountain random encounters.
-    'gnoll_hunter','crag_cat',
+    'gnoll_hunter','gnoll_warrior','crag_cat',
     'kobold_drake_rider','piranhas_swarm','general_zhost','general_zhost_boss',
     'wolf_pack','stone_giant','mimic','ruga_slave_master','zhost_revenge','ancestor_spirits',
     'dwarven_specter','kobold_slyblade','obsidian_oracle','magma_drake',

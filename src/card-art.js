@@ -277,6 +277,7 @@ export const CARD_ART_MAP = {
   // East Mountain random-encounter monsters — keyed by enemy-name slug so the
   // fight-start showcase, combat portrait, and codex all resolve the art.
   gnoll_hunter: 'GnollHunter.jpg',
+  gnoll_warrior: 'GnollWarrior.jpg',
   crag_cat: 'CragCat.jpg',
   giant_hyena: 'GiantHyena.jpg',
   summon_giant_hyena: 'GiantHyena.jpg',
@@ -291,11 +292,15 @@ export const CARD_ART_MAP = {
   beastmaster_horn: 'BeastmasterHorn.jpg',
   hunters_recurve_bow: 'HuntersRecurveBow.jpg',
   pack_hyena: 'PackHyena.jpg',
+  summon_hyena_pack: 'PackHyena.jpg',
   bone_bow: 'BoneBow.jpg',
   bone_javelin: 'BoneJavelin.jpg',
+  bone_cage: 'BoneCage.jpg',
   gnoll_bite: 'GnollBite.jpg',
   // Patient Hunter power reuses the Gnoll Hunter portrait.
   patient_hunter: 'GnollHunter.jpg',
+  // Rampage power reuses the Bite art (the warrior's savagery).
+  rampage: 'GnollBite.jpg',
   // Rend — the troll's claw attack reuses the troll portrait art.
   rend: 'TrollRegen.jpg',
   // Loathsome Limb — torn-off limb creature (Loathsome Limbs power).
