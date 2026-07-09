@@ -117,6 +117,12 @@ export function saveGame(state, saveName = '') {
     // post-kraken level-up was awarded.
     krakenDefeated: !!state.krakenDefeated,
     krakenLevelUpClaimed: !!state.krakenLevelUpClaimed,
+    // Gnoll guards-cave rescue — one-shot latch for Gontran's watchtower
+    // victory + tier-2 level-up. Latches forever (never cleared on rest).
+    gontranGnollVictoryClaimed: !!state.gontranGnollVictoryClaimed,
+    // Guild Hall gnoll reward — one-shot latch for Aldric's Shield of Last
+    // Hope gift. Latches forever.
+    guildGnollRewardClaimed: !!state.guildGnollRewardClaimed,
     // Harpy nest — latches when the wreckage harpies (first fight or
     // revisit) are defeated. Cleared by respawnSouthernMonsters at
     // any explicit rest beat so walking back onto the cog refires
@@ -259,6 +265,15 @@ export function saveGame(state, saveName = '') {
     labyrinthSeed: typeof state.labyrinthSeed === 'number' ? state.labyrinthSeed : 0,
     labyrinthEncounterChance: typeof state.labyrinthEncounterChance === 'number' ? state.labyrinthEncounterChance : 0.2,
     labyrinthComplete: !!state.labyrinthComplete,
+    // Gnoll cave layout — which chasm entrance is the boss / guard / generic
+    // cave. Rolled ONCE per character on first cave discovery and PERSISTED so
+    // the layout is permanent for that character: a save taken inside a cave
+    // must rebuild the SAME map, or its node ids go missing on load (blank/
+    // "purple" screen). Only re-rolls on a brand-new character (main.js resets
+    // it to null in resetStoryFlags / startNewGame), never on rest. Previously
+    // this field was passed from main.js but dropped here, so it re-rolled
+    // randomly on every load.
+    gnollCaveTypes: (state.gnollCaveTypes && typeof state.gnollCaveTypes === 'object') ? state.gnollCaveTypes : null,
     // Well Rested snapshot: the deck size at the time of the last
     // qualifying rest / level-up rebalance. Without this in the save
     // payload the city gates re-locked the player after a reload even

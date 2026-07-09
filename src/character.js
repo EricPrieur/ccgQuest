@@ -1374,6 +1374,7 @@ export function createReadinessPerk() {
     description: 'Combat Start: Draw 1.',
     imageId: 'flash_of_genius_perk', effectType: 'combat_start_draw', effectValue: 1,
     tier: 2,
+    unique: true,
   });
 }
 
@@ -1590,14 +1591,14 @@ export function createCleansingArmorPerk() {
   });
 }
 
-// Swift Assault STACKS (not unique) — like Boarhide Bracers, +1 per copy on
-// the first attack of the turn.
+// Swift Assault (unique) — +1 damage on the first attack of each turn. Unique,
+// so it's offered at most once and can't be stacked.
 export function createSwiftAssaultPerk() {
   return new Perk({
     id: 'swift_assault', name: 'Swift Assault',
     description: 'Combat: First Attack: +1 Damage.',
     imageId: 'swift_assault_perk', effectType: 'first_attack_damage', effectValue: 1,
-    tier: 2, rarity: 'rare',
+    tier: 2, rarity: 'rare', unique: true,
   });
 }
 

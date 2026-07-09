@@ -15,6 +15,8 @@ export const CARD_ART_MAP = {
   drow_parrying_dagger: 'DrowParryingDagger.jpg',
   adamantine_rapier: 'AdamantineRapierTier.jpg',
   adamantine_chain_shirt: 'AdamantineChainShirt.jpg',
+  shield_of_last_hope: 'ShieldOfLastHope.jpg',
+  symbol_of_last_hope: 'SymbolOfLastHope.jpg',
   darkwood_hand_crossbow: 'DarkwoodHandCrossbow.jpg',
   piwafwi: 'Piwafwi.jpg',
   drow_sleep_poison: 'DrowSleepPoison.jpg',
@@ -297,6 +299,25 @@ export const CARD_ART_MAP = {
   bone_javelin: 'BoneJavelin.jpg',
   bone_cage: 'BoneCage.jpg',
   gnoll_bite: 'GnollBite.jpg',
+  // Gnoll Pack Lord boss + his rank-and-file Gnoll creature.
+  gnoll: 'Gnoll.jpg',
+  gnoll_pack_lord: 'GnollPackLord.jpg',
+  // Bone Whip — the Pack Lord's Poison-All rally whip.
+  bone_whip: 'BoneWhip.jpg',
+  // Bone Flail — the Fang of Yeenoghu's random multi-strike weapon.
+  bone_flail: 'BoneFlail.jpg',
+  // Ancient Bones — the Fang's quest-item drop (unplayable / unsellable).
+  ancient_bones: 'AncientBones.jpg',
+  // Fang of Yeenoghu ability trio (player-usable + in the Fang's deck).
+  shadow_clone: 'ShadowClone.jpg',
+  floating_skulls: 'FloatingSkulls.jpg',
+  shadow_drain: 'ShadowDrain.jpg',
+  // Floating Skull summon reuses the Floating Skulls card art.
+  floating_skull: 'FloatingSkulls.jpg',
+  // Gnoll Pack power reuses the plain Gnoll portrait.
+  gnoll_pack: 'Gnoll.jpg',
+  // Gnoll Fang of Yeenoghu's richer Gnoll Pack power — same Gnoll portrait.
+  gnoll_pack_yeenoghu: 'Gnoll.jpg',
   // Patient Hunter power reuses the Gnoll Hunter portrait.
   patient_hunter: 'GnollHunter.jpg',
   // Rampage power reuses the Bite art (the warrior's savagery).

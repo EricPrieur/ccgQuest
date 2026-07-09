@@ -67,6 +67,9 @@ export class EncounterPhaseData {
     // lootCards / lootGold.
     lootPickCount = 0,
     lootPickCards = [],
+    // Optional flavor caption shown under the "Choose N" line on the loot-pick
+    // screen (e.g. the Fang's "You absorb some of the dark power of Yeenoghu!!!").
+    lootCaption = '',
     // Power-showcase loot: when set to a power id (e.g.
     // 'necromancer_power'), the LOOT phase renders that power card
     // centered like a loot reveal AND auto-grants it to the player
@@ -101,6 +104,7 @@ export class EncounterPhaseData {
     this.choicePrompt = choicePrompt;
     this.lootPickCount = lootPickCount;
     this.lootPickCards = lootPickCards;
+    this.lootCaption = lootCaption;
     this.lootPower = lootPower;
     this.phaseTitle = phaseTitle;
     this.guaranteedLoot = guaranteedLoot;
@@ -2504,6 +2508,22 @@ export function createOutpostKrakenReportEncounter() {
 // south outpost gate art for the backdrop (rendered via the
 // ENCOUNTER_BG_MAP override on this encounter id).
 export function createWatchtowerCheckEncounter(variant = 'pre_kraken') {
+  // Post-rescue standing check-in — the captured patrol is home and the pack has
+  // mostly pulled back. Fires from startNodeEncounter once gontranGnollVictoryClaimed
+  // latches, replacing the earlier hopeful / gnoll-watch beats.
+  if (variant === 'post_gnoll_rescue') {
+    return new Encounter('watchtower_check', 'On the Watchtower', 'Gontran carries the north road a little lighter these days.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Gontran is at the north rail again, but he\'s leaning on it now rather than gripping it. He nods as your boots hit the platform.', 'Gontran'),
+          new EncounterText('"Any word from the foothills?" you ask.', '!'),
+          new EncounterText('"Still watching — I\'ll not pretend I\'ve stopped. But it\'s quieter up there than it\'s been in months. Whatever the gnolls are working at in the east mountains, your efforts put the fear back into them. They\'ve pulled back into their holes, mostly, and the trapper boys are walking the high meadow without an escort again."', 'Gontran'),
+          new EncounterText('He glances back toward the guards\' fire, where a familiar young recruit is laughing at something. "You gave me my people back, and you gave this road its nerve back. That\'ll do. That\'ll do fine."', 'Gontran'),
+        ],
+      }),
+    ]);
+  }
   // Post-Kraken variant — boat business is closed, dialog rotates to
   // Gontran's other open problem: the gnoll pack the trappers warned
   // about. Triggered from startNodeEncounter when krakenLevelUpClaimed
@@ -2531,6 +2551,38 @@ export function createWatchtowerCheckEncounter(variant = 'pre_kraken') {
         new EncounterText('"Still working on it," you say.', '!'),
         new EncounterText('He nods, more to himself than to you. "Aye. Right. Of course." He turns back to the road. "Come find me the moment you have something. Or — you know — even if you don\'t. It\'s a lonely view from up here."', 'Gontran'),
       ],
+    }),
+  ]);
+}
+
+// Gontran gnoll-rescue victory — fired at the watchtower once the party has
+// freed the captives in the Prisoner Hole (completedEncounters.has(
+// 'gnoll_prisoner_hole')). Gontran is overjoyed; the empty LOOT phase routes
+// into a tier-2 ability + tier-2 perk level-up (the milestone reward for
+// clearing the pack and bringing his people home).
+export function createGontranGnollVictoryEncounter() {
+  return new Encounter('gontran_gnoll_victory', 'On the Watchtower', 'Gontran turns as your boots hit the platform — and freezes.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You climb the ladder to the watchtower with four battered figures shuffling up behind you, blankets from the storehouse already around their shoulders. Gontran is at the north rail, eyes on the foothill road as ever. He hears the extra footsteps and turns — and goes very still.', 'Gontran'),
+        new EncounterText('"That\'s..." He comes off the rail slowly. His gaze moves across the gaunt faces, one to the next, and stops hard on the man with the sergeant\'s bearing. "Halvor. HALVOR." His voice cracks clean in half. "Gods above. I sent you up that trail weeks ago. You didn\'t come back, and I — I\'d started writing the letters. All four of them."', 'Gontran'),
+        new EncounterText('The sergeant manages something that is almost a salute and mostly just staying on his feet. "Ran into more than we could handle, sir. Pack took us alive — wish they hadn\'t." A rasp of something like a laugh. "But we held. All four still breathing. That\'s more than I\'d have bet on, down in that hole."', '!'),
+        new EncounterText('Gontran turns to you, and for a moment the careworn officer is simply gone, replaced by a man who cannot quite believe what he is looking at. "You went into the pack\'s own DEN. You found my patrol — my PEOPLE — and you brought every one of them out." He scrubs a hand hard across his face, and it comes away wet, and he doesn\'t bother pretending otherwise. "Do you understand what you\'ve given me back? I have spent weeks writing letters I couldn\'t make myself send."', 'Gontran'),
+        new EncounterText('His eyes catch on the youngest — the girl already being steered toward the guards\' fire. "The Marlow girl. Fifteen. Her mother begged me not to take her on, and I told her the south road was quiet these days." A rough breath. "I get to be wrong about that. Gods, I get to walk down there and tell her mother I was WRONG."', 'Gontran'),
+        new EncounterText('He straightens, and there\'s iron back in him now — but a warmer iron than before. "You\'ve done more for this outpost in a day than I\'ve managed in a season. I won\'t forget it, and neither will Qualibaf, once my letter reaches the Guildmaster — and this one I\'ll press the seal on straight." A crooked, wet grin. "First time for everything."', 'Gontran'),
+        new EncounterText('Raena watches the rescued guards settle by the fire, the young recruit already half-asleep against the sergeant\'s shoulder, and something in her stance loosens. "This," she says, half to herself. "This is the part that\'s worth it."', 'Raena'),
+        new EncounterText('Then the practical edge comes back into her voice. "And this time we don\'t sit on it. Two letters from Gontran now — the kraken and this. We take them to the Guildmaster in Qualibaf ourselves, in person. We\'ve more than earned that audience."', 'Raena'),
+        new EncounterText('You feel it too — the hard-won certainty of people who walked into the dark for strangers and walked back out with them. You have grown into something the south road can lean on.', '!'),
+      ],
+    }),
+    // Empty LOOT phase → noLoot + triggersLevelUp routes straight into the
+    // level-up flow: a tier-2 ability pick followed by a tier-2 perk pick.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      triggersLevelUp: true,
+      levelUpTier: 2,
+      perkTier: 2,
     }),
   ]);
 }
@@ -3428,8 +3480,39 @@ export function createGuildHallVictoryEncounter() {
         new EncounterText('"Practical matters, hero. The Greedy Goblin Inn — and every inn on the South Road — has been notified. You and yours rest under their roofs at no charge, for life. You earned a thousand warm beds."', 'Aldric Voss'),
         new EncounterText('"…I might use ALL of them. Just so we\'re clear."', 'Thorb'),
         new EncounterText('"There is more coming, of course. The Deep Roads stir. The Drow we cannot un-see. But not tonight. Tonight — eat, drink, sleep. Qualibaf owes you the rest."', 'Aldric Voss'),
-        new EncounterText('You leave the Guild Hall with the cheer of the city at your back and a long, warm night ahead. Whatever Part 2 brings can wait until morning.', '!'),
+        new EncounterText('You leave the Guild Hall with the cheer of the city at your back and a long, warm night ahead. Whatever your next adventures bring can wait until morning.', '!'),
       ],
+    }),
+  ]);
+}
+
+// Guild Hall — the gnoll-rescue reward. Fires when the party brings Gontran's
+// letters to Aldric Voss after freeing the captured patrol
+// (gontranGnollVictoryClaimed). Aldric receives them formally and gifts the
+// Shield of Last Hope via the LOOT phase. One-shot (guildGnollRewardClaimed
+// latch in main.js's guild_hall dispatch).
+export function createGuildHallGnollRewardEncounter() {
+  return new Encounter('guild_hall_gnoll_reward', 'Guild Hall', 'Aldric Voss reads Gontran\'s letters twice.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The clerks don\'t make you wait this time. The moment Gontran\'s seals come out of your pack — two letters, one pressed crooked and one pressed straight — you\'re walked briskly down the corridor to Aldric Voss\'s chambers.', '!'),
+        new EncounterText('The Guildmaster reads them both. Then he reads the second one again, more slowly, his thumb resting on the line about the patrol.', 'Aldric Voss'),
+        new EncounterText('"A kraken in the south river," he says at last. "And a gnoll pack dug into the foothills deep enough to take a full patrol alive. Gontran does not exaggerate in writing — if anything he undersells." He sets the letters down. "And he tells me you walked into that pack\'s own den and brought his people out. All four of them."', 'Aldric Voss'),
+        new EncounterText('"We did, my Lord," Raena says.', 'Raena'),
+        new EncounterText('Aldric studies the three of you the way a man studies a tool he did not expect to be this good. "The south road has been a thorn in this Guild\'s side for a year. Too far to garrison, too poor to fortify, too important to abandon. I have spent that year being told it cannot be held." A short, dry breath. "And then you hold it. Twice. Without being asked the second time."', 'Aldric Voss'),
+        new EncounterText('He rises, crosses to a locked cabinet behind his desk, and lifts out two things wrapped in oilcloth — both plainly older than anyone in the room. A shield of pale, scarred steel, its face worn smooth by hands long dead. And a small worn medallion on a leather thong.', '!'),
+        new EncounterText('"These came off the last company that held the south road, back in my grandfather\'s day. The Guild has kept them for someone who\'d earn them. Frankly I\'d begun to think we never would." He sets both on the desk between you. "The Shield of Last Hope — steel that keeps its bearer on their feet when they\'ve no business still standing. And the Symbol of Last Hope — the company\'s old chaplain-medallion; they say it never left a wounded soldier\'s side, and mended them slow but sure."', 'Aldric Voss'),
+        new EncounterText('He steps back from the desk. "I can only part with one. The relic knows its bearer — choose the one that suits you, and carry it well."', 'Aldric Voss'),
+        new EncounterText('Thorb looks between the two like a child at a bakery window. "Now THAT," he breathes, "is a proper reward."', 'Thorb'),
+      ],
+    }),
+    // Dragon-style pick: both relics are shown and the party keeps ONE.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Choose Your Reward',
+      lootPickCards: ['shield_of_last_hope', 'symbol_of_last_hope'],
+      lootPickCount: 1,
     }),
   ]);
 }
@@ -5792,6 +5875,120 @@ export function createGnollWarriorEncounter() {
   ]);
 }
 
+export function createGnollPackLordEncounter() {
+  return new Encounter('gnoll_pack_lord', 'Gnoll Pack Lord', 'The pack answers to one.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The cave widens into a reeking den heaped with gnawed bone. A towering gnoll rises from the pile, a whip of knotted vertebrae uncoiling in one fist — and all around, the pack lifts its heads as one. The Pack Lord throws back its throat and howls, and the den answers.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_pack_lord' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot'] }),
+  ]);
+}
+
+// Guards-cave variant of the Pack Lord fight, fired when the party walks onto
+// the Inner Run node. Same combat + loot as the generic den, but the pre-combat
+// text establishes the human prisoners penned in the pit behind the pack — the
+// hook that sends the party on to the Prisoner Hole once the boss falls.
+export function createGnollPackLordDenEncounter() {
+  return new Encounter('gnoll_pack_lord_den', 'Gnoll Pack Lord', 'The pack answers to one.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The run opens without warning into a vast, reeking den — the floor a midden of cracked bone and rotting hide, the air thick enough to chew. At its heart a towering gnoll heaves upright off the pile, a whip of knotted vertebrae uncoiling in one fist, and every shadow along the walls resolves into yellow eyes and bared teeth. The pack lifts its heads as one.'),
+        new EncounterText('Then you see them. Beyond the gnolls, sunk in a pit clawed into the far wall and caged behind a lattice of lashed bone, pale shapes stir. Human faces — hollow, filthy, streaked with old blood — turn toward your torchlight. Rags of what might once have been a uniform hang off their shoulders; one of them, small, is helped upright by another.', '!'),
+        new EncounterText('"Gods," Raena breathes. "There are people back there. Living people."', 'Raena'),
+        new EncounterText('"Then we\'re not leavin\' without \'em." Thorb hefts his weapon and plants his feet. "Through the big one, if we have to."', 'Thorb'),
+        new EncounterText('The Pack Lord throws back its throat and howls, and the whole den answers.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_pack_lord' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot'] }),
+  ]);
+}
+
+// Prisoner Hole — one-shot rescue dialog on the guards-cave dead-end node.
+// Only reachable after the Pack Lord den fight (the Inner Run gates the path),
+// so it assumes the boss is already dead. Freeing four captives; one is a
+// half-starved child. Completing it latches 'gnoll_prisoner_hole' in
+// completedEncounters, which the watchtower dispatch reads to unlock Gontran's
+// victory beat + level-up.
+export function createGnollPrisonerHoleEncounter() {
+  return new Encounter('gnoll_prisoner_hole', 'The Prisoner Hole', 'Behind the bone lattice — survivors.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The den goes quiet but for your own breathing. You pick your way past the fallen pack to the pit at the back and tear down the lattice of lashed bone, snapping the cords the gnolls had knotted through it.'),
+        new EncounterText('Four of them. Gaunt, filthy, blinking at the torchlight like it hurts — but soldiers, unmistakably: the ruin of outpost colors on their backs, a dented iron gorget, a snapped spear one of them still grips like he\'s forgotten it\'s broken. A patrol that went up the trail and never came down. And they\'re on their feet — shaking, leaning on one another, but standing.', '!'),
+        new EncounterText('Valdrisa is already down among them, hands moving from wrist to brow to ribs with the brisk certainty of someone who has counted a great many pulses. "They\'ll keep," she says. "Half-starved, knocked about, a cracked rib or two — nothing food and a warm fire won\'t mend. They\'ve been down here weeks, at a guess."', 'Valdrisa'),
+        new EncounterText('The youngest can\'t be more than fifteen — a girl with a recruit\'s cropped hair and a soldier\'s attempt at a steady jaw that doesn\'t quite hold. Thorb crouches down to her level, which for Thorb is barely a crouch at all, and digs a wrapped bundle of trail rations from his pack.', '!'),
+        new EncounterText('"Here, lass." He presses it into her thin hands and folds her fingers around it. "Slow, now. Small bites. There\'s more where that came from, soldier — I promise you that." She eats like she\'s afraid it\'ll be taken back, and manages a thank-you between mouthfuls.', 'Thorb'),
+        new EncounterText('Raena crouches by the eldest — a hard-bitten man with a sergeant\'s bearing under three weeks of filth, still holding the broken spear. "Can you walk? All of you?"', 'Raena'),
+        new EncounterText('The sergeant looks at the pit, at the dead gnolls, at you. Something in his face cracks and steadies. "For a way out of here? We\'ll crawl if we have to. Half my patrol had stopped believing anyone was coming."', '!'),
+        new EncounterText('"You won\'t have to crawl," Raena says, and gets an arm under him. "There\'s an outpost on the south road — a man named Gontran holds it. Hot food, blankets, a roof. And I\'d wager he\'s been sick over the lot of you. Let\'s get you home."', 'Raena'),
+        new EncounterText('You lead them up out of the gnoll-dark, the young recruit\'s hand fisted in the hem of Thorb\'s cloak the whole long way. It\'s time to bring Gontran\'s people home.', '!'),
+      ],
+    }),
+  ]);
+}
+
+// Gnoll Fang of Yeenoghu — the scripted one-shot boss at the boss cave's
+// Dead-End Hollow node (`..._a5`). Fires 100% on arrival, never repeats (gated
+// on completedEncounters in main.js's arriveAtNode). WIP boss (deck = 5 Bite
+// only for now); its Gnoll Pack power carries the fight with turn-start summons.
+export function createGnollFangOfYeenoghuEncounter() {
+  return new Encounter('gnoll_fang_of_yeenoghu', 'Gnoll Fang of Yeenoghu', 'Something worse than a pack-leader waits here.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The hollow chokes to a dead end heaped with gnawed bone and black ichor — and it is not empty. A gnoll far larger than any you have faced unfolds from the dark, its hide seamed with rents that never healed, a single fang the length of your forearm bound at its throat. Where it steps, the lesser gnolls cringe and part.'),
+        new EncounterText('This is no mere pack-leader. This is a Fang of Yeenoghu — a chosen butcher of the Gnoll Lord — and at its rising the whole den throws back its throat and howls as one.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_fang_of_yeenoghu' }),
+    // Guaranteed loot: the Bone Flail + a guaranteed Ancient Bones, both 100%
+    // (guaranteedLoot bypasses the 50% drop gate).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Gnoll Fang of Yeenoghu',
+      lootGoldDice: [4, 8],
+      lootCards: ['bone_flail', 'ancient_bones'],
+      guaranteedLoot: true,
+    }),
+    // Dark gift — after the loot, the player claims ONE of the Fang's three
+    // Yeenoghu abilities (Shadow Clone / Floating Skulls / Shadow Drain).
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: "The Fang's Legacy",
+      lootPickCards: ['shadow_clone', 'floating_skulls', 'shadow_drain'],
+      lootPickCount: 1,
+      lootCaption: 'You absorb some of the dark power of Yeenoghu!!!',
+    }),
+  ]);
+}
+
+// Corrupted Shrine — the defiled altar at the boss cave's dead end (`..._a6`),
+// reached past the Gnoll Fang of Yeenoghu. A crafting station (like the Tharnag
+// forge) that spends Ancient Bones + gold to enchant an ability with a Played:
+// Deal 1 Poison Randomly rider. The "Offer" choice (effectType 'corrupted_shrine')
+// opens the shrine picker; repeatable (does not complete on offer). Eerie choir
+// music is crossfaded in from startNodeEncounter.
+export function createCorruptedShrineEncounter() {
+  return new Encounter('corrupted_shrine', 'The Corrupted Shrine', 'Bone and black ichor, heaped where the gnolls worship something worse.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The hollow ends at a defiled altar — a cairn of gnawed bone and old kills, slick with black ichor, raised to whatever the pack worshipped beneath their Fang. The air here is wrong: cold, still, and heavy with a patient hunger that pricks at the back of your neck.'),
+        new EncounterText('"I do not like this place," Raena says quietly, one hand at her bow. "But that is old power — the real kind. If you have Ancient Bones to spend, the shrine will take them, and give something back. It always does."', 'Raena'),
+        new EncounterText('"Feed it a set of Ancient Bones and it\'ll bleed its rot into one of your abilities," Thorb mutters, keeping his distance. "Costs coin too — this sort never comes free. Just don\'t look too long into the dark of it."', 'Thorb'),
+        new EncounterText('You step up to the altar. The shrine waits.', '!'),
+      ],
+    }),
+  ]);
+}
+
 export function createCragCatEncounter() {
   return new Encounter('crag_cat', 'Crag Cat', 'Something stalks the rocks.', [
     new EncounterPhaseData({
@@ -7280,6 +7477,7 @@ export const ENCOUNTER_REGISTRY = {
   antiquity_shop_cleared: createAntiquityShopClearedEncounter,
   guild_hall: createGuildHallEncounter,
   guild_hall_victory: createGuildHallVictoryEncounter,
+  guild_hall_gnoll_reward: createGuildHallGnollRewardEncounter,
   city_north_gate: createCityNorthGateEncounter,
   // North Qualibaf
   north_crossroad: createNorthCrossroadEncounter,
@@ -7378,6 +7576,12 @@ export const ENCOUNTER_REGISTRY = {
   east_trail_deep_gnoll: createEastTrailDeepGnollEncounter,
   gnoll_hunter: createGnollHunterEncounter,
   gnoll_warrior: createGnollWarriorEncounter,
+  gnoll_pack_lord: createGnollPackLordEncounter,
+  gnoll_fang_of_yeenoghu: createGnollFangOfYeenoghuEncounter,
+  corrupted_shrine: createCorruptedShrineEncounter,
+  gnoll_pack_lord_den: createGnollPackLordDenEncounter,
+  gnoll_prisoner_hole: createGnollPrisonerHoleEncounter,
+  gontran_gnoll_victory: createGontranGnollVictoryEncounter,
   crag_cat: createCragCatEncounter,
   dwarven_specter: createDwarvenSpecterEncounter,
   // Tharnag Interior

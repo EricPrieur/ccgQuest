@@ -40,6 +40,9 @@ export class Creature {
     endTurnDamage = 0,
     onDeathDamage = 0,
     onDeathPoisonAll = 0,
+    // Floating Skull — on death, fling N Poison at ONE random target on the
+    // opposing side (vs onDeathPoisonAll which poisons the whole enemy line).
+    onDeathPoisonRandom = 0,
     onDeathFireHits = 0,
     onDeathDiscardOrDamage = 0,
     onAttackSnagCard = false,
@@ -144,6 +147,7 @@ export class Creature {
     this.endTurnDamage = endTurnDamage;
     this.onDeathDamage = onDeathDamage;
     this.onDeathPoisonAll = onDeathPoisonAll;
+    this.onDeathPoisonRandom = onDeathPoisonRandom;
     this.onDeathFireHits = onDeathFireHits;
     this.onDeathDiscardOrDamage = onDeathDiscardOrDamage;
     // Kraken Tentacle: on swing land, splice 1 random hand card off

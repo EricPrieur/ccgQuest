@@ -2346,8 +2346,8 @@ function createTreantCreature() {
 export function createSummonTreants() {
   return new Card({
     id: 'summon_treants', name: 'Summon Treants',
-    description: 'Summon or Buff 2-3 Treants.',
-    shortDesc: 'Summon/Buff\n2-3 Treants', subtype: 'ability',
+    description: 'Summon or Bolster 2-3 Treants.',
+    shortDesc: 'Summon/Bolster\n2-3 Treants', subtype: 'ability',
     cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_treants', 1, TargetType.SUMMON)],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
@@ -2361,41 +2361,42 @@ export function createSummonTreants() {
   });
 }
 
-// Feral Wrath — Druid Tier 2 ability. Each cast adds 1 charge. On the
-// next attack, HALF of the swing's damage (rounded UP) converts to
-// Bleed on the target — so the swing still lands a damage chunk AND
-// stamps Bleed. Charge consumed. Card id stays `feral_bite` so older
-// saves deserialize cleanly; only the display name + mechanic changed.
+// Feral Wrath — Druid Tier 2 ability. A single hard swing: Deal 5 + Bleed,
+// then gain a random Shield between floor(N/2) and N, where N = your ally count
+// (rewards a full board, with a guaranteed floor). Card id stays `feral_bite`
+// so older saves deserialize cleanly; changed from the old "damage → Bleed".
 export function createFeralBite() {
   return new Card({
     id: 'feral_bite', name: 'Feral Wrath',
-    description: 'Gain Feral Wrath(2).\nOn attack: consume a charge\nto convert half your damage\nto Bleed (rounded up).',
-    shortDesc: 'Wrath +2\nhalf dmg→Bleed', subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    // Each cast adds 2 charges (value=2). Each on-attack consumption
-    // burns one charge and converts half the swing's damage to Bleed.
+    description: 'Deal 5 + Bleed. Gain Shield up to the number of allies.',
+    shortDesc: '5 + Bleed\nShield = allies', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('grant_bleed_weapon', 2, TargetType.SELF),
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('gain_shield_per_ally', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
-    noTierOffset: true,
+    gamePlusOffset: { damage: 2, apply_bleed: 1 },
   });
 }
 
 export function createStarfire() {
   return new Card({
     id: 'starfire', name: 'Starfire',
-    description: 'Recharge a Card -> Deal 3 Damage and 3 Fire, Draw.',
-    shortDesc: 'R-Card->3 Dmg+3 Fire\nDraw', subtype: 'ability',
+    description: 'Recharge a Card -> Deal 3 Damage and 3 Fire, Draw.\nHeroism: +1 +Fire.',
+    shortDesc: 'R-Card->3 Dmg+3 Fire\nDraw\nHeroism: +1 +Fire', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    // apply_fire_with_heroism runs BEFORE damage and does NOT clear heroism, so
+    // each Heroism adds +1 Fire here AND +1 damage on the swing below.
     effects: [
+      new CardEffect('apply_fire_with_heroism', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
-      new CardEffect('apply_fire', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { damage: 2, apply_fire: 1 },
+    gamePlusOffset: { damage: 2, apply_fire_with_heroism: 1 },
   });
 }
 
@@ -2421,15 +2422,18 @@ export function createHealingTouch() {
 export function createNaturesHealing() {
   return new Card({
     id: 'natures_healing', name: "Nature's Healing",
-    description: 'Heal all Ailments.\nGain Heroism per Ailment healed.\nHeal 5.',
-    shortDesc: 'Heal Ailments\n+Heroism per healed\nHeal 5', subtype: 'ability',
+    description: 'Heal 3 Ailment to All.\nHeal 3 to All.\nOverheal: Shield/Heroism.',
+    shortDesc: 'Heal 3 Ailment ALL\nHeal 3 ALL\nOverheal: Shield/Hero', subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    // heal_ailments_all + team_heal_overheal both hit YOU and every alive ally
+    // (SELF target = no picker; they iterate the whole friendly side). Overheal
+    // is spent per-point randomly on +1 Shield or +1 Heroism (50/50).
     effects: [
-      new CardEffect('heal_all_negative_effects', 0, TargetType.SELF),
-      new CardEffect('heal', 5, TargetType.SELF),
+      new CardEffect('heal_ailments_all', 3, TargetType.SELF),
+      new CardEffect('team_heal_overheal', 3, TargetType.SELF),
     ],
     characterClass: ['druid'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { heal: 2 },
+    gamePlusOffset: { heal_ailments_all: 1, team_heal_overheal: 1 },
   });
 }
 
@@ -4219,6 +4223,46 @@ export function createAdamantineChainShirt() {
     ],
     tier: 2, rarity: 'rare',
     gamePlusOffset: { block: 2, gain_heroism: 1 },
+  });
+}
+
+// Shield of Last Hope — Tier 2 Rare light armor (Guildmaster reward). A panic
+// button: Gain 4 Shield, and if you're Bloodied (at half HP or less), also
+// Heal 8. The heal simply doesn't fire while you're above half.
+export function createShieldOfLastHope() {
+  return new Card({
+    id: 'shield_of_last_hope', name: 'Shield of Last Hope',
+    description: 'Gain 4 Shield.\nBloodied: Heal 8.',
+    shortDesc: '+4 Shield\nBloodied: Heal 8',
+    subtype: 'light_armor',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 4, TargetType.SELF),
+      new CardEffect('bloodied_heal', 8, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { gain_shield: 1, bloodied_heal: 2 },
+  });
+}
+
+// Symbol of Last Hope — Tier 2 Rare relic (the other half of the Guildmaster
+// reward pick). FREE and stays in hand, so once per turn you Heal 2 — and while
+// Bloodied (at half HP or less) Heal 4 more (6 total). A slow, reliable sustain
+// engine, the counterpart to the Shield's burst.
+export function createSymbolOfLastHope() {
+  return new Card({
+    id: 'symbol_of_last_hope', name: 'Symbol of Last Hope',
+    description: 'Heal 2.\nBloodied: Heal 4.\nStays in hand.',
+    shortDesc: 'Heal 2\nBloodied: Heal 4\nStays',
+    subtype: 'relic',
+    cardType: CardType.RELIC, costType: CostType.FREE,
+    effects: [
+      new CardEffect('heal', 2, TargetType.SELF),
+      new CardEffect('bloodied_heal', 4, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'rare',
+    gamePlusOffset: { heal: 1, bloodied_heal: 2 },
   });
 }
 
@@ -7881,6 +7925,180 @@ export function createGiantHyenaCreature() {
   c.riposte = true;
   c.riposteAmount = 1;
   return c;
+}
+
+// Gnoll — the Pack Lord's rank-and-file (start-of-fight litter + the Gnoll
+// Pack power's per-turn top-up). A plain 4/4 brawler, no riders.
+export function createGnollCreature() {
+  const c = new Creature({
+    name: 'Gnoll', attack: 3, maxHp: 4,
+    description: 'Savage packmate.',
+  });
+  // Codex framing — summoned by the Gnoll Pack Lord (an ally-type boss summon).
+  c._codexSide = 'enemy';
+  c._sourceRarity = 'uncommon';
+  c._sourceSubtype = 'allies';
+  return c;
+}
+
+// Gnoll Warrior (summoned ally) — a tougher 4/5 with 1 Armor that carries its
+// OWN Rampage: when it kills one of your units it frenzies for +1-2 Heroism and
+// +1-2 Shield (the `_rampageOnKill` flag is read by Character.onCreaturesRemoved
+// in main.js, the same hook that drives the standalone Gnoll Warrior enemy).
+export function createGnollWarriorCreature() {
+  const c = new Creature({
+    name: 'Gnoll Warrior', attack: 4, maxHp: 5, armor: 1,
+    description: 'Rampage: on kill, +1-2 Heroism, +1-2 Shield.',
+  });
+  c._rampageOnKill = true;
+  // Codex framing — summoned by the Gnoll Pack Lord (an ally-type boss summon).
+  c._codexSide = 'enemy';
+  c._sourceRarity = 'uncommon';
+  c._sourceSubtype = 'allies';
+  return c;
+}
+
+// Gnoll Pack Lord (summoned creature) — called in by the Gnoll Fang of Yeenoghu
+// boss (its "1 Pack Lord + 1-2 Hyenas" choice). A 4/4 brute. Reuses the Pack
+// Lord portrait automatically via its name (creature_gnoll_pack_lord).
+export function createGnollPackLordCreature() {
+  const c = new Creature({
+    name: 'Gnoll Pack Lord', attack: 4, maxHp: 4,
+    description: 'The pack answers to one.',
+  });
+  // Codex framing — summoned by the Gnoll Fang of Yeenoghu (an ally-type boss summon).
+  c._codexSide = 'enemy';
+  c._sourceRarity = 'epic';
+  c._sourceSubtype = 'allies';
+  return c;
+}
+
+// Floating Skull — the Floating Skulls ability's swarm summon. A 1/1 with 1
+// Armor whose attack applies Poison, and which spits 1 Poison at a random foe
+// when it dies (onDeathPoisonRandom). Summoned on either side (the Fang's deck
+// AND the player card), so codex framing is stamped at spawn time, not here.
+export function createFloatingSkullCreature() {
+  const c = new Creature({
+    name: 'Floating Skull', attack: 1, maxHp: 1, armor: 1, poisonAttack: true,
+    onDeathPoisonRandom: 1,
+    description: 'On Death: Deal Poison Randomly.',
+  });
+  c._sourceRarity = 'epic';
+  c._sourceSubtype = 'ability';
+  return c;
+}
+
+// Bone Flail — Epic Tier 2 Martial Weapon (the Gnoll Fang of Yeenoghu's weapon,
+// also its rare drop). Flails wildly: 3 times it strikes a RANDOM foe for 2
+// damage + 1 Poison. The `damage_poison_random` effect is caster-aware — the
+// player hits the enemy side; the Fang (enemy) hits the player + their summons.
+export function createBoneFlail() {
+  return new Card({
+    id: 'bone_flail', name: 'Bone Flail',
+    description: 'Deal 2 + Poison to a random enemy, 3 times.',
+    shortDesc: '2 + Poison\nrandom x3',
+    subtype: 'martial',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_poison_random', 2, TargetType.RANDOM_ENEMY),
+    ],
+    tier: 2, rarity: 'epic',
+    gamePlusOffset: { damage_poison_random: 1 },
+  });
+}
+
+// Shadow Clone — Epic Tier 2 Ability. Kills one of the foe's summons (Sentinel
+// first, else random) and raises a Shadow Copy of it on the caster's side: same
+// stats, a very dark tint, 1 Poison, and it can't attack the turn it's made.
+// Caster-aware `shadow_clone` — a player cast steals an enemy summon; the Fang's
+// cast steals one of the player's allies. Built-in recharge cost.
+export function createShadowClone() {
+  return new Card({
+    id: 'shadow_clone', name: 'Shadow Clone',
+    description: 'Kill an enemy summon and create a Shadow Copy with 1 Poison.',
+    shortDesc: 'Kill a summon\nRaise a Shadow',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('shadow_clone', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'epic',
+  });
+}
+
+// Floating Skulls — Epic Tier 2 Ability. Summons one Floating Skull per foe (the
+// enemy boss + each of its allies count). Caster-aware `summon_floating_skulls`.
+// Built-in recharge cost. previewCreature surfaces the skull in the codex.
+export function createFloatingSkulls() {
+  const card = new Card({
+    id: 'floating_skulls', name: 'Floating Skulls',
+    description: 'Summon 1 Floating Skulls per enemy.',
+    shortDesc: '1 Skull\nper enemy',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_floating_skulls', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'epic',
+  });
+  card.previewCreature = createFloatingSkullCreature();
+  return card;
+}
+
+// Shadow Drain — Epic Tier 2 Ability. Every one of the caster's allies loses 1
+// life (TRUE, unpreventable — it can kill them); then deal 1 to all foes and
+// heal the caster 1 per life lost that way. DISCARD cost — like Bandage, the
+// card lands in the discard pile after it resolves. Caster-aware `shadow_drain`.
+export function createShadowDrain() {
+  return new Card({
+    id: 'shadow_drain', name: 'Shadow Drain',
+    description: 'Each ally lose 1 life.\nDeal to All + Heal, 1 per life lost.',
+    shortDesc: 'Allies -1 life\nDrain: AoE + Heal',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('shadow_drain', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'epic',
+  });
+}
+
+// Ancient Bones — Epic Tier 2 crafting material (like Mithril / Adamantine ore),
+// dropped by the Gnoll Fang of Yeenoghu. Can't be played (unplayable) and can't
+// be sold (id-gated in canSellAtShop), but the player CAN stock multiples — it's
+// the fuel for the Corrupted Shrine enchant, spent 1-per-enchant.
+export function createAncientBones() {
+  return new Card({
+    id: 'ancient_bones', name: 'Ancient Bones',
+    description: 'A bundle of ancient, yellowed bones. A powerful aura radiates from within — cold, and patient.',
+    shortDesc: 'A powerful aura\nradiates from within',
+    subtype: 'item',
+    cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [],
+    tier: 2, rarity: 'epic',
+    unplayable: true,
+  });
+}
+
+// Bone Whip (Gnoll Pack Lord) — the boss's rally engine. A Simple Weapon that
+// lashes Poison across the whole party and rouses the pack (every enemy ally
+// gains Heroism). Uses the caster-aware `apply_poison_all_foes` so an enemy
+// holder poisons the PLAYER side; `buff_allies_heroism` only touches allies,
+// never the caster. Sound auto-routes to whip_crack via the id substring.
+export function createBoneWhip() {
+  return new Card({
+    id: 'bone_whip', name: 'Bone Whip',
+    description: 'Deal Poison to All.\nAllies Gain Heroism.',
+    shortDesc: 'Poison All\nAllies +Heroism',
+    subtype: 'simple', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_poison_all_foes', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
+    ],
+    priority: 20,
+    tier: 2, rarity: 'epic', noTierOffset: true,
+    gamePlusOffset: { apply_poison_all_foes: 1, buff_allies_heroism: 1 },
+  });
 }
 
 export function createSummonGiantHyena() {

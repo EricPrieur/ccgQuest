@@ -731,7 +731,7 @@ export function createGnollBossCaveMap(mapId) {
     { id: `${P}_a3`, name: 'Reeking Den', description: 'A reeking den of hide-scraps and old kills.', encounterId: '', connections: [`${P}_a2`, `${P}_a4`], position: [520, 70], ...F },
     { id: `${P}_a4`, name: 'Broken Stair', description: 'The run climbs over a fall of broken stone.', encounterId: '', connections: [`${P}_a3`, `${P}_a5`, `${P}_b3`], position: [550, 330], ...F },
     { id: `${P}_a5`, name: 'Dead-End Hollow', description: 'A deep hollow at the run\'s dead end.', encounterId: '', connections: [`${P}_a4`, `${P}_a6`], position: [280, 370], ...F },
-    { id: `${P}_a6`, name: 'Corrupted Shrine', description: 'A defiled shrine at the hollow\'s end — bones and black ichor heaped where the gnolls worship something worse than themselves.', encounterId: '', connections: [`${P}_a5`], position: [120, 470], ...F },
+    { id: `${P}_a6`, name: 'Corrupted Shrine', description: 'A defiled shrine at the hollow\'s end — bones and black ichor heaped where the gnolls worship something worse than themselves.', encounterId: 'corrupted_shrine', connections: [`${P}_a5`], position: [120, 470], ...F },
     // Branch B — the short pack-leader's ground; loops back to the Broken Stair.
     { id: `${P}_b1`, name: 'Wide Gallery', description: 'A wider gallery opens off the other fork.', encounterId: '', connections: [`${P}_entry`, `${P}_b2`], position: [790, 420], ...F },
     { id: `${P}_b2`, name: 'Cook-Fires', description: 'Cold cook-fires and gnoll-sign foul the air.', encounterId: '', connections: [`${P}_b1`, `${P}_b3`], position: [680, 640], ...F },
@@ -770,7 +770,10 @@ export function createGnollGuardsCaveMap(mapId) {
     { id: `${P}_entry`, name: 'Cave Mouth', description: 'The cave opens on a guarded gnoll-run bending away into the dark.', encounterId: '', connections: [`${P}_g2`], position: [1080, 100], ...F },
     { id: `${P}_g2`, name: 'Guard Post', description: 'A crude barricade and a cold watch-fire block the run.', encounterId: '', connections: [`${P}_entry`, `${P}_g3`], position: [900, 390], ...F },
     { id: `${P}_g3`, name: 'Inner Run', description: 'The passage presses on past the guard-post.', encounterId: '', connections: [`${P}_g2`, `${P}_g4`], position: [500, 520], ...F },
-    { id: `${P}_g4`, name: 'Prisoner Hole', description: 'A deep pit-den at the run\'s end — a captive is held here, guarded.', encounterId: '', connections: [`${P}_g3`], position: [270, 540], ...F },
+    // canRevisit:false (overriding F) so the one-shot rescue dialog fires once
+    // and the node falls silent afterward — you can still stand on it, but the
+    // prisoners aren't re-rescued every visit.
+    { id: `${P}_g4`, name: 'Prisoner Hole', description: 'A deep pit-den at the run\'s end — a captive is held here, guarded.', encounterId: 'gnoll_prisoner_hole', connections: [`${P}_g3`], position: [270, 540], ...F, canRevisit: false },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = `${P}_entry`;

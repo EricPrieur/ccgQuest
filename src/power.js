@@ -780,10 +780,44 @@ export function createRampagePower() {
     id: 'rampage',
     name: 'Rampage',
     costDescription: 'Passive',
-    effectDescription: 'When it or an ally kills your unit: gain 1 Rage and Heal 1-3.',
+    effectDescription: 'When it or an ally kills your unit: gain 1-2 Heroism and 1-2 Shield.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'On kill:\n+1 Rage, Heal 1-3',
+    shortDesc: 'On kill:\n+1-2 Heroism\n+1-2 Shield',
+    noTierOffset: true,
+  });
+}
+
+// Gnoll Pack (Gnoll Pack Lord) — at the start of every enemy turn the Pack Lord
+// calls in one more Gnoll (25% chance it's a Rampaging Gnoll Warrior). Logic
+// lives in the startEnemyTurn power loop (main.js), where the boss summons the
+// same 75/25 mix it opens the fight with.
+export function createGnollPackPower() {
+  return new Power({
+    id: 'gnoll_pack',
+    name: 'Gnoll Pack',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: Summon 1 Gnoll (25% a Gnoll Warrior).',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Turn Start:\nSummon 1 Gnoll',
+    noTierOffset: true,
+  });
+}
+
+// Gnoll Pack (Gnoll Fang of Yeenoghu) — a richer pack call than the Pack Lord's.
+// Each enemy turn the Fang howls in ONE of three: 1-2 plain Gnolls, a lone Gnoll
+// Warrior, or a Gnoll Pack Lord flanked by 1-2 Hyenas. Logic lives in the
+// startEnemyTurn power loop (main.js).
+export function createGnollPackYeenoghuPower() {
+  return new Power({
+    id: 'gnoll_pack_yeenoghu',
+    name: 'Gnoll Pack',
+    costDescription: 'Passive',
+    effectDescription: 'Start of Turn: Summon Gnolls.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Turn Start:\nSummon Gnolls',
     noTierOffset: true,
   });
 }
