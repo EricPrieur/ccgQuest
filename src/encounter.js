@@ -5969,6 +5969,58 @@ export function createGnollFangOfYeenoghuEncounter() {
   ]);
 }
 
+// Into the Dark — the Underdark entrance dialog on Crags & Chasm 07's c7_8 node.
+// The party recognises the deep gnoll-road for what it is; choosing "Lets go
+// in." teleports to the Underdark Gnoll Entrance map (handled by the
+// 'enter_underdark_gnoll' choice case in main.js). "Not yet." leaves them on the
+// surface node. Re-offered until they commit (canRevisit node), after which the
+// node acts as a plain teleporter.
+export function createUnderdarkEntranceEncounter() {
+  return new Encounter('underdark_entrance', 'Into the Dark', 'The road ends at a mouth of true blackness.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The dwarf road gives out at last — not at a wall, but at a throat of blackness that swallows your torchlight whole. Cold air breathes up out of it, older than the mountain, carrying a faint far-off dripping and a smell like wet stone and things that have never seen the sun.'),
+        new EncounterText('"This is it," Raena says quietly, staring down. "Or the start of it. An entrance to deeper caves — the deep dark the dwarves warned us of. This has to be the Underdark entrance we\'ve been looking for."', 'Raena'),
+        new EncounterText('Thorb hefts his weapon and peers into the gulf. "Aye. Nothing good lives down there. But that\'s where the trail leads." He glances at you. "Well? Lets go in?"', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Lets go in.',
+          'You take a breath, tighten your grip, and step down into the true dark.',
+          'enter_underdark_gnoll', 0,
+        ),
+        new EncounterChoice(
+          'Not yet.',
+          'Not yet. You step back from the edge — the dark can wait a moment longer.',
+          '', 0,
+          { completesEncounter: true }
+        ),
+      ],
+    }),
+  ]);
+}
+
+// The Sunless Sea — the western fork off The Long Deep (ug_7). A one-shot flavor
+// beat: Thorb and Valdrisa read the plunge for what it is and steer the party
+// back toward the shallower eastern routes. A soft nudge, not a gate.
+export function createUnderdarkSunlessSeaEncounter() {
+  return new Encounter('underdark_sunless_sea', 'The Sunless Sea', 'A vast, lightless water at the bottom of the fork.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The fork spills out onto a shingle of wet black stone, and beyond it — water. A vast, still, lightless sea, stretching past the reach of your torches into a dark that has never held a star. Somewhere far out, something breaks the surface, and is gone.'),
+        new EncounterText('Thorb and Valdrisa share a long look — the wordless kind that passes between people who have both seen too much of the deep places.', '!'),
+        new EncounterText('"That\'s the true deep, that is," Thorb says, low. "The old dark under the dark. This road drops too far, too fast — go swimmin\' in that and we don\'t come back up."', 'Thorb'),
+        new EncounterText('"He\'s right." Valdrisa draws the party back a step from the water\'s edge. "We\'re not ready for the roots of the world, not yet. Let\'s keep as far east as we can — hug the shallow edge of it, not its throat. The deep will still be here when we\'re ready for it."', 'Valdrisa'),
+      ],
+    }),
+  ]);
+}
+
 // Corrupted Shrine — the defiled altar at the boss cave's dead end (`..._a6`),
 // reached past the Gnoll Fang of Yeenoghu. A crafting station (like the Tharnag
 // forge) that spends Ancient Bones + gold to enchant an ability with a Played:
@@ -7578,6 +7630,8 @@ export const ENCOUNTER_REGISTRY = {
   gnoll_warrior: createGnollWarriorEncounter,
   gnoll_pack_lord: createGnollPackLordEncounter,
   gnoll_fang_of_yeenoghu: createGnollFangOfYeenoghuEncounter,
+  underdark_entrance: createUnderdarkEntranceEncounter,
+  underdark_sunless_sea: createUnderdarkSunlessSeaEncounter,
   corrupted_shrine: createCorruptedShrineEncounter,
   gnoll_pack_lord_den: createGnollPackLordDenEncounter,
   gnoll_prisoner_hole: createGnollPrisonerHoleEncounter,

@@ -623,10 +623,40 @@ export function createEastMountainCragsChasm07Map() {
     { id: 'c7_5', name: 'The Reek', description: 'The water gives way to a fouler stretch — the stink of gnoll thick as fog.', encounterId: '', connections: ['c7_4', 'c7_6'], position: [830, 710], mapArea: 'east_mountain_crags_chasm_07', ...D },
     { id: 'c7_6', name: 'Bone Weir', description: 'A dam of bones and debris chokes the channel; you climb over it.', encounterId: '', connections: ['c7_5', 'c7_7'], position: [570, 910], mapArea: 'east_mountain_crags_chasm_07', ...D },
     { id: 'c7_7', name: 'The Descent', description: 'The road tilts down, the water draining away into deeper dark ahead.', encounterId: '', connections: ['c7_6', 'c7_8'], position: [290, 820], mapArea: 'east_mountain_crags_chasm_07', ...D },
-    { id: 'c7_8', name: 'Into the Dark', description: 'The dwarf road bores down into true blackness, deeper into the gnoll-held dark — with no end to it in sight.', encounterId: '', connections: ['c7_7'], position: [350, 600], mapArea: 'east_mountain_crags_chasm_07', ...D },
+    // Into the Dark — the Underdark entrance. First arrival fires the
+    // recognition dialog (encounterId 'underdark_entrance'); choosing "Lets go
+    // in." teleports to the Underdark Gnoll Entrance map. Once unlocked the two
+    // act as a bidirectional teleporter (passthroughTo + arriveAtNode branches).
+    { id: 'c7_8', name: 'Into the Dark', description: 'The dwarf road bores down into true blackness, deeper into the gnoll-held dark — with no end to it in sight.', encounterId: 'underdark_entrance', connections: ['c7_7'], position: [350, 600], mapArea: 'east_mountain_crags_chasm_07', passthroughTo: 'ug_entry', ...D },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'c7_1';
+  return map;
+}
+
+// Underdark Gnoll Entrance — the first Underdark map, reached through the "Into
+// the Dark" node (c7_8) on Crags & Chasm 07. A line down into the true dark that
+// forks in two at The Long Deep. ug_entry is the threshold: it teleports back to
+// c7_8 (passthroughTo + arriveAtNode branch). No random encounters here yet.
+export function createUnderdarkGnollEntranceMap() {
+  const map = new GameMap('underdark_gnoll_entrance', 'The Underdark');
+  const AREA = 'underdark_gnoll_entrance';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnollEntrance01.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — the teleport node back to the surface (c7_8). Always visible.
+    { id: 'ug_entry', name: 'Underdark Threshold', description: 'You step through the gnoll-gnawed mouth of the dwarf road and into the true dark. The air changes — colder, older, alive with a faint dripping echo. Behind you, the way back up.', encounterId: '', connections: ['ug_2'], position: [50, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'c7_8' },
+    { id: 'ug_2', name: 'The First Descent', description: 'The floor tilts away, dwarf-cut steps worn to ramps by countless clawed feet.', encounterId: '', connections: ['ug_entry', 'ug_3'], position: [130, 350], ...D },
+    { id: 'ug_3', name: 'Fungal Gallery', description: 'Pale luminous fungus climbs the walls, throwing a sick blue glow across the cavern.', encounterId: '', connections: ['ug_2', 'ug_4'], position: [430, 720], ...D },
+    { id: 'ug_4', name: 'The Deep Fork', description: 'The passage splits and rejoins around a great stone pillar, gnoll-sign scratched into its base.', encounterId: '', connections: ['ug_3', 'ug_5'], position: [590, 260], ...D },
+    { id: 'ug_5', name: 'Whispering Dark', description: 'Something moves in the black beyond your torchlight — or the dark itself is breathing.', encounterId: '', connections: ['ug_4', 'ug_6'], position: [1070, 330], ...D },
+    // The Long Deep forks in two, on into the Underdark proper.
+    { id: 'ug_6', name: 'The Long Deep', description: 'The cavern opens into a vast, lightless gulf. The Underdark proper waits below — the way splits ahead.', encounterId: '', connections: ['ug_5', 'ug_7', 'ug_8'], position: [1130, 670], ...D },
+    { id: 'ug_7', name: 'The Sunless Sea', description: 'One fork drops toward the lap of black water against unseen stone — a sea that has never known the sun.', connections: ['ug_6'], position: [860, 870], ...D, encounterId: 'underdark_sunless_sea', canRevisit: false },
+    { id: 'ug_8', name: 'The Deepening Way', description: 'The other fork bores on downward, the dark thickening with every step into the roots of the world.', encounterId: '', connections: ['ug_6'], position: [1160, 840], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ug_entry';
   return map;
 }
 

@@ -88,6 +88,8 @@ export const CARD_ART_MAP = {
   careful_strike: 'CarefulStrikeAbility.jpg',
   heroic_tumble: 'HeroicTumble.jpg',
   hunters_mark: 'HunterMark.jpg',
+  // Marking Shot (Ranger tier-2, replaces Hunter's Mark) reuses the same art.
+  marking_shot: 'HunterMark.jpg',
   animal_companion: 'AnimalCompanion.jpg',
   piercing_shot: 'PiercingShot.jpg',
   explosive_shot: 'ExplosiveShot.jpg',
@@ -298,6 +300,8 @@ export const CARD_ART_MAP = {
   bone_bow: 'BoneBow.jpg',
   bone_javelin: 'BoneJavelin.jpg',
   bone_cage: 'BoneCage.jpg',
+  bone_cleaver: 'BoneCleaver.jpg',
+  cracked_marrow_bone: 'CrackedMarrowBone.jpg',
   gnoll_bite: 'GnollBite.jpg',
   // Gnoll Pack Lord boss + his rank-and-file Gnoll creature.
   gnoll: 'Gnoll.jpg',

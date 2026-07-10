@@ -1187,13 +1187,13 @@ export function createRaenaCardTier3() {
   return new Card({
     id: 'raena_card_3',
     name: 'Raena',
-    description: 'Recharge a card ->\nCall Raena to the battle!\nDraw.\nCalled: Deal 4 Damage.',
-    shortDesc: 'Call Raena, Draw\nCalled: 4 Dmg',
+    description: 'Recharge a card ->\nCall Raena to the battle!\nDraw.\nCalled: Deal 5 Damage.',
+    shortDesc: 'Call Raena, Draw\nCalled: 5 Dmg',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: (() => {
-      const arrow = new CardEffect('damage', 4, TargetType.SINGLE_ENEMY);
+      const arrow = new CardEffect('damage', 5, TargetType.SINGLE_ENEMY);
       arrow.optional = true;
       arrow.noAttackCount = true;
       arrow.fromAlly = true; // Riposte hits Raena, not the player (summon first)
@@ -1850,6 +1850,28 @@ export function createHuntersMark() {
   });
 }
 
+// Marking Shot — Ranger tier-2 pick that REPLACES Hunter's Mark in the player
+// ability choice (the old Hunter's Mark card stays put for the Gnoll Hunter
+// deck). A bow shot for 4 that consumes/doubles on an EXISTING Mark like any
+// attack, then leaves a fresh Mark: the apply_mark resolves AFTER the hit, so
+// the Mark it adds isn't spent by this same shot — later swings consume it.
+// Reuses the Hunter's Mark art.
+export function createMarkingShot() {
+  return new Card({
+    id: 'marking_shot', name: 'Marking Shot',
+    description: 'Deal 4 + Mark.',
+    shortDesc: '4 + Mark',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 1 },
+  });
+}
+
 export function createAnimalCompanion() {
   return new Card({
     id: 'animal_companion', name: 'Animal Companion',
@@ -2455,7 +2477,7 @@ export function getRangerAbilityChoices() {
   // stays in CARD_REGISTRY so older saves with it still deserialize.
   // Elemental Weapon takes its slot.
   return [createTamedRat(), createGoodberries(), createAimedShotCard(), createHeroicTumble(),
-          createHuntersMark(), createAnimalCompanion(), createElementalWeapon(), createExplosiveShot()];
+          createMarkingShot(), createAnimalCompanion(), createElementalWeapon(), createExplosiveShot()];
 }
 
 export function getWizardAbilityChoices() {
@@ -5895,13 +5917,13 @@ export function createSummonAncestor() {
     // `summon_ancestor` effect handler — these are weaker than the
     // boss-shell versions in setupEnemyForCombat.
     previewCreatures: [
-      new Creature({ name: 'Durin Stoneheart', attack: 4, maxHp: 8,
+      new Creature({ name: 'Durin Stoneheart', attack: 4, maxHp: 6,
         endTurnHealAllies: 1,
         description: 'End of Turn: Heal 1 to all allies.' }),
-      new Creature({ name: 'Balgrim Ironvein', attack: 3, maxHp: 5, armor: 1,
+      new Creature({ name: 'Balgrim Ironvein', attack: 3, maxHp: 4, armor: 1,
         endTurnShieldAllies: 1,
         description: 'End of Turn: All allies gain 1 Shield.' }),
-      new Creature({ name: 'Thordak Ashmantle', attack: 3, maxHp: 5, multiAttack: 99,
+      new Creature({ name: 'Thordak Ashmantle', attack: 3, maxHp: 3, multiAttack: 99,
         haste: true,
         description: 'Haste. Attacks ALL enemies.' }),
     ],
@@ -6053,14 +6075,14 @@ export function createSpikedGoblinHelmet() {
   });
 }
 
-// Goblin Boss's Whistle — summons 1-4 random goblins (Minion / Sapper /
+// Goblin Boss's Whistle — summons 1-3 random goblins (Minion / Sapper /
 // Warrior) to fight on the player's side. Game+ raises the MAX by +1 per
-// offset (1-5, 1-6, …) — handled in the summon_random_goblins effect.
+// offset (1-4, 1-5, …) — handled in the summon_random_goblins effect.
 export function createGoblinBossWhistle() {
   return new Card({
     id: 'goblin_bosss_whistle', name: "Goblin Boss's Whistle",
-    description: 'Summon 1 to 4 Random Goblins.',
-    shortDesc: 'Summon 1-4\nRandom Goblins',
+    description: 'Summon 1 to 3 Random Goblins.',
+    shortDesc: 'Summon 1-3\nRandom Goblins',
     subtype: 'allies', cardType: CardType.CREATURE, costType: CostType.RECHARGE,
     effects: [new CardEffect('summon_random_goblins', 2, TargetType.SUMMON)],
     rarity: 'rare', tier: 2,
@@ -6973,15 +6995,19 @@ export function createBoneStorm() {
 // ============================================================
 
 export function createValdrisaCreature() {
-  return new Creature({
-    name: 'Valdrisa', attack: 3, maxHp: 5, isCompanion: true,
+  const c = new Creature({
+    name: 'Valdrisa', attack: 4, maxHp: 6, isCompanion: true,
     // +3 vs Armor/Shield (Tier 3 parity). armorBonusOverride bumps the
     // default +2 obsidian-family bonus to +3 — applyObsidianAllyBonus
     // reads this when the swing target has any armor or shield.
     armorBonusOverride: 3,
-    description: '+3 vs Armor/Shield. Turn End: Heal 2 a random damaged ally.',
+    description: '+3 vs Armor/Shield. Turn End: Heal 3 a random damaged ally.',
     noTierOffset: true,
   });
+  // endTurnHealRandomAlly isn't a Creature constructor param — set it directly
+  // so the runtime heal tick reads 3 (default fallback is only 2).
+  c.endTurnHealRandomAlly = 3;
+  return c;
 }
 
 // Valdrisa tier 3 — ccgQuest+ rescue version (offset 1+, since base
@@ -6990,13 +7016,16 @@ export function createValdrisaCreature() {
 // vs Armor/Shield). The endTurnHealRandomAlly and armorBonusOverride
 // fields are read by the runtime tick + applyObsidianAllyBonus.
 export function createValdrisaTier3Creature() {
-  return new Creature({
-    name: 'Valdrisa', attack: 4, maxHp: 6, isCompanion: true,
-    endTurnHealRandomAlly: 3,
+  const c = new Creature({
+    name: 'Valdrisa', attack: 5, maxHp: 10, isCompanion: true,
     armorBonusOverride: 3,
-    description: '+3 vs Armor/Shield. Turn End: Heal 3 a random damaged ally.',
+    description: '+3 vs Armor/Shield. Turn End: Heal 4 a random damaged ally.',
     noTierOffset: true,
   });
+  // endTurnHealRandomAlly isn't a Creature constructor param — set it directly
+  // (the value passed in the constructor object was silently dropped before).
+  c.endTurnHealRandomAlly = 4;
+  return c;
 }
 
 export function createValdrisaCard() {
@@ -7250,7 +7279,7 @@ export function createThorbCreature() {
   return new Creature({
     name: 'Thorb',
     attack: 2,
-    maxHp: 5,
+    maxHp: 4,
     armor: 1,
     isCompanion: true,
     // Turn End: +Shield power dropped across all three Thorb tiers
@@ -7281,7 +7310,7 @@ export function createThorbTier3Creature() {
   return new Creature({
     name: 'Thorb',
     attack: 4,
-    maxHp: 8,
+    maxHp: 11,
     armor: 1,
     sentinel: true,
     isCompanion: true,
@@ -7293,7 +7322,7 @@ export function createThorbTier3Creature() {
 // Raena base creature — recruited at Calm Grove. Attacks 2 targets.
 export function createRaenaCreature() {
   return new Creature({
-    name: 'Raena', attack: 2, maxHp: 4, multiAttack: 2, isCompanion: true,
+    name: 'Raena', attack: 2, maxHp: 3, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
     noTierOffset: true,
   });
@@ -7308,11 +7337,11 @@ export function createRaenaUpgradedCreature() {
   });
 }
 
-// Raena tier 3 — ccgQuest+ rescue version (offset 2+). +1 attack and
-// +1 max HP over tier 2. Multi-attack count is unchanged.
+// Raena tier 3 — ccgQuest+ rescue version (offset 2+). Multi-attack count is
+// unchanged; the glass-cannon stat line jumps to 5/7 over tier 2's 3/5.
 export function createRaenaTier3Creature() {
   return new Creature({
-    name: 'Raena', attack: 4, maxHp: 6, multiAttack: 2, isCompanion: true,
+    name: 'Raena', attack: 5, maxHp: 7, multiAttack: 2, isCompanion: true,
     description: 'Attacks 2 targets.',
     noTierOffset: true,
   });
@@ -7442,7 +7471,7 @@ function createDwarvenScoutCreature() {
   return new Creature({
     name: 'Dwarven Scout',
     attack: 2,
-    maxHp: 4,
+    maxHp: 5,
     shield: 1,
     endTurnDamage: 1,
     isCompanion: true,
@@ -8120,32 +8149,32 @@ export function createSummonGiantHyena() {
 export function createBoneBow() {
   return new Card({
     id: 'bone_bow', name: 'Bone Bow',
-    description: 'Recharge a Card -> Deal 6, Draw.\nFirst Strike: Poison',
-    shortDesc: 'R-Card->6, Draw\nFirst Strike: Poison',
+    description: 'Recharge a Card -> Deal 8, Draw.\nFirst Strike: Poison',
+    shortDesc: 'R-Card->8, Draw\nFirst Strike: Poison',
     subtype: 'ranged', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('first_strike_poison_attack', 6, TargetType.SINGLE_ENEMY, 1),
+      new CardEffect('first_strike_poison_attack', 8, TargetType.SINGLE_ENEMY, 1),
       new CardEffect('draw', 1, TargetType.SELF),
       // "Recharge a Card" — costs an extra card, so the Draw offsets the
       // recharge instead of net-growing the turn (no infinite draw chain).
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     priority: 25,
-    tier: 2, rarity: 'uncommon', noTierOffset: true,
+    tier: 2, rarity: 'rare', noTierOffset: true,
   });
 }
 
 export function createBoneJavelin() {
   return new Card({
     id: 'bone_javelin', name: 'Bone Javelin',
-    description: 'Deal 5 + Poison.\n+5 Against Summons.',
-    shortDesc: '5 + Poison\n+5 vs Summons',
+    description: 'Deal 6 + Poison.\n+6 Against Summons.',
+    shortDesc: '6 + Poison\n+6 vs Summons',
     subtype: 'martial_2h', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('bone_javelin_attack', 5, TargetType.SINGLE_ENEMY, 5),
+      new CardEffect('bone_javelin_attack', 6, TargetType.SINGLE_ENEMY, 6),
     ],
     priority: 15,
-    tier: 2, rarity: 'uncommon', noTierOffset: true,
+    tier: 2, rarity: 'rare', noTierOffset: true,
   });
 }
 
@@ -8171,6 +8200,9 @@ export function createPackHyenaCreature() {
     description: '+1 Atk per adjacent ally (max 3).',
   });
   c.packTactics = true;
+  // Rare-rarity framing in the codex (all spawns route through this creator).
+  c._sourceRarity = 'rare';
+  c._sourceSubtype = 'allies';
   return c;
 }
 
@@ -8221,8 +8253,58 @@ export function createBeastCollar() {
       new CardEffect('heal_bleed', 2, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
-    rarity: 'common', tier: 2,
+    rarity: 'uncommon', tier: 2,
     gamePlusOffset: { block: 2 },
+  });
+}
+
+// Bone Cleaver — Uncommon Tier 2 simple weapon from the gnoll loot. A crude
+// two-headed bone chopper: 2 damage + Poison to 2 targets (multi_damage +
+// multi-target apply_poison, same shape as the Jagged Chopper's Bleed version).
+export function createBoneCleaver() {
+  return new Card({
+    id: 'bone_cleaver', name: 'Bone Cleaver',
+    description: 'Deal 2 + Poison on 2 targets.',
+    shortDesc: '2 + Poison\nx2',
+    subtype: 'simple', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY, 2),
+    ],
+    tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 1.5, apply_poison: 1 },
+  });
+}
+
+// Cracked Marrow-Bone — Common Tier 2 food (a gnaw-open marrow bone, gnoll
+// staple). Modeled on Bear Fat Rations: a Consume + Recharge 1 meal that clears
+// ALL Bleed and heals 6, milling 1 card as the queasy cost, then leaves a 3-turn
+// meal buff of Heal 2 Bleed + Heal 1.
+export function createCrackedMarrowBone() {
+  return new Card({
+    id: 'cracked_marrow_bone', name: 'Cracked Marrow-Bone',
+    description: 'Consume + Recharge 1 ->\nHeal all Bleed, Heal 6, discard 1.\nMeal: Heal 2 Bleed, Heal 1 for 3 turns.',
+    shortDesc: 'C+R1->Heal Bleed\nHeal 6, discard 1\nMeal: 2 Bleed+1 3T',
+    subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal_bleed', 99, TargetType.SELF),
+      new CardEffect('heal', 6, TargetType.SELF),
+      new CardEffect('discard_deck', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Cracked Marrow-Bone',
+      turnsPerCombat: 3,
+      effects: [
+        { effectType: 'heal_bleed', value: 2 },
+        { effectType: 'heal', value: 1 },
+      ],
+      description: 'Heal 2 Bleed and Heal 1 each turn for 3 turns (each combat, until rest).',
+    },
+    tier: 2, rarity: 'common',
+    gamePlusOffset: { heal: 3 },
   });
 }
 
@@ -8237,21 +8319,21 @@ export function createBeastmasterHorn() {
     ],
     // Both possible summons shown side-by-side in the mini showcase.
     previewCreatures: [createGiantHyenaCreature(), createPackHyenaCreature()],
-    rarity: 'rare', tier: 2,
+    rarity: 'epic', tier: 2,
   });
 }
 
 export function createHuntersRecurveBow() {
   return new Card({
     id: 'hunters_recurve_bow', name: "Hunter's Recurve Bow",
-    description: 'Recharge 2 Cards -> Deal 12, Draw.\nMark the target.',
-    shortDesc: 'R2 Cards->12, Draw\nMark',
+    description: 'Recharge a Card ->\nDeal 8 Damage + Mark, Draw.',
+    shortDesc: 'R Card->8 + Mark\nDraw',
     subtype: 'ranged', cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 12, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('damage', 8, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
-      new CardEffect('recharge_extra', 2, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     rarity: 'epic', tier: 2,
     gamePlusOffset: { damage: 3 },
@@ -8808,13 +8890,13 @@ export function createUnhatchedRocEggCreature() {
   const egg = new Creature({
     name: 'Unhatched Roc Egg',
     attack: 0,
-    maxHp: 5,
+    maxHp: 3,
     armor: 1,
-    description: 'On Death: Hatch into a Roc Chick.\nEnd of Turn: Deal 1-3 damage to self.',
+    description: 'On Death: Hatch into a Roc Chick.\nTurn Start: Deal 5 damage to self.',
   });
   egg._cantAttack = true;
   egg._hitSfxKey = 'egg_hatch_01';
-  egg._endTurnSelfDamage = { min: 1, max: 3 };
+  egg._startTurnSelfDamage = { min: 5, max: 5 };
   return egg;
 }
 
@@ -8828,8 +8910,8 @@ export function createUnhatchedRocEggCreature() {
 export function createRocChickCreature() {
   const c = new Creature({
     name: 'Roc Chick',
-    attack: 3,
-    maxHp: 8,
+    attack: 2,
+    maxHp: 6,
     bloodfrenzy: 1,
     description: 'Attacks a random enemy.\nGain 1 Rage per attack.',
   });
@@ -8847,14 +8929,14 @@ export function createUnhatchedRocEggCard() {
   return new Card({
     id: 'unhatched_roc_egg',
     name: 'Unhatched Roc Egg',
-    description: 'Recharge 2 Cards -> Call an Unhatched Roc Egg to the battle!\nDraw.',
-    shortDesc: 'R+2->Call\nRoc Egg\nDraw',
+    description: 'Recharge a Card -> Call an Unhatched Roc Egg to the battle!\nDraw.',
+    shortDesc: 'R Card->Call\nRoc Egg\nDraw',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('summon_unhatched_roc_egg', 1, TargetType.SUMMON),
-      new CardEffect('recharge_extra', 2, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     rarity: 'epic',
