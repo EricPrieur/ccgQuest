@@ -5862,6 +5862,476 @@ export function createGnollHunterEncounter() {
   ]);
 }
 
+// Umber Hulk — the Underdark's roaming random encounter. Armor 3, a 40-card
+// deck of Rend (3 + Bleed across 3 targets) and Rock Skin (stacking Armor +
+// Block 3). Fired by the shared Underdark spawn roll, not by any map node.
+export function createUmberHulkEncounter() {
+  return new Encounter('umber_hulk', 'Umber Hulk', 'Something comes through the wall.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The wall beside you comes apart. Not falls — comes APART, chewed open from the far side, and what climbs through it stands taller than Thorb and twice as wide, plated in overlapping grey-black shell.'),
+        new EncounterText('Four eyes open in a row across its head, two of them wide and glassy and two of them very much not, and its mandibles work the air like it is already tasting how the fight goes.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'umber_hulk' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['umber_hulk_loot'] }),
+  ]);
+}
+
+// Drow Warparty — the Underdark's ambush encounter. The party itself is an
+// invulnerable shell; the fight is the Priestess and her four Warriors, and
+// they open by striking first.
+export function createDrowWarpartyEncounter() {
+  return new Encounter('drow_warparty', 'Drow Warparty', 'They were waiting, and they saw you first.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('There is no warning. One stretch of tunnel wall is wall, and the next it is a row of faces — grey skin, white hair, black mail that gives back nothing of your torchlight.'),
+        new EncounterText('A woman steps out ahead of them with a flail already turning at her side, and says something flat and unhurried over her shoulder. Four blades come out of four scabbards at exactly the same moment.'),
+        new EncounterText('"Drow," Valdrisa says, very quietly. "Do not let this go long. Whatever is on those blades, they had it ready before we got here."', 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'drow_warparty' }),
+    // Same drow pool The Assassin drops from, but rank-and-file: 50%-gated
+    // (GATED_LOOT) and one pick on a hit.
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['drow_warparty_loot'] }),
+  ]);
+}
+
+// Carrion Crawler — the third Underdark roaming spawn. The head is
+// invulnerable; the fight is its five body segments, fought while your hand
+// gets locked one card at a time.
+export function createCarrionCrawlerEncounter() {
+  return new Encounter('carrion_crawler', 'Carrion Crawler', 'Something long is coming down the wall.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The ceiling is moving. Not all of it — one long line of it, coming down the wall head-first on more legs than you want to count, segment after segment after segment.'),
+        new EncounterText('The head reaches the floor and keeps coming, and a crown of soft grey feelers spreads open around its mouth, reaching, tasting. Wherever they brush the stone, the moss beneath goes limp.'),
+        new EncounterText('"Do not let those touch you," Valdrisa says, backing up fast. "Whatever the toxin is, it does not kill. It just makes you stop."', 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'carrion_crawler' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['carrion_crawler_loot'] }),
+  ]);
+}
+
+// ============================================================
+// The deep gnome village — first-visit story beats.
+// ============================================================
+
+// The Low Door (ugv20_entry) — the party realises what they have just walked
+// into, and works out that they were led here.
+export function createGnomeVillageFoundEncounter() {
+  return new Encounter('gnome_village_found', 'The Low Door', 'A village nobody was supposed to find.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You come through the little round door one at a time, on hands and knees, and stand up into lamplight. Not torchlight. Not fungus-glow. Lamps — trimmed, tended, burning steady in a street.'),
+        new EncounterText('Valdrisa turns a slow circle. "Do you understand what we are standing in? Every account of the Svirfneblin says the same thing: their settlements are not found. Not by drow, not by duergar, not in six hundred years of anybody trying."', 'Valdrisa'),
+        new EncounterText('"And yet," Thorb says. "Here we are. Five big loud strangers with a torch."', 'Thorb'),
+        new EncounterText('Brad is already working it backwards. "That door was cut for someone half my height and it was swept clean. That gap behind the vault was propped, not fallen. Every wrong turn we took since the coffer, something was making the right one easier." He looks around at you. "We were led."', 'Brad'),
+        new EncounterText('Raena nods slowly. "A place like this, you find one of two ways. You are a gnome..." She lets it sit. "...or you are following one."', 'Raena'),
+        new EncounterText('Nobody says the obvious thing out loud — that somewhere behind you, a small figure with metal hands has been opening doors.'),
+      ],
+    }),
+  ]);
+}
+
+// The Village Overlook (ugv20_4) — Cornis steps out and welcomes them in.
+export function createCornisWelcomeEncounter() {
+  return new Encounter('cornis_welcome', 'A Familiar Face', 'Somebody was expecting you.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The shelf looks down over the whole town, and the whole town has stopped to look back. Shutters are open a finger-width all along the far wall. You can feel the eyes even where you cannot see them.'),
+        new EncounterText('Then someone comes up the lane at a walk, entirely unhurried, and the nearest shutters ease open a little wider to watch him do it.'),
+        new EncounterText('"You made it," says Cornis Metalhands, and knocks two mithril knuckles together like a man settling a bet with himself. "Good. I was not certain you would."', 'Cornis Metalhands'),
+        new EncounterText('He looks you over — the size of you, the state of you — with the flat interest of a smith pricing scrap. "You do not slip away well, you big ones. You go through a place instead of past it. That is a dangerous way to travel down here, and you have been travelling like that a long while."', 'Cornis Metalhands'),
+        new EncounterText('Thorb opens his mouth. Cornis is already turning. "Later. All of it later." He waves a hand at the bridges and the lamps and the whole impossible town of it. "Come. I will show you my house. There is food, and there is a floor that is not the Underdark, and you will take both."', 'Cornis Metalhands'),
+        new EncounterText('He points off west, past the lanterns, to where the lanes run out toward the oldest doors in the town. "West side. Keep going west and you will come to it — the door with the metal plate on it, and the empty one across the way. That one is yours while you are here."', 'Cornis Metalhands'),
+      ],
+    }),
+  ]);
+}
+
+// The Old Burrows (ugv21_a3) — Cornis points out the two doors.
+export function createCornisTwoDoorsEncounter() {
+  return new Encounter('cornis_two_doors', 'Two Doors', 'Somewhere to put your boots.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Cornis stops in the oldest lane in the village, where the doorsills are worn into dips, and points with two fingers at once — right, then left.'),
+        new EncounterText('"Mine," he says, of the right-hand door with the bright metal plate screwed into it at his shoulder height. "And that one is yours, for as long as you are here. Nobody has lived in it since old Dunnik, and Dunnik was not large either, so I make no promises about the ceiling."', 'Cornis Metalhands'),
+        new EncounterText('He is already backing toward his own step. "Go and put your things down. Sleep if you can manage it. Then come across and eat — I have mushroom bread in, and the baked caps, and a stew that is better than it sounds."', 'Cornis Metalhands'),
+        new EncounterText('"How much better than it sounds?" Brad asks.\n"Some," says Cornis, and shuts his door.', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+// Our Borrowed House (bh42_entry) — the party sizes up their accommodation.
+export function createBorrowedHouseArrivalEncounter() {
+  return new Encounter('borrowed_house_arrival', 'Our Borrowed House', 'Cosy. Aggressively cosy.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You get through the door the same way you got into the village: on all fours, one at a time, with some swearing.'),
+        new EncounterText('Inside is one room. A swept floor, a cold hearth the size of a soup bowl, a bench along one wall, and a bed. Everyone stands up at once and everyone stops at once, because the ceiling is exactly where their heads are.'),
+        new EncounterText('Thorb turns around very carefully, like a man in a cupboard. "I want it on record that I am the SHORT one in this company," he says, "and I am wearing this house."', 'Thorb'),
+        new EncounterText('Valdrisa has folded herself onto the bench with her knees somewhere near her chin, and appears to have decided this is fine. "It is warm, it is dry, and nothing in it wants to eat us. I have slept gladly in far worse."', 'Valdrisa'),
+        new EncounterText('"There is one bed," Raena points out.', 'Raena'),
+        new EncounterText('"There is one bed for a person four feet tall," Brad says, from the floor, where he has already claimed the best flagstone by lying on it. "Which makes it a very good pillow, and a very bad bed, and I am not fighting anyone for it."', 'Brad'),
+        new EncounterText('Thorb lowers himself down against the wall with a grunt that lasts most of the way to the ground. "Floor of a house," he says, to nobody. "Floor of a HOUSE. With a door on it." He shuts his eyes. "Wake me when the stew happens."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// The Workbench in Cornis's house (ch41_bench) — a promise for later.
+export function createCornisWorkbenchEncounter() {
+  return new Encounter('cornis_workbench', 'The Workbench', "A smith's bench, and an idea.", [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The bench runs the whole back wall: vices, files, a banked forge no bigger than a helmet, and a rack of spare mithril fingers hung in order of size like a set of chisels.'),
+        new EncounterText('Everything on it is small. Everything on it is also, you notice, extremely good — the kind of work that makes Thorb go quiet and pick something up without asking.'),
+        new EncounterText('"Dwarf-tight, this," he says, turning a file over. "Tighter, maybe. Do not tell anyone I said the second part."', 'Thorb'),
+        new EncounterText('Valdrisa runs a finger along the vice. "A bench like this could put an edge back on half of what we are carrying. When there is time — and when our host is standing at it — this will be worth coming back to."', 'Valdrisa'),
+      ],
+    }),
+  ]);
+}
+
+// The Bed (bh42_bed) — the village rest.
+export function createBorrowedHouseBedEncounter() {
+  return new Encounter('borrowed_house_bed', 'The Bed', 'Small, but yours.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The bed is a gnome bed: short, wide, stuffed with something that rustles, and piled with more blankets than a person that size could possibly need.'),
+        new EncounterText('Nobody is going to fit in it. Between the bench, the floor, the blankets and the fact that there is a bolted door between you and the whole of the Underdark, nobody much cares.'),
+        new EncounterText('Raena sets her bow down within reach of her hand — habit, not worry — and looks at the rest of you. "We sleep. Properly. It has been a long way down here and it is going to be a long way back."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Sleep here.',
+          'You put out the lamp. For the first time since the mountain, all five of you sleep at once, behind a door, under a roof, with somebody else keeping watch over the dark outside. You wake up different — steadier, clearer, like something that had been fraying for weeks finally had time to knit.',
+          'gnome_village_rest', 0
+        ),
+        new EncounterChoice(
+          'Not yet.',
+          'You leave the blankets folded. There is still light under Cornis\'s door across the lane.',
+          'gnome_village_rest_leave', 0
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Cornis's table (ch41_entry, after the party has slept) — the meal, the
+// question of why they are down here at all, and Cornis throwing in with them.
+// Ends on a LOOT phase that hands over his ally card; the encounter-complete
+// dispatch then grants the Barrelstalk meal + beverage from the food.
+export function createCornisFeastEncounter() {
+  return new Encounter('cornis_feast', "Cornis's Table", 'Food, and a decision.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The round door is open when you come back across the lane, and the smell coming out of it stops all five of you in the street.'),
+        new EncounterText('"Sit," says Cornis, without turning round from the hearth. There is a pause while everyone works out where. "On the floor," he adds. "There is no chair in this house that will not die under any of you."', 'Cornis Metalhands'),
+        new EncounterText('So you sit on the floor of a gnome\'s house with your knees up around your ears, and he feeds you: bluecap bread still hot, barrel-stalk split and roasted in its own water, small pale caps fried black at the edges in something that is definitely not butter and is definitely delicious.'),
+        new EncounterText('Thorb eats four helpings and says nothing at all until the fourth is gone. "Right," he says finally, with enormous dignity. "That is better than it sounds."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Cornis lets the eating finish before he asks. Then, quietly, with his metal hands folded: "So. What are five of you doing this deep, walking like people with somewhere to be?"', 'Cornis Metalhands'),
+        new EncounterText('It comes out in pieces, the way tired stories do. The mountain. Tharnag under siege. The lower halls that nobody has heard from. Dwarves taken down into the dark and not brought back up.'),
+        new EncounterText('Thorb finishes it himself, staring into the little hearth. "My father is King Thorgrim of Tharnag," he says. "If any of them are still alive down there, he is one of them. And if he is not..." He turns his cup around. "Then I still want to be the one who goes and finds out."', 'Thorb'),
+        new EncounterText('Valdrisa puts a hand flat on the floor beside his. "We know roughly where the deep road comes up under Tharnag. Roughly. We have been guessing at it since the crossroad, and we are guessing badly — this whole country is a maze that changes its mind."', 'Valdrisa'),
+        new EncounterText('Raena says what none of you wanted to: "And we have been losing days to it."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Cornis is quiet for a while. Then he gets up, goes to his bench, and starts unhooking things off it — a small hammer, a coil of wire, a roll of tools that folds up no bigger than a loaf.'),
+        new EncounterText('"North," he says. "The way you want is north, and you would not have found it in a season of looking. I would." He screws a fresh hand onto his wrist and works the fingers once, testing. "I have walked the north road since I was a boy. I know which of it is still there."', 'Cornis Metalhands'),
+        new EncounterText('Brad blinks. "You are coming WITH us?"\n"You fed me nothing and I am feeding you," Cornis says, which is not an answer. Then, more plainly: "If time matters, go north soon. Tomorrow. And no, you are not going without me — you would walk straight past the door and into something with teeth."', 'Cornis Metalhands'),
+        new EncounterText('He looks up at the four of you towering over his furniture, and something in his face gives way to a small hard grin. "Besides. Somebody in this company should be able to fit through a gap."', 'Cornis Metalhands'),
+      ],
+    }),
+    // His card — standard loot reveal, the same beat as any other companion.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      phaseTitle: 'A New Companion',
+      lootTitle: 'Cornis Joins You',
+      lootCards: ['cornis_card'],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The rest of the night is the best any of you have had since the surface. Thorb produces a song. Brad produces a bottle nobody saw him carrying. Cornis produces more barrel-stalk, which turns out to hold enough clean water in it to drink a party under the table.'),
+        new EncounterText('You go back across the lane full, watered, and — for the first time in a long while — five instead of four.'),
+      ],
+    }),
+  ]);
+}
+
+// The Glowstone Fountain (ugv21_b3) — the village wishing well. Repeatable:
+// throw coins for a blessing that quiets the deep roads. The three choices are
+// a straight gold-for-safety trade; the handler applies the matching reduction
+// to the Underdark encounter step until the next roaming fight.
+export function createGlowstoneFountainEncounter() {
+  return new Encounter('glowstone_fountain', 'The Glowstone Fountain', 'The heart of the village.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The channel widens and drops into a basin of pale fitted stone, and the water in it is LIT — lumps of raw glowstone sunk along the bottom throwing a slow green-white light straight up through two feet of clear cold water.'),
+        new EncounterText('Water mushrooms grow around the rim in a ring, fine as lace, their caps turned down toward the glow. Every few seconds one lets go of a bubble and the whole basin shivers with light.'),
+        new EncounterText('The bottom of the fountain is scattered with coins. Not many. Small ones, worn smooth, some of them older than the village has any right to be.'),
+        new EncounterText('Valdrisa crouches at the rim with her hands on her knees. "They throw for safe roads," she says. "Every people who live near a dark place has a well like this, and they all throw for the same thing." She glances up at you. "It costs a coin to be superstitious. It costs more not to be."', 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Throw in 1 gold.',
+          'You flick a single copper in. It turns over twice on the way down and settles among the others, and for a moment the glowstone under it burns a shade brighter.',
+          'fountain_toss_1', 0
+        ),
+        new EncounterChoice(
+          'Throw in 3 gold.',
+          'Three coins go in together, and the light climbs the water after them. The ring of little mushrooms shivers all the way round the rim.',
+          'fountain_toss_3', 0
+        ),
+        new EncounterChoice(
+          'Throw in 10 gold.',
+          'You tip ten gold into the basin in one bright handful. The glow comes up through the water hard enough to throw your shadows on the ceiling, and holds there a long moment before it settles.',
+          'fountain_toss_10', 0
+        ),
+        new EncounterChoice(
+          'Keep your coin.',
+          'You leave the water alone. The little mushrooms go on breathing bubbles at the light, entirely unbothered either way.',
+          'fountain_toss_none', 0
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Deep Gnome Merchants — the Underdark's non-combat roaming encounter. A
+// The Hall of Callarduran (hoc_entry) — one-shot arrival beat inside the
+// village's holy place. Nothing happens here and nothing attacks; the room is
+// the event. The altar itself is a separate node (hoc_altar).
+export function createHallOfCallarduranArrivalEncounter() {
+  return new Encounter('hall_of_callarduran_arrival', 'The Hall of Callarduran', 'The holy place under the village.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You come through a door cut for people half your size, and straighten up into a space so large your light cannot find the top of it. The walls have no tool marks. None. They run on smooth as poured water, curving up and away into dark, and there is not one chisel scar in the whole of it.'),
+        new EncounterText('Thorb puts his palm flat on the wall and leaves it there a long time. When he takes it away he does not say anything clever. "No dwarf cut this," he says. "No gnome either. This was made by hands, and the hands were bigger than the room."', 'Thorb'),
+        new EncounterText('At the far end, a hand of rock comes out of the wall. Not carved onto it — out of it, wrist still buried in the stone, fingers half-curled, palm turned up and open the way you hold a hand out to a nervous animal. It is big enough to stand in.'),
+        new EncounterText('Something rests in the palm and burns red from the inside, and the light of it climbs the fingers and lies across the floor in a long red road that stops just short of your boots.'),
+        new EncounterText('All along the base, on the fingers and around the wrist, the village has left what it could spare — chips of red crystal, worn tools, a child\'s carving, a hammer with its handle broken. Nothing valuable. Everything used.', 'Valdrisa'),
+        new EncounterText('"Callarduran Smoothhands," Valdrisa says quietly. "Stone, and deep places, and the quiet earth. Six hundred years of gnomes have knelt here." She has not moved from the doorway. "Whatever else is true — this one is still listening."', 'Valdrisa'),
+      ],
+    }),
+  ]);
+}
+
+// Altar of Psilofyr (ugv20_t3) — the fungus-covered idol at the top of the
+// village warrens. Repeatable: the party can come back and keep feeding it.
+// `offerings` is built at fire time from what the party is actually carrying —
+// [{ id, name, count, tier }] — so the list only shows caps they have. The
+// Rare Mushroom is deliberately NOT offerable; the god wants food, not relics.
+// One place for the offer-row label, because main.js re-labels these rows live
+// as the party donates (the counts would otherwise go stale mid-visit).
+export function psilofyrOfferLabel(name, count) {
+  return count > 0
+    ? `Lay a ${name} on the statue.  (${count} held)`
+    : `Lay a ${name} on the statue.  (none left)`;
+}
+
+export function createPsilofyrAltarEncounter(offerings = []) {
+  const choices = [];
+  for (const o of offerings) {
+    choices.push(Object.assign(
+      new EncounterChoice(
+        psilofyrOfferLabel(o.name, o.count),
+        'You set the cap against the stone, in among the others. Nothing answers — but by the time you straighten up, the growth around it has thickened, and there is a little more of the god than there was.',
+        'psilofyr_donate', 0,
+        { returnToChoices: true, repeatable: true },
+      ),
+      { _donateId: o.id, _donateName: o.name },
+    ));
+  }
+  // Nothing offerable, and the plain Leave — both exit STRAIGHT to the map.
+  // Empty effectType + empty resultText is what the bare-Leave fast path in
+  // handleEncounterChoiceClick looks for; `_exitToast` rides along so the
+  // empty-handed answer still says something on the way out.
+  if (choices.length === 0) {
+    choices.push(Object.assign(
+      new EncounterChoice(
+        'Search your packs for something worth offering.',
+        '', '', 0,
+        { completesEncounter: true },
+      ),
+      { _exitToast: 'Nothing you carry ever grew. The god is owed better.' },
+    ));
+  }
+  choices.push(new EncounterChoice(
+    'Leave the god to its garden.',
+    '', '', 0,
+    { completesEncounter: true },
+  ));
+  return new Encounter('psilofyr_altar', 'Altar of Psilofyr', 'The fungus god of the deep places.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The alcove at the top of the stair holds a squat stone figure, and you have to look at it a while before you can find it under the growth. Caps crowd its shoulders in tiers. A grey ruff of something soft has climbed one arm to the elbow. Where the face should be there is only fungus.'),
+        new EncounterText('There is a shallow bowl cut into the stone at its feet, and the bowl is not empty. Mushrooms — dozens of them, laid in careful rows, the oldest gone black and soft and the newest still firm. Nobody has cleared the old ones away.', 'Valdrisa'),
+        new EncounterText('"Psilofyr," Valdrisa says, and sounds surprised to be saying it. "The mushroom-folk keep him. The myconids." She looks up at the fungus-choked walls of the whole village. "And of course they do. These people live on caps. You would borrow a neighbor\'s god too, for that."', 'Valdrisa'),
+        new EncounterText('Thorb reaches out to brush a black, collapsing cap off the statue\'s shoulder. The keeper on the stair below makes a small sound, and he stops with his hand halfway there.', 'Thorb'),
+        new EncounterText('"Right," he says, and puts the hand behind his back. "It stays on. The growing IS the offering." He steps back to look at the whole heaped, rotting, thriving thing. "Feed it, then. That is what it is for."'),
+      ],
+    }),
+    // _noDeactivateOnExhaust: the altar is permanently repeatable. Without it,
+    // donating your LAST cap greys out that row, the choice-completion path
+    // sees every returnToChoices option exhausted, and it retires the node —
+    // locking the party out of an altar they are meant to keep feeding.
+    Object.assign(
+      new EncounterPhaseData({ phaseType: EncounterPhase.CHOICE, choices }),
+      { _noDeactivateOnExhaust: true },
+    ),
+  ]);
+}
+
+// The Deep Tinker (ugv21_c4) — the workshop off The Toolmakers' Doors. Ondrik
+// Sootspindle has no trade-Common at all, so the whole transaction runs on
+// chalk, gesture and eyebrow. Both versions hand off to his shop.
+export function createDeepTinkerEncounter(revisit = false) {
+  if (revisit) {
+    return new Encounter('deep_tinker_revisit', 'The Deep Tinker', "Ondrik Sootspindle's workshop.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Ondrik does not look up when you duck back in. He wipes the slate with his sleeve, writes a fresh column of numbers on it, and taps it twice with the chalk without ever taking his eyes off the vise.', 'Ondrik Sootspindle'),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('deep_tinker', 'The Deep Tinker', 'A workshop, a slate, and not one word of your language.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The door is propped open with a broken pick. Inside, every wall is pegboard and every peg has a tool on it, hung in an order so exact that the empty pegs look like missing teeth. Something on the back bench is ticking.'),
+        new EncounterText('The gnome at the vise is old, soot to the elbows, with a lens strapped over one eye on a frame of bent wire. He looks up. He looks at all of you. He goes back to the vise, finishes the turn he was making, and only then puts down the file.'),
+        new EncounterText('Then he picks up a slate, chalks a number on it, holds up a pick with his other hand, and raises both eyebrows.'),
+        new EncounterText('Thorb laughs out loud — the first proper laugh out of him since the mountain. "Now THAT is a language I have got all of." He takes the pick, tests the heft, and taps the slate. The gnome wipes it, writes a smaller number, and looks unbearably pleased with himself.', 'Thorb'),
+        new EncounterText('He goes down the pegboard with you, holding things up one at a time — hammer, pick, gloves, helm — chalking a price for each and rubbing it out again when your face does the wrong thing. Somewhere in there you work out his name is Ondrik, because he writes that too, and underlines it.', 'Ondrik Sootspindle'),
+        new EncounterText('Last of all he unhooks a pair of goggles off the highest peg. Thick brass, thicker glass, lenses stacked three deep on little hinged arms. He puts them on, looks straight through the workshop wall at something none of you can see, taps the stone twice — and chalks a number on the slate with a great deal more confidence than the others.', 'Ondrik Sootspindle'),
+      ],
+    }),
+  ]);
+}
+
+// The Spore & Sprig (ugv21_d4) — the village's one storefront, off Apothecary
+// Square. Sivvi Duskcap runs it, and she is the only gnome in town who does
+// business with the roaming carts, which is why she has trade-Common at all.
+// Both versions hand straight off to her shop (see the openShop hook in
+// main.js); the revisit one is a single beat so a second trip isn't a wall of
+// text.
+export function createSporeAndSprigEncounter(revisit = false) {
+  if (revisit) {
+    return new Encounter('spore_and_sprig_revisit', 'The Spore & Sprig', "Sivvi Duskcap's shop.", [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Sivvi is up her ladder when you duck back in, and does not bother coming down. "Big ones! Back, back." She flaps a hand at the shelves without looking. "Is all still there. Is all still price."', 'Sivvi Duskcap'),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('spore_and_sprig', 'The Spore & Sprig', 'The only shop in a village nobody was supposed to find.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The shop is one long room with a low ceiling, and the ceiling is the best part of it — every beam hung with drying bundles, so you walk through the place bent double with fungus brushing your hair.'),
+        new EncounterText('The humming stops. A deep gnome woman leans out from behind a stack of crates, grey as slate, white hair pinned up with what looks like two mushroom stems, spectacles shoved up on her forehead. She looks at you for a long moment. Then she looks up. Then further up.'),
+        new EncounterText('"Hah!" She claps her hands once, delighted. "The big ones. Is true, then. Whole street says big ones, and I say, Sivvi, is nonsense, is nobody that big." She wipes her palms on her apron and comes around the crates to stand under you. "Sivvi Duskcap. Is my shop. You are welcome, mind the beam."', 'Sivvi Duskcap'),
+        new EncounterText('Brad, who has already cracked his head on the beam, says nothing.'),
+        new EncounterText('"You have the trade-tongue?" She taps her own chest, pleased with herself. "I have it. Only me in whole town. Carts come, carts want words, Sivvi learns words." She shrugs. "Words are cheap. Caps are not cheap."', 'Sivvi Duskcap'),
+        new EncounterText('She walks you down the shelves with a finger out. "Blue is food. Barrel-stalk is food and drink both, is good for a road. Cave-cap for the hurt. Lantern if you go dark places, which you go, is obvious." Her finger stops at the last shelf, and slows. "And this one is not for everybody."', 'Sivvi Duskcap'),
+        new EncounterText('The book she lifts down is bound in something pale and soft that is not leather, and the pages breathe faintly when she opens them. "Old writing. Grows on a friend, if the friend lets it." She snaps it shut and sets it on the counter, watching your face. "Is expensive. Is worth it."', 'Sivvi Duskcap'),
+      ],
+    }),
+  ]);
+}
+
+// Svirfneblin trade party wants to do business, and none of it is in a language
+// you speak. Two variants:
+//   * withCornis = false — the default. Every merchant line is deep-gnome
+//     gibberish; Valdrisa and Thorb each catch fragments and guess badly.
+//   * withCornis = true  — once Cornis Metalhands is in the party he does the
+//     talking and translates back in his own thick gnomish accent.
+// Either way the dialog hands straight off to the merchants' shop (see the
+// gnome_merchants branch in the encounter-complete dispatch).
+export function createGnomeMerchantsEncounter(withCornis = false) {
+  if (withCornis) {
+    return new Encounter('gnome_merchants_cornis', 'Deep Gnome Merchants', 'A trade party in the dark — and someone to talk to them.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('Lights come up the tunnel toward you — a string of small covered handcarts, glowstone lanterns swinging off the frames, and a dozen deep gnomes who stop dead when they see how big you are.'),
+          new EncounterText('Cornis walks straight past all of you with his hands up and open, and says something short and rattling in the language they are already muttering in. Every head turns.', 'Cornis Metalhands'),
+          new EncounterText('The eldest of them fires back a long stream of it. Cornis listens, snorts, and answers with three words. Whatever they were, the carts start coming uncovered.', 'Cornis Metalhands'),
+          new EncounterText('"Right," Cornis says over his shoulder, in that flat rolling accent of his. "He is saying: you are the biggest thing come down this road in a hundred year, and he is not selling to the biggest thing come down this road in a hundred year until it is paying first. I am telling him you are paying."', 'Cornis Metalhands'),
+          new EncounterText('He taps a crate with a mithril knuckle. "Caps, mostly. The blue is good food, the barrel-stalk is food AND water, and do not let him tell you otherwise about the price — I know what he paid for it."', 'Cornis Metalhands'),
+          new EncounterText('Thorb leans down to Brad. "I have no idea whether that little man is haggling for us or selling us." Brad nods. "Aye. Grand, isn\'t it."', 'Thorb'),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('gnome_merchants', 'Deep Gnome Merchants', 'A trade party in the dark, and not a word of it in your tongue.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Lights come up the tunnel toward you — a string of small covered handcarts, glowstone lanterns swinging off the frames, and a dozen deep gnomes who stop dead when they see how big you are.'),
+        new EncounterText('Nobody runs. The eldest of them plants himself in front of the lead cart, folds his arms, and says: "Vekk. Vekk-tarrun dhu? Grish-a nimmet, grish-a NIMMET, hau?"'),
+        new EncounterText('Valdrisa tilts her head, listening the way she listens to everything. "That is Svirfneblin, and it is old. I have read it, never heard it spoken." A pause. "I believe \'nimmet\' is trade. Or theft. The words share a root, which tells you something about who wrote the dictionary."', 'Valdrisa'),
+        new EncounterText('The old gnome jabs a thumb at his carts and rattles off another string of it, faster, with what is unmistakably a price at the end of it.'),
+        new EncounterText('Thorb grunts. "Dwarf and gnome cut the same stone for a long age. I have got maybe one word in five." He counts on his fingers. "Cap. Water. Something about your mother, I think, but it might have been a measurement."', 'Thorb'),
+        new EncounterText('"Grish-a nimmet," the old gnome says again, and pulls the cover off the nearest cart. Pale blue mushrooms, packed in rows. He points at them, then at your coin purse, and raises both eyebrows to make the question universal.'),
+        new EncounterText('Brad is already counting coppers. "See, THAT I understood perfectly."', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+// Roper — the second Underdark roaming spawn. Looks like a stalagmite until it
+// opens an eye and six tentacles come off the ceiling.
+export function createRoperEncounter() {
+  return new Encounter('roper', 'Roper', 'The rock opens an eye.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('One of the stalagmites you have been walking past for the last hundred paces opens an eye.'),
+        new EncounterText('Ropes of grey muscle peel off the column and hang down between you and the way on, swaying, tasting the air. Behind them the rock splits into a mouth full of pegs — and the first lash is already coming.'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'roper' }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['roper_loot'] }),
+  ]);
+}
+
 export function createGnollWarriorEncounter() {
   return new Encounter('gnoll_warrior', 'Gnoll Warrior', 'A brute blocks the way.', [
     new EncounterPhaseData({
@@ -6005,18 +6475,430 @@ export function createUnderdarkEntranceEncounter() {
 }
 
 // The Sunless Sea — the western fork off The Long Deep (ug_7). A one-shot flavor
-// beat: Thorb and Valdrisa read the plunge for what it is and steer the party
-// back toward the shallower eastern routes. A soft nudge, not a gate.
+// beat: now that Brad has joined at The Long Deep, he draws the party's real
+// destination out of Thorb (Tharnag, north-east) and steers them back off the
+// water. A soft nudge, not a gate.
 export function createUnderdarkSunlessSeaEncounter() {
   return new Encounter('underdark_sunless_sea', 'The Sunless Sea', 'A vast, lightless water at the bottom of the fork.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('The fork spills out onto a shingle of wet black stone, and beyond it — water. A vast, still, lightless sea, stretching past the reach of your torches into a dark that has never held a star. Somewhere far out, something breaks the surface, and is gone.'),
-        new EncounterText('Thorb and Valdrisa share a long look — the wordless kind that passes between people who have both seen too much of the deep places.', '!'),
-        new EncounterText('"That\'s the true deep, that is," Thorb says, low. "The old dark under the dark. This road drops too far, too fast — go swimmin\' in that and we don\'t come back up."', 'Thorb'),
-        new EncounterText('"He\'s right." Valdrisa draws the party back a step from the water\'s edge. "We\'re not ready for the roots of the world, not yet. Let\'s keep as far east as we can — hug the shallow edge of it, not its throat. The deep will still be here when we\'re ready for it."', 'Valdrisa'),
+        new EncounterText('This fork runs down toward the lap of black water in the dark — a sunless sea, stretching past the reach of your torches.'),
+        new EncounterText('Brad hangs back at the waterline, thumbs hooked in his belt. "So — before we go paddling off into the dark. You lot were headed where, exactly?"', 'Brad'),
+        new EncounterText('Thorb grunts. "Near Tharnag. The dwarf-hold. That\'s north and east of here — north-east, aye?"', 'Thorb'),
+        new EncounterText('Brad nods, tipping his head back the way you came. "North-east\'s that way. This" — a flick of the eyes at the black water — "is very much not. Let\'s not go wading any deeper into the Sunless Sea than we have to."', 'Brad'),
       ],
+    }),
+  ]);
+}
+
+// Meeting Brad the Fox — fires once at The Long Deep (ug_6), the junction where
+// the first Underdark map forks. A shadow peels out of the dark and introduces
+// himself: Brad, a self-styled guide who knows these roads and will walk them
+// with the party for a cut of the take. The back-and-forth ends on a handshake,
+// then a LOOT page hands over the brad_card ("Brad the Fox joins the party!").
+// One-shot: ug_6 is canRevisit:false so the meeting never replays.
+export function createUnderdarkBradMeetingEncounter() {
+  return new Encounter('underdark_brad_meeting', 'The Long Deep', 'A voice out of the dark, where no voice should be.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The cavern opens into a vast, lightless gulf, and the way splits ahead. You are still weighing the forks when a dry, amused voice drifts out of the black — close, far too close.'),
+        new EncounterText('"I wouldn\'t go that way if I were you."', 'Brad'),
+        new EncounterText('The whole party jumps as one, spinning toward the voice with blades half-drawn. There — peeling itself out of a corner so black you\'d have sworn it was solid stone — steps a lean, sharp-faced figure, moving with the easy quiet of something that has never once been caught.'),
+        new EncounterText('"Brad the Fox is the name. You can call me... Brad." He folds into a bow so deep and so unhurried it tips over into the ridiculous, and holds it a beat too long before unfolding again with a grin.', 'Brad'),
+        new EncounterText('Thorb keeps his weapon up. "And what in the deep roads is a man doing down here alone, grinning at strangers in the dark?"', 'Thorb'),
+        new EncounterText('"Alone? Comfortable, more like. The Underdark and I are old acquaintances — I\'ve walked these roads a handful of times and strolled back out each one, which is a good deal more than most down here can say."', 'Brad'),
+        new EncounterText('Raena narrows her eyes, reading him the way she reads a trail. "And now you\'re offering to walk them with us. Why?"', 'Raena'),
+        new EncounterText('His eyes flick across the four of you, weighing the party. "Because you look like folk who\'ll turn up trouble and treasure in equal measure — and five walk these roads a good deal safer than four. I\'ll guide you. Keep you off the paths that swallow people whole." The grin sharpens. "For a cut, naturally. A share of the gold, a share of the riches. Nothing you\'d weep over."', 'Brad'),
+        new EncounterText('He spreads his hands, palms open, the picture of honesty. "So. Do we have a deal?"', 'Brad'),
+        new EncounterText('Thorb mutters something about foxes and henhouses — but Raena is already nodding. Down here, a guide who truly knows the dark is worth more than any purse of gold. Hands are clasped, the bargain struck.'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Brad the Fox joins the party!',
+      lootCards: ['brad_card'],
+    }),
+  ]);
+}
+
+// The South Crossroad arrival — fires once as the party emerges from the cramped
+// entry tunnels into the great crossroad chamber (usx_xroad). They marvel, catch
+// the faint deep-tunnel light, guess at their bearings, and each pitch a road:
+// Thorb north, Raena south (water / rest), Valdrisa east (mushroom-light, safer).
+// Then Brad — the party's Underdark guide since The Long Deep — reads all three:
+// north climbs toward Tharnag, east may hold Svirfneblin (deep gnome) allies, and
+// south he won't vouch for (his knowledge thins out that way).
+export function createUnderdarkSouthXRoadArrivalEncounter() {
+  return new Encounter('underdark_south_xroad_arrival', 'The South Crossroad', 'The tunnels open into a vast crossroad of the deep.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The road drops you down, the walls fall away — and without warning you stand at the lip of an immensity of black air. After hours of stone pressing close on every side, the sheer size of it stops the whole party in its tracks: a vast crossroad of the deep, its ceiling lost somewhere far, far above.'),
+        new EncounterText('For a moment nobody speaks. Then you see it: from the mouths of the deeper tunnels running off the chamber, a faint light bleeds up out of the dark — cold, and strange, and not from any torch. Something down those roads is lit.', '!'),
+        new EncounterText('Raena turns a slow circle, reading the black. "Best I can tell, we\'re turned about but — right runs south, straight on is east, and left goes north. For whatever that\'s worth this deep."', 'Raena'),
+        new EncounterText('Thorb is already squinting left, north. "North, then. That\'s our way — straight on and don\'t dawdle." His hand tightens on his weapon.', 'Thorb'),
+        new EncounterText('"Hold." Raena tips her head to the right. "South. I hear water down that road — running water. If anywhere down here is safe to rest and resupply, it\'s where the water is."', 'Raena'),
+        new EncounterText('Valdrisa is staring straight ahead, east, at a soft bloom of pale light far down the forward tunnel. "Mushroom-light. Where things grow, less tends to hunt. That road may be the gentler one — if you want the safer path first."', 'Valdrisa'),
+        new EncounterText('Brad has been quiet, letting them wrangle it out — but now he steps into the middle of the chamber and turns a slow circle, taking in all three roads with a professional\'s eye. "Right. Since you\'re paying for what I know, here\'s what I know."', 'Brad'),
+        new EncounterText('He nods left, north, where Thorb is already set to go. "North climbs. Keeps climbing, if memory serves — back up toward the old dwarf-country. If it\'s Tharnag you\'re still bound for, that\'s your direction. Long haul, but the right one."', 'Brad'),
+        new EncounterText('His grin dims a shade. "Only — it\'s not a clean run. To reach the Tharnag country from down here, we\'ll most likely have to cross the Giant Fungus caverns first, I\'m afraid. Bad stretch, that. Things grow big in there, and hungry with it. But there\'s no way round it that I\'ve ever found."', 'Brad'),
+        new EncounterText('He tips his chin east, at Valdrisa\'s pale fungal glow. "That mushroom-light? Where the glow-caps grow thick like that, you\'ll often find Svirfneblin — deep gnomes. Shy little folk, quick to vanish, but come at them without steel drawn and they\'ve been known to warm to travelers. Could be we\'d find friends down that road. Allies are worth more than loot, this deep."', 'Brad'),
+        new EncounterText('He turns last to the right — south, the water road — and for once the easy patter falters. "South, though... I\'ll be straight with you: I\'ve never had cause to go far that way. Water means a way through, and maybe a rest, aye — but I won\'t swear to what else drinks from it. That road you\'d be walking on my guesswork, not my word."', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+// Beyond the Gate — one-shot beat fired the first time the party teleports onto
+// the East Path 16 threshold (uep16_entry), past the Svirfneblin gate. The caverns
+// have visibly changed — brighter, more fungus, worked stone — and Valdrisa + Brad
+// read it as deep-gnome country drawing close. uep16_entry is canRevisit:false so
+// it plays once.
+export function createUnderdarkEastGateEncounter() {
+  return new Encounter('underdark_east_gate', 'Beyond the Gate', 'Past the Svirfneblin gate the deep changes character.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Beyond the gate the caverns have shifted. The walls glow brighter, pale mushrooms crowd thicker along the road, and the stone underfoot is worked and tended — smoothed by small, careful hands. The deep here feels different. Lived-in.'),
+        new EncounterText('Valdrisa trails her fingers over a bed of cultivated fungus at the roadside. "This is tended, not wild — someone farms these caverns. And the light keeps growing, the deeper we go."', 'Valdrisa'),
+        new EncounterText('Brad nods, quietly pleased with himself. "More light, more mushrooms, worked stone — that\'s deep-gnome country, sure as anything. The Svirfneblin I told you about. We must be getting close now."', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+// The Underground River — one-shot beat on the middle node of South Path 09
+// (usp9_2). Raena reads the river and reckons they're close to the surface lake;
+// Brad, unconvinced, goes on record that following it is a bad idea.
+export function createUnderdarkSouthRiverEncounter() {
+  return new Encounter('underdark_south_river', 'The Underground River', 'A broad black river running on through the dark.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Raena crouches at the water\'s edge and lets the current run over her fingers, reading it the way she reads a trail. "We\'ve been shadowing this same river a good while now — since the spring, near enough. It\'s pulled us the one way the whole time."', 'Raena'),
+        new EncounterText('She straightens, looking off down the broadening dark. "A river this size has to empty somewhere. If I\'ve kept my bearings at all, we\'re close to that lake now. Stay with the water — it\'ll take us out."', 'Raena'),
+        new EncounterText('Brad blows out a slow breath and doesn\'t move from the wall. "For the record — I still think this is a bad idea. Chasing black water toward some lake none of us has laid eyes on. Water that runs this deep usually empties somewhere that doesn\'t care for visitors." He shrugs. "But you\'re paying. Lead on."', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+// The Bottomless Lake — the dead-end beat at the far end of South Path 13
+// (usp13_3). The party comes upon a vast black underground lake fed by a
+// waterfall falling out of the dark far overhead, ringed with the wrecks of
+// surface ships. Raena's unease pays off when a tentacle — the same kind seen
+// on the river, but monstrous now — rises: the Deep Kraken, source of the
+// Kraken Spawn. The CHOICE forks into fight (advances to the deep_kraken
+// COMBAT phase) or flee (the 'bottomless_lake_run' handler bails back to the
+// map, leaving the node un-completed so it can be approached again). Uses the
+// TheBottomlessLake background via ENCOUNTER_BG_MAP.
+export function createBottomlessLakeEncounter() {
+  return new Encounter('bottomless_lake', 'The Bottomless Lake', 'A black lake with no far shore, fed from a great height.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The passage opens without warning into a cavern so vast the far side is only a guess. Before you lies a lake of black, still water that runs out past the reach of any light — no far shore, no bottom you would care to test.'),
+        new EncounterText('From somewhere impossibly high in the dark, a waterfall thunders down in a single unbroken column, feeding the lake without end. It is as if a whole surface lake had been tipped over the edge of the world and set to pour itself down here forever — and yet the black water never rises, never spills. Somewhere in the twisted logic of this place, the cycle closes. It should not make sense. Down here, it does.'),
+        new EncounterText('Along the near shore lie wrecks — the broken hulls of boats and river-barges, some fresh enough to still smell of pitch, others so old they have half-turned to stone. All of them came from above. None of them left.'),
+        new EncounterText('Raena stops at the waterline before you can, one hand thrown out to hold you back. "Don\'t," she says quietly. "Don\'t drink from it. Don\'t fill a skin. There\'s something here — I can feel it the way you feel eyes on the back of your neck. This water is watched."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You take her word for it and turn to go. And that is when the water stirs.'),
+        new EncounterText('A shape breaks the surface — a tentacle, glistening and black, rising in a slow coil against the falling water. You have seen its like before, on the river above, lashing up out of the shallows.'),
+        new EncounterText('But that one was a limb you could sever. This one is ten times its size — thick as an old oak, tall as a ship\'s mast, and it is only the first of them. In a single cold instant you understand: the thing on the surface was a spawn. A splinter. A child sent up to the light. THIS is where it came from.'),
+        new EncounterText('"Gods below," Thorb breathes, backing up a step. "That\'s the mother of it."', 'Thorb'),
+        new EncounterText('Brad is already halfway to the passage, dagger out, eyes gone wide and wild. "I KNEW this was a bad idea!"', 'Brad'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Stay and fight.',
+          'No running from a thing that big in the dark — better to face it on your feet, at the water\'s edge, than have it drag you under from behind. You set your stance and raise your weapons as the black coils rise.',
+          '', 0
+        ),
+        new EncounterChoice(
+          'Run for your life.',
+          'Some things are not meant to be fought. You turn and run for the passage, the roar of the falls swallowing your footsteps as the tentacles crash down behind you. The dark takes you back the way you came — heart pounding, alive.',
+          'bottomless_lake_run', 0
+        ),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.COMBAT,
+      enemyId: 'deep_kraken',
+    }),
+    // Salvage pick — the SAME six tier-1 epics the Kraken Spawn drops from
+    // the wrecked hold; party keeps 2 distinct. (For now the Deep Kraken
+    // reuses the surface Kraken's loot table.)
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      phaseTitle: 'Sunken Salvage',
+      lootTitle: 'Sunken Salvage',
+      lootPickCount: 2,
+      lootPickCards: [
+        'bloody_eye_patch',
+        'harpoon_of_the_deep',
+        'tentacle_whip',
+        'sailors_lucky_compass',
+        'krakens_eye_spyglass',
+        'barnacle_covered_buckler',
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('With a final shudder the vast body sinks back beneath the black water, the coils going slack and slipping under one by one. The waterfall thunders on, indifferent, as the last ripples die away. Whatever it was, whatever it fed — it will spawn no more children up the river.'),
+        new EncounterText('Among the nearer wrecks, half-swallowed by the black shallows, something the great beast dragged down long ago has washed loose — salvage worth the taking before you go.'),
+        new EncounterText('Raena lets out a long breath. "That," she says, "was where the river\'s monster was born. And now it isn\'t." She still won\'t go near the water.', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// The Quiet Pool — the short-branch dead-end of South Path 12 (usp12_a3). A
+// clean pocket of running water, fed off the shaft-light above and untouched by
+// whatever watches the Bottomless Lake. Drinking heals the party to FULL HP
+// (not a full rest — no respawns / level-up) and grants the Deep River Water
+// beverage. One drink per rest (gated by _quietPoolUsed in main.js, cleared by
+// setWellRested). No ENCOUNTER_BG override, so it renders against the map art.
+// The Drink / Leave choices use custom effect types that bail back to the map
+// WITHOUT completing the encounter, so the node stays approachable.
+export function createQuietPoolEncounter() {
+  return new Encounter('quiet_pool', 'The Quiet Pool', 'Clear, running water — apart from the black lake.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The short way ends at a still, clear pool where a thread of the river runs in bright over pale stone, lit from the shaft far above. After the black, watched water of the lake, it looks almost impossibly clean.'),
+        new EncounterText('Raena crouches and cups a handful, sniffs it, tastes a drop from her fingertip — and, for once, nods. "This one\'s good," she says. "Runs off the high water before it ever reaches that lake. Cold, clean, and old. Drink your fill here — it\'ll do you more good than any waterskin."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Drink deep from the pool.',
+          'You kneel and drink until you can hold no more. The cold runs through you like a second wind — aches ease, wounds knit, and the weariness of the deep road washes clean away. You fill a skin for the trail: Deep River Water, still cold from the stone.',
+          'quiet_pool_drink', 0
+        ),
+        new EncounterChoice(
+          'Leave the water be.',
+          'You leave the pool undisturbed and turn back toward the fork.',
+          'quiet_pool_leave', 0
+        ),
+      ],
+    }),
+  ]);
+}
+
+// The Ring Chamber — one-shot beat fired the first time the party steps off the
+// corridor into the Mushroom Circle map (umc25_entry, canRevisit:false so it
+// plays once). Nothing attacks; the room simply feels wrong, and Raena's
+// instinct reads it as a way through to somewhere rather than a dead end.
+// Both versions are one-shot: umc25_entry is canRevisit:false, so whichever
+// version fires (Cornis in the party or not) plays once and never again.
+export function createMushroomCircleArrivalEncounter(withCornis = false) {
+  if (withCornis) {
+    return new Encounter('mushroom_circle_arrival_cornis', 'The Ring Chamber', 'A round chamber where the air sits wrong.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The corridor lets you out into a chamber so round it cannot be an accident of the rock. The air here sits heavy and unmoving, and the spores that drift everywhere else in the deep hang motionless, as though the room were holding its breath.'),
+          new EncounterText('Cornis stops one pace inside the doorway and does not come any further. He is the only one of you who has ever been under this mountain before, and he has gone very quiet — which is what makes the rest of you stop too.', 'Cornis Metalhands'),
+          new EncounterText('"I know this room," he says. "Every gnome raised in these tunnels knows this room. You\'re told to leave it be, and nobody tells you why, because nobody knows why." His mithril fingers open and close once, slowly. "It\'s older than the village. It\'s older than the gnomes, I reckon. Whoever cut it, it wasn\'t us."', 'Cornis Metalhands'),
+          new EncounterText('Valdrisa turns a slow circle with her chin lifted, the way she does when she is reading something none of you can see. "The air is thin here. Stretched." She rubs her fingers together and frowns at nothing. "Not thin like high country. Thin like a curtain."', 'Valdrisa'),
+          new EncounterText('"Aye. That\'s near enough the word my grandmother used." Cornis finally steps in, and does it carefully, the way a man walks on ice. "She called it a door with nothing on the far side of it. She also said not to go finding out."', 'Cornis Metalhands'),
+          new EncounterText('Raena has not moved since she came through. She is standing very still with her head tilted, listening past all of you — and when she finally speaks, it is quiet, and certain. "There\'s a road here." She nods at the far side of the chamber. "I can\'t see it and I can\'t point to it, but I\'ve stood on enough trailheads to know one when it\'s under my feet. This place goes somewhere."', 'Raena'),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('mushroom_circle_arrival', 'The Ring Chamber', 'A round chamber where the air sits wrong.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The corridor lets you out into a chamber so round it cannot be an accident of the rock. The air here sits heavy and unmoving, and the spores that drift everywhere else in the deep hang motionless, as though the room were holding its breath.'),
+        new EncounterText('Thorb stops dead three steps in and puts a hand flat against the wall, then takes it away again. "That\'s not stone-quiet," he says slowly. "Stone\'s quiet all the way down. This is quiet like something\'s listening."', 'Thorb'),
+        new EncounterText('Valdrisa turns a slow circle with her chin lifted, the way she does when she is reading something none of you can see. "The air is thin here. Stretched." She rubs her fingers together and frowns at nothing. "Not thin like high country. Thin like a curtain."', 'Valdrisa'),
+        new EncounterText('Brad, for once, has nothing clever ready. He has his back to the wall and his eyes on the far side of the chamber. "Right," he says. "Whatever we\'re doing in here, let\'s do it quick."', 'Brad'),
+        new EncounterText('Raena has not moved since she came through the door. She is standing very still with her head tilted, listening past all of you — and when she finally speaks, it is quiet, and certain. "There\'s a road here." She nods at the far side of the chamber. "I can\'t see it and I can\'t point to it, but I\'ve stood on enough trailheads to know one when it\'s under my feet. This place goes somewhere."', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+// The Mushroom Circle — the ring itself (umc25_2). The party gets the tingle, and
+// the CHOICE forks into stepping into the ring ('mushroom_circle_enter') or
+// stepping back ('mushroom_circle_leave'). Neither completes the node, so the
+// choice can be taken again on a later approach. The step-in branch is a stub for
+// now — it will teleport to the paired circle once that map exists.
+// Each version narrates ONCE. The startNodeEncounter special-case latches which
+// one has played and drops a repeat approach straight onto the CHOICE phase, so
+// the ring can still be stepped into later without replaying the dialog.
+export function createMushroomCircleEncounter(withCornis = false) {
+  if (withCornis) {
+    return new Encounter('mushroom_circle_cornis', 'The Mushroom Circle', 'A perfect ring of pale mushrooms.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          new EncounterText('The mushrooms grow in a ring — a true ring, unbroken, each pale cap spaced from the next as evenly as stitches in a hem. Nothing grows inside it. The floor within the circle is bare, swept stone.'),
+          new EncounterText('As you come close the hair lifts on your arms, and a faint tingle runs up through your boots and into your teeth. It is not painful. It is not even unpleasant. It is simply, unmistakably, not natural.'),
+          new EncounterText('Cornis crouches at the rim and holds one mithril hand flat above the bare stone without touching it. The metal hums — you can hear it, a thin sweet note like a struck rim. He listens to it with the face of a man reading a word he only half recognises.', 'Cornis Metalhands'),
+          new EncounterText('"This is old magic," he says at last. "Older than the village. Before the gnomes, if you want my guess — we didn\'t make this. We found it, and we had the sense to walk around it." He sits back on his heels. "Don\'t ask me what it does. I couldn\'t tell you. What my hands tell me is that it isn\'t a trap and it isn\'t a ward. It\'s open. It\'s been open the whole while."', 'Cornis Metalhands'),
+          new EncounterText('Brad has stopped well short of the ring. "So your considered advice is that we walk into the very old thing that nobody has ever understood."\n"My considered advice," says Cornis, "is that I tell you what it is and you decide what to do about it. I\'m a smith, not a priest."', 'Brad'),
+          new EncounterText('Raena looks across at you, and there it is again — that flat certainty she gets when the trail is right in front of her. "This is the road I felt. Step in, and I don\'t think we\'ll be standing here anymore." A pause. "Your call."', 'Raena'),
+        ],
+      }),
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.CHOICE,
+        choices: [
+          new EncounterChoice(
+            'Step into the circle.',
+            'You step over the ring of pale caps and onto the bare stone. The tingle climbs to a hum, the chamber tilts a hand\'s width sideways — and the last thing you hear from the Underdark is Cornis saying something short and old in Svirfneblin that sounds a great deal like a prayer.',
+            'mushroom_circle_enter', 0
+          ),
+          new EncounterChoice(
+            'Step back from the ring.',
+            'You step back from the mushrooms, and the tingle fades off your skin the moment you do. Cornis looks relieved, and does a poor job of hiding it. The ring sits there, patient, waiting to be tried again.',
+            'mushroom_circle_leave', 0
+          ),
+        ],
+      }),
+    ]);
+  }
+  return new Encounter('mushroom_circle', 'The Mushroom Circle', 'A perfect ring of pale mushrooms.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The mushrooms grow in a ring — a true ring, unbroken, each pale cap spaced from the next as evenly as stitches in a hem. Nothing grows inside it. The floor within the circle is bare, swept stone.'),
+        new EncounterText('As you come close the hair lifts on your arms, and a faint tingle runs up through your boots and into your teeth. It is not painful. It is not even unpleasant. It is simply, unmistakably, not natural.'),
+        new EncounterText('"Feel that?" Brad has stopped well short of the ring. "Because I feel that, and I\'d like it noted that I don\'t care for it."', 'Brad'),
+        new EncounterText('Valdrisa crouches at the edge of the circle and holds a palm out over the bare stone without touching it. "It is not a trap, and it is not a ward," she says. "It is a door standing open. Whoever set this ring meant it to be used."', 'Valdrisa'),
+        new EncounterText('Raena looks across at you, and there it is again — that flat certainty she gets when the trail is right in front of her. "This is the road I felt. Step in, and I don\'t think we\'ll be standing here anymore." A pause. "Your call."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Step into the circle.',
+          'You step over the ring of pale caps and onto the bare stone. The tingle climbs to a hum, the chamber tilts a hand\'s width sideways — and the cold weight of the mountain comes off you all at once.',
+          'mushroom_circle_enter', 0
+        ),
+        new EncounterChoice(
+          'Step back from the ring.',
+          'You step back from the mushrooms, and the tingle fades off your skin the moment you do. The ring sits there, patient, waiting to be tried again.',
+          'mushroom_circle_leave', 0
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Mushroom Farm — the harvest beat shared by the four tended beds on the East
+// Path 18 ring (Watered Beds / Spore Garden / Compost Midden / Cap Rows). Short
+// dialog, then Harvest / Leave. The outcome is PRE-ROLLED in the
+// startNodeEncounter special-case, which rewrites the harvest choice's result
+// text to match what the party actually turns up (and greys the option out when
+// the bed has already been picked over this rest).
+export function createMushroomFarmEncounter() {
+  return new Encounter('mushroom_farm', 'The Mushroom Beds', 'Someone tends these caverns.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The mushrooms here did not grow this way on their own. The beds are laid out in rows, the weak growth pinched off, the litter raked up around the roots — and the whole plot is set where the water runs.'),
+        new EncounterText('Valdrisa crouches and turns a cap over without picking it. "Tended. Recently." She looks along the row at the small, deliberate gaps. "Someone was working this bed within the day."', 'Valdrisa'),
+        new EncounterText('Brad is already eyeing the crop with an entirely different interest. "Aye, and whoever they are, they\'re not here, and we haven\'t eaten anything that wasn\'t rations in a week." He spreads his hands. "I\'m not saying rob the place. I\'m saying a few caps off the end of a row."', 'Brad'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Harvest some of the mushrooms.',
+          'You work along the end of a row, taking a few caps and leaving the beds otherwise as you found them.',
+          'mushroom_farm_harvest', 0
+        ),
+        new EncounterChoice(
+          'Leave the beds alone.',
+          'Somebody is counting on this crop. You step back over the channel and leave the rows untouched.',
+          'mushroom_farm_leave', 0
+        ),
+      ],
+    }),
+  ]);
+}
+
+// The Ancient Druid Circle — the one-shot beat fired when the party steps out of
+// the Mushroom Circle and onto the surface for the first time since Chapter 3
+// began (adc_center, canRevisit:false). Three movements: the shock of daylight,
+// Raena recognizing the ring from her girlhood near Kar-Eden (and the party
+// guessing that's WHY the crossing worked), and the circle's treant guardians
+// waking to a party they don't know.
+//
+// The guardian fight sits between the "the trees are moving" phase and the
+// victory beat: enemyId 'ancients_guardians' (an invulnerable presence riding
+// three 2x2 Ancients of War — see ENEMY_DECKS in main.js).
+export function createAncientDruidCircleEncounter() {
+  return new Encounter('ancient_druid_circle', 'The Ancient Druid Circle', 'Standing stones, open sky, and guardians waking.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The hum takes you — and lets go. And there is SKY.'),
+        new EncounterText('Light comes down through moving leaves in broken white flashes, and every one of them goes through your eyes like a thrown stone. You have not seen the sun in weeks. You had stopped expecting to. Somebody swears. Somebody else is laughing, or crying, and cannot tell you which.'),
+        new EncounterText('Air moves. That is the part that undoes you — air that MOVES, warm and full of green and turned earth and something flowering, after all that still, dead, dripping dark. Birds. Wind in high branches. The enormous, ordinary noise of a wood in the afternoon.'),
+        new EncounterText('You are standing in a ring of leaning grey stones in a forest clearing, and there is not one grain of Underdark stone anywhere in sight.'),
+        new EncounterText('Thorb has both hands over his eyes and is swearing steadily into them, in Dwarvish, without repeating himself once. "A ring," he manages. "We stepped in a ring of mushrooms and came out a ring of ROCKS. Somebody explain the geometry of that to me. Slowly."', 'Thorb'),
+        new EncounterText('Brad has gone very quiet. He turns a slow full circle with his arms out, palms up, as if checking that all of him arrived. "I have been down there," he says, "eleven years." His voice cracks in the middle of it and he does not appear to notice. "Eleven years."', 'Brad'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('And then Raena makes a sound none of you have heard her make before.'),
+        new EncounterText('She has gone three steps out of the ring, into the grass, and she is standing there with a hand pressed flat over her mouth. "I know this place," she says. "I KNOW this place."', 'Raena'),
+        new EncounterText('She turns fast, pointing, the words falling over each other. "That stone leans — it always leaned, we used to climb it. There\'s a spring downslope, that way, under the roots. This is the old circle above the river bend. This is Silverwood. This is MY wood."', 'Raena'),
+        new EncounterText('"I came here as a girl," she says, quieter. "Before the kobolds. Before any of it. Our elders would bring us up to the stones at the turn of the season and make us sit in the grass and be silent, and we hated it, and we came anyway." She laughs, badly. "Kar-Eden is half a day north of where you are standing."', 'Raena'),
+        new EncounterText('Valdrisa has been watching her, and something in her face settles. "That is your answer, then," she says. "A door of that kind cannot open on nowhere. It needs a far end that is KNOWN — held in a mind that has stood on it." She looks at Raena. "The ring did not choose the Silverwood. It chose you. We simply happened to be holding on."', 'Valdrisa'),
+        new EncounterText('"So the elf daydreams about home," Thorb says, "and the mushrooms drop us in her back garden." He shakes his head slowly. "I want it on record that I hate that. And that I\'m glad of it."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You are still standing there working it through when the light changes.'),
+        new EncounterText('Not a cloud. Something at the clearing\'s edge has moved to block the sun — and then the tree beside it moves too, and the ground shivers, and what you took for four old oaks around the ring are pulling their roots up out of the earth in slow, dripping ropes.'),
+        new EncounterText('They come around you without hurry, the way a hand closes. Bark cracks and re-knits into shoulders. Old boughs swing down and around. Two knots of pale heartwood high up in the first one open, and they are eyes, and they are looking at exactly none of you with any kind of welcome.'),
+        new EncounterText('"NO —" Raena is already out in front, both hands up and empty, shouting into the shadow of them in the high old Elvish she has not used in years. "We are not thieves! I am of Kar-Eden — I sat in this grass, you KNOW me, I sat here —"', 'Raena'),
+        new EncounterText('The nearest guardian looks down at her for a long, considering moment. Whatever it finds, it is not enough. The circle of them closes another step, and the grass goes dark under the branches, and there is nowhere left to stand that is not underneath something very old and very angry.'),
+        new EncounterText('Brad draws both daggers with a whimper. "Trees," he says. "It had to be trees."', 'Brad'),
+      ],
+    }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'ancients_guardians' }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('It ends the way a storm ends — not beaten so much as spent.'),
+        new EncounterText('The great one stands over Raena with a limb raised and does not bring it down. She has not moved. She has not stopped talking, either, the old words coming steady and low, naming her house and her elders and the seasons she sat here in the wet grass being silent.'),
+        new EncounterText('Something in the pale heartwood eyes goes out — the anger, or the mistake. The raised limb settles. Slowly, hugely, the guardian lowers itself back into the place it stood before, and its roots go down into the turned earth and take hold, and the bark closes over the seams until it is only an old oak at the edge of a clearing. One by one, the others follow it down.'),
+        new EncounterText('The clearing is quiet. The sun comes back through the leaves in pieces. Somewhere downslope, a bird that had shut up starts again.'),
+        new EncounterText('Raena stands in the middle of the ring with her hands still open and her shoulders shaking, and when she finally turns around to face you all, she is smiling in a way you have never once seen on her.'),
+        new EncounterText('"They remembered," she says. "They were slow about it, but they remembered." She wipes her face with the back of her wrist and looks up at the four sleeping oaks — HER oaks, now, in a way none of you will ever quite have a word for. "The circle is ours. It stands open, and it stands watched, and nothing comes up out of that dark behind us without these four having something to say about it."', 'Raena'),
+        new EncounterText('She looks north, through the trees, toward a half day\'s walk and a village she has not seen since she was a girl — and then, deliberately, she looks away from it. "As much as I wish we could go and see my family and my friends in Kar-Eden," she says, "we should go south and find Qualibaf. Resupply there, and get back to our quest as fast as we can manage." She shoulders her bow. "The wood will keep. What\'s under it won\'t."', 'Raena'),
+      ],
+    }),
+    // Both drops, every time — a one-shot fight with no farming to price
+    // against. guaranteedLoot also bypasses the 50% gate on principle.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootCards: ['staff_of_the_ancients', 'treant_bark'],
+      guaranteedLoot: true,
     }),
   ]);
 }
@@ -7632,6 +8514,42 @@ export const ENCOUNTER_REGISTRY = {
   gnoll_fang_of_yeenoghu: createGnollFangOfYeenoghuEncounter,
   underdark_entrance: createUnderdarkEntranceEncounter,
   underdark_sunless_sea: createUnderdarkSunlessSeaEncounter,
+  underdark_brad_meeting: createUnderdarkBradMeetingEncounter,
+  underdark_east_gate: createUnderdarkEastGateEncounter,
+  underdark_south_xroad_arrival: createUnderdarkSouthXRoadArrivalEncounter,
+  underdark_south_river: createUnderdarkSouthRiverEncounter,
+  bottomless_lake: createBottomlessLakeEncounter,
+  quiet_pool: createQuietPoolEncounter,
+  mushroom_circle_arrival: () => createMushroomCircleArrivalEncounter(false),
+  mushroom_circle_arrival_cornis: () => createMushroomCircleArrivalEncounter(true),
+  mushroom_circle: () => createMushroomCircleEncounter(false),
+  mushroom_circle_cornis: () => createMushroomCircleEncounter(true),
+  ancient_druid_circle: createAncientDruidCircleEncounter,
+  mushroom_farm: createMushroomFarmEncounter,
+  umber_hulk: createUmberHulkEncounter,
+  roper: createRoperEncounter,
+  carrion_crawler: createCarrionCrawlerEncounter,
+  drow_warparty: createDrowWarpartyEncounter,
+  gnome_village_found: createGnomeVillageFoundEncounter,
+  cornis_welcome: createCornisWelcomeEncounter,
+  cornis_two_doors: createCornisTwoDoorsEncounter,
+  borrowed_house_arrival: createBorrowedHouseArrivalEncounter,
+  cornis_workbench: createCornisWorkbenchEncounter,
+  borrowed_house_bed: createBorrowedHouseBedEncounter,
+  cornis_feast: createCornisFeastEncounter,
+  glowstone_fountain: createGlowstoneFountainEncounter,
+  hall_of_callarduran_arrival: createHallOfCallarduranArrivalEncounter,
+  // The altar's real choice list is rebuilt in startNodeEncounter from what the
+  // party is carrying; this registry entry exists so the node passes the
+  // "is there an encounter for this id?" gate at all (a missing entry makes the
+  // node silently mark itself done and stay on the map).
+  psilofyr_altar: () => createPsilofyrAltarEncounter([]),
+  deep_tinker: () => createDeepTinkerEncounter(false),
+  deep_tinker_revisit: () => createDeepTinkerEncounter(true),
+  spore_and_sprig: () => createSporeAndSprigEncounter(false),
+  spore_and_sprig_revisit: () => createSporeAndSprigEncounter(true),
+  gnome_merchants: () => createGnomeMerchantsEncounter(false),
+  gnome_merchants_cornis: () => createGnomeMerchantsEncounter(true),
   corrupted_shrine: createCorruptedShrineEncounter,
   gnoll_pack_lord_den: createGnollPackLordDenEncounter,
   gnoll_prisoner_hole: createGnollPrisonerHoleEncounter,

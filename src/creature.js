@@ -1,4 +1,22 @@
 /**
+ * Optional UI hook fired when a creature avoids a hit via dodgeChance
+ * (Brad the Fox's On Hit avoid). Wired by main.js so creature.js can
+ * surface a float / log without importing the renderer (avoids a
+ * circular import). Left null in headless / test contexts.
+ */
+export let onCreatureDodge = null;
+export function setCreatureDodgeHandler(fn) { onCreatureDodge = fn; }
+
+/**
+ * Optional UI hook fired whenever a creature actually loses HP. Wired by
+ * main.js so per-creature reaction cues (the Carrion Crawler Torso's chitter)
+ * can play from one place instead of every damage call site. Left null in
+ * headless / test contexts.
+ */
+export let onCreatureDamaged = null;
+export function setCreatureDamagedHandler(fn) { onCreatureDamaged = fn; }
+
+/**
  * A creature that persists on the battlefield.
  */
 export class Creature {
@@ -11,6 +29,16 @@ export class Creature {
     armor = 0,
     shield = 0,
     poisonAttack = false,
+    // Sunder rider — each swing stacks N Sunder on the target (Cornis
+    // Metalhands: 1). Mirrors poisonAttack / bleedAttack.
+    sunderAttack = 0,
+    // "On Attack: Allies gain Heroism" (Drow Priestess) — every OTHER alive
+    // creature on this creature's side banks N Heroism whenever it swings.
+    onAttackHeroismAllies = 0,
+    // Per-swing damage override for multi-swing creatures: the LAST queued
+    // swing uses this attack value instead of `attack` (Drow Warrior: 1 first,
+    // 4 second). Only meaningful alongside _attacksPerTurn > 1.
+    secondSwingAttack = null,
     // Optional taxonomy tags for cross-creature effects (e.g.
     // Mortain's Staff: "you and your skeletons gain Shield"). Keep
     // them as plain strings like 'Skeleton' / 'Undead' so the rider
@@ -24,6 +52,26 @@ export class Creature {
     bleedingBonus = 0,
     endOfTurnDeath = false,
     fireImmune = false,
+    // Ice Body's other half. Mirrors fireImmune: the holder no-sells the
+    // status (its swings are never blunted by Ice) but stacks still land
+    // and still cancel the opposing element, which is what lets banked Ice
+    // shield the body from Fire.
+    iceImmune = false,
+    // Riposte was previously only ever set post-construction (trap.riposte =
+    // true). Declaring it here lets factories pass it inline like sentinel.
+    // riposteAmount MUST default to null, not 0 — the resolver reads
+    // `riposteAmount != null ? riposteAmount : attack`.
+    riposte = false,
+    riposteAmount = null,
+    // Riposte flavour: 'fire' | 'ice' makes the lash-back apply that element
+    // (riposteAmount stacks of it) instead of damage, which is what lets a
+    // 0-attack elemental body riposte at all.
+    riposteStatus = null,
+    // Art override. Creature art is normally keyed off the snake-cased NAME,
+    // which breaks as soon as two creatures share a name — the wizard's summoned
+    // Ice Elemental and Overseer Gnikan's are different bodies with different
+    // art. Set this to a CARD_ART_MAP key to win over the name slug.
+    artId = null,
     attackAll = false,
     // Roc Chick rider — extends attackAll to also hit the attacker's
     // own teammates (sibling chicks + unhatched eggs) on the same
@@ -56,6 +104,11 @@ export class Creature {
     // (Ice Elemental's Ice-Absorb math) so the "needs rules" red
     // badge in the codex stays off. Read by creatureHasOffsetRules.
     noTierOffset = false,
+    // On Hit dodge — % chance (0-100) to avoid an incoming NORMAL hit
+    // entirely (no HP lost, no armor/shield spent). Rolled at the top of
+    // takeDamage; true damage (takeUnpreventableDamage) ignores it.
+    // Brad the Fox is the first user (50).
+    dodgeChance = 0,
     // Ethereal-style per-hit damage cap (0 = uncapped). When > 0,
     // takeDamage / takeUnpreventableDamage clamp each incoming hit to
     // this value — a 3-HP creature with damageCap 1 needs 3 hits to
@@ -106,6 +159,16 @@ export class Creature {
     this.poisonStacks = 0;
     this.shockStacks = 0;
     this.bleedStacks = 0;
+    // Sunder stacks carried BY this creature (each shaves 1 off its armor).
+    this.sunderStacks = 0;
+    // Paralyze (Carrion Crawler set) — each stack makes the creature skip one
+    // action it would have taken, then decays by 1. Summons only: creatures
+    // with a footprint bigger than 1x1 (slotW/slotH) shrug it off, and it can
+    // never land on an enemy CHARACTER (bosses aren't creatures).
+    this.paralyzeStacks = 0;
+    // Weak — each stack HALVES one attack this creature makes, then is spent.
+    // The mirror of Mark (which doubles one attack made against a target).
+    this.weakStacks = 0;
     // Drow Sleep Poison — a Poison variant that also saps 1 attack/stack
     // and heals dead-last. Applied by the Drow Sleep Poison item.
     this.drowSleepStacks = 0;
@@ -120,6 +183,9 @@ export class Creature {
     this.regenBuffs = [];
 
     this.poisonAttack = poisonAttack;
+    this.sunderAttack = sunderAttack;
+    this.onAttackHeroismAllies = onAttackHeroismAllies;
+    this._secondSwingAttack = secondSwingAttack;
     this.traits = Array.isArray(traits) ? [...traits] : [];
     this.fireAttack = fireAttack;
     this.iceAttack = iceAttack;
@@ -132,6 +198,11 @@ export class Creature {
     // owner's end-of-turn cleanup so the summon crumbles automatically.
     this.endOfTurnDeath = endOfTurnDeath;
     this.fireImmune = fireImmune;
+    this.iceImmune = iceImmune;
+    this.riposte = riposte;
+    this.riposteAmount = riposteAmount;
+    this.riposteStatus = riposteStatus;
+    this.artId = artId;
     this.attackAll = attackAll;
     this.attackAllIncludingOwn = attackAllIncludingOwn;
     this.multiAttack = multiAttack;
@@ -162,6 +233,7 @@ export class Creature {
     this.description = description;
     this.sourceCard = sourceCard;
     this.noTierOffset = noTierOffset;
+    this.dodgeChance = dodgeChance;
     this.damageCap = damageCap;
     this.hitDeath = hitDeath;
     this.lifesteal = lifesteal;
@@ -175,6 +247,20 @@ export class Creature {
   }
 
   takeDamage(amount) {
+    // Totems (the Arcane Vortex) are scenery: nothing damages them, from any
+    // source. Guarding here rather than at the call sites catches the DoT
+    // ticks, which hit creatures directly and never pass through
+    // applyDamageToAlly.
+    if (this._untargetableAlly) return 0;
+    // On Hit dodge (Brad the Fox) — roll BEFORE any mitigation. On a
+    // success the whole hit is avoided: 0 HP lost, no armor/shield spent.
+    // Only real, positive hits can be dodged (a 0-damage swing isn't a
+    // "hit" worth a roll). True damage bypasses this via
+    // takeUnpreventableDamage, which never calls here.
+    if (this.dodgeChance > 0 && amount > 0 && Math.random() * 100 < this.dodgeChance) {
+      if (onCreatureDodge) onCreatureDodge(this);
+      return 0;
+    }
     // Ethereal cap — clamp the whole hit before armor/shield so the
     // post-mitigation HP loss can never exceed damageCap.
     if (this.damageCap > 0) amount = Math.min(amount, this.damageCap);
@@ -184,8 +270,11 @@ export class Creature {
     // bouncing off the armor, and a small shielded creature would
     // hemorrhage shields to chip damage that armor should have
     // soaked for free. Shield is the persistent buffer behind it.
-    if (this.armor > 0) {
-      const armorAbsorb = Math.min(this.armor, amount);
+    // Sunder shaves the armor 1 per stack. Creatures carry no block pool, so
+    // any leftover stacks simply have nothing else to eat here.
+    const effArmor = Math.max(0, (this.armor || 0) - (this.sunderStacks || 0));
+    if (effArmor > 0) {
+      const armorAbsorb = Math.min(effArmor, amount);
       amount -= armorAbsorb;
     }
     if (this.shield > 0) {
@@ -193,11 +282,18 @@ export class Creature {
       this.shield -= shieldAbsorb;
       amount -= shieldAbsorb;
     }
+    // Record how far past 0 this hit went. Polymorph needs it: when a Sheep or
+    // a Giant Ape is destroyed the form ends and the LEFTOVER damage carries
+    // through to the creature underneath, so the clamp below can't simply
+    // throw the excess away.
+    this._lastOverkill = Math.max(0, amount - this.currentHp);
     this.currentHp = Math.max(0, this.currentHp - amount);
+    if (amount > 0 && onCreatureDamaged) onCreatureDamaged(this, amount);
     return amount;
   }
 
   takeUnpreventableDamage(amount) {
+    if (this._untargetableAlly) return 0;
     // Ethereal caps even true damage — "can't take more than N".
     if (this.damageCap > 0) amount = Math.min(amount, this.damageCap);
     // True Damage burns Regen 1:1 — same rule as Character true damage.
@@ -207,15 +303,28 @@ export class Creature {
       this._regen = Math.max(0, this._regen - amount);
     }
     this.currentHp = Math.max(0, this.currentHp - amount);
+    if (amount > 0 && onCreatureDamaged) onCreatureDamaged(this, amount);
     return amount;
   }
 
   ready() {
     this.exhausted = false;
     this.justSummoned = false;
+    // Multi-swing allies get their full allowance back each turn.
+    this._swingsUsed = 0;
   }
 
   exhaust() {
+    // Attack Twice (Cornis Metalhands) and any other _attacksPerTurn > 1
+    // ally spends ONE swing per attack and only exhausts once the
+    // allowance runs out. Single-swing creatures (the default) exhaust
+    // immediately, exactly as before.
+    const per = Math.max(1, this._attacksPerTurn || 1);
+    if (per > 1) {
+      this._swingsUsed = (this._swingsUsed || 0) + 1;
+      if (this._swingsUsed < per) return;
+      this._swingsUsed = 0;
+    }
     this.exhausted = true;
   }
 

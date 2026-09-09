@@ -470,6 +470,8 @@ export const SOUND_MAP = {
   spider_scuttle_01: 'Monster/spider_scuttle_01',
   // Kobold Warden — louder hiss for fight start / death + the warden's
   // Guards! / Hide in the Corner card plays.
+  // Snake Trap — the snakes' hiss on spawn (Ranger Trap).
+  snake_hiss:     'Monster/reptilian_hiss_02',
   warden_hiss:    'Monster/reptilian_hiss_01',
   // Kobold Cook (Prison Kitchen) — short reptilian shriek when the
   // party lunges at him. Pairs with the hero pain cue on the
@@ -607,6 +609,8 @@ export const SOUND_MAP = {
   valdrisa_summon: 'Heroes/hero_female_pain_04',
   // Aimed Shot (ranger power) — bowstring draw before the shot.
   aimed_shot:     'Weapons/bow_draw_01',
+  // Same draw, its own alias — the Quiver isn't an Aimed Shot.
+  bow_draw:       'Weapons/bow_draw_01',
   // Druid wild-shape attack cues.
   bear_form_attack: 'Misc/bear_growl_01',
   cat_form_attack:  'Misc/lion_roar_01',
@@ -615,6 +619,12 @@ export const SOUND_MAP = {
   // growl, Huffer (boar) gets a pig grunt for summon / attack / death.
   bear_growl:       'Misc/bear_growl_01',
   pig_grunt:        'Misc/pig_grunt_01',
+  // Polymorph — the Sheep borrows the pig grunt (closest livestock noise in
+  // the pack) and the Giant Ape gets the deepest ogre growl, which reads as a
+  // big primate without colliding with bear_growl (Misha / Avatar of the Wild).
+  sheep_bleat:      'Misc/pig_grunt_01',
+  ape_roar:         'Monster/ogre_growl_deep_01',
+  ape_slam:         'Monster/ogre_growl_deep_03',
   // Obsidian boss reactions — lava splash when the slime sheds armor
   // and spawns a split, rocks pile thump when the golem's armor cracks.
   lava_bubble:      'Misc/lava_bubble_01',

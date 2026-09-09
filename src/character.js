@@ -138,6 +138,12 @@ export class Character {
     this.rage = 0;
     this.ignite = 0;
     this.poisonBuff = 0;
+    // Mining Goggles — armed "next attack also Sunders" charge, consumed on the
+    // next swing through the same rider hook as poisonBuff.
+    this.sunderBuff = 0;
+    // Crawler Skullcap — STANDING "every attack also applies N Poison" rider.
+    // Unlike poisonBuff this is never consumed; it lasts the whole fight.
+    this.poisonAttacks = 0;
     this.unpreventableBuff = 0;
     this.level = 1;
     this.perks = [];
@@ -150,6 +156,18 @@ export class Character {
     let a = this.baseArmor;
     for (const p of this.powers) {
       if (p.id === 'armor' && !p.exhausted) a += (p.armorLevel || 1);
+    }
+    // Cards that grant Armor just by being HELD (Miner's Helm). The bonus is
+    // live while the card sits in hand and vanishes the moment it's played,
+    // recharged or discarded — no state to track, the hand IS the state.
+    if (this.deck && Array.isArray(this.deck.hand)) {
+      for (const c of this.deck.hand) {
+        if (!c) continue;
+        const effs = c.currentEffects || c.effects || [];
+        for (const e of effs) {
+          if (e && e.effectType === 'armor_in_hand') a += (e.value || 1);
+        }
+      }
     }
     return a;
   }
@@ -343,8 +361,9 @@ export class Character {
     // Armor FIRST (permanent flat reduction off the top), shield
     // afterward — same rule as Creature.takeDamage. Without this the
     // standing Shield stack would burn off chip damage that armor
-    // should soak for free.
-    const armorAbsorb = Math.min(this.armor, remaining);
+    // should soak for free. Sunder shaves the armor here too (no block
+    // layer on this path, so nothing spills).
+    const armorAbsorb = Math.min(this.sunderedDefenses(0).armor, remaining);
     remaining -= armorAbsorb;
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, remaining);
@@ -399,8 +418,13 @@ export class Character {
     // behavior wiped currentBlock to 0 after the first hit; that
     // turned a Block 4 into "absorb 1 then vanish". We now drain
     // only what we used so multi-hit turns chip away at block.
-    if (this.currentBlock > 0) {
-      const blockAbsorb = Math.min(this.currentBlock, remaining);
+    // Sunder eats Armor first, then spills onto Block (never Shield). Both
+    // effective values come from one helper so the two layers can't drift.
+    const sundered = this.sunderedDefenses(this.currentBlock);
+    if (sundered.block > 0) {
+      const blockAbsorb = Math.min(sundered.block, remaining);
+      // Drain the REAL block pool by what was actually used — the sundered
+      // portion stays on the sheet but can't absorb while Sunder holds.
       this.currentBlock -= blockAbsorb;
       remaining -= blockAbsorb;
     }
@@ -410,7 +434,7 @@ export class Character {
     // (persistent), so chip damage against a shielded + armored
     // creature first scrubs off block, then bounces off armor, then
     // chips shields only if anything is left over.
-    const armorAbsorb = Math.min(this.armor, remaining);
+    const armorAbsorb = Math.min(sundered.armor, remaining);
     remaining -= armorAbsorb;
     if (this.shield > 0) {
       const shieldAbsorb = Math.min(this.shield, remaining);
@@ -474,7 +498,27 @@ export class Character {
     { key: 'FIRE',       label: 'Fire',              color: '#dc8c28' },
     { key: 'ICE',        label: 'Ice',               color: '#78c8ff' },
     { key: 'SHOCK',      label: 'Shock',             color: '#ffe650' },
+    // Weak comes after the DoTs — a heal that can scrub something that ticks
+    // on its own should spend itself there first — but ahead of Sunder, so a
+    // cleanse still gets your swings back before it repairs your guard.
+    { key: 'WEAK',       label: 'Weak',              color: '#b48ad0' },
+    // Sunder is LAST on purpose — it only gets cleared once nothing else is
+    // on you.
+    { key: 'SUNDER',     label: 'Sunder',            color: '#b0763c' },
   ];
+
+  // Sunder — each stack shaves 1 off Armor, and any leftover past the armor
+  // pool shaves 1 off Block. Never touches Shield. Returns the effective
+  // values so every defense site computes it identically.
+  //   armor 3, sunder 1            -> armor 2, block untouched
+  //   armor 2, sunder 5, block 5   -> armor 0, block 2 (3 sunder spilled over)
+  sunderedDefenses(blockAmount) {
+    const sunder = (typeof this.getStatus === 'function') ? (this.getStatus('SUNDER') || 0) : 0;
+    const armor = Math.max(0, (this.armor || 0) - sunder);
+    const spill = Math.max(0, sunder - (this.armor || 0));
+    const block = Math.max(0, (blockAmount || 0) - spill);
+    return { armor, block, sunder };
+  }
   applyStatus(status, stacks) {
     // Spell Turning (Crag Cat power) — each negative-status application has a
     // 50% chance to be turned aside entirely (one roll per application,
@@ -758,6 +802,20 @@ export class Character {
       // so the per-tick effect here is a deliberate no-op.
       case 'bloodied_rage':
         break;
+      // Bulwark's taunt is a pure display marker — the real state is the
+      // _playerSentinelActive flag in main.js (pickEnemyAttackTarget reads
+      // it). The buff exists so the player can SEE the taunt is up; its tick
+      // is a deliberate no-op and it expires on its own after one turn.
+      case 'sentinel_marker':
+        break;
+      // Summon Storm's lightning and Avatar of the Wild's bleed rider are both
+      // reactive, not per-turn: they fire from the Shock handlers
+      // (fireStormLightning) and the damage sites (applyBleedWeaponRider)
+      // respectively. The buffs exist so the player can see they're up and, for
+      // the storm, so turnsRemaining counts it down. Ticks are no-ops.
+      case 'storm_lightning':
+      case 'avatar_bleed':
+        break;
       case 'gain_heroism': {
         this.heroism += effectValue;
         const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'buff_angelic_03';
@@ -879,6 +937,38 @@ export class Character {
             sfxStagger: buff.tickSfxStagger || 150,
           });
           remaining--;
+        }
+        break;
+      }
+      case 'heal_overheal_draw': {
+        // Deep River Water beverage tick — heal exactly like the 'heal' case,
+        // but any overflow past full HP (deck full, no ailments left) converts
+        // 1-for-1 into a card draw instead of being wasted.
+        let remaining = Math.max(1, effectValue || 1);
+        const tickSfx = buff.tickSfxKey != null ? buff.tickSfxKey : 'heal_spell';
+        remaining = this.healAilments(remaining, ({ n, label, verb, color }) => {
+          const V = verb.charAt(0).toUpperCase() + verb.slice(1);
+          logs.push({ text: `  ${buff.name}: ${V} ${n} ${label}`, color, buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+        });
+        while (remaining > 0 && this.deck && this.deck.discardPile.length > 0) {
+          const card = this.deck.discardPile.pop();
+          this.deck.addToRechargePile(card);
+          logs.push({ text: `  ${buff.name}: Healed 1 (${card.name})`, color: '#3cc83c', card, healed: 1, buff, sfxKey: tickSfx, sfxCount: buff.tickSfxCount || 1, sfxStagger: buff.tickSfxStagger || 150 });
+          remaining--;
+        }
+        // Leftover = overheal → draw that many cards.
+        if (remaining > 0 && this.deck) {
+          const drawn = this.deck.draw(remaining, 10);
+          drawn.forEach((d, idx) => {
+            logs.push({
+              text: `  ${buff.name}: Overheal — Draw ${d.name}`,
+              color: '#3c3cc8',
+              card: d, buff,
+              sfxKey: idx === 0 ? 'card_draw' : undefined,
+              sfxCount: idx === 0 ? 1 : 1,
+              sfxStagger: 0,
+            });
+          });
         }
         break;
       }
@@ -1176,6 +1266,42 @@ export class Character {
           ally.heroism = (ally.heroism || 0) + effectValue;
           logs.push({
             text: `    ${ally.name}: +${effectValue} Heroism`,
+            color: '#ffd700',
+            token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
+            buff,
+            creature: ally,
+          });
+        }
+        break;
+      }
+      case 'rallying_shout_tick': {
+        // Rallying Shout — the Warrior tier-3 rally that replaced Shield Wall
+        // and Battle Shout. One buff, one icon, both grants: effectValue
+        // Shield AND effectValue Heroism to the character and every alive
+        // ally. effectValue carries the stack count (one per cast), so a
+        // second cast makes it +2/+2. Deliberately its own tick rather than
+        // stacking a shield_wall + battle_shout pair, so the buff row shows a
+        // single Rallying Shout badge instead of the two retired cards'.
+        this.shield = (this.shield || 0) + effectValue;
+        this.heroism = (this.heroism || 0) + effectValue;
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Shield`,
+          color: '#64b4dc',
+          token: 'Shield', tokenAmount: effectValue, tokenColor: '#64b4dc',
+          buff,
+        });
+        logs.push({
+          text: `  ${buff.name}: +${effectValue} Heroism`,
+          color: '#ffd700',
+          token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
+          buff,
+        });
+        for (const ally of (this.creatures || [])) {
+          if (!ally.isAlive) continue;
+          ally.shield = (ally.shield || 0) + effectValue;
+          ally.heroism = (ally.heroism || 0) + effectValue;
+          logs.push({
+            text: `    ${ally.name}: +${effectValue} Shield, +${effectValue} Heroism`,
             color: '#ffd700',
             token: 'Heroism', tokenAmount: effectValue, tokenColor: '#ffd700',
             buff,

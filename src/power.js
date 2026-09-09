@@ -348,10 +348,10 @@ export function createSplit() {
     id: 'split',
     name: 'Split',
     costDescription: 'Passive',
-    effectDescription: 'Splits when damaged.',
+    effectDescription: 'On Hit: Splits.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'Split on hit',
+    shortDesc: 'On Hit:\nSplits',
     // +1 max slimes summoned per offset (base 1, offset 1 = 1-2,
     // offset 2 = 1-3, etc). Runtime is the on-hit split handler.
     gamePlusOffset: { split_summon: 1 },
@@ -427,6 +427,39 @@ export function createPlagueSpawn() {
     isPassive: true,
     shortDesc: 'Spawn 1/1\nCockroach',
     noTierOffset: true, // spawned cockroaches stay 1/1 across ccgQuest+
+  });
+}
+
+// Tentacles (Roper) — keeps the Roper's grasping ring topped up. Turn Start:
+// if fewer than 6 Roper Tentacles are on the field, grow one back. Its art is
+// the tentacle portrait, not the Roper's.
+export function createTentaclesPower() {
+  return new Power({
+    id: 'tentacles',
+    name: 'Tentacles',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: If the Roper has less than 6 tentacles, create 1-2.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Grow 1-2\n(max 6)',
+    noTierOffset: true, // the cap is a count, not a stat that scales
+  });
+}
+
+// Tentacle Lashes (Carrion Crawler) — the head's paralytic feelers. Turn Start:
+// two cards anywhere in the player's deck (hand, draw, discard or recharge) are
+// Paralyzed and stay unplayable for the rest of the fight (they can still be
+// spent as recharge fuel).
+export function createTentacleLashesPower() {
+  return new Power({
+    id: 'tentacle_lashes',
+    name: 'Tentacle Lashes',
+    costDescription: 'Passive',
+    effectDescription: 'Turn Start: Paralyze 2 cards.',
+    rechargeCost: 0,
+    isPassive: true,
+    shortDesc: 'Paralyze 2\ncards/turn',
+    noTierOffset: true,
   });
 }
 
@@ -647,10 +680,10 @@ export function createObsidianConstructPower() {
     id: 'obsidian_construct',
     name: 'Obsidian Construct',
     costDescription: 'Passive',
-    effectDescription: 'When Hit: -1 Armor, +1 Rage. Turn Start: +1 Armor (max 5), -1 Rage.',
+    effectDescription: 'On Hit: -1 Armor, +1 Rage. Turn Start: +1 Armor (max 5), -1 Rage.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'When Hit:\n-1 Armor, +1 Rage',
+    shortDesc: 'On Hit:\n-1 Armor, +1 Rage',
     // +2 to the regen armor cap per offset (5 → 7 → 9 …) so the
     // construct can rebuild deeper into the fight before peeling
     // out. Regen amount stays at 1.
@@ -659,7 +692,7 @@ export function createObsidianConstructPower() {
 }
 
 // Obsidian Body (Oracle) — bare armor-peel variant. Mirrors the slime
-// power's "When Hit: -1 Armor" rule but drops the slime-spawn rider.
+// power's "On Hit: -1 Armor" rule but drops the slime-spawn rider.
 // Pairs with Dark Vision on the Oracle: 15 armor + every successful
 // hit chips 1 (no auto-regen, no rage gain).
 export function createObsidianOracleBodyPower() {
@@ -667,10 +700,10 @@ export function createObsidianOracleBodyPower() {
     id: 'obsidian_oracle_body',
     name: 'Obsidian Body',
     costDescription: 'Passive',
-    effectDescription: 'When Hit: -1 Armor.',
+    effectDescription: 'On Hit: -1 Armor.',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'When Hit:\n-1 Armor',
+    shortDesc: 'On Hit:\n-1 Armor',
     // Bare armor-peel rule — no numeric value to scale with tier.
     noTierOffset: true,
   });
@@ -708,10 +741,10 @@ export function createObsidianBodyPower() {
     id: 'obsidian_body',
     name: 'Obsidian Body',
     costDescription: 'Passive',
-    effectDescription: 'When Hit: -1 Armor, spawn an Obsidian Slime. Turn Start: +1 Armor (max 5).',
+    effectDescription: 'On Hit: -1 Armor, spawn an Obsidian Slime. Turn Start: +1 Armor (max 5).',
     rechargeCost: 0,
     isPassive: true,
-    shortDesc: 'When Hit:\n-1 Armor +Slime',
+    shortDesc: 'On Hit:\n-1 Armor +Slime',
     // +1 to the turn-start armor regen per offset (1 → 2 → 3 …).
     gamePlusOffset: {},
   });

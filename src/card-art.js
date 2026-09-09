@@ -78,10 +78,20 @@ export const CARD_ART_MAP = {
   hammer_of_wrath: 'HammerofWrath.jpg',
   holy_sword: 'HolySword.jpg',
   revivify: 'Revivify.jpg',
+  // Paladin tier 2 / tier 3 — the aura-and-judgment line. hammer_of_wrath_t3
+  // shares the retired tier-2 card's art on purpose; a DIFFERENT key pointing
+  // at the same file is fine (the Rampage trap was two keys with the SAME name
+  // and different files).
+  aura_of_might: 'AuraofMight.jpg',
+  holy_steed: 'HolySteed.jpg',
+  devotion_aura: 'DevotionAura.jpg',
+  holy_shield: 'HolyShield.jpg',
+  hammer_of_wrath_t3: 'HammerofWrath.jpg',
 
   // === Ranger ===
   tamed_rat: 'TamedRatAbility.jpg',
   goodberries: 'GoodberriesAbility.jpg',
+  track: 'Track.jpg',
   goodberry: 'Goodberryitem.jpg',
   multi_shot: 'MultiShotAbility.jpg',
   aimed_shot_card: 'AimedShot2.jpg',
@@ -91,8 +101,10 @@ export const CARD_ART_MAP = {
   // Marking Shot (Ranger tier-2, replaces Hunter's Mark) reuses the same art.
   marking_shot: 'HunterMark.jpg',
   animal_companion: 'AnimalCompanion.jpg',
+  bestial_wrath: 'BestialWrath.jpg',
   piercing_shot: 'PiercingShot.jpg',
   explosive_shot: 'ExplosiveShot.jpg',
+  rain_of_arrows: 'RainofArrows.jpg',
   elemental_weapon: 'ElementalWeaponBothElements.jpg',
   buff_elemental_weapon_fire: 'ElementalWeaponFire.jpg',
   buff_elemental_weapon_ice: 'ElementalWeaponIce.jpg',
@@ -104,8 +116,50 @@ export const CARD_ART_MAP = {
   arcane_shield: 'ArcaneShield.jpg',
   burning_hands: 'BurningHands.jpg',
   ice_nova: 'FrostNova.jpg',
+  // Elemental Nova — the modal that folded Burning Hands + Ice Nova together.
+  // This is the card's own face in hand; its two modes still swap to the
+  // originals' art via CardMode.artId so the picker shows which element you're
+  // choosing.
+  elemental_nova: 'ElementalNova.jpg',
   ice_block: 'IceBlock.jpg',
   ice_shatter: 'IceShatter.jpg',
+  // Shatter Storm — no dedicated art yet; borrows the Ice Shatter frost burst,
+  // which is the same moment writ large. Distinct KEY, same file: harmless.
+  shatter_storm: 'IceShatter.jpg',
+  arcane_explosion: 'ArcaneExplosion.jpg',
+  summon_elemental: 'SummonElemental.jpg',
+  fireball: 'Fireball.jpg',
+  arcane_vortex: 'ArcaneVortexAbility.jpg',
+  polymorph: 'Polymorph.jpg',
+  // The two Polymorph forms — keyed off creature.artId so a transformed body
+  // keeps its own art without colliding with whatever it used to be called.
+  sheep: 'Sheep.jpg',
+  giant_ape: 'GiantApe.jpg',
+  // The three Vortex stages. Keyed off creature.artId, not the name slug, so
+  // the body can rename itself as it grows without losing its art.
+  small_arcane_vortex: 'SmallArcaneVortex.jpg',
+  medium_arcane_vortex: 'MediumArcadeVortex.jpg',
+  large_arcane_vortex: 'LargeArcadeVortex.jpg',
+  // The two elementals. Keyed off the creature-name slug the summon preview
+  // and creature card both resolve through, plus the mode artIds on the card.
+  wizard_fire_elemental: 'WizardFireElemental.jpg',
+  wizard_ice_elemental: 'WizardIceElemental.jpg',
+  quiver: 'Quiver.jpg',
+  endless_quiver: 'EndlessQuiver.jpg',
+  bone_quiver: 'BoneQuiver.jpg',
+  mephit_skin_quiver: 'MephitSkinQuiver.jpg',
+  // Ranger Traps. The armed totem wears the ability's own face (you don't know
+  // which trap it is yet), and each sprung trap's token art doubles as the art
+  // for the body it leaves behind — creature.artId points at the same keys.
+  trap: 'TrapRangerAbility.jpg',
+  killing_ground: 'KillingGround.jpg',
+  trueshot_barrage: 'TrueshotBarrage.jpg',
+  death_coil: 'DeathCoil.jpg',
+  snake_trap: 'SnakeTrap.jpg',
+  explosive_trap: 'ExplosiveTrap.jpg',
+  bear_trap: 'BearTrap.jpg',
+  ice_trap: 'IceTrap.jpg',
+  spike_trap: 'SpikeTrap.jpg',
   cold_breath: 'VarimatrasBreath.jpg',
   varimatras_bite: 'VarimatrasBiteAttack.jpg',
   varimatras_claw: 'VarimatrasClawAttack.jpg',
@@ -126,6 +180,11 @@ export const CARD_ART_MAP = {
   backstab: 'Backstab.jpg',
   poisoned_dagger: 'PoisonedDagger.jpg',
   sprint: 'Sprint.jpg',
+  // Rogue tier 1 / tier 3 — the fight-dirty line.
+  hamstring: 'Hamstring.jpg',
+  exploit: 'Exploit.jpg',
+  crippling_venom: 'CripplingVenom.jpg',
+  assassinate: 'Assassinate.jpg',
   sprint_enemy: 'Sprint.jpg', // Slyblade/Assassin's Sprint reuses the Sprint art
   // Slyblade enemy-side aliases — same art as the Rogue cards above
   // since the slyblade's kit is the same six abilities a Rogue player
@@ -147,11 +206,24 @@ export const CARD_ART_MAP = {
   shield_wall: 'ShieldWall.jpg',
   battle_shout: 'BattleShout.jpg',
   execute: 'Execute.jpg',
+  // Warrior tier 2 / tier 3 — the shout + carve line that replaced
+  // Shield Wall and Battle Shout in the pool.
+  intimidating_shout: 'IntimidatingShout.jpg',
+  // NOT `rampage` — the Gnoll Fang of Yeenoghu's Rampage power holds that key
+  // further down as its showcase alias (GnollBite.jpg), and a duplicate key in
+  // this literal would silently win over this one.
+  warrior_rampage: 'Rampage.jpg',
+  whirlwind: 'Whirlwind.jpg',
+  sunder_armor: 'SunderArmor.jpg',
+  rallying_shout: 'RallyingShout.jpg',
+  bulwark: 'Bulkwark.jpg',
   enraged_strike: 'EnragedStrike.jpg',
 
   // === Druid ===
   wrath: 'WrathDruid.jpg',
   regrowth: 'RegrowthDruid.jpg',
+  // The Ancients Guardians cast the same spell — same art.
+  guardian_regrowth: 'RegrowthDruid.jpg',
   regrowth_legacy: 'RegrowthDruid.jpg',
   feral_swipe: 'FeralSwipe.jpg',
   feral_swipe_legacy: 'FeralSwipe.jpg',
@@ -163,6 +235,14 @@ export const CARD_ART_MAP = {
   starfire: 'Starfire.jpg',
   healing_touch: 'HealingTouch.jpg',
   natures_healing: 'HealingTouch.jpg',
+  // Druid tier 1 / tier 3 — the storm-and-grove line. Force of Nature reuses
+  // the Ancients Guardians' AncientofWar art so the card and the creature it
+  // calls read as the same being.
+  call_lightning: 'CallLightning.jpg',
+  entangling_roots: 'EntanglingRoots.jpg',
+  force_of_nature: 'AncientofWar.jpg',
+  summon_storm: 'SummonStorm.jpg',
+  avatar_of_the_wild: 'AvataroftheWild.jpg',
 
   // === Enemy Cards - Rat ===
   bite: 'BiteRat.jpg',
@@ -207,6 +287,12 @@ export const CARD_ART_MAP = {
   buff_scroll_of_potency: 'ScrollOfPotency.jpg',
   buff_ale: 'Ale.jpg',
   buff_dwarven_brew: 'DwarvenBrew.jpg',
+  // Deep River Water beverage — uses the art of the map you drink it on
+  // (South Path 12, the Quiet Pool's map). Escapes assets/Cards/ via ../Maps/
+  // since getCardArt hard-codes the Cards/ prefix (same trick as
+  // buff_volcano_blessing). Resolves for both the codex card and the in-combat
+  // buff icon (both route through getCardArt('buff_deep_river_water')).
+  buff_deep_river_water: '../Maps/UnderdarkSouthPath12.jpg',
   buff_regrowth: 'RegrowthDruid.jpg',
   buff_regrowth_legacy: 'RegrowthDruid.jpg',
   buff_elf_reinforcements: 'ElfWarrior.jpg',
@@ -312,6 +398,66 @@ export const CARD_ART_MAP = {
   bone_flail: 'BoneFlail.jpg',
   // Ancient Bones — the Fang's quest-item drop (unplayable / unsellable).
   ancient_bones: 'AncientBones.jpg',
+  // Chapter 3 — Underdark fungus loot.
+  bluecap: 'Bluecap.jpg',
+  barrelstalk: 'Barrelstalk.jpg',
+  rare_mushroom: 'RareMushroom.jpg',
+  // Glowstone Fountain blessing — the sheet buff icon. Lives in Cards/ (a copy
+  // of the encounter backdrop) because the inventory buff row resolves art
+  // through getCardArt, which only reaches assets/Cards.
+  glowstone_fountain_buff: 'GlowstoneFountainBuff.jpg',
+  // Deep gnome gear — Underdark merchant stock.
+  svirfhammer: 'Svirfhammer.jpg',
+  deep_pick: 'DeepPick.jpg',
+  work_gloves: 'WorkGloves.jpg',
+  fungal_lantern: 'FungalLantern.jpg',
+  mycelial_codex: 'MycelialCodex.jpg',
+  mining_goggles: 'MiningGoggles.jpg',
+  // Umber Hulk loot (Chapter 3).
+  umber_shield: 'UmberShield.jpg',
+  mandible_cleaver: 'MandibleCleaver.jpg',
+  umber_eye_charm: 'UmberEyeCharm.jpg',
+  burrowers_gauntlet: 'BurrowersGauntlet.jpg',
+  tunnelbreaker_pick: 'TunnelbreakerPick.jpg',
+  // Roper loot (Chapter 3).
+  roperhide_armor: 'RoperhideArmor.jpg',
+  roper_mandible_blade: 'RoperMandibleBlade.jpg',
+  stone_mimic_veil: 'StoneMimicVeil.jpg',
+  tendril_lash: 'TendrilLash.jpg',
+  grasping_tendrils: 'GraspingTendrils.jpg',
+  // Carrion Crawler loot (Chapter 3).
+  carapace_buckler: 'CarapaceBuckler.jpg',
+  crawler_skullcap: 'CrawlerSkullcap.jpg',
+  paralytic_stinger: 'ParalyticStinger.jpg',
+  paralytic_glaive: 'ParalyticGlaive.jpg',
+  carrion_satchel: 'CarrionSatchel.jpg',
+  // Psilofyr's altar reward.
+  staff_of_fungi: 'StaffofFungi.jpg',
+  // Ancients Guardians drops (Chapter 3, one-shot).
+  staff_of_the_ancients: 'StaffoftheAncients.jpg',
+  treant_bark: 'TreantBark.jpg',
+  miners_helm: 'MinersHelm.jpg',
+  // Chapter 3 Underdark — Umber Hulk's kit. Rend reuses the hulk's own
+  // portrait (its umber-hulk-specific version, not the troll's Rend).
+  umber_hulk: 'UmberHulk.jpg',
+  // Roper — the body's portrait doubles as its Bite card art; the tentacle
+  // portrait doubles as the Tentacles power art.
+  roper: 'Roper.jpg',
+  roper_bite: 'Roper.jpg',
+  roper_tentacle: 'RoperTentacle.jpg',
+  tentacles: 'RoperTentacle.jpg',
+  // Carrion Crawler — the head's portrait doubles as its Bite card art and its
+  // Tentacle Lashes power art (that one also needs a POWER_ART_MAP entry).
+  carrion_crawler: 'CarriorCrawler.jpg',
+  carrion_crawler_bite: 'CarriorCrawler.jpg',
+  carrion_crawler_torso: 'CarriorCrawlerTorso.jpg',
+  // Drow Warparty — the shell's portrait plus its two escort types.
+  drow_warparty: 'DrowWarparty.jpg',
+  drow_priestess: 'DrowPriestess.jpg',
+  drow_warrior: 'DrowWarrior.jpg',
+  tentacle_lashes: 'CarriorCrawler.jpg',
+  rend_umber_hulk: 'UmberHulk.jpg',
+  rock_skin: 'RockSkin.jpg',
   // Fang of Yeenoghu ability trio (player-usable + in the Fang's deck).
   shadow_clone: 'ShadowClone.jpg',
   floating_skulls: 'FloatingSkulls.jpg',
@@ -324,7 +470,10 @@ export const CARD_ART_MAP = {
   gnoll_pack_yeenoghu: 'Gnoll.jpg',
   // Patient Hunter power reuses the Gnoll Hunter portrait.
   patient_hunter: 'GnollHunter.jpg',
-  // Rampage power reuses the Bite art (the warrior's savagery).
+  // Rampage power reuses the Bite art (the gnoll's savagery). Keep this key
+  // as the bare `rampage` — showcasePower renders the power through
+  // getCardArt(power.id). The Warrior's Rampage CARD is `warrior_rampage`
+  // above precisely so it can't collide with this entry.
   rampage: 'GnollBite.jpg',
   // Rend — the troll's claw attack reuses the troll portrait art.
   rend: 'TrollRegen.jpg',
@@ -486,6 +635,12 @@ export const CARD_ART_MAP = {
   kraken_tentacle_block: 'KrakenSpawnTentacle.jpg',
   kraken_whip:           'KrakenSpawnTentacle.jpg',
   ink_cloud:             'InkCloud.jpg',
+  // The Deep Kraken (Underdark boss) — reuses the surface Kraken art.
+  deep_tentacle_grab:        'KrakenSpawn_TentacleAttack.jpg',
+  deep_swallowing_bite:      'KrakenSpawn.jpg',
+  deep_kraken_tentacle:      'KrakenSpawnTentacle.jpg',
+  deep_kraken_tentacle_block:'KrakenSpawnTentacle.jpg',
+  deep_kraken_whip:          'KrakenSpawnTentacle.jpg',
   // Kraken loot drops (pick-2 epics after the fight).
   bloody_eye_patch:        'BloodyEyePatch.jpg',
   harpoon_of_the_deep:     'HarpoonOfTheDeep.jpg',
@@ -528,6 +683,8 @@ export const CARD_ART_MAP = {
   thorb_card: 'ThorbAlly.jpg',
   thorb_card_2: 'ThorbAlly.jpg',
   thorb_card_3: 'ThorbAlly.jpg',
+  brad_card: 'BradtheFox.jpg',
+  cornis_card: 'CornisMetalhands.jpg',
   valdrisa_card: 'ValdrisaEmberforge.jpg',
   valdrisa_card_3: 'ValdrisaEmberforge.jpg',
   pet_slime: 'SlimeSummon.jpg',
@@ -697,6 +854,8 @@ export const CARD_ART_MAP = {
   pet_slime: 'SlimeSummon.jpg',
   kobold_guard: 'KoboldGuard.jpg',
   thorb: 'ThorbAlly.jpg',
+  brad_the_fox: 'BradtheFox.jpg',
+  cornis_metalhands: 'CornisMetalhands.jpg',
   small_spider: 'PetSpider.jpg',
   spider: 'PetSpider.jpg',
   deathjump_spider: 'DeathjumpSpider.jpg',
@@ -785,6 +944,11 @@ export const POWER_ART_MAP = {
   // Dire Bear's Feral Wrath passive — reuses the bear-claw art.
   feral_wrath: 'DireBearClaws.jpg',
   overwhelm: 'MimicInAntiquity.jpg',
+  // Roper's tentacle-regrow passive — uses the tentacle portrait, not the
+  // Roper's body. Powers resolve through POWER_ART_MAP, so a CARD_ART_MAP
+  // entry alone leaves the power card blank.
+  tentacles: 'RoperTentacle.jpg',
+  tentacle_lashes: 'CarriorCrawler.jpg',
   wolf_pack: 'WolfPackPower.jpg',
   piranhas_swarm: 'PiranhasSwarm.jpg',
   piranha: 'PiranhasSwarm.jpg',

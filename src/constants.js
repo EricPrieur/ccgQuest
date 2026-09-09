@@ -1,5 +1,5 @@
 // === Game Version ===
-export const GAME_VERSION = '2.286';
+export const GAME_VERSION = '2.475';
 
 // === Screen Dimensions ===
 export const SCREEN_WIDTH = 1280;
@@ -37,6 +37,11 @@ export const GameState = Object.freeze({
   ALLY_TARGETING: 'ALLY_TARGETING',
   BUFF_TARGETING: 'BUFF_TARGETING',
   SCRY_SELECT: 'SCRY_SELECT',
+  // Killing Ground's trap picker — three consecutive rounds, each offering
+  // three random traps. Its own state rather than a flag on SCRY_SELECT: scry
+  // carries scout mode and a deferred-damage handoff that have nothing to do
+  // with arming traps.
+  TRAP_SELECT: 'TRAP_SELECT',
   INVENTORY: 'INVENTORY',
   DECK_TUTORIAL: 'DECK_TUTORIAL',
   HELP_SCREEN: 'HELP_SCREEN',
@@ -173,6 +178,7 @@ export const SUBTYPE_COLORS = Object.freeze({
   staff: '#b43c3c',         // Red
   ability: '#8c3c8c',       // Purple
   item: '#808080',          // Grey
+  quiver: '#a8763c',        // Leather brown — gear, not a weapon
   ally: '#64b4dc',          // Ally blue (matches in-combat ally tint)
   allies: '#64b4dc',        // Ally blue
   relic: '#c0c0dc',         // Silver

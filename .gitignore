@@ -1,6 +1,10 @@
 node_modules/
 dist/
 .claude/
+
+# itch.io build output (npm run itch) — ~240 MB, regenerated from dist/
+ccgQuest-itch.zip
+
 .env
 .env.local
 .env.*.local

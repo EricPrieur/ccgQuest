@@ -128,6 +128,37 @@ export function saveGame(state, saveName = '') {
     // any explicit rest beat so walking back onto the cog refires
     // the short revisit encounter.
     harpiesDefeated: !!state.harpiesDefeated,
+    // Underdark progress latches — the entrance-teleporter unlock, the
+    // Bottomless Lake reveal (skip-intro on re-approach), and the Quiet Pool
+    // one-per-rest drink. Persisted so a reload keeps Underdark state intact.
+    underdarkGnollUnlocked: !!state.underdarkGnollUnlocked,
+    bottomlessLakeRevealed: !!state.bottomlessLakeRevealed,
+    quietPoolUsed: !!state.quietPoolUsed,
+    // Mushroom Circle — set once the party has stepped into the ring and
+    // crossed to the Ancient Druid Circle. Without this the step-in dialog
+    // asks again after every reload.
+    mushroomCircleUsed: !!state.mushroomCircleUsed,
+    // Kar-Eden road — set once the party walks down out of the Silverwood to
+    // Qualibaf. Keeps the Silverwood Road node unlocked across reloads.
+    karEdenRoadUnlocked: !!state.karEdenRoadUnlocked,
+    // Mushroom beds — which of the four East Path 18 beds have been picked
+    // since the last full rest, plus the once-per-run Rare Mushroom latch.
+    mushroomFarmsHarvested: Array.isArray(state.mushroomFarmsHarvested) ? state.mushroomFarmsHarvested.slice() : [],
+    rareMushroomFound: !!state.rareMushroomFound,
+    // Once the farm dialog has been read, every bed opens on the choice.
+    mushroomFarmIntroSeen: !!state.mushroomFarmIntroSeen,
+    // Altar of Psilofyr — running offering total (resets to 0 each time it
+    // pays out a Staff of Fungi), so a part-filled bowl survives a reload.
+    psilofyrOffering: typeof state.psilofyrOffering === 'number' ? state.psilofyrOffering : 0,
+    // Introduction read — later visits open straight on the offering list.
+    psilofyrIntroSeen: !!state.psilofyrIntroSeen,
+    // Underdark roaming-monster roll — the cumulative per-node chance and the
+    // "party has entered the Underdark" arming latch.
+    underdarkEncounterChance: typeof state.underdarkEncounterChance === 'number' ? state.underdarkEncounterChance : 0.02,
+    underdarkEncArmed: !!state.underdarkEncArmed,
+    // Glowstone Fountain blessing — the per-node encounter-step reduction the
+    // party paid for, live until their next roaming Underdark fight.
+    fountainStepReduction: typeof state.fountainStepReduction === 'number' ? state.fountainStepReduction : 0,
     // Dire Bear (Circular Ruins) — same latch shape as harpies. Set
     // by the post-combat dispatch; cleared on rest via setWellRested
     // so the ruins re-arm for a fresh ambush.

@@ -11,6 +11,15 @@
  * Transient (cleared at end of combat):
  *   rechargePile, damagePile, playPile
  */
+/**
+ * Optional draw intercept. main.js registers a handler so a card held in hand
+ * can swap a draw for another effect (Fungal Lantern -> Scry). Return true to
+ * report the draw as fully handled; anything else lets the normal draw run.
+ */
+export let onDeckDrawIntercept = null;
+export function setDeckDrawInterceptHandler(fn) { onDeckDrawIntercept = fn; }
+
+
 export class Deck {
   constructor() {
     this.masterDeck = [];
@@ -96,7 +105,7 @@ export class Deck {
 
     // Draw up to hand size (hand may already have cards from persistence)
     const toDraw = Math.max(0, classHandSize - this.hand.length);
-    return this.draw(toDraw, maxHandSize);
+    return this._drawRaw(toDraw, maxHandSize);
   }
 
   // Force a fresh hand: return the currently-held hand to the pool,
@@ -150,7 +159,7 @@ export class Deck {
     for (const c of this.hand) c.exhausted = false;
 
     const toDraw = Math.max(0, classHandSize - this.hand.length);
-    this.draw(toDraw, maxHandSize);
+    this._drawRaw(toDraw, maxHandSize);
 
     this.drawPile = [];
     this.damagePile = [];
@@ -167,10 +176,20 @@ export class Deck {
     this.rechargePile = [];
     this.playPile = [];
     this.shuffleDrawPile();
-    return this.draw(classHandSize, maxHandSize);
+    return this._drawRaw(classHandSize, maxHandSize);
   }
 
+  // Interceptable draw — this is what card / power / rider effects call. A
+  // held card can swap it for something else (Fungal Lantern -> Scry).
   draw(count = 1, maxHandSize = 10) {
+    if (onDeckDrawIntercept && onDeckDrawIntercept(this, count)) return [];
+    return this._drawRaw(count, maxHandSize);
+  }
+
+  // Uninterceptable draw — deck plumbing (opening hand, end-of-combat refill,
+  // rebalance). These aren't "you drew a card" moments, so the Lantern and
+  // anything like it must never see them.
+  _drawRaw(count = 1, maxHandSize = 10) {
     const drawn = [];
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     for (let i = 0; i < count; i++) {
@@ -320,6 +339,17 @@ export class Deck {
     if (idx === -1) return false;
     this.playPile.splice(idx, 1);
     this.discardPile.push(card);
+    return true;
+  }
+
+  // Pull a card back out of the play pile and into hand. Used by allies that
+  // return to hand at end of turn (Cornis Metalhands) — their source card sits
+  // in the play pile while they're on the field, exactly like Thorb's.
+  playPileToHand(card) {
+    const idx = this.playPile.indexOf(card);
+    if (idx === -1) return false;
+    this.playPile.splice(idx, 1);
+    this.hand.push(card);
     return true;
   }
 

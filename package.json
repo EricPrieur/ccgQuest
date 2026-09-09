@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "restart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/restart-dev.ps1",
     "build": "vite build",
     "preview": "vite preview",
+    "build:itch": "vite build --base=./ && node scripts/prune-itch-assets.mjs",
+    "pack:itch": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/zip-itch.ps1",
+    "itch": "npm run build:itch && npm run pack:itch",
     "wav-to-ogg": "node scripts/convert-wav-to-ogg.mjs",
     "png-to-jpg": "node scripts/convert-png-to-jpg.mjs"
   },

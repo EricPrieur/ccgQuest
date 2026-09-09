@@ -282,6 +282,22 @@ into it but not back out"), it's almost always because step 2 was
 skipped — the cross-map gate runs only on walk-onto, never on the
 self-click.
 
+## Card budgets & loot math → `docs/loot-budget.md`
+
+Before pricing a new card or building a drop table, read
+**`docs/loot-budget.md`**. It holds the budget grid (tier × rarity), the
+cost rules (a second card cost is worth +budget−1 unless the card Draws),
+the per-effect price list (Damage 1, Block 1, Shield 2, Sunder 3, Poison 2,
+Bleed 1; Draw is free on defense cards and expensive everywhere else), the
+multipliers (stays-in-hand ×3, 2nd target half, ALL targets ×3), and the
+loot-table math (50% gate → weighted pick; house weights common 1.0 /
+uncommon 0.75 / rare 0.5).
+
+It's a guide, not a law — cards have to feel playable first. Its job is to
+keep new content in the same neighbourhood as what's already shipped and to
+make outliers obvious. Reference points: a Chapter 2 gnoll table is worth
+~7.55 EV on a drop, a Chapter 3 Underdark table ~9.66.
+
 ## Versioning
 
 `GAME_VERSION` in `src/constants.js` is bumped manually before every push.

@@ -692,7 +692,7 @@ export function createMagicMissiles() {
   return new Card({
     id: 'magic_missiles',
     name: 'Magic Missiles',
-    description: 'Recharge a Card ->\nDeal 1 Damage X 3, Draw.',
+    description: 'Arcane: Recharge a Card ->\nDeal 1 Damage X 3, Draw.',
     shortDesc: 'R->1 Dmg X3\nDraw',
     subtype: 'ability',
     cardType: CardType.ATTACK,
@@ -706,6 +706,7 @@ export function createMagicMissiles() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     gamePlusOffset: { magic_missile_barrage: 1 },
+    arcaneHits: 3, // one Vortex proc per hit
     characterClass: ['wizard'],
     tier: 1,
     rarity: 'uncommon',
@@ -1049,6 +1050,10 @@ export function createAimedShotCard() {
   return new Card({
     id: 'aimed_shot_card',
     name: 'Aimed Shot',
+    // The only ability that's a bow shot, so it feeds a Quiver like one. Stays
+    // an Ability everywhere that matters (deck limits, class list, codex tab) —
+    // the trait only changes what triggers off it.
+    subtype2: 'ranged',
     description: 'Recharge a Card -> Deal 4 Damage, Draw.\nHeroism: +2.',
     shortDesc: 'R-Card->4 Dmg, Draw\nHeroism: +2',
     subtype: 'ability',
@@ -1309,9 +1314,9 @@ export function createBagOfHerbs() {
     rarity: 'uncommon',
     tier: 2,
     gamePlusOffset: { gain_random_herbs: 1/3 }, // +1 herb every 3 offsets
+    // Side preview — show the three herbs it can draw from.
+    previewCards: [createGoodberry(), createCaveShroom(), createFrostbloom()],
   });
-  // Side preview — show the three herbs it can draw from.
-  card.previewCards = [createGoodberry(), createCaveShroom(), createFrostbloom()];
   return card;
 }
 
@@ -1547,8 +1552,11 @@ export function getRangerStarterDeck() {
   for (let i = 0; i < 2; i++) cards.push(createWoodenSword());
   // 3 Leather Armor
   for (let i = 0; i < 3; i++) cards.push(createLeatherArmor());
-  // 2 Scraps
-  for (let i = 0; i < 2; i++) cards.push(createScraps());
+  // 1 Scraps — the second one is now the Quiver, which the three Short Bows
+  // all want as their recharge cost anyway.
+  cards.push(createScraps());
+  // 1 Quiver
+  cards.push(createQuiver());
   return cards;
 }
 
@@ -1778,6 +1786,147 @@ export function createConsecration() {
   });
 }
 
+// ============================================================
+// Paladin tier 2 / tier 3 — the aura-and-judgment line. The class thesis is
+// Heroism-from-healing (Overheal -> Heroism), and these extend it outward: the
+// auras give the whole party something while they sit in hand, and Hammer of
+// Wrath is the bulk payoff that the Heroism generators never had.
+//
+// Note on the in-hand auras: the passive is a live scan of the player's hand
+// (getDamageModifier / the damage-absorb paths in main.js), NOT an effect on
+// the card. That's the same pattern Boarhide Bracers, Snow Paws, Miner's Helm
+// and Piwafwi use, and it's what gives the cards their cost — you can't spend
+// the card without giving up the aura.
+// ============================================================
+
+// Aura of Might — Paladin Tier 2 (7). Replaces the old Shock-flavored Hammer of
+// Wrath in the tier-2 pool (that card is retired to legacy; the NAME moves to
+// the tier-3 judgment below). Fixes two things at once: the tier-2 pool was
+// three attacks and one utility, and the class had no party support at all.
+//
+// While held: +1 damage for you AND every ally, on every swing — which also
+// pumps POWERS, so Cleave (two hits) gets +2 a turn out of it on its own.
+// Spend it and the aura ends, but everyone banks Heroism instead. Heroism
+// persists between turns, so cashing it out as you end your turn front-loads
+// the next one — and that's the setup for Hammer of Wrath, which harvests the
+// whole party's Heroism at triple value.
+export function createAuraOfMight() {
+  return new Card({
+    id: 'aura_of_might', name: 'Aura of Might',
+    description: 'In Hand: You and your allies\ndeal +1 Damage.\nOn Recharge: You and allies\ngain Heroism.',
+    shortDesc: 'Hand: +1 Dmg\nyou + allies\nR: Team Heroism',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_team_heroism', 1, TargetType.SELF),
+    ],
+    characterClass: ['paladin'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { on_recharge_team_heroism: 1 },
+  });
+}
+
+// Holy Steed — Paladin Tier 3. DEFENSE like every other in-hand passive in the
+// game (Boarhide Bracers, Snow Paws, Miner's Helm, Piwafwi), which means it is
+// spent reactively: you hold it to stay mounted, and the moment you throw it in
+// front of a blow you dismount — the horse carries you clear (halve the hit,
+// draw) and its parting gift is the heal.
+//
+// The two halves are mutually exclusive by construction, which is the whole
+// card: +5 on your opening swing every turn for as long as you hold it, or one
+// big mitigation-plus-heal when you finally need it.
+export function createHolySteed() {
+  return new Card({
+    id: 'holy_steed', name: 'Holy Steed',
+    description: 'First Attack: +5.\nDefense: Halve the damage\nagainst you, Draw.\nOn Recharge: Heal 4.\nOverheal: Heroism.',
+    shortDesc: 'Hand: +5 First Atk\nDef: Halve dmg, Draw\nR: Heal 4',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('halve_incoming_damage', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('on_recharge_heal_overheal_heroism', 4, TargetType.SELF),
+    ],
+    characterClass: ['paladin'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { on_recharge_heal_overheal_heroism: 2 },
+  });
+}
+
+// Devotion Aura — Paladin Tier 3. The defensive twin of Aura of Might: while
+// held, every body on your side takes 1 less from every hit. That is flat
+// per-swing mitigation, so its value scales with (allies x enemy swings) rather
+// than with damage — it blanks 1-attack summons outright and barely registers
+// against a boss. Priced high for exactly that reason.
+export function createDevotionAura() {
+  return new Card({
+    id: 'devotion_aura', name: 'Devotion Aura',
+    description: 'In Hand: You and your allies\ntake 1 less Damage.\nOn Recharge: You and allies\ngain Shield.',
+    shortDesc: 'Hand: -1 Dmg taken\nyou + allies\nR: Team Shield',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_team_shield', 1, TargetType.SELF),
+    ],
+    characterClass: ['paladin'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { on_recharge_team_shield: 1 },
+  });
+}
+
+// Holy Shield — Paladin Tier 3 armor. 5 Shield (10) plus a heal that can never
+// be wasted: whatever can't restore a card converts 1:1 into a single damage
+// PACKET at a random enemy. One packet, not N pings — an armored target eats a
+// flat reduction per hit, so four 1s would land for nothing where one 4 gets
+// through. Random target keeps a free 5-damage burst from being aimed.
+//
+// Third output for the paladin's Overheal engine: Heroic Heal and Holy Sword
+// spend the waste on Heroism, this one spends it on judgment.
+export function createHolyShield() {
+  return new Card({
+    id: 'holy_shield', name: 'Holy Shield',
+    description: 'Gain 5 Shields. Heal 5.\nOverheal: Deal 1 Damage.',
+    shortDesc: '5 Shields, Heal 5\nOverheal: Damage',
+    subtype: 'heavy_armor',
+    cardType: CardType.DEFENSE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 5, TargetType.SELF),
+      new CardEffect('heal_overheal_damage', 5, TargetType.SELF),
+    ],
+    characterClass: ['paladin'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { gain_shield: 1, heal_overheal_damage: 1 },
+  });
+}
+
+// Hammer of Wrath — Paladin Tier 3 (13) + 12 for the second card = 25. The
+// bulk Heroism payoff the class never had: Heroism is normally consumed by
+// whatever you swing next at 1 damage a point, so banking a lot of it was worth
+// no more per point than banking a little. This spends the WHOLE party's stock
+// at 3x.
+//
+// Consequence worth knowing: it makes turn ORDER matter. Attack with anything
+// first — yours or an ally's — and that Heroism is already gone at 1x. The
+// correct line is always Hammer first.
+//
+// New id (the old tier-2 Shock version keeps `hammer_of_wrath` and is retired
+// to legacy so existing saves still deserialize); the art file is shared.
+export function createHammerOfWrathT3() {
+  return new Card({
+    id: 'hammer_of_wrath_t3', name: 'Hammer of Wrath',
+    description: 'Recharge a Card -> Deal 10.\nUse up Heroism on you and allies.\n+3 Damage per Heroism used.',
+    shortDesc: 'R-Card->10 Dmg\n+3 per Heroism\nused (team)',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // ONE effect, not damage + a harvest: the plain `damage` handler would
+      // add and zero the player's Heroism at 1x before any harvest could run,
+      // silently giving the WORSE conversion. maxTargets carries the per-point
+      // multiplier (3).
+      new CardEffect('hammer_of_wrath_strike', 10, TargetType.SINGLE_ENEMY, 3),
+    ],
+    characterClass: ['paladin'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { hammer_of_wrath_strike: 3 },
+  });
+}
+
 export function createHammerOfWrath() {
   return new Card({
     id: 'hammer_of_wrath', name: 'Hammer of Wrath',
@@ -1859,16 +2008,242 @@ export function createHuntersMark() {
 export function createMarkingShot() {
   return new Card({
     id: 'marking_shot', name: 'Marking Shot',
-    description: 'Deal 4 + Mark.',
-    shortDesc: '4 + Mark',
+    description: 'Recharge a Card ->\nDeal 4 + Mark, Draw.',
+    shortDesc: 'R Card->4 + Mark\nDraw',
     subtype: 'ability',
+    // It's an arrow, so it feeds a Quiver — and the card cost is what routes it
+    // through the recharge picker where a quiver can be spent on it.
+    subtype2: 'ranged',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    // Deliberately the exact shape of Hunter's Recurve Bow one rarity rung
+    // down: same text, 4 damage instead of 8. Mark lands AFTER the damage, so
+    // it's the NEXT shot that cashes it, not this one.
     effects: [
       new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
       new CardEffect('apply_mark', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { damage: 1 },
+  });
+}
+
+// Bestial Wrath — Ranger Tier 3 (13). The pack card. The buff lands FIRST, so
+// the swing counts the boosted Attack — worth about +1 per beast, which is why
+// the order is spelled out on the card.
+//
+// Scales hard with board width: ~7 points on one beast, ~15 on three, ~20 on
+// four. A genuine build-around, and a dead card for a Ranger who took neither
+// Rat Taming nor Animal Companion — the pool's only two beast sources.
+// Everything else (Beastmaster Horn, Jar of Piranhas, Pet Spider) is loot.
+// Rain of Arrows — Ranger Tier 2 (7) + 6 for the second card = 13. Five arrows,
+// each rolling 1-4 at its own randomly chosen enemy: 12.5 expected, right on
+// budget.
+//
+// Replaces Explosive Shot, which was the same "Recharge a Card -> multi-hit"
+// shape but strictly narrower. Losing its Draw is deliberate — the Ranger has
+// the deepest card engine in the game and the doc flags draw as the abuse axis.
+//
+// Rider semantics follow Fan of Blades: Heroism, Rage, Ignite and the Vial
+// charges are snapshotted ONCE and paid out on every arrow, so a single charge
+// covers the whole volley. An arrow whose target died to an earlier arrow
+// re-rolls onto something still standing rather than being lost. Note the flip side of five separate hits — armor
+// absorbs per hit, so a volley fares far worse into plate than one big swing of
+// the same total.
+export function createRainOfArrows() {
+  return new Card({
+    id: 'rain_of_arrows', name: 'Rain of Arrows',
+    // Five arrows — it reads as a bow more than Aimed Shot does, so it feeds a
+    // Quiver too. Note the buffs a quiver grants are snapshotted once and
+    // re-applied to EVERY arrow, which makes this the biggest quiver payoff in
+    // the game; see the barrage note in resolveBarrageShot.
+    subtype2: 'ranged',
+    description: 'Recharge a Card ->\nDeal 1-4 Randomly 5 times.',
+    shortDesc: 'R-Card->1-4 Dmg\nx5, random',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // value packs the roll as min*10 + max (14 = "1 to 4"), matching
+      // damage_range; maxTargets is the arrow count.
+      new CardEffect('rain_of_arrows', 14, TargetType.ALL_ENEMIES, 5),
+    ],
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { rain_of_arrows: 1 },
+  });
+}
+
+// Track — Ranger Tier 1 (4). Scry 3 (~3, since Shield of Faith prices a plain
+// Draw at ~2 and Scry adds selection) plus a 50% Goodberry (~0.75). Lands at
+// ~3.75.
+//
+// Replaces Goodberries, and it's a net TIGHTENING of the class's card flow even
+// though it scrys: the old card ran create_goodberries: 3, dropping up to three
+// tokens into your hand at once. Scry 3 draws one and recharges two. The berries
+// survive — the Tamed Rat still forages them, and this rolls for one — they just
+// stop being manufactured three at a time by the deepest card engine in the game.
+export function createTrack() {
+  return new Card({
+    id: 'track', name: 'Track',
+    description: 'Scry 3.\nMight forage some goodberries.',
+    shortDesc: 'Scry 3\n50%: Goodberry',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('scry_pick', 3, TargetType.SELF),
+      new CardEffect('forage_goodberry_chance', 50, TargetType.SELF),
+    ],
+    characterClass: ['ranger'], tier: 1, rarity: 'uncommon',
+    // Side preview, same as the retired Goodberries card had — the berry it
+    // can forage is the only thing about this card you can't read off the text.
+    previewCard: createGoodberry(),
+    gamePlusOffset: { scry_pick: 1 },
+  });
+}
+
+// === Ranger Traps ===
+// Trap is a Tier 1 ability that arms a hidden trap: an untargetable, unkillable
+// totem that costs nothing but a field slot until something swings at YOU. It
+// fires once, reveals itself as a showcased card, and vanishes.
+//
+// The five outcomes are deliberately kept in a tight 6-9 point band. Rolling a
+// random trap only reads as variety rather than a slot machine if no result is
+// a dud — that tightness is what earns the card its randomness discount.
+//
+// The five token cards below exist for display only: they are what the side
+// previews show on the Trap card, and what gets showcased centre-screen when
+// one springs. They're never in a deck.
+export const TRAP_KINDS = ['snake', 'explosive', 'bear', 'ice', 'spike'];
+
+export function createSnakeTrapToken() {
+  return new Card({
+    id: 'snake_trap', name: 'Snake Trap',
+    description: 'Summon 3 Snakes (1/1).',
+    shortDesc: '3x 1/1 Snake',
+    subtype: 'ability', cardType: CardType.CREATURE, costType: CostType.FREE,
+    effects: [], isToken: true, tier: 1, rarity: 'uncommon',
+  });
+}
+
+export function createExplosiveTrapToken() {
+  return new Card({
+    id: 'explosive_trap', name: 'Explosive Trap',
+    description: 'Deal 1 and Fire to All.',
+    shortDesc: '1 Dmg + Fire\nto All',
+    subtype: 'ability', cardType: CardType.ATTACK, costType: CostType.FREE,
+    effects: [], isToken: true, tier: 1, rarity: 'uncommon',
+  });
+}
+
+export function createBearTrapToken() {
+  return new Card({
+    id: 'bear_trap', name: 'Bear Trap',
+    description: 'Summon a 2/2 Sentinel Bear.\nThe attack hits the Bear instead.',
+    shortDesc: '2/2 Sentinel Bear\nRedirects the hit',
+    subtype: 'ability', cardType: CardType.CREATURE, costType: CostType.FREE,
+    effects: [], isToken: true, tier: 1, rarity: 'uncommon',
+  });
+}
+
+export function createIceTrapToken() {
+  return new Card({
+    id: 'ice_trap', name: 'Ice Trap',
+    description: 'Deal 5 Ice to the attacker.',
+    shortDesc: '5 Ice to\nthe attacker',
+    subtype: 'ability', cardType: CardType.ATTACK, costType: CostType.FREE,
+    effects: [], isToken: true, tier: 1, rarity: 'uncommon',
+  });
+}
+
+export function createSpikeTrapToken() {
+  return new Card({
+    id: 'spike_trap', name: 'Spike Trap',
+    description: 'Deal 5 True Damage\nto the attacker.',
+    shortDesc: '5 True Damage\nto the attacker',
+    subtype: 'ability', cardType: CardType.ATTACK, costType: CostType.FREE,
+    effects: [], isToken: true, tier: 1, rarity: 'uncommon',
+  });
+}
+
+export function createTrapTokenFor(kind) {
+  switch (kind) {
+    case 'snake': return createSnakeTrapToken();
+    case 'explosive': return createExplosiveTrapToken();
+    case 'bear': return createBearTrapToken();
+    case 'ice': return createIceTrapToken();
+    default: return createSpikeTrapToken();
+  }
+}
+
+// The bodies two of the traps leave behind. Both are Beasts (Bestial Wrath
+// counts them) and both borrow their trap card's art.
+export function createTrapSnakeCreature() {
+  return new Creature({
+    name: 'Snake', attack: 1, maxHp: 1,
+    artId: 'snake_trap', traits: ['Beast'],
+  });
+}
+
+export function createTrapBearCreature() {
+  return new Creature({
+    name: 'Bear', attack: 2, maxHp: 2, sentinel: true,
+    artId: 'bear_trap', traits: ['Beast'],
+    description: 'Sentinel.',
+  });
+}
+
+// The armed trap itself — a totem, exactly like the Arcane Vortex: nothing can
+// target it, nothing can damage it, it never acts. All it costs is a field
+// slot, and it keeps its kind secret until it springs.
+export function createArmedTrapCreature(kind) {
+  const c = new Creature({
+    name: 'Armed Trap', attack: 0, maxHp: 1,
+    artId: 'trap', description: 'Springs when you are attacked.',
+  });
+  c._invulnerable = true;
+  c._untargetableAlly = true;
+  c._cantAttack = true;
+  c._trapKind = kind;
+  // No stat line to grow, so NG+ has nothing to scale — say so explicitly
+  // rather than letting the codex paint a "needs offset rules" badge on it.
+  c.noTierOffset = true;
+  return c;
+}
+
+// Trap — Ranger Tier 1 (4), budgeted at ~6 because the payoff is both random
+// and delayed. Replaces Heroic Tumble.
+export function createTrapCard() {
+  return new Card({
+    id: 'trap', name: 'Trap',
+    description: 'Set a random Trap.\nIt springs when you are attacked.',
+    shortDesc: 'Set a random Trap',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_armed_trap', 1, TargetType.SUMMON)],
+    characterClass: ['ranger'], tier: 1, rarity: 'uncommon',
+    // All five outcomes shown on the card — the roll is random, but which
+    // results are possible shouldn't be a mystery.
+    previewCards: [
+      createSnakeTrapToken(), createExplosiveTrapToken(), createBearTrapToken(),
+      createIceTrapToken(), createSpikeTrapToken(),
+    ],
+    noTierOffset: true,
+  });
+}
+
+export function createBestialWrath() {
+  return new Card({
+    id: 'bestial_wrath', name: 'Bestial Wrath',
+    description: 'Your Beasts gain +1/+1.\nDeal damage equal to the total\nAttack of your Beasts.',
+    shortDesc: 'Beasts +1/+1\nDeal = their Attack',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('bestial_wrath', 1, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['ranger'], tier: 3, rarity: 'rare',
+    noTierOffset: true,
   });
 }
 
@@ -1916,22 +2291,38 @@ export function createElementalWeapon() {
   // ElementalWeaponIce) so the player sees which element they're
   // picking at a glance. Same image is reused on the in-combat buff
   // (imageId 'buff_elemental_weapon_<element>' in the resolver).
-  const fireMode = new CardMode('Attacks add 1 Fire',
-    [new CardEffect('grant_elemental_weapon_fire', 1, TargetType.SELF)]);
+  //
+  // Both modes now carry a swing as well as the imbue. The buff alone was a
+  // pure setup card — it did nothing the turn you spent it, which is what made
+  // it the weakest pick in the Ranger tier-2 pool. Budget is T2 uncommon (7):
+  // the Fire rider is worth ~4 and the Ice rider ~3 (Ice is mitigation, not
+  // damage), so the swing sizes are set to bring each mode to the same place.
+  //
+  // The grant is ordered BEFORE the damage on purpose: this card's own hit
+  // rides its own rider, so Fire mode reads "Deal 2 + 1 Fire" and Ice mode
+  // "Deal 3 + 1 Ice" on the cast itself.
+  const fireMode = new CardMode('Attacks add 1 Fire, Deal 2', [
+    new CardEffect('grant_elemental_weapon_fire', 1, TargetType.SELF),
+    new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+  ]);
   fireMode.artId = 'buff_elemental_weapon_fire';
-  const iceMode = new CardMode('Attacks add 1 Ice',
-    [new CardEffect('grant_elemental_weapon_ice', 1, TargetType.SELF)]);
+  const iceMode = new CardMode('Attacks add 1 Ice, Deal 3', [
+    new CardEffect('grant_elemental_weapon_ice', 1, TargetType.SELF),
+    new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+  ]);
   iceMode.artId = 'buff_elemental_weapon_ice';
   return new Card({
     id: 'elemental_weapon', name: 'Elemental Weapon',
-    description: 'Choose:\nYour attacks add Fire,\nOR your attacks add Ice.',
-    shortDesc: 'Attacks +Fire\nOR Attacks +Ice',
+    description: 'Choose:\nAttacks add Fire, Deal 2,\nOR attacks add Ice, Deal 3.',
+    shortDesc: '+Fire, 2 Dmg\nOR +Ice, 3 Dmg',
     subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    // ATTACK now that both modes swing — same shape as Wrath, the other modal
+    // attack. The mode picker resolves first, then targeting.
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [],
     modes: [fireMode, iceMode],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
-    noTierOffset: true,
+    gamePlusOffset: { modes: [{ damage: 2 }, { damage: 2 }] },
   });
 }
 
@@ -1985,15 +2376,17 @@ export function createBurningHands() {
 export function createIceNova() {
   return new Card({
     id: 'ice_nova', name: 'Ice Nova',
-    description: 'Deal 1 Damage and 1 Ice to ALL enemies.',
+    // Kept in lockstep with Elemental Nova's ice mode — same name, same card,
+    // and drifting stat lines between two copies of "the same" spell is exactly
+    // the bug the guardian Regrowth hit.
+    description: 'Deal 2 Ice to ALL enemies.',
     shortDesc: '1 Dmg+Ice ALL', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
-      new CardEffect('apply_ice_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_ice_all', 2, TargetType.ALL_ENEMIES),
     ],
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { damage_all: 1, apply_ice_all: 0.5 },
+    gamePlusOffset: { apply_ice_all: 1 },
   });
 }
 
@@ -2141,6 +2534,318 @@ export function createVarimatrasScale() {
   });
 }
 
+// Elemental Nova — Wizard Tier 2. Burning Hands and Ice Nova folded into one
+// modal card, the same move Rallying Shout made for the warrior: two cards that
+// were never picked together become one card that asks the class's central
+// question at the moment of casting. Frees a tier-2 seat as a bonus.
+//
+// The two originals are NOT deleted — their creators stay exported and
+// registered. Ice Nova is still Overseer Gnikan's board-clear (8 copies in each
+// phase of that fight) and both keep their CARD_REGISTRY entries so older saves
+// holding them deserialize cleanly. They simply leave the wizard's pick list.
+//
+// Per-mode artId swaps the choice card's face so the player sees which element
+// they're picking, exactly like Elemental Weapon's fire/ice modes.
+export function createElementalNova() {
+  // Mode labels are bare elements — "Fire" / "Ice" — matching the two choice
+  // tokens Elemental Infusion offers. The card's own description already spells
+  // out what each one does, so restating it on the choice tiles was noise.
+  const fireMode = new CardMode('Fire', [
+    new CardEffect('apply_fire_all', 2, TargetType.ALL_ENEMIES),
+  ]);
+  fireMode.artId = 'burning_hands';
+  const iceMode = new CardMode('Ice', [
+    new CardEffect('apply_ice_all', 2, TargetType.ALL_ENEMIES),
+  ]);
+  iceMode.artId = 'ice_nova';
+  return new Card({
+    id: 'elemental_nova', name: 'Elemental Nova',
+    description: 'Choose:\nDeal 2 Fire to All,\nOR Deal 2 Ice to All.',
+    shortDesc: '2 Fire to All\nOR 2 Ice to All',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [],
+    modes: [fireMode, iceMode],
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    // Per-mode scaling, mirroring the two cards it replaced.
+    gamePlusOffset: { modes: [{ apply_fire_all: 1 }, { apply_ice_all: 1 }] },
+  });
+}
+
+// Shatter Storm — Wizard Tier 3 (13) + 12 for the second card = 25. The payoff
+// the Ice lane never had: Ice is mitigation, so a wizard who commits to it
+// spends the whole fight making things weaker without making them dead. This
+// converts the whole board's accumulated frost into one burst.
+//
+// "Min +1" is what keeps it honest at both ends: a target with no Ice still
+// gets 1, so the card never whiffs (floor: 1 damage + 1 Shield per enemy), but
+// the ceiling has to be built over several turns — and enemy Ice drains a stack
+// every time they swing, so the board actively burns down your setup.
+//
+// Shield is deliberately PER ENEMY, not per Ice: Shield prices at 2 points each,
+// so scaling it off the total shattered made the card worth ~3x its budget on a
+// wide board and won the next two turns as well as this one.
+export function createShatterStorm() {
+  return new Card({
+    id: 'shatter_storm', name: 'Shatter Storm',
+    description: 'Recharge a Card ->\nDouble Ice on enemies (min +1),\nthen shatter it for damage.\nGain 1 Shield per enemy.',
+    shortDesc: 'R-Card->2x Ice,\nshatter all\n+1 Shield/enemy',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // value = Shield granted per enemy shattered. The doubling and the
+      // min-+1 floor are structural, not tunable from here.
+      new CardEffect('shatter_storm', 1, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['wizard'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { shatter_storm: 1 },
+  });
+}
+
+// Arcane Explosion — Wizard Tier 2 (7). Deal 1 to All (3 with the ALL
+// multiplier) plus an On Recharge that repeats it (3) = 6.
+//
+// The On Recharge is the point of the card, not padding. It's a RECHARGE-cost
+// card, so the rider fires on every cast — but it ALSO fires when the card is
+// spent as another card's recharge cost, and the wizard pays those constantly:
+// 5 of its 12 starter cards demand fodder (3x Short Staff, Ice Bolt, Magic
+// Missiles), plus Shatter Storm and Arcane Beam's optional recharges. So this
+// is never a dead card — draw it and the board eats 1 whether you cast it or
+// feed it to something else.
+export function createArcaneExplosion() {
+  return new Card({
+    id: 'arcane_explosion', name: 'Arcane Explosion',
+    description: 'Arcane: Recharge -> Deal 1 to All.\nRecharge up to 3 extra cards\nfor +1 Damage each.\nOn Recharge: Deal 1 to All.',
+    shortDesc: '1-4 Dmg to All\nR: 1 Dmg to All',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('optional_recharge_damage', 1, TargetType.SELF),
+      new CardEffect('on_recharge_damage_all', 1, TargetType.SELF),
+    ],
+    arcaneHits: 2, // one Vortex proc per hit
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage_all: 1, optional_recharge_damage: 1 },
+  });
+}
+
+// The wizard's two elementals. Both convert their WHOLE swing into their
+// element rather than dealing damage — attack 0 with a fire/ice rider, the same
+// shape the Pet Spider uses for poison. That's why the Ice one prices out at
+// roughly Misha/Huffer despite a 5 HP Sentinel body: it can't kill anything.
+//
+// Fire Body / Ice Body carry the immunity + shrink rules (see the keyword).
+export function createWizardFireElemental() {
+  return new Creature({
+    name: 'Fire Elemental',
+    // 0 attack + fireAttack 3: the swing IS the fire. Haste is worth more here
+    // than on a damage body — Fire nets +2 stacks a turn against its 1/turn
+    // decay, so landing the first application a turn early compounds.
+    attack: 0, maxHp: 2, haste: true,
+    fireAttack: 3, fireImmune: true,
+    riposte: true, riposteAmount: 1, riposteStatus: 'fire',
+    artId: 'wizard_fire_elemental',
+    description: 'Haste. Fire Body.\nDeal 3 Fire.\nRiposte: 1 Fire.',
+  });
+}
+
+export function createWizardIceElemental() {
+  return new Creature({
+    name: 'Ice Elemental',
+    attack: 0, maxHp: 5, sentinel: true,
+    iceAttack: 2, iceImmune: true,
+    riposte: true, riposteAmount: 1, riposteStatus: 'ice',
+    artId: 'wizard_ice_elemental',
+    description: 'Sentinel. Ice Body.\nDeal 2 Ice.\nRiposte: 1 Ice.',
+  });
+}
+
+// Summon Elemental — Wizard Tier 2. The class's first summon. Modal like
+// Elemental Infusion and Elemental Nova, and the two options are a real choice
+// rather than a better/worse pair: Fire is 3 Fire a swing on a body that dies
+// to a stiff breeze, Ice is a 5 HP Sentinel wall that deals no damage at all
+// but stacks the frost Shatter Storm cashes in.
+//
+// The Draw is why this ISN'T priced with the second-card bonus (a card that
+// replaces itself pays no premium) — it lands at Animal Companion's budget,
+// which is the right benchmark: same tier, same "summon one of two" shape.
+export function createSummonElemental() {
+  // The Draw lives in EACH MODE, not in the card's base effects: a modal card
+  // resolves only its chosen mode's effect list, so a draw parked on the card
+  // itself is silently dropped. Wrath's "Deal 1 Damage, Draw" mode does the
+  // same thing for the same reason.
+  const fireMode = new CardMode('Fire', [
+    new CardEffect('summon_fire_elemental', 1, TargetType.SUMMON),
+    new CardEffect('draw', 1, TargetType.SELF),
+  ]);
+  fireMode.artId = 'wizard_fire_elemental';
+  const iceMode = new CardMode('Ice', [
+    new CardEffect('summon_ice_elemental', 1, TargetType.SUMMON),
+    new CardEffect('draw', 1, TargetType.SELF),
+  ]);
+  iceMode.artId = 'wizard_ice_elemental';
+  return new Card({
+    id: 'summon_elemental', name: 'Summon Elemental',
+    description: 'Recharge a Card ->\nSummon an Elemental, Draw.',
+    shortDesc: 'R-Card->Fire or\nIce Elemental, Draw',
+    subtype: 'ability',
+    cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    // recharge_extra stays on the card — getCardRechargeExtra reads the CARD's
+    // effects to price the cost before a mode is ever chosen.
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    modes: [fireMode, iceMode],
+    characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
+    previewCreatures: [createWizardFireElemental(), createWizardIceElemental()],
+    noTierOffset: true,
+  });
+}
+
+// Fireball — Wizard Tier 3 (13) + 12 for the second card = 25. The nuke the
+// class conspicuously lacked. Priced off Burning Hands, the game's own Fire-to-
+// All anchor (2 Fire to All for a 7 budget): 4 Fire to All is ~14, plus 4
+// damage to All at 12, landing on 26 against 25.
+export function createFireball() {
+  return new Card({
+    id: 'fireball', name: 'Fireball',
+    description: 'Recharge a Card ->\nDeal 4 and 4 Fire to All.',
+    shortDesc: 'R-Card->4 Dmg\n+ 4 Fire to All',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('damage_all', 4, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_fire_all', 4, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['wizard'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { damage_all: 2, apply_fire_all: 1 },
+  });
+}
+
+// === Arcane Vortex ===
+// The Vortex is a TOTEM, not a fighter: it never attacks, never takes damage,
+// and enemies ignore it entirely. The only thing it costs you is field space,
+// which is why it grows — 5+ charges turns it into a 2x2 that eats a third of
+// your line. Charges live on the creature, so they reset with it every fight.
+//
+// Three stages purely for readability: you can tell at a glance how hard the
+// engine is running without counting anything.
+export const ARCANE_VORTEX_STAGES = [
+  { min: 1, name: 'Small Arcane Vortex',  artId: 'small_arcane_vortex',  w: 1, h: 1 },
+  { min: 3, name: 'Medium Arcane Vortex', artId: 'medium_arcane_vortex', w: 1, h: 1 },
+  { min: 5, name: 'Large Arcane Vortex',  artId: 'large_arcane_vortex',  w: 2, h: 2 },
+];
+
+export function arcaneVortexStageFor(charges) {
+  let stage = ARCANE_VORTEX_STAGES[0];
+  for (const s of ARCANE_VORTEX_STAGES) if (charges >= s.min) stage = s;
+  return stage;
+}
+
+// Charge count is the whole stat line, so it goes in the description rather
+// than the attack box — the body has 0 attack and can't be hit.
+export function arcaneVortexDescription(charges) {
+  const lo = charges;
+  const hi = charges * 2;
+  return `Arcane: Deal ${lo}-${hi}.\nCharges: ${charges}.`;
+}
+
+export function createArcaneVortexCreature(charges = 1) {
+  const stage = arcaneVortexStageFor(charges);
+  const c = new Creature({
+    name: stage.name,
+    attack: 0, maxHp: 1,
+    slotW: stage.w, slotH: stage.h,
+    artId: stage.artId,
+    description: arcaneVortexDescription(charges),
+  });
+  // Totem flags. _invulnerable keeps it off every "pick a target" list that
+  // already respects it; _untargetableAlly is the player-side equivalent (no
+  // enemy-targeting path filtered _invulnerable on our side of the field), and
+  // _cantAttack keeps it out of the swing queue and the ally-attack selector.
+  c._invulnerable = true;
+  c._untargetableAlly = true;
+  c._cantAttack = true;
+  c._vortexCharges = charges;
+  return c;
+}
+
+// Arcane Vortex — Wizard Tier 3 (13). Deal 5 (5) plus a permanent-for-the-fight
+// engine: every point of Arcane damage you deal fires the Vortex for 1-2 per
+// charge at a random enemy.
+//
+// One charge is worth roughly a Rage stack (5) — the per-trigger number is
+// bigger than Rage's flat +1, but it only fires on ARCANE cards rather than
+// every attack, so it evens out. 5 + 5 = 10 against 13, and the card is
+// deliberately left under budget because the payoff is back-loaded: the turn
+// you cast it you have spent a tier-3 slot on 5 damage and a body that can't
+// fight.
+//
+// A second cast never makes a second Vortex — it adds a charge to the one
+// standing, and the ORDER matters: the charge lands first, so that cast's own
+// Deal 5 already fires at the new, higher rate.
+export function createArcaneVortexCard() {
+  return new Card({
+    id: 'arcane_vortex', name: 'Arcane Vortex',
+    description: 'Arcane: Summon an Arcane Vortex.\nDeal 5 Damage.',
+    shortDesc: 'Summon Vortex\n5 Arcane Dmg',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      // Charge/summon FIRST so the damage below already benefits from it.
+      new CardEffect('summon_arcane_vortex', 1, TargetType.SUMMON),
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['wizard'], tier: 3, rarity: 'rare',
+    arcaneHits: 1,
+    previewCreature: createArcaneVortexCreature(1),
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+// Polymorph — Wizard Tier 3. Two spells in one card, sharing the engine's only
+// transform-with-memory: the target is REPLACED for a while and remembers what
+// it was, and when the form breaks any leftover damage carries through to the
+// creature underneath.
+//
+// Sheep (~8-9 of a 13 budget): an enemy summon spends 3 of its actions as a 1/1
+// that can still swing — it just swings for 1 and has forgotten every ability.
+// Same restrictions as Paralyze (1x1 creatures only), so it does nothing to a
+// lone boss.
+//
+// Giant Ape (~16): one of YOUR creatures becomes a 6/10 2x2 that roars Weak
+// onto the whole enemy line. multiAttack was cut — 6 damage on two targets was
+// the single biggest number on the card, and a second target is only worth
+// about 1.5x anyway since it can't be the same body twice.
+//
+// Both halves have a zero floor (no enemy summons / no allies), but in opposite
+// situations, so the card is almost always live in ONE mode — which is why
+// neither half gets the dead-card discount.
+export function createPolymorph() {
+  const sheepMode = new CardMode('Sheep', [
+    new CardEffect('polymorph_sheep', 3, TargetType.SINGLE_ENEMY),
+  ]);
+  sheepMode.artId = 'sheep';
+  const apeMode = new CardMode('Giant Ape', [
+    new CardEffect('polymorph_ape', 6, TargetType.SINGLE_ALLY),
+  ]);
+  apeMode.artId = 'giant_ape';
+  return new Card({
+    id: 'polymorph', name: 'Polymorph',
+    description: 'Choose:\nSheep an enemy summon for 3,\nOR an ally becomes a Giant Ape.',
+    shortDesc: 'Sheep a summon\nOR Giant Ape',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [],
+    modes: [sheepMode, apeMode],
+    characterClass: ['wizard'], tier: 3, rarity: 'rare',
+    noTierOffset: true,
+  });
+}
+
 export function createIceBlock() {
   return new Card({
     id: 'ice_block', name: 'Ice Block',
@@ -2159,13 +2864,14 @@ export function createIceBlock() {
 export function createArcaneBeam() {
   return new Card({
     id: 'arcane_beam', name: 'Arcane Beam',
-    description: 'Deal 5 Damage. Recharge up to 3 extra cards for +3 damage each.',
-    shortDesc: '5-14 Dmg', subtype: 'ability',
+    description: 'Arcane: Deal 6 Damage.\nRecharge up to 3 extra cards\nfor +3 damage each.',
+    shortDesc: '6-15 Dmg', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 6, TargetType.SINGLE_ENEMY),
       new CardEffect('optional_recharge_damage', 3, TargetType.SELF),
     ],
+    arcaneHits: 1, // one Vortex proc per hit
     characterClass: ['wizard'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { damage: 2, optional_recharge_damage: 1 },
   });
@@ -2191,10 +2897,11 @@ export function createFanOfBlades() {
   });
 }
 
-// Blade Flurry — Rogue Tier 2. Replaces Fan of Blades in the player
-// pool. A 5-shot barrage (1 dmg each): click once, aim each strike at
-// any target (same enemy to focus, or spread). Every shot carries all
-// riders (Heroism, poison buffs, Ignite, etc.) via resolveBarrageShot.
+// Blade Flurry — Rogue Tier 2, alongside Fan of Blades. A 5-shot barrage
+// (1 dmg each): click once, aim each strike at any target (same enemy to
+// focus, or spread). Every shot carries all riders (Heroism, poison buffs,
+// Ignite, etc.) via resolveBarrageShot. Where Fan of Blades is a flat
+// hit-everything sweep, this one lets the player choose the spread.
 export function createBladeFlurry() {
   return new Card({
     id: 'blade_flurry', name: 'Blade Flurry',
@@ -2228,13 +2935,13 @@ export function createBackstab() {
 
 export function createPoisonedDagger() {
   return new Card({
-    id: 'poisoned_dagger', name: 'Poisoned Daggers',
-    description: 'Deal 1 + Poison Damage X 2.\nStays in hand',
-    shortDesc: '1+Poison X2\nStays', subtype: 'simple',
+    id: 'poisoned_dagger', name: 'Poisoned Dagger',
+    description: 'Deal 1 + Poison\nStays in hand.',
+    shortDesc: '1 + Poison\nStays', subtype: 'simple',
     cardType: CardType.ATTACK, costType: CostType.FREE,
-    // 2-shot poison barrage — click once, aim each of the 2 daggers
-    // (1 dmg + 1 Poison) at any target or Done to skip the 2nd. Each
-    // shot carries all riders (Heroism, poison buffs, Ignite, etc.).
+    // A single poisoned throw (1 dmg + 1 Poison). Still routed through the
+    // barrage flow at one shot so it keeps that path's rider handling
+    // (Heroism, poison buffs, Ignite, etc.) and the intrinsic Poison stamp.
     effects: [
       new CardEffect('poison_dagger_barrage', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
@@ -2246,15 +2953,132 @@ export function createPoisonedDagger() {
   });
 }
 
+// ============================================================
+// Rogue tier 1 / tier 3 — the "fight dirty" line. Bleed, Poison, Sunder and
+// Weak instead of Block: the rogue mitigates by shrinking the swing coming
+// back, not by absorbing it.
+// ============================================================
+
+// Hamstring — Rogue Tier 1 (4). Cut the tendon: 2 Bleed (2) + 1 Weak (2). No
+// damage of its own; the whole card is the debuff. Takes Heroic Tumble's slot
+// in the Rogue pool (the Ranger keeps Tumble).
+export function createHamstring() {
+  return new Card({
+    id: 'hamstring',
+    name: 'Hamstring',
+    description: 'Deal 2 Bleed + Weak.',
+    shortDesc: '2 Bleed\n+ Weak',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_bleed', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_weak', 1, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['rogue'],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { apply_bleed: 1 },
+  });
+}
+
+// Exploit — Rogue Tier 3 (13). Sunder 1 (3) + Deal 5 (5) + Poison (2) +
+// 2 Bleed (2), and the swing hits for 7 instead of 5 into Armor or Shield.
+// The damage rides armor_bonus_damage (encoded base*10 + bonus = 57), the same
+// effect the Obsidian Forge and Greatclub use, so the Armor/Shield check is
+// already built. Sunder is ordered FIRST so the strip helps this same hit.
+export function createExploit() {
+  return new Card({
+    id: 'exploit',
+    name: 'Exploit',
+    description: 'Sunder, Deal 5 + Poison\n+ 2 Bleed.\nArmor/Shield: +2.',
+    shortDesc: 'Sunder, 5 Dmg\n+Poison +2 Bleed\nvs Armor: +2',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('armor_bonus_damage', 57, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 2, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['rogue'],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { apply_sunder: 1, apply_bleed: 1 },
+  });
+}
+
+// Crippling Venom — Rogue Tier 3 (13). Deal 4 (4) + 2 Poison (4) + 1 Weak for
+// every Poison stack this attack lands (2 base = 4). The Weak count is
+// measured, not fixed: a Vial of Poison charge or any standing poison rider
+// pushes the Poison up and the Weak with it.
+export function createCripplingVenom() {
+  return new Card({
+    id: 'crippling_venom',
+    name: 'Crippling Venom',
+    description: 'Deal 4 + 2 Poison.\nDeal 1 Weak per Poison\napplied by this attack.',
+    shortDesc: '4 Dmg + 2 Poison\n1 Weak per\nPoison applied',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('crippling_venom', 4, TargetType.SINGLE_ENEMY, 2),
+    ],
+    characterClass: ['rogue'],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { crippling_venom: 2 },
+  });
+}
+
+// Assassinate — Rogue Tier 3 (13) + 12 for the second card cost = 25.
+// Deal 15 (15), and against a target that hasn't been touched yet: +10 (5 at
+// half-weight) and a Draw (~2), plus an On Kill draw (~2). "Was Undamaged" is
+// only true on the opening blow of a fight or against a fresh summon, so the
+// spike can't be manufactured mid-combat; the base 15 is what carries it the
+// rest of the time.
+export function createAssassinate() {
+  return new Card({
+    id: 'assassinate',
+    name: 'Assassinate',
+    description: 'Recharge a Card ->\nDeal 15.\nWas Undamaged: +10, Draw.\nOn Kill: Draw.',
+    shortDesc: 'R-Card->15 Dmg\nUndamaged: +10\n+Draw / Kill: Draw',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('assassinate_strike', 15, TargetType.SINGLE_ENEMY),
+      // Read by maybeFireDrawOnKill off the active card once the strike lands.
+      new CardEffect('draw_on_kill', 1, TargetType.SELF),
+    ],
+    characterClass: ['rogue'],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { assassinate_strike: 3 },
+  });
+}
+
 export function createSprint() {
   return new Card({
-    id: 'sprint', name: 'Sprint',
-    description: 'Draw 2.',
-    shortDesc: 'Draw 2', subtype: 'ability',
-    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
-    effects: [new CardEffect('draw', 2, TargetType.SELF)],
-    characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
-    noTierOffset: true,
+    id: 'sprint',
+    name: 'Sprint',
+    description: 'Draw 2,\nDiscard the top card.',
+    shortDesc: 'Draw 2\nDiscard top',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('draw', 2, TargetType.SELF),
+      new CardEffect('discard_top_card', 1, TargetType.SELF),
+    ],
+    characterClass: ['rogue'],
+    // Tier 3 abilities are RARE by default (the tier-3 ability line is the
+    // late-game upgrade band; uncommon is where the tier-2 versions sit).
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { draw: 1 },
   });
 }
 
@@ -2345,11 +3169,183 @@ export function createBattleShout() {
   });
 }
 
+// ============================================================
+// Warrior tier 2 / tier 3 — the shout-and-carve line. Shield Wall and
+// Battle Shout left the pool for LEGACY_CARD_IDS; their "now + every
+// turn" aura is folded into the single tier-3 Rallying Shout, and the
+// seats they freed go to Intimidating Shout and Rampage.
+// ============================================================
+
+// Intimidating Shout — Warrior Tier 2 (7). 1 Weak on every enemy: 2 points a
+// stack × 3 for the ALL multiplier = 6. No damage of its own — it's the
+// warrior's answer to a wide board, blunting the whole enemy row's next swing
+// instead of killing anything.
+export function createIntimidatingShout() {
+  return new Card({
+    id: 'intimidating_shout', name: 'Intimidating Shout',
+    description: 'Deal Weak to All.',
+    shortDesc: 'Weak to All', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_weak_all', 1, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { apply_weak_all: 1 },
+  });
+}
+
+// Rampage — Warrior Tier 2 (7) on a Discard cost (× 1.5 = 10.5). Rage 1
+// (4-5, permanent +1 damage on every attack for the rest of the fight) plus a
+// 3-target chain for 2 (2 + 1 + 1 at the halved rate for extra targets = 4).
+// The Rage is what the card is really buying; the chain just makes the turn
+// you spend a card on it not feel empty.
+export function createRampage() {
+  return new Card({
+    // Id is `warrior_rampage`, not `rampage`: the Gnoll Fang of Yeenoghu's
+    // Rampage POWER already owns the bare `rampage` key in CARD_ART_MAP (its
+    // showcase alias, pointing at GnollBite.jpg). A second `rampage` entry in
+    // that same object literal is a duplicate key — last one wins — so the
+    // card silently rendered the gnoll's bite art.
+    id: 'warrior_rampage', name: 'Rampage',
+    description: 'Discard -> Gain 1 Rage.\nDeal 2 on 3 targets.',
+    shortDesc: 'D->+1 Rage\n2 Dmg x3', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('gain_rage', 1, TargetType.SELF),
+      new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 3),
+    ],
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 1 },
+  });
+}
+
+// Whirlwind — Warrior Tier 3 (13) rare. 3 damage to every enemy (3 × 3 for the
+// ALL multiplier = 9) plus 1 Bleed to every enemy (1 × 3 = 3) = 12. The
+// warrior's board sweep, and the Bleed keeps ticking on whatever survives it.
+export function createWhirlwind() {
+  return new Card({
+    id: 'whirlwind', name: 'Whirlwind',
+    description: 'Deal 3 + Bleed to All.',
+    shortDesc: '3 Dmg + Bleed\nto All', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_all', 3, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_bleed_all', 1, TargetType.ALL_ENEMIES),
+    ],
+    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { damage_all: 2, apply_bleed_all: 1 },
+  });
+}
+
+// Sunder Armor — Warrior Tier 3 (13) rare on a Discard cost (× 1.5 = 19.5).
+// 3 Sunder (3 a stack = 9) then 3 damage for EVERY Sunder stack standing on
+// the target afterwards — 9 on a clean target, more if the warrior (or an
+// Exploit / Mandible Cleaver / Umber Hulk Rend) already stripped it. The
+// sunder_armor_strike handler applies the stacks first so this same swing
+// carves through the armor it just peeled.
+export function createSunderArmor() {
+  return new Card({
+    id: 'sunder_armor', name: 'Sunder Armor',
+    description: 'Discard -> Deal 3 Sunder.\nDeal 3 Damage per Sunder.',
+    shortDesc: 'D->3 Sunder\n3 Dmg/Sunder', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('sunder_armor_strike', 3, TargetType.SINGLE_ENEMY),
+    ],
+    // The handler reads eff.value for BOTH the Sunder applied and the damage
+    // per stack, so one offset bumps the strip and the payoff together.
+    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { sunder_armor_strike: 1 },
+  });
+}
+
+// Rallying Shout — Warrior Tier 3 (13) rare. Shield Wall and Battle Shout
+// merged into one card: Shield AND Heroism, on the player and every ally, now
+// and at the start of every turn. Each of the two retired tier-2 cards was
+// worth 7, so the merge lands at 14 against a 13 budget — close enough, and it
+// frees two tier-2 seats.
+export function createRallyingShout() {
+  return new Card({
+    id: 'rallying_shout', name: 'Rallying Shout',
+    description: 'You and your allies gain Shield and Heroism now and at the start of your turn.',
+    shortDesc: 'Shield + Heroism\nnow & per turn', subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.RECHARGE,
+    // The "now" half (self + allies, Shield and Heroism) plus ONE per-turn
+    // buff of its own — grant_rallying_shout_buff / rallying_shout_tick — not
+    // a stacked pair of the retired Shield Wall + Battle Shout buffs. The
+    // pair was quicker to wire but showed the player two badges belonging to
+    // cards that are no longer in the game; this way the buff row shows a
+    // single Rallying Shout badge with its own art. Casting twice stacks it
+    // to +2 Shield / +2 Heroism per turn.
+    effects: [
+      new CardEffect('gain_shield', 1, TargetType.SELF),
+      new CardEffect('buff_allies_shield', 1, TargetType.SELF),
+      new CardEffect('gain_heroism', 1, TargetType.SELF),
+      new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
+      new CardEffect('grant_rallying_shout_buff', 1, TargetType.SELF),
+    ],
+    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    gamePlusOffset: {
+      gain_shield: 1,
+      buff_allies_shield: 1,
+      gain_heroism: 1,
+      buff_allies_heroism: 1,
+      grant_rallying_shout_buff: 1,
+    },
+  });
+}
+
+// Bulwark — Warrior Tier 3 (13) rare on a Discard cost (× 1.5 = 19.5). The
+// warrior's last stand, built on the one number this engine already tracks as
+// "how much punishment have you taken": the discard pile IS the damage pile
+// (deck.js — drawPile is rebuilt as masterDeck minus discard, and only a rest
+// or level-up clears it). So the Shield count is literally "1 per point of
+// damage since your last rest", Bulwark's own discarded body included.
+//
+// The three riders are deliberately small next to that scaling number:
+//   - Sentinel until your next turn — you join the same Sentinel pool a
+//     guarding ally sits in, so attackers must come at a Sentinel first
+//     (picking freely between you and any guarding ally), and a multi-target
+//     swing fills every Sentinel slot before it spills onto the rest of the
+//     row. Only an "attacks ALL" swing ignores it, same as for allies.
+//   - Bloodied: Draw — note this is the SAME variable as the Shield count
+//     (Bloodied is "discard >= half your deck"), so the draw switches on
+//     exactly when the Shield number peaks.
+//   - On Recharge: 2 Shields — a Discard-cost card lands in the discard pile,
+//     never the recharge pile, so playing Bulwark can't trigger its own
+//     rider. It only pays out when ANOTHER card eats Bulwark out of hand as
+//     recharge fodder (Arcane Beam and the other recharge_extra costs).
+export function createBulwark() {
+  return new Card({
+    id: 'bulwark', name: 'Bulwark',
+    description: 'Discard -> Gain 1 Shield per discarded card.\nGain Sentinel until next turn.\nBloodied: Draw.\nOn Recharge: 2 Shields.',
+    shortDesc: 'D->1 Shield per\ndiscard, Sentinel\nBloodied: Draw',
+    subtype: 'ability',
+    cardType: CardType.ABILITY, costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('bulwark_shield', 1, TargetType.SELF),
+      new CardEffect('gain_sentinel', 1, TargetType.SELF),
+      new CardEffect('bloodied_draw', 1, TargetType.SELF),
+      new CardEffect('on_recharge_shield', 2, TargetType.SELF),
+    ],
+    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { on_recharge_shield: 1 },
+  });
+}
+
 export function createExecute() {
   return new Card({
     id: 'execute', name: 'Execute',
-    description: 'Deal 5. Bloodied: Draw.',
-    shortDesc: '5\nBloodied: Draw', subtype: 'ability',
+    // "Target Bloodied", not the bare "Bloodied": half_hp_draw reads the
+    // TARGET's health here, where every other Bloodied card in the game
+    // (Shield / Symbol of Last Hope, Frenzy Blood Vial, Bulwark) reads its
+    // owner's. Same pill on both would have meant two opposite things.
+    // Spelled "Deal 5 Damage" rather than the old bare "Deal 5" so the Game+
+    // description swap can actually find the number (EFFECT_DESC_PATTERNS.damage
+    // keys on "Deal N Damage" / "N Dmg"); the old wording matched neither, so
+    // the printed 5 never scaled with the offset.
+    description: 'Deal 5 Damage.\nTarget Bloodied: Draw.',
+    shortDesc: '5 Dmg\nTarget Bloodied:\nDraw', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
@@ -2361,8 +3357,21 @@ export function createExecute() {
 }
 
 // --- Druid Tier 2 ---
-function createTreantCreature() {
-  return new Creature({ name: 'Treant', attack: 2, maxHp: 1, haste: true, description: 'Haste' });
+// Exported: the Ancients Guardians raise these too (Regrowth overheal and the
+// Ancient of War's death burst both spawn Treants on the enemy side).
+// The one place a Treant is built. Every grove effect (Summon Treants,
+// Regrowth's overheal, Treant Bark, Staff of the Ancients) routes through
+// here so the stat line can't drift between them.
+//
+// `traits` mirrors the necromancer's Skeleton/Undead structure: the narrow
+// tag ('Treant') is the summon family that bolster effects draw from, so a
+// bigger body can join the grove by carrying the same tag instead of being
+// matched on its name. See createAncientOfWarCreature.
+export function createTreantCreature() {
+  return new Creature({
+    name: 'Treant', attack: 2, maxHp: 1, haste: true, description: 'Haste',
+    traits: ['Treant'],
+  });
 }
 
 export function createSummonTreants() {
@@ -2380,6 +3389,176 @@ export function createSummonTreants() {
     // branch in applyGamePlusOffsetInPlace rewrites the max number
     // (4 → 5 at offset 2, → 6 at offset 4).
     gamePlusOffset: { summon_treants: 0.5 },
+  });
+}
+
+// ============================================================
+// Druid tier 1 / tier 3 — the storm-and-grove line. Call Lightning seeds the
+// Shock theme at tier 1 (taking Sneak Attack's seat, which was the one card in
+// the druid pool with no nature identity and which the Rogue still runs), and
+// Summon Storm cashes it in at tier 3.
+// ============================================================
+
+// Call Lightning — Druid Tier 1 (4). 1-3 damage (avg 2) + 1 Shock (2).
+//
+// Effect ORDER is the whole balance of this card. Shock is +1 damage taken per
+// stack (getIncomingDamageModifier), so applying it first would raise this very
+// hit to 2-4 and push the card to 5 on a 4 budget. Damage resolves FIRST, then
+// the Shock lands for whatever comes next — which is also what the printed text
+// says, in that order.
+export function createCallLightning() {
+  return new Card({
+    id: 'call_lightning', name: 'Call Lightning',
+    description: 'Deal 1-3 and Shock.',
+    shortDesc: '1-3 Dmg\n+ Shock', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      // damage_range encodes min*10 + max — 13 = "1 to 3".
+      new CardEffect('damage_range', 13, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_shock', 1, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['druid'], tier: 1, rarity: 'uncommon',
+    // +1 to the top of the roll per offset (13 → 14 = "1 to 4").
+    gamePlusOffset: { damage_range: 1 },
+  });
+}
+
+// Entangling Roots — Druid Tier 3 (13) rare. Poison on every enemy (2 × 3 for
+// the ALL multiplier = 6) and Paralyze on everything that can be paralyzed
+// (~3 × 3 = 9), plus a Poison drip when the card recharges (2). That totals ~17
+// against a 13 budget, and it is deliberately left there: Paralyze only touches
+// 1x1 enemy CREATURES, so against a lone boss — or anything with a 2x2 body —
+// this collapses to "1 Poison on one target" and is worth about 2. High
+// ceiling, near-zero floor; the average lands where it should.
+//
+// Note the On Recharge rider fires on EVERY cast, not just when the card is
+// used as fodder: playCardSelf runs the on-recharge hooks for any RECHARGE-cost
+// card. It's an on-play rider wearing the enchant family's wording.
+export function createEntanglingRoots() {
+  return new Card({
+    id: 'entangling_roots', name: 'Entangling Roots',
+    description: 'Deal 1 Poison and\nParalyze All.\nOn Recharge: Poison Randomly.',
+    shortDesc: 'Poison + Paralyze\nAll\nR: Poison Rnd', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_paralyze_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('on_recharge_poison_random', 1, TargetType.SELF),
+    ],
+    characterClass: ['druid'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { apply_poison_all: 1, apply_paralyze_all: 1 },
+  });
+}
+
+// The player's Ancient of War — the grove's answer to a boss. Smaller than the
+// Ancients Guardians' version (that one is 5/15 with 5 Armor) because this one
+// body-blocks instead of grinding: Sentinel means every single-target swing has
+// to come through its 10 HP and 1 Armor first.
+//
+// Companion-routed (isCompanion + sourceCard + _routeToPlayPile, set by the
+// summon handler): the card sits in the play pile while the Ancient stands, and
+// falls into the DISCARD pile when it dies — a permanent point of the player's
+// HP. That death cost is why the card is priced against the 19.5 Discard budget
+// rather than the flat 13. If it survives the fight, endCombat drops the play
+// pile back into the deck; it never carries over to the next fight.
+//
+// 'Treant' in traits is what puts it in the grove: Summon Treants, Treant Bark
+// and the Staff of the Ancients all bolster from the trait now, so a standing
+// Ancient is a legal +1/+1 target — the best one there is, since it's the rare
+// ally that survives long enough to spend the buff.
+export function createPlayerAncientOfWarCreature() {
+  const c = new Creature({
+    name: 'Ancient of War',
+    attack: 3,
+    maxHp: 10,
+    armor: 1,
+    sunderAttack: 1,
+    sentinel: true,
+    slotW: 2,
+    slotH: 2,
+    isCompanion: true,
+    description: 'Sentinel.\nOn Death: Summon 1-2 Treants.',
+    traits: ['Ancient', 'Treant'],
+  });
+  c.onDeathSummonTreants = [1, 2];
+  return c;
+}
+
+// Force of Nature — Druid Tier 3 rare. Recharge a Card -> the Ancient walks in,
+// and you draw one back. The Draw is why this ISN'T priced with the second-card
+// bonus (a card that replaces itself pays no cost premium); the DEATH of the
+// Ancient sending its card to discard is what earns the 1.5x instead.
+export function createForceOfNature() {
+  return new Card({
+    id: 'force_of_nature', name: 'Force of Nature',
+    description: 'Recharge a Card ->\nCall an Ancient of War\nto the battle! Draw.',
+    shortDesc: 'R-Card->Ancient\nof War, Draw', subtype: 'ability',
+    cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('summon_ancient_of_war', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    characterClass: ['druid'], tier: 3, rarity: 'rare',
+    previewCreature: createPlayerAncientOfWarCreature(),
+    // Scaling lives on CREATURE_TIER_OFFSET['Ancient of War'] (main.js), not on
+    // an effect value — the marker just opts the card into the offset pass.
+    gamePlusOffset: { summon_ancient_of_war: 0 },
+  });
+}
+
+// Summon Storm — Druid Tier 3 (13) rare + a second card cost (+12) = 25.
+// Shock on everything (6), then 4 damage on everything — which lands as 5 per
+// target, because the card's own Shock went first and Shock is +1 damage taken
+// (15) — plus a 2-turn lightning rider (~5). 26 against 25.
+//
+// The rider deliberately can NOT proc off its own cast, and that needs no
+// special-casing: grant_storm_buff is listed LAST, so the Shock above resolved
+// before the buff existed. A SECOND Summon Storm does proc the first one's
+// buff, once per enemy it shocks — which is exactly the intended payoff.
+export function createSummonStorm() {
+  return new Card({
+    id: 'summon_storm', name: 'Summon Storm',
+    description: 'Recharge a Card ->\nDeal Shock to All,\nDeal 4 to All.\nWhen you Shock, randomly\nDeal 1-3 for 2 turns.',
+    shortDesc: 'R-Card->Shock All\n4 Dmg All\nShock->1-3 Dmg 2t',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_shock_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('damage_all', 4, TargetType.ALL_ENEMIES),
+      // MUST stay last — see the self-proc note above. Value is the duration
+      // in turns, not a damage amount.
+      new CardEffect('grant_storm_buff', 2, TargetType.SELF),
+    ],
+    characterClass: ['druid'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { damage_all: 2, apply_shock_all: 1 },
+  });
+}
+
+// Avatar of the Wild — Druid Tier 3 (13) rare on a Discard cost (x1.5 = 19.5).
+// Both halves of Feral Form at once and permanently: the cat's Bleed (as a
+// rider on every attack for the rest of the fight, 4) and the bear's guard
+// (2 Shield = 4, 4 Ailments cleansed ~1), plus 1 Rage (5) and a 4-damage swing
+// (4) that already benefits from BOTH new buffs — the Rage and the Bleed rider
+// are granted before it, so the opening rake hits for 5 and bleeds.
+export function createAvatarOfTheWild() {
+  return new Card({
+    id: 'avatar_of_the_wild', name: 'Avatar of the Wild',
+    description: 'Discard -> Gain 1 Rage,\nGain 2 Shield, Heal 4 Ailments.\nYour attacks also deal Bleed\nthis fight. Deal 4.',
+    shortDesc: 'D->Rage, 2 Shield\nHeal 4 Ailments\nAttacks Bleed, 4 Dmg',
+    subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('gain_rage', 1, TargetType.SELF),
+      new CardEffect('gain_shield', 2, TargetType.SELF),
+      new CardEffect('heal_ailments_self', 4, TargetType.SELF),
+      // Before the swing on purpose: the Deal 4 below rides its own rider.
+      new CardEffect('grant_avatar_bleed', 1, TargetType.SELF),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['druid'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { damage: 2, gain_shield: 1 },
   });
 }
 
@@ -2468,40 +3647,228 @@ export function getPaladinAbilityChoices() {
   // creator stays in CARD_REGISTRY so older saves that already had it
   // still deserialize, but it's no longer offered on level-up / pick
   // screens. If/when we want it back, just put it back in this list.
+  // Tier 2: the old Shock-flavored Hammer of Wrath left the pool for Aura of
+  // Might — the tier was three attacks and one utility, and the class had no
+  // party support at all. Shock is the druid's identity now (Call Lightning ->
+  // Summon Storm), so dropping it here separates the two cleanly. The NAME
+  // moves up to the tier-3 judgment.
   return [createHeroicStrike(), createShieldBash(), createShieldOfFaith(), createHeroicHeal(),
-          createConsecration(), createHammerOfWrath(), createHolySword(), createRevivify()];
+          createConsecration(), createAuraOfMight(), createHolySword(), createRevivify(),
+          createHolySteed(), createDevotionAura(), createHolyShield(), createHammerOfWrathT3()];
 }
 
 export function getRangerAbilityChoices() {
   // Piercing Shot retired from the level-up / shrine pool; its creator
   // stays in CARD_REGISTRY so older saves with it still deserialize.
   // Elemental Weapon takes its slot.
-  return [createTamedRat(), createGoodberries(), createAimedShotCard(), createHeroicTumble(),
-          createMarkingShot(), createAnimalCompanion(), createElementalWeapon(), createExplosiveShot()];
+  return [createTamedRat(), createTrack(), createAimedShotCard(), createTrapCard(),
+          createMarkingShot(), createAnimalCompanion(), createElementalWeapon(),
+          createRainOfArrows(),
+          createBestialWrath(), createEndlessQuiver(), createKillingGround(),
+          createTrueshotBarrage()];
+}
+
+// Trueshot Barrage - Ranger Tier 3. Three unpreventable shots, and the ranger's
+// answer to the armoured things waiting in the Underdark.
+//
+// Runs through the barrage flow rather than three stacked effects, and that IS
+// the design: resolveBarrageShot snapshots Heroism, Ignite and the poison buff
+// ONCE and re-applies them to every shot, so a quiver fed to this card pays out
+// three times. Three separate unpreventable_damage effects would consume the
+// Heroism on shot one and the poison buff on the first hit, and the whole quiver
+// package would do nothing here.
+//
+// 5x3 = 15 True. At roughly 1.4x normal damage that prices near 21 against a
+// tier-3 rare with a card cost (25), deliberately leaving headroom, because
+// every point of Heroism on this card is worth 3 damage rather than 1.
+//
+// It must NEVER gain a Draw: an unconditional draw cancels the second-card cost
+// bonus outright, dropping the budget from 25 to 13 and leaving this at nearly
+// double its tier.
+export function createTrueshotBarrage() {
+  return new Card({
+    id: 'trueshot_barrage',
+    name: 'Trueshot Barrage',
+    description: 'Recharge a Card ->\nDeal 5 True Damage 3 times.',
+    shortDesc: 'R Card->5 True\nx3',
+    subtype: 'ability',
+    subtype2: 'ranged',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('trueshot_barrage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    characterClass: ['ranger'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { trueshot_barrage: 1 },
+  });
+}
+
+// Killing Ground - Ranger Tier 3. The capstone of the Trap line, and the only
+// defensive option in the ranger's whole pool: armour isn't the ranger's answer,
+// prepared ground is.
+//
+// Three traps, and you CHOOSE each one from three random offers — deliberately
+// NOT stated on the card, which just reads "Set 3 Traps"; the picker is a
+// pleasant surprise rather than a cost to explain. It rewards
+// reading the fight (a Bear body when you need a blocker, Spike when you need
+// the boss dead). The same trap can come up across rounds, so three Bear Traps
+// is possible.
+//
+// ~18 of raw trap value against a tier-3 rare's 13. The delay and the residual
+// randomness (three of five offered, not any of five) pay the difference, which
+// is why it takes no second card cost.
+export function createKillingGround() {
+  return new Card({
+    id: 'killing_ground',
+    name: 'Killing Ground',
+    description: 'Set 3 Traps.',
+    shortDesc: 'Set 3 Traps',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('killing_ground', 3, TargetType.SUMMON)],
+    characterClass: ['ranger'], tier: 3, rarity: 'rare',
+    previewCards: [
+      createSnakeTrapToken(), createExplosiveTrapToken(), createBearTrapToken(),
+      createIceTrapToken(), createSpikeTrapToken(),
+    ],
+    noTierOffset: true,
+  });
+}
+
+// Bone Quiver - Tier 2 rare, taken off the gnolls who were shooting at you.
+// Their whole line is Bone-prefixed and their Bone Cleaver already poisons, so
+// the toxin rider is the pack's signature rather than a bolted-on keyword.
+//
+// The Poison is the single-use "your next attack also applies Poison" buff, not
+// a random application: the quiver is spent BEFORE the bow picks a target, so
+// applying it to a random enemy could poison a hyena while you shoot the
+// hunter. Riding the shot means it always lands on what you actually hit.
+export function createBoneQuiver() {
+  return new Card({
+    id: 'bone_quiver',
+    name: 'Bone Quiver',
+    description: 'On Recharge: Gain Heroism.\nRanged: Gain Poison.',
+    shortDesc: 'On Recharge:\n+Heroism\nRanged: +Poison',
+    subtype: 'quiver',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
+      new CardEffect('on_recharge_poison_buff_ranged', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'rare',
+    unplayable: true,
+    // Bare-keyword stacks, so no number in the text for the NG+ rewriter.
+    noTierOffset: true,
+  });
+}
+
+// Mephit Skin Quiver - Tier 2 uncommon, cured from magma mephit hide, so it
+// carries fire the way the Bone Quiver carries rot. Unlike its siblings the
+// BASE line is the rider too: it stokes Ignite whatever you feed it to, and a
+// bow just gets a second stack.
+export function createMephitSkinQuiver() {
+  return new Card({
+    id: 'mephit_skin_quiver',
+    name: 'Mephit Skin Quiver',
+    description: 'On Recharge: Gain Ignite.\nRanged: Gain Ignite.',
+    shortDesc: 'On Recharge:\n+Ignite\nRanged: +Ignite',
+    subtype: 'quiver',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_ignite', 1, TargetType.SELF),
+      new CardEffect('on_recharge_ignite_ranged', 1, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'uncommon',
+    unplayable: true,
+    noTierOffset: true,
+  });
+}
+
+// Endless Quiver - Ranger Tier 3. The prize is not the Heroism, it is the card
+// economy: every ranger bow costs "Recharge a Card ->", and this pays that cost
+// for free once per turn, forever. The Heroism is the garnish.
+//
+// It drops the base Quiver's second Heroism - the Ranged clause buys the return
+// instead. Fed to anything that is not a bow it is simply Wolf Fang: one
+// Heroism and it is gone, which is what stops it being a generic good card in a
+// non-bow deck.
+//
+// "Stays in hand" is the player-facing wording because that is what it looks
+// like from their seat, but mechanically the card really does land in the
+// recharge pile - that is precisely why the on-recharge Heroism fires with no
+// new plumbing - and is then pulled straight back. See maybeReturnQuiverToHand.
+export function createEndlessQuiver() {
+  return new Card({
+    id: 'endless_quiver',
+    name: 'Endless Quiver',
+    description: 'On Recharge: Gain Heroism.\nRanged: Stays in hand.',
+    shortDesc: 'On Recharge:\n+Heroism\nRanged: Stays',
+    subtype: 'quiver',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
+      new CardEffect('on_recharge_return_ranged', 1, TargetType.SELF),
+    ],
+    characterClass: ['ranger'], tier: 3, rarity: 'rare',
+    unplayable: true,
+    // Bare-keyword Heroism, so there is no number in the text for the NG+
+    // rewriter to find - same reason the base Quiver opts out.
+    noTierOffset: true,
+  });
 }
 
 export function getWizardAbilityChoices() {
   return [createFireBurst(), createIceBolt(), createMagicMissiles(), createArcaneShield(),
-          createBurningHands(), createIceNova(), createIceBlock(), createArcaneBeam()];
+          // Ice Block left the pool: it puts 4 Ice on YOU, and the passive shatter
+          // fires on the player too — a 40% chance per incoming hit to take 4
+          // that Block can't stop AND spray each of your own allies. Its creator
+          // stays registered; Overseer Gnikan still runs 4 copies.
+          createElementalNova(), createArcaneBeam(),
+          createArcaneExplosion(), createSummonElemental(),
+          createShatterStorm(), createFireball(), createArcaneVortexCard(),
+          createPolymorph()];
 }
 
 export function getRogueAbilityChoices() {
-  return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createHeroicTumble(),
-          createBladeFlurry(), createBackstab(), createPoisonedDagger(), createSprint()];
+  // Heroic Tumble left the Rogue pool for Hamstring — the class mitigates by
+  // shrinking incoming swings (Weak) rather than gambling on Block. Tumble is
+  // still a Ranger tier-1 pick, so it stays in active rotation.
+  return [createAimedShotCard(), createSneakAttack(), createPetSpider(), createHamstring(),
+          createBladeFlurry(), createBackstab(), createPoisonedDagger(), createFanOfBlades(),
+          createSprint(), createExploit(), createCripplingVenom(), createAssassinate()];
 }
 
 export function getWarriorAbilityChoices() {
+  // Tier 1: Heroic Strike, Charge, Reckless Strike, Shield Bash.
+  // Tier 2: Mortal Strike (id thunderclap), Execute, Intimidating Shout,
+  //         Rampage — Shield Wall and Battle Shout retired to legacy.
+  // Tier 3: Whirlwind, Sunder Armor, Rallying Shout, Bulwark.
   return [createHeroicStrike(), createCharge(), createRecklessStrike(), createShieldBash(),
-          createThunderclap(), createShieldWall(), createBattleShout(), createExecute()];
+          createThunderclap(), createExecute(),
+          createIntimidatingShout(), createRampage(),
+          createWhirlwind(), createSunderArmor(), createRallyingShout(), createBulwark()];
 }
 
 export function getDruidAbilityChoices() {
-  return [createWrath(), createRegrowth(), createFeralSwipe(), createSneakAttack(),
+  // Tier 1: Wrath, Regrowth, Feral Swipe, Call Lightning. Sneak Attack left
+  // the pool for Call Lightning — it's the Rogue's signature (and still sits in
+  // that pool), its "X = attacks this turn" scaling wants a multi-attack deck
+  // the Druid doesn't build, and it was the only card here with no nature
+  // identity. Tier 3: Entangling Roots, Force of Nature, Summon Storm,
+  // Avatar of the Wild.
+  return [createWrath(), createRegrowth(), createFeralSwipe(), createCallLightning(),
           // Healing Touch retired from the pool in favor of Nature's
           // Healing; its creator stays in CARD_REGISTRY so older
           // saves that already had it still deserialize cleanly.
           createSummonTreants(), createFeralBite(), createStarfire(),
-          createNaturesHealing()];
+          createNaturesHealing(),
+          createEntanglingRoots(), createForceOfNature(), createSummonStorm(),
+          createAvatarOfTheWild()];
 }
 
 // Necromancer ability pool. Tier 1: Arcane Shield (shared with
@@ -2514,7 +3881,8 @@ export function getNecromancerAbilityChoices() {
   return [createArcaneShield(), createShadowBolt(), createDrainLife(),
           createArmyOfTheDeadCard(),
           createTheButcher(), createPlague(),
-          createCorpseExplosion(), createBoneStormNecromancer()];
+          createCorpseExplosion(), createBoneStormNecromancer(),
+          createDeathCoil()];
 }
 
 export function getAbilityChoices(className, count = 3, tier = 1) {
@@ -2705,8 +4073,9 @@ export function createTheButcher() {
     id: 'the_butcher', name: 'The Butcher',
     description: 'Recharge a Card ->\nCall The Butcher!\nDraw.',
     shortDesc: 'R-Card->Call\nThe Butcher, Draw',
-    // Ally card (the Butcher himself is the summon). Still a Tier 2
-    // Necromancer ability CHOICE — it stays in getNecromancerAbilityChoices.
+    // Ally card (the Butcher himself is the summon). A Tier 3 Necromancer
+    // ability CHOICE — it stays in getNecromancerAbilityChoices, it just
+    // sits in the tier-3 band now.
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
@@ -2716,8 +4085,9 @@ export function createTheButcher() {
       new CardEffect('draw', 1, TargetType.SELF),
     ],
     characterClass: ['necromancer'],
-    tier: 2,
-    rarity: 'uncommon',
+    // Tier 3 abilities are rare (see the tier-3 ability line).
+    tier: 3,
+    rarity: 'rare',
     // Codex Summons tab + hover preview pull from this; the live
     // summon is built in the summon_butcher handler with the same stats.
     previewCreature: createButcherCreature(),
@@ -2742,8 +4112,9 @@ export function createPlague() {
       new CardEffect('apply_all_poison_damage', 0, TargetType.ALL_ENEMIES),
     ],
     characterClass: ['necromancer'],
-    tier: 2,
-    rarity: 'uncommon',
+    // Tier 3 abilities are rare (see the tier-3 ability line).
+    tier: 3,
+    rarity: 'rare',
     gamePlusOffset: { apply_poison_all: 1 },
   });
 }
@@ -2800,6 +4171,40 @@ export function createBoneBuckler() {
 // (the highest-HP one) and detonates it: every enemy takes damage equal
 // to that ally's current HP, and all enemies are Poisoned. A finisher
 // that turns a fat skeleton (or The Butcher) into a board-wide nuke.
+// Death Coil - Necromancer Tier 2. The class's missing pillar: until now nothing
+// in the necromancer's kit raised anything off an ENEMY corpse. Every body it
+// fielded came out of a card, and Corpse Explosion consumes one of your own.
+//
+// Budget: Discard multiplies by 1.5, so a T2 uncommon is 7 x 1.5 = 10.5. Deal 10
+// plus a kill-gated Skeleton (a body is worth ~1.5-2, halved behind the gate)
+// lands at ~11. Reckless Strike is the anchor for the shape - T1 uncommon,
+// Discard -> Deal 6, i.e. 4 x 1.5 exactly.
+//
+// The Discard cost is doing thematic work, not just paying for numbers: the
+// discard pile IS the player's damage track, so this literally spends vitality
+// to cast. Fitting for a necromancer, and the reason it shouldn't become the
+// pool's default cost - this class has the smallest deck in the game.
+//
+// 10 damage one-shots most summons and won't drop a boss, so the rider fires
+// exactly when you're clearing adds. Sweep the minions, keep the corpses.
+export function createDeathCoil() {
+  return new Card({
+    id: 'death_coil',
+    name: 'Death Coil',
+    description: 'Discard -> Deal 10.\nOn Kill: Summon a Skeleton.',
+    shortDesc: 'D->10 Dmg\nOn Kill: Skeleton',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('summon_skeleton_on_kill', 1, TargetType.SUMMON),
+    ],
+    characterClass: ['necromancer'], tier: 2, rarity: 'uncommon',
+    gamePlusOffset: { damage: 3 },
+  });
+}
+
 export function createCorpseExplosion() {
   return new Card({
     id: 'corpse_explosion',
@@ -4016,6 +5421,124 @@ export function createKrakenWhip() {
 }
 
 // ============================================================
+// The Deep Kraken — the Underdark boss beneath the Bottomless Lake.
+// A copy of the Kraken Spawn kit with everything scaled up: the boss
+// carries 4x the deck (HP), its cards deal double, and it summons
+// Deep Tentacles (6/10) instead of the surface 3/5 tentacles. The
+// summon EFFECT TYPES are shared with the surface Kraken — the spawn
+// handler in main.js reads enemy._deepKraken and swaps in the bigger
+// tentacle, so these cards reuse summon_kraken_tentacle* directly.
+// ============================================================
+
+// Deep Tentacle — the Deep Kraken's limb. Double the surface Tentacle
+// (6 atk / 10 hp) with the same on-attack card-snag.
+export function createDeepTentacleCreature() {
+  const c = new Creature({
+    name: 'Deep Tentacle', attack: 6, maxHp: 10,
+    onAttackSnagCard: true,
+    description: 'On Attack: snag 1 random card from your hand.',
+  });
+  c._codexSide = 'enemy';
+  return c;
+}
+
+// Deep Tentacle Grab — summon a Deep Tentacle that swings immediately.
+export function createDeepTentacleGrab() {
+  return new Card({
+    id: 'deep_tentacle_grab',
+    name: 'Deep Tentacle Grab',
+    description: 'Recharge ->\nSummon a Deep Tentacle, it attacks.',
+    shortDesc: 'R->Deep Tentacle\n+Attack',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle', 1, TargetType.SUMMON),
+    ],
+    previewCreature: createDeepTentacleCreature(),
+    rarity: 'epic',
+    noTierOffset: true,
+  });
+}
+
+// Deep Tentacle — passive summon (no immediate swing).
+export function createDeepKrakenTentacleCard() {
+  return new Card({
+    id: 'deep_kraken_tentacle',
+    name: 'Deep Tentacle',
+    description: 'Recharge ->\nSummon a Deep Tentacle.',
+    shortDesc: 'R->Deep Tentacle',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle_passive', 1, TargetType.SUMMON),
+    ],
+    previewCreature: createDeepTentacleCreature(),
+    rarity: 'epic',
+    noTierOffset: true,
+  });
+}
+
+// Deep Tentacle Block — DEFENSE summon: a fresh Deep Tentacle soaks the swing.
+export function createDeepKrakenTentacleBlock() {
+  return new Card({
+    id: 'deep_kraken_tentacle_block',
+    name: 'Deep Tentacle Block',
+    description: 'Recharge ->\nSummon a Deep Tentacle\nwho blocks the attack.\nDraw.',
+    shortDesc: 'R->Deep Tentacle\nBlocks, Draw',
+    subtype: 'spell',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_kraken_tentacle_block', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    previewCreature: createDeepTentacleCreature(),
+    rarity: 'epic',
+    noTierOffset: true,
+  });
+}
+
+// Deep Swallowing Bite — double the surface bite: 24 minus cards in hand.
+export function createDeepSwallowingBite() {
+  return new Card({
+    id: 'deep_swallowing_bite',
+    name: 'Deep Swallowing Bite',
+    description: 'Recharge +1 ->\nDeal 24 Damage minus cards in hand.',
+    shortDesc: 'R+1->24-hand Dmg',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_minus_hand_count', 24, TargetType.SINGLE_ENEMY),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    gamePlusOffset: { damage_minus_hand_count: 3 },
+  });
+}
+
+// Deep Tentacle Whip — AoE 5 to all + every alive tentacle gains 2 Heroism.
+export function createDeepKrakenWhip() {
+  return new Card({
+    id: 'deep_kraken_whip',
+    name: 'Deep Tentacle Whip',
+    description: 'Recharge ->\nDeal 5 Damage to all enemies.\nAllies gain 2 Heroism.',
+    shortDesc: 'R->5 Dmg All\nAllies +2 Heroism',
+    subtype: 'spell',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage_all', 5, TargetType.ALL_ENEMIES),
+      new CardEffect('buff_allies_heroism', 2, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    gamePlusOffset: { damage_all: 1, buff_allies_heroism: 1 },
+  });
+}
+
+// ============================================================
 // Kraken Spawn loot drops (post-fight pick-2 from the wreck).
 // All tier-1 epics, all themed around the sea / bleed / heroism.
 // ============================================================
@@ -4249,42 +5772,56 @@ export function createAdamantineChainShirt() {
 }
 
 // Shield of Last Hope — Tier 2 Rare light armor (Guildmaster reward). A panic
-// button: Gain 4 Shield, and if you're Bloodied (at half HP or less), also
-// Heal 8. The heal simply doesn't fire while you're above half.
+// button: Gain 4 Shield, plus a scaling heal by how hurt you are. Bruised
+// (lost 25%+ HP) heals 4; Bloodied (half HP or less) heals another 4 on top,
+// so a Bloodied character heals 8 total, a Bruised-but-not-Bloodied one 4, and
+// above 75% HP it's just the shield. The bloodied_heal is listed first so it
+// resolves before bruised_heal (see the bruised_heal case in main.js).
 export function createShieldOfLastHope() {
   return new Card({
     id: 'shield_of_last_hope', name: 'Shield of Last Hope',
-    description: 'Gain 4 Shield.\nBloodied: Heal 8.',
-    shortDesc: '+4 Shield\nBloodied: Heal 8',
+    description: 'Gain 4 Shield.\nBruised: Heal 4.\nBloodied: Heal 4.',
+    // shortDesc drops the "Heal" word so each pill + number fits ONE row on the
+    // 96px inventory card (a full "[BLOODIED] Heal 4" line wraps and overflows
+    // the 3-line box). The full description above keeps the readable wording.
+    shortDesc: '+4 Shield\nBruised: 4\nBloodied: 4',
     subtype: 'light_armor',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_shield', 4, TargetType.SELF),
-      new CardEffect('bloodied_heal', 8, TargetType.SELF),
+      new CardEffect('bloodied_heal', 4, TargetType.SELF),
+      new CardEffect('bruised_heal', 4, TargetType.SELF),
     ],
     tier: 2, rarity: 'rare',
-    gamePlusOffset: { gain_shield: 1, bloodied_heal: 2 },
+    gamePlusOffset: { gain_shield: 1, bloodied_heal: 2, bruised_heal: 2 },
   });
 }
 
 // Symbol of Last Hope — Tier 2 Rare relic (the other half of the Guildmaster
-// reward pick). FREE and stays in hand, so once per turn you Heal 2 — and while
-// Bloodied (at half HP or less) Heal 4 more (6 total). A slow, reliable sustain
-// engine, the counterpart to the Shield's burst.
+// reward pick). FREE and stays in hand, so once per turn you Heal 2 — plus a
+// step-up by how hurt you are: Bruised (lost 25%+ HP) heals 2 more, and
+// Bloodied (half HP or less) heals another 2 on top. So a healthy character
+// heals 2, a Bruised one 4, and a Bloodied one 6. A slow, reliable sustain
+// engine, the counterpart to the Shield's burst. The bloodied_heal is listed
+// before bruised_heal so it resolves first (see the bruised_heal case).
 export function createSymbolOfLastHope() {
   return new Card({
     id: 'symbol_of_last_hope', name: 'Symbol of Last Hope',
-    description: 'Heal 2.\nBloodied: Heal 4.\nStays in hand.',
-    shortDesc: 'Heal 2\nBloodied: Heal 4\nStays',
+    description: 'Heal 2.\nBruised: Heal 2.\nBloodied: Heal 2.\nStays in hand.',
+    // Compact shortDesc: base heal + "Stays" fold onto row 1, the two pill
+    // conditionals drop the "Heal" word so each fits one row — keeps the whole
+    // card to 3 lines on the 96px inventory card. Full wording is above.
+    shortDesc: 'Heal 2, Stays\nBruised: 2\nBloodied: 2',
     subtype: 'relic',
     cardType: CardType.RELIC, costType: CostType.FREE,
     effects: [
       new CardEffect('heal', 2, TargetType.SELF),
-      new CardEffect('bloodied_heal', 4, TargetType.SELF),
+      new CardEffect('bloodied_heal', 2, TargetType.SELF),
+      new CardEffect('bruised_heal', 2, TargetType.SELF),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     tier: 2, rarity: 'rare',
-    gamePlusOffset: { heal: 1, bloodied_heal: 2 },
+    gamePlusOffset: { heal: 1, bloodied_heal: 2, bruised_heal: 2 },
   });
 }
 
@@ -4653,6 +6190,20 @@ export function createBuffDwarvenBrew() {
     name: 'Dwarven Brew',
     description: 'Start of Turn: +Shield',
     shortDesc: '+Shield/turn',
+    subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
+    effects: [],
+    noTierOffset: true,
+  });
+}
+// Deep River Water — Beverage granted by drinking at the Quiet Pool (the
+// untainted river near the Bottomless Lake). Heals 1 each turn for 3 turns;
+// if the heal would overheal (already at full HP), draws instead.
+export function createBuffDeepRiverWater() {
+  return new Card({
+    id: 'buff_deep_river_water',
+    name: 'Deep River Water',
+    description: 'Start of Turn: Heal 1.\nOverheal: Draw.',
+    shortDesc: 'Heal 1/turn\nOverheal: Draw',
     subtype: 'buff', cardType: CardType.ABILITY, costType: CostType.FREE,
     effects: [],
     noTierOffset: true,
@@ -5218,6 +6769,44 @@ export function createApprenticesSpellbook() {
     rarity: 'common',
     tier: 1,
     gamePlusOffset: { gain_heroism: 1 },
+  });
+}
+
+// Quiver — Tier 1 uncommon, and the first card of its own `quiver` subtype.
+// Unplayable: its only use is as another card's recharge cost, which is a fine
+// deal for an archer (bows are RECHARGE-cost, so you pay one nearly every turn)
+// and deliberately a poor one for anyone else.
+//
+// The conditional second Heroism is what keeps it honest. Fed to a greataxe it
+// gives 1 — Apprentice's Spellbook parity, except the Spellbook stays in hand
+// and this doesn't, so there's no reason for a 2-hander build to want it. Fed
+// to a bow it gives 2, which is the "slightly better than the Spellbook per
+// use, but one-shot" trade it's priced for. Both stacks land BEFORE the card
+// they paid for resolves, so the bow fires with them already up.
+//
+// Class access is gated on RANGED proficiency rather than a hand-maintained
+// list — see the `quiver` branch of canClassEquip. Ranger, Rogue, Warrior.
+export function createQuiver() {
+  return new Card({
+    id: 'quiver',
+    name: 'Quiver',
+    description: 'On Recharge: Gain Heroism.\nRanged: Gain Heroism.',
+    shortDesc: 'On Recharge:\n+Heroism\nRanged: +Heroism',
+    subtype: 'quiver',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
+      new CardEffect('on_recharge_heroism_ranged', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 1,
+    unplayable: true,
+    // The description states its stacks as bare keywords (house style for a
+    // single stack), so there is no number in the text for the NG+ rewriter to
+    // find — scaling the effect would silently desync the card face from what
+    // it does. Opt out rather than lie.
+    noTierOffset: true,
   });
 }
 
@@ -5901,7 +7490,7 @@ export function createSummonAncestor() {
     name: 'Summon Ancestor',
     description: 'Recharge a Card ->\nSummon 1 Ancestor.\n(Durin, Balgrim, or Thordak)\nDraw.',
     shortDesc: 'R->Summon\nAncestor, Draw',
-    subtype: 'ability',
+    subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: [
@@ -7319,6 +8908,48 @@ export function createThorbTier3Creature() {
   });
 }
 
+// Brad the Fox — tier-3 rare Ally companion. Glass-cannon skirmisher:
+// hits hard the turn he lands (Haste) and slips half the blows aimed at
+// him (dodgeChance 50). Summoned by createBradCard / the summon_brad
+// handler; the dodge is resolved centrally in Creature.takeDamage.
+export function createBradCreature() {
+  return new Creature({
+    name: 'Brad the Fox',
+    attack: 3,
+    maxHp: 4,
+    haste: true,
+    poisonAttack: true,
+    dodgeChance: 50,
+    isCompanion: true,
+    // Poison is shown by the poisonAttack rider icon next to the attack
+    // stat — don't repeat the word here or it renders a second inline icon.
+    description: 'Haste.\nOn Hit: 50% to avoid the damage.',
+    noTierOffset: true,
+  });
+}
+
+// Cornis Metalhands — deep gnome smith of the Underdark village, his hands
+// mithril from the wrist down and cut to take a socketed tool: he screws on a
+// hammer, a pick, a blade, whatever the fight wants. Haste + Attack Twice makes
+// him a burst of two swings the turn he lands, and at end of turn he walks off
+// the field and back into your hand (see the end-of-turn return in main.js), so
+// he's re-castable every turn instead of holding ground.
+export function createCornisCreature() {
+  return new Creature({
+    name: 'Cornis Metalhands',
+    attack: 2,
+    maxHp: 3,
+    haste: true,
+    isCompanion: true,
+    // Mithril hands chew plate: every swing stacks 1 Sunder. Shown as the
+    // Sunder rider icon next to the attack stat (like Brad's poison fang), so
+    // the word isn't repeated in the description.
+    sunderAttack: 1,
+    description: 'Haste. Attack Twice.\nEnd of turn: return to hand.',
+    noTierOffset: true,
+  });
+}
+
 // Raena base creature — recruited at Calm Grove. Attacks 2 targets.
 export function createRaenaCreature() {
   return new Creature({
@@ -7416,6 +9047,61 @@ export function createThorbTier3Card() {
     tier: 3,
     previewCreature: createThorbTier3Creature(),
     // Top of the Thorb tier chain — no further offset stamping.
+    noTierOffset: true,
+  });
+}
+
+// Brad the Fox — tier-3 rare Ally companion card. Same call-a-companion
+// shape as Thorb (Recharge a card -> summon + draw), but Brad is a Haste
+// glass cannon with a 50% on-hit dodge (see createBradCreature). Single
+// tier for now — not in COMPANION_TIER_CHAINS, so the ccgQuest+ offset
+// system leaves it as-is.
+export function createBradCard() {
+  return new Card({
+    id: 'brad_card',
+    name: 'Brad the Fox',
+    description: 'Recharge a Card ->\nCall Brad the Fox\nto the battle!\nDraw.',
+    shortDesc: 'Call Brad\nDraw',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_brad', 1, TargetType.SUMMON),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    isUnique: true,
+    tier: 3,
+    previewCreature: createBradCreature(),
+    // Companion card — no name-stamp / offset scaling.
+    noTierOffset: true,
+  });
+}
+
+// Cornis Metalhands — tier-3 rare Ally card, same call-a-companion shape as
+// Thorb / Brad (Recharge a card -> summon + draw). The difference is he doesn't
+// stay: he swings twice on arrival and returns to hand at end of turn, BEFORE
+// the refill draw, so he occupies a hand slot going into the next turn.
+export function createCornisCard() {
+  return new Card({
+    id: 'cornis_card',
+    name: 'Cornis Metalhands',
+    description: 'Recharge a Card ->\nCall Cornis Metalhands\nto the battle!\nDraw.',
+    shortDesc: 'Call Cornis\nDraw',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_cornis', 1, TargetType.SUMMON),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'rare',
+    isUnique: true,
+    tier: 3,
+    previewCreature: createCornisCreature(),
+    // Companion card — no name-stamp / offset scaling.
     noTierOffset: true,
   });
 }
@@ -8109,6 +9795,98 @@ export function createAncientBones() {
   });
 }
 
+// Bluecap — Common Tier 3 meal, the Underdark's staple crop. The deep gnomes
+// grind it into flour; the party just eats it. Light Consume + Recharge 1 heal
+// plus a long, cheap 4-turn meal tick.
+export function createBluecap() {
+  return new Card({
+    id: 'bluecap',
+    name: 'Bluecap',
+    description: 'Consume + Recharge 1 -> Heal 5.\nMeal: Heal 1 for 4 turns.',
+    shortDesc: 'C+R1->Heal 5\nMeal: Heal 1/4T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 5, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Bluecap',
+      effectType: 'heal',
+      value: 1,
+      turnsPerCombat: 4,
+      description: 'Heal 1 each turn for 4 turns (each combat, until rest)',
+    },
+    rarity: 'common',
+    tier: 3,
+    gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Barrelstalk — Uncommon Tier 3 fungus that's food AND drink: the stalk holds
+// clean water, the flesh is a meal. The only card that fills BOTH provision
+// slots off one Consume (see the `provisions` array support in the
+// grant_provision handler).
+export function createBarrelstalk() {
+  return new Card({
+    id: 'barrelstalk',
+    name: 'Barrelstalk',
+    description: 'Consume + Recharge 2 -> Heal 6.\nMeal: Heal 1 for 3 turns.\nBeverage: Heal 1 for 3 turns.',
+    shortDesc: 'C+R2->Heal 6\nMeal: Heal 1/3T\nBev: Heal 1/3T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 6, TargetType.SELF),
+      new CardEffect('recharge_extra', 2, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    // Dual-slot: one bite fills the Meal slot, the water in the stalk fills
+    // the Beverage slot. Each replaces whatever was in its own slot.
+    provisions: [
+      {
+        slot: 'meal',
+        name: 'Barrelstalk',
+        effectType: 'heal',
+        value: 1,
+        turnsPerCombat: 3,
+        description: 'Heal 1 each turn for 3 turns (each combat, until rest)',
+      },
+      {
+        slot: 'beverage',
+        name: 'Barrelstalk Water',
+        imageId: 'barrelstalk',
+        effectType: 'heal',
+        value: 1,
+        turnsPerCombat: 3,
+        description: 'Heal 1 each turn for 3 turns (each combat, until rest)',
+      },
+    ],
+    rarity: 'uncommon',
+    tier: 3,
+    gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Rare Mushroom — Rare Tier 3 material, the Ancient Bones treatment: can't be
+// played (unplayable), can't be sold (id-gated in canSellAtShop), stacks freely
+// in the backpack. No use wired yet — it's fuel for something later.
+export function createRareMushroom() {
+  return new Card({
+    id: 'rare_mushroom', name: 'Rare Mushroom',
+    description: 'An exceptionally rare fungus with powerful magical properties. Its true use is unknown.',
+    shortDesc: 'Powerful magic within\nIts use is unknown',
+    subtype: 'item',
+    cardType: CardType.ITEM, costType: CostType.RECHARGE,
+    effects: [],
+    tier: 3, rarity: 'rare',
+    unplayable: true,
+  });
+}
+
 // Bone Whip (Gnoll Pack Lord) — the boss's rally engine. A Simple Weapon that
 // lashes Poison across the whole party and rouses the pack (every enemy ally
 // gains Heroism). Uses the caster-aware `apply_poison_all_foes` so an enemy
@@ -8473,6 +10251,894 @@ export function createRend() {
     tier: 2,
     rarity: 'epic',
     gamePlusOffset: { damage_random_split: 2 },
+  });
+}
+
+// Rend (Umber Hulk) — the hulk's version of the troll's claw rake: wider (3
+// targets instead of 2) and a touch weaker per hit (3 instead of 4), with the
+// same Bleed rider riding the damage_random_split handler. Monster-only, and
+// the bulk of the hulk's 40-card deck. Uses its own art (UmberHulk.jpg).
+export function createRendUmberHulk() {
+  return new Card({
+    id: 'rend_umber_hulk',
+    name: 'Rend',
+    description: 'Recharge -> Sunder, Deal 3 + Bleed to 2-3 targets.',
+    shortDesc: 'R->Sunder, 3\n+ Bleed x2-3',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    // Target count rolls 2 or 3 per cast — minTargets is stamped on the
+    // effect below (the CardEffect constructor doesn't take it positionally),
+    // as is the Sunder rider. Sunder lands first on each pick, so the claw
+    // that follows bites into already-stripped Armor.
+    effects: [
+      Object.assign(
+        new CardEffect('damage_random_split', 3, TargetType.ALL_ENEMIES, 3, 1),
+        { minTargets: 2, sunder: 1 },
+      ),
+    ],
+    priority: 10,
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { damage_random_split: 2 },
+  });
+}
+
+// Staff of Fungi — Psilofyr's answer to a full offering bowl. Rare T3 (13) plus
+// 9 for the second card cost: the party-wide version of the Mycelial Codex,
+// a full Poison scrub on your whole line, and a handful of caps grown out of
+// whatever it pulled off you. Not a drop — it forms out of the altar's growth
+// once enough has been offered (see the psilofyr_donate handler).
+//
+// "Living ally" here means Creature.isAlive (currentHp > 0), NOT a creature
+// TYPE check — Skeletons and every other Undead ally are buffed exactly like
+// anything else on the field. The Necromancer is a first-class user of this.
+export function createStaffOfFungi() {
+  return new Card({
+    id: 'staff_of_fungi',
+    name: 'Staff of Fungi',
+    description: 'Recharge a Card ->\nAllies gain +1/+1 and\ntheir attacks Poison.\nHeal all Poison on you\nand your allies, and\ngrow mushrooms from it.',
+    shortDesc: 'R-Card->Allies\n+1/+1 +Poison\nScrub Poison',
+    subtype: 'staff',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('all_allies_growth', 1, TargetType.SELF),
+      new CardEffect('fungal_bloom', 0, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { all_allies_growth: 1 },
+  });
+}
+
+// ============================================================
+// The Ancients Guardians — the Silverwood circle fight. The guardians
+// themselves are an untouchable presence; what you actually fight is the ring
+// of Ancients of War standing between you and the trees.
+// ============================================================
+
+// Ancient of War — a 2x2 Sentinel with 5 Armor over 10 HP. Killing one is the
+// point of the fight, and killing one is also the problem: the wood puts the
+// pieces back up as a spray of smaller Treants.
+export function createAncientOfWarCreature() {
+  const c = new Creature({
+    name: 'Ancient of War',
+    attack: 5,
+    maxHp: 15,
+    armor: 5,
+    // Sunder rider instead of Sentinel: the Ancients don't body-block for the
+    // wood, they grind your guard down. The stack lands BEFORE the swing
+    // resolves (see the creature-swing path in main.js), so the Armor/Block it
+    // strips is already gone when that same hit is mitigated.
+    sunderAttack: 1,
+    slotW: 2,
+    slotH: 2,
+    // No "Attacks Sunder" line: sunderAttack draws its own rider icon beside
+    // the attack stat, so spelling it out again would render the pill twice.
+    description: 'On Death: Summon 2-4 Treants.',
+    // Same shape as the necromancer's ['Skeleton', 'Undead']: the specific
+    // tag first, the summon family second. Carrying 'Treant' is what puts an
+    // Ancient in the grove — Summon Treants, Treant Bark and the Staff of the
+    // Ancients all bolster from the trait now, not from the name, so the big
+    // body is a legal target for +1/+1. That is deliberately the strongest
+    // place to put the buff: most allies die the turn they're hit, so a body
+    // that survives several turns is the only one that ever cashes it in.
+    traits: ['Ancient', 'Treant'],
+  });
+  // On-death summon rider — [min, max] Treants raised on the SAME side the
+  // Ancient was standing on. Handled in the death sweep in main.js.
+  c.onDeathSummonTreants = [2, 4];
+  return c;
+}
+
+// Regrowth (Ancients Guardians) — the guardians' only card, and they hold two
+// of them, so the ring is healed twice a turn. Overheal spills into a fresh
+// Treant exactly like the druid version the player knows.
+// Built FROM the player's Regrowth so the two can't drift — same tier, same
+// rarity, same art, same numbers (Heal 1 now + Heal 1 for 4 turns, each tick
+// sprouting a Treant on overheal). The only difference is the routing: the
+// guardians can't be asked who to target, so their copy carries a single
+// `guardian_regrowth` effect that picks a random creature on their line and
+// then runs the player card's two effects on it.
+export function createGuardianRegrowth() {
+  const card = createRegrowth();
+  card.id = 'guardian_regrowth';
+  card.description = 'Heal 1 on a random ally,\nHeal 1 for 4 Turns.\nOverheal: Summon a Treant.';
+  card.shortDesc = 'Heal 1 random\nRegen 4t\nOverheal: Treant';
+  card.effects = [new CardEffect('guardian_regrowth', 4, TargetType.SELF)];
+  // Not a player card — drop the class gate so it never shows up as loot or
+  // an ability pick. MUST be an empty array, not null: Card.copy() spreads
+  // this field ([...this.characterClass]) and a null throws mid-copy, which
+  // takes out Deck.startCombat when the fight tries to deal the enemy's hand.
+  card.characterClass = [];
+  card.noTierOffset = true;
+  return card;
+}
+
+// Ancients Guardians loot — both drop, every time. This is a one-shot story
+// fight that never recurs, so there's no farming to price against: the pair is
+// the reward for the whole Silverwood beat.
+
+// Staff of the Ancients — epic T3 (16) + 15 for the second card cost = 31.
+// Sunder lands first, then the swing, and every point that actually gets
+// through pays out twice: a Shield for you and a Treant grown or grown-into.
+// Against a naked target that's 5 Shields and 5 Treant actions; against armor
+// it is a good deal less, which is what the Sunder is there to fix.
+export function createStaffOfTheAncients() {
+  return new Card({
+    id: 'staff_of_the_ancients',
+    name: 'Staff of the Ancients',
+    description: 'Recharge a Card ->\nSunder, Deal 5 Damage.\nPer damage dealt: gain 1\nShield and Summon or\nBolster a Treant.',
+    shortDesc: 'R-Card->Sunder\n5 Dmg / Per dmg:\n1 Shield + Treant',
+    subtype: 'staff',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('ancients_staff_strike', 5, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 3,
+    rarity: 'epic',
+    previewCreature: createTreantCreature(),
+    gamePlusOffset: { ancients_staff_strike: 2 },
+  });
+}
+
+// Treant Bark — epic T3 relic (16). A grove in your pocket: one Treant grown
+// or bolstered every time you play it, and the relic cantrip pays for itself.
+export function createTreantBark() {
+  return new Card({
+    id: 'treant_bark',
+    name: 'Treant Bark',
+    description: 'Summon or Bolster a Treant,\nDraw.',
+    shortDesc: 'Summon/Bolster\nTreant, Draw',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_or_bolster_treant', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'epic',
+    previewCreature: createTreantCreature(),
+    gamePlusOffset: { summon_or_bolster_treant: 1 },
+  });
+}
+
+// ============================================================
+// Carrion Crawler loot — Chapter 3 Underdark. The crawler's set is Poison and
+// Paralyze: it wins by taking your turn away from you, and its gear hands that
+// back. Paralyze lands on SUMMONS only (see the apply_paralyze handler).
+// ============================================================
+
+// Carapace Buckler — common T3 (7): 3 Shields (6) + Heal 1 Sunder (1), with
+// the first-shield draw riding the defense card's free cantrip.
+export function createCarapaceBuckler() {
+  return new Card({
+    id: 'carapace_buckler',
+    name: 'Carapace Buckler',
+    description: 'Gain 3 Shields,\nHeal 1 Sunder.\nFirst Shield: Draw.',
+    shortDesc: '3 Shields\nHeal 1 Sunder\n1st Shield: Draw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 3, TargetType.SELF),
+      new CardEffect('heal_sunder', 1, TargetType.SELF),
+      new CardEffect('draw_if_no_shield', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { gain_shield: 1 },
+  });
+}
+
+// Crawler Skullcap — uncommon T3 (10): Block 5 (5) + the defense draw, plus a
+// standing rider that laces every attack you make this fight with 1 Poison.
+// The rider rides the shared consumePoisonBuff choke point, so it works on
+// every attack shape without touching the individual damage cases.
+export function createCrawlerSkullcap() {
+  return new Card({
+    id: 'crawler_skullcap',
+    name: 'Crawler Skullcap',
+    description: 'Attacks also apply 1 Poison.\nBlock 5, Draw.',
+    shortDesc: 'Attacks +1 Poison\nBlock 5, Draw',
+    subtype: 'heavy_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('grant_poison_attacks', 1, TargetType.SELF),
+      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+// Paralytic Stinger — uncommon T3 (10). The caster's answer to summon spam:
+// 1-2 Poison, and if the target is a summon it loses its next action.
+export function createParalyticStinger() {
+  return new Card({
+    id: 'paralytic_stinger',
+    name: 'Paralytic Stinger',
+    description: 'Deal 1-2 Poison,\nParalyze if a Summon.\nAllies gain 1 Heroism.',
+    shortDesc: '1-2 Poison\nParalyze Summon\nAllies +Heroism',
+    subtype: 'wand',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      // Range encoding matches damage_range: min*10 + max (12 = "1 to 2").
+      new CardEffect('apply_poison_range', 12, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_paralyze', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('buff_allies_heroism', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { buff_allies_heroism: 1 },
+  });
+}
+
+// Paralytic Glaive — uncommon T3 (10) + 9 for the second card cost = 19. The
+// melee half of the same answer: Deal 6 (6) + 1-2 Poison (3) + Paralyze (3)
+// on the first target, half again on the second.
+export function createParalyticGlaive() {
+  return new Card({
+    id: 'paralytic_glaive',
+    name: 'Paralytic Glaive',
+    description: 'Recharge a Card ->\nDeal 6 + 1-2 Poison,\nParalyze if a Summon,\nOn 2 Targets.',
+    shortDesc: 'R-Card->6 Dmg\n1-2 Poison\nParalyze x2',
+    subtype: 'martial_2h',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('multi_damage', 6, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('apply_poison_range', 12, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('apply_paralyze', 1, TargetType.SINGLE_ENEMY, 2),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 2 },
+  });
+}
+
+// Carrion Satchel — rare T3 (13). Whatever the crawler had been digesting,
+// bottled. Creates 2-3 poisons rolled off the underdark_poisons table; the
+// copies are stamped as tokens so they can't be sold, even though the same
+// cards bought or looted normally still can be.
+export function createCarrionSatchel() {
+  return new Card({
+    id: 'carrion_satchel',
+    name: 'Carrion Satchel',
+    description: 'Create 2-3 Poisons.',
+    shortDesc: 'Create 2-3\nPoisons',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('create_random_poisons', 3, TargetType.SELF)],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { create_random_poisons: 1 },
+  });
+}
+
+// ============================================================
+// Roper loot — Chapter 3 Underdark. Where the hulk's set is Sunder, the
+// roper's is Poison, Shields and tentacles: it fights by holding you still and
+// wearing you down, and its drops do the same.
+// ============================================================
+
+// Roperhide Armor — uncommon T3 (10): Block 5 (5) + 1 Shield per living enemy
+// (2 each) + the defense card's free Draw. Scales with the swarm fights the
+// Underdark keeps throwing (tentacles, crawler segments, warparties).
+export function createRoperhideArmor() {
+  return new Card({
+    id: 'roperhide_armor',
+    name: 'Roperhide Armor',
+    description: 'Block 5,\nGain 1 Shield per enemy,\nDraw.',
+    shortDesc: 'Block 5\n1 Shield/enemy\nDraw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('shield_per_enemy', 1, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { block: 2 },
+  });
+}
+
+// Roper Mandible Blade — uncommon T3 (10): Deal 8 (8) + Poison (2). The
+// chapter's clean 1H martial line, with none of the hulk gear's armor tax.
+export function createRoperMandibleBlade() {
+  return new Card({
+    id: 'roper_mandible_blade',
+    name: 'Roper Mandible Blade',
+    description: 'Deal 8 + Poison.',
+    shortDesc: '8 Dmg\n+ Poison',
+    subtype: 'martial',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 8, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { damage: 3, apply_poison: 1 },
+  });
+}
+
+// Stone Mimic Veil — common T3 (7). Dual-mode like the Burrower's Gauntlet,
+// but the modes trade differently: the play mode (Scout 2 + 2 Shields) KEEPS
+// the veil in hand, so it can be re-read every turn; using it as a block
+// spends it to the recharge pile and scries instead. Deliberately weak per
+// use — the value is that it never runs out until you cash it in.
+export function createStoneMimicVeil() {
+  return new Card({
+    id: 'stone_mimic_veil',
+    name: 'Stone Mimic Veil',
+    description: 'Scout 2, Gain 2 Shields.\nStays in hand.\nDefense: Block 2, Scry 2',
+    shortDesc: 'Scout 2, 2 Shields\nStays / Def:\nBlock 2, Scry 2',
+    subtype: 'clothing',
+    cardType: CardType.ATTACK,
+    // RECHARGE, but the play mode never pays it (stays-in-hand skips the
+    // cost) — so the cost only lands when the veil is spent as a block,
+    // which is exactly the "Block recharges the card" behavior.
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('scout', 2, TargetType.SELF),
+      new CardEffect('gain_shield', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    modes: [
+      new CardMode('Block 2, Scry 2', [
+        new CardEffect('block', 2, TargetType.SELF),
+        new CardEffect('scry_pick', 2, TargetType.SELF),
+      ]),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { gain_shield: 1 },
+  });
+}
+
+// Tendril Lash — rare T3 (13), the chapter's only ranged weapon. The second
+// card cost earns no bonus because the Draw hands the card straight back
+// (same rule as the Bone Bow). On a kill the severed tendril keeps moving and
+// fights for you.
+export function createTendrilLash() {
+  return new Card({
+    id: 'tendril_lash',
+    name: 'Tendril Lash',
+    description: 'Recharge a Card ->\nDeal 9 + Poison, Draw.\nOn Kill: Summon a\nRoper Tentacle.',
+    shortDesc: 'R-Card->9 + Poison\nDraw / On Kill:\nTentacle',
+    subtype: 'ranged',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('damage', 9, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('summon_tentacle_on_kill', 1, TargetType.SUMMON),
+    ],
+    tier: 3,
+    rarity: 'rare',
+    previewCreature: createRoperTentacleCreature(),
+    gamePlusOffset: { damage: 3, apply_poison: 1 },
+  });
+}
+
+// Grasping Tendrils — uncommon T3 (10). The chapter's only summon card. Roper
+// Tentacles are Sentinels with 2 armor and a Poison rider, so a pair of them
+// is a wall that also stacks the roper set's damage type.
+export function createGraspingTendrils() {
+  return new Card({
+    id: 'grasping_tendrils',
+    name: 'Grasping Tendrils',
+    description: 'Summon 1-2 Roper Tentacles.',
+    shortDesc: 'Summon 1-2\nTentacles',
+    subtype: 'allies',
+    cardType: CardType.CREATURE,
+    costType: CostType.RECHARGE,
+    effects: [new CardEffect('summon_roper_tentacles', 1, TargetType.SUMMON)],
+    tier: 3,
+    rarity: 'uncommon',
+    previewCreature: createRoperTentacleCreature(),
+    // Base 1-2; +1 max per offset, read by the summon handler.
+    gamePlusOffset: { roper_tentacle_summon: 1 },
+  });
+}
+
+// ============================================================
+// Umber Hulk loot — Chapter 3 Underdark. The hulk is the chapter's armor
+// breaker, and its drops are the Sunder set: every piece either strips armor,
+// punishes it, or cleans Sunder off you. Budgets follow the loot table
+// (T3: common 7 / uncommon 10 / rare 13), with a second card cost paying for
+// its own budget - 1 on the two Recharge-a-Card weapons.
+// ============================================================
+
+// Umber Shield — the hulk's own shell strapped to an arm. Common T3 (7):
+// 4 Shields (8) + Heal 1 Sunder (1).
+export function createUmberShield() {
+  return new Card({
+    id: 'umber_shield',
+    name: 'Umber Shield',
+    description: 'Gain 4 Shields,\nHeal 1 Sunder.',
+    shortDesc: '4 Shields\nHeal 1 Sunder',
+    subtype: 'light_armor',
+    // ABILITY, not DEFENSE: this grants Shield, and Shield is a proactive
+    // buff you put up on your own turn — DEFENSE is for reactive Block cards
+    // played in the enemy's attack phase. Every other pure gain_shield card
+    // (Buckler, Cracked Buckler, Shield of Last Hope, Roc Eggshell Shield…)
+    // is an ABILITY; this one was the lone outlier and could only be played
+    // reactively.
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('gain_shield', 4, TargetType.SELF),
+      new CardEffect('heal_sunder', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { gain_shield: 1 },
+  });
+}
+
+// Mandible Cleaver — a hulk's jaw on a haft, swung two-handed. Uncommon T3
+// (10) + 9 for the second card cost = 19: Sunder (3) + Deal 9 (9) + Bleed (1)
+// on the first target, half again on the second. Sunder is ordered ahead of
+// the damage so the armor it strips is gone before the swing lands.
+export function createMandibleCleaver() {
+  return new Card({
+    id: 'mandible_cleaver',
+    name: 'Mandible Cleaver',
+    description: 'Recharge a Card ->\nSunder + 9 Damage\n+ Bleed, On 2 Targets.',
+    shortDesc: 'R-Card->Sunder\n9 Dmg + Bleed\nx2',
+    subtype: 'martial_2h',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('multi_damage', 9, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('apply_bleed', 1, TargetType.SINGLE_ENEMY, 2),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { multi_damage: 3, apply_sunder: 1 },
+  });
+}
+
+// Umber Eye Charm — one of the hulk's four eyes, still looking. Rare T3 (13):
+// a Sunder ping (3) on a random enemy plus the relic cantrip that carries the
+// rest of the budget.
+export function createUmberEyeCharm() {
+  return new Card({
+    id: 'umber_eye_charm',
+    name: 'Umber Eye Charm',
+    description: 'Sunder Randomly, Draw.',
+    shortDesc: 'Sunder Rand\nDraw',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_sunder_random', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'rare',
+    gamePlusOffset: { apply_sunder_random: 1 },
+  });
+}
+
+// Burrower's Gauntlet — the hulk's digging claw, worn. Dual-mode like Sturdy
+// Boots: the top-level effects are the ATTACK play (a free Sunder that keeps
+// the glove in hand), modes[0] is what it does when thrown up as a block —
+// and blocking spends it, because the defending path always plays the card.
+// Deliberately narrow: worth a lot against the chapter's armored monsters,
+// close to dead against anything without armor.
+export function createBurrowersGauntlet() {
+  return new Card({
+    id: 'burrowers_gauntlet',
+    name: "Burrower's Gauntlet",
+    description: 'Attack: Sunder.\nStays in hand.\nDefense: Block 2, Scry 2',
+    shortDesc: 'Atk: Sunder\nStays / Def:\nBlock 2, Scry 2',
+    subtype: 'clothing',
+    cardType: CardType.ATTACK,
+    // RECHARGE, but the attack mode never pays it (stays-in-hand skips the
+    // cost) — so the cost only lands when the glove is spent as a block, and
+    // it recharges rather than discarding. Same deal as the Stone Mimic Veil.
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    modes: [
+      new CardMode('Block 2, Scry 2', [
+        new CardEffect('block', 2, TargetType.SELF),
+        new CardEffect('scry_pick', 2, TargetType.SELF),
+      ]),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { apply_sunder: 1 },
+  });
+}
+
+// Tunnelbreaker Pick — what the hulk's claws leave you when you rebuild one
+// into a tool. Uncommon T3 (10) + 9 for the second card cost = 19:
+// Sunder 3 (9) + Deal 10 (10). The heavier sibling of the Deep Pick.
+export function createTunnelbreakerPick() {
+  return new Card({
+    id: 'tunnelbreaker_pick',
+    name: 'Tunnelbreaker Pick',
+    description: 'Recharge a Card ->\nSunder 3, Deal 10.',
+    shortDesc: 'R-Card->Sunder 3\nDeal 10',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_sunder', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { damage: 3, apply_sunder: 1 },
+  });
+}
+
+// ============================================================
+// Deep Gnome gear — Chapter 3 Underdark, sold by the roaming merchants.
+// Every attacking piece lists Sunder BEFORE its damage on purpose: Sunder
+// shaves Armor (then Block) as it resolves, so the strike that follows lands
+// into the softened defense and gets the extra point through.
+// ============================================================
+
+// Svirfhammer — the plain deep-gnome work hammer. Sunder, then Deal 4.
+export function createSvirfhammer() {
+  return new Card({
+    id: 'svirfhammer',
+    name: 'Svirfhammer',
+    description: 'Sunder, Deal 4.',
+    shortDesc: 'Sunder\nDeal 4',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      // Sunder FIRST — it strips 1 Armor/Block so the swing behind it lands
+      // for +1 against anything defended.
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+// Deep Pick — the heavy two-hand version: pay a card, break more armor, hit
+// much harder.
+export function createDeepPick() {
+  return new Card({
+    id: 'deep_pick',
+    name: 'Deep Pick',
+    description: 'Recharge a Card -> Sunder 2, Deal 7.',
+    shortDesc: 'R-Card->Sunder 2\nDeal 7',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('apply_sunder', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 7, TargetType.SINGLE_ENEMY),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { damage: 3, apply_sunder: 1 },
+  });
+}
+
+// Work Gloves — miner's leathers. Defensive line that still chews someone's
+// armor on the way past.
+export function createWorkGloves() {
+  return new Card({
+    id: 'work_gloves',
+    name: 'Work Gloves',
+    description: 'Block 4, Sunder Randomly, Draw.',
+    shortDesc: 'Block 4\nSunder Rand\nDraw',
+    subtype: 'light_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('block', 4, TargetType.SELF),
+      new CardEffect('apply_sunder_random', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { block: 2, apply_sunder_random: 1 },
+  });
+}
+
+// Fungal Lantern — held, never played. Scouts deep on arrival, and while it's
+// in your hand every card-driven Draw on your turn becomes a Scry 2 instead
+// (the end-of-turn refill is untouched — see the draw case in main.js).
+export function createFungalLantern() {
+  return new Card({
+    id: 'fungal_lantern',
+    name: 'Fungal Lantern',
+    description: 'Scout 4.\nWhen you Draw, you Scry 2 instead.\nStays in hand.',
+    shortDesc: 'Scout 4\nDraw -> Scry 2\nStays',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    // FREE — the card never leaves hand, so a recharge cost would be paid once
+    // and ridden forever (same reasoning as Small Pouch).
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('scout', 4, TargetType.SELF),
+      new CardEffect('draw_becomes_scry', 2, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { scout: 1, draw_becomes_scry: 1 },
+  });
+}
+
+// Mining Goggles — Ondrik Sootspindle's stock-in-trade at The Deep Tinker.
+// Held, never spent. While they're in hand the top card of your draw pile is
+// face-up to you (drawn on the character panel), and reading the seams through
+// them arms the next swing with Sunder — re-play them each turn to re-arm.
+export function createMiningGoggles() {
+  return new Card({
+    id: 'mining_goggles',
+    name: 'Mining Goggles',
+    description: 'In Hand: Reveal the top card of your deck.\nYour next attack gains Sunder.\nStays in hand.',
+    shortDesc: 'See next card\nNext atk: Sunder\nStays',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    // FREE for the same reason as the Fungal Lantern / Miner's Helm — the card
+    // never leaves hand, so a recharge cost would be paid once and ridden all
+    // fight.
+    costType: CostType.FREE,
+    effects: [
+      // Passive marker — the reveal is read off the hand by the combat UI, not
+      // resolved (same shape as armor_in_hand / draw_becomes_scry).
+      new CardEffect('reveal_top_card', 0, TargetType.SELF),
+      new CardEffect('grant_sunder_buff', 1, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { grant_sunder_buff: 1 },
+  });
+}
+
+// Mycelial Codex — the prize off Sivvi Duskcap's back shelf at The Spore &
+// Sprig. Held, never spent: each turn you can read a page over one of your
+// allies and the fungus takes to it, growing it +1/+1 and lacing every swing
+// it makes with spores from then on.
+export function createMycelialCodex() {
+  return new Card({
+    id: 'mycelial_codex',
+    name: 'Mycelial Codex',
+    description: '1 Ally gains +1/+1.\nIts attacks also deal Poison.\nStays in hand.',
+    shortDesc: 'Ally +1/+1\nAtk +Poison\nStays',
+    subtype: 'scroll',
+    cardType: CardType.ITEM,
+    // FREE for the same reason as the Fungal Lantern — the card never leaves
+    // hand, so a recharge cost would be paid once and ridden all fight.
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('mycelial_growth', 1, TargetType.SINGLE_ALLY),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'uncommon',
+    gamePlusOffset: { mycelial_growth: 1 },
+  });
+}
+
+// Miner's Helm — the Armor is passive while the helm sits in your hand; play it
+// and you trade that standing Armor for an immediate Block 3 + Draw.
+export function createMinersHelm() {
+  return new Card({
+    id: 'miners_helm',
+    name: "Miner's Helm",
+    description: '1 Armor while in hand.\nBlock 3, Draw.',
+    shortDesc: '+1 Armor in hand\nBlock 3, Draw',
+    subtype: 'heavy_armor',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('armor_in_hand', 1, TargetType.SELF),
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { block: 2, armor_in_hand: 1 },
+  });
+}
+
+// Drow Priestess (Drow Warparty) — the warparty's spine. Swings a flail across
+// 3 targets for 2 + Bleed each, and every attack rallies the rest of the party
+// (On Attack: Allies gain Heroism). 1 Armor over 20 HP; kill her and the
+// warriors stop getting free damage.
+export function createDrowPriestessCreature() {
+  return new Creature({
+    name: 'Drow Priestess',
+    attack: 2,
+    maxHp: 20,
+    armor: 1,
+    bleedAttack: 1,
+    multiAttack: 3,
+    description: 'Attacks 3 targets.\nOn Attack: Allies gain Heroism.',
+  });
+}
+
+// Drow Warrior (Drow Warparty) — opens with a poisoned hand-crossbow bolt, then
+// closes with the blade. Two swings a turn: the bolt is 1 + Poison (bow cue),
+// the sword follow-up lands for 4 with no rider (sword cue). 1 Armor over 15 HP.
+export function createDrowWarriorCreature() {
+  return new Creature({
+    name: 'Drow Warrior',
+    attack: 1,
+    maxHp: 15,
+    armor: 1,
+    poisonAttack: true,
+    description: 'Crossbow: 1 + Poison.\nThen blade: 4.',
+  });
+}
+
+// Carrion Crawler Torso — the segments of the crawler's body. They never
+// attack; they just sit there soaking, 3 Armor over 12 HP, and burst into a
+// cloud of spores when cut down (On Death: Poison to All). Killing all five is
+// the win condition — the crawler's head itself is invulnerable.
+//
+// Note: Paralyze does nothing to these on purpose. _cantAttack keeps them off
+// the action queue entirely, so there is no action for a stack to eat — the
+// crawler is immune to its own paralytic poison. Not a bug to "fix".
+export function createCarrionCrawlerTorsoCreature() {
+  const c = new Creature({
+    name: 'Carrion Crawler Torso',
+    attack: 0,
+    maxHp: 12,
+    armor: 3,
+    onDeathPoisonAll: 1,
+    description: "Can't attack.\nOn Death: Poison to All.",
+  });
+  // attack: 0 alone does NOT keep a creature off the attack queue — the enemy
+  // planner deliberately queues 0-attack bodies so rider-only creatures (Pet
+  // Spider) still land their poison. _cantAttack is the flag that actually
+  // benches them, same as the prison cart and the dragon eggs.
+  c._cantAttack = true;
+  return c;
+}
+
+// Bite (Carrion Crawler) — the head's swing. Solid damage plus a variable
+// 1-3 Poison, so the toxin load builds fast across a long clear.
+export function createCarrionCrawlerBite() {
+  return new Card({
+    id: 'carrion_crawler_bite',
+    name: 'Bite',
+    description: 'Deal 5 Damage + 1 to 3 Poison.',
+    shortDesc: '5 Dmg\n+1-3 Poison',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+      // Rolls 1-3 at resolve time (see apply_poison_random in the enemy path).
+      new CardEffect('apply_poison_random', 3, TargetType.SINGLE_ENEMY),
+    ],
+    priority: 10,
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+// Roper Tentacle — the Roper's grasping ring. Sentinel forces the party to
+// chew through the tentacles before they can reach the body, and every lash
+// stacks Poison, so a slow clear costs a lot of toxin. The Roper's Tentacles
+// power regrows one each turn up to 6.
+export function createRoperTentacleCreature() {
+  return new Creature({
+    name: 'Roper Tentacle',
+    attack: 1,
+    maxHp: 4,
+    armor: 2,
+    poisonAttack: true,
+    sentinel: true,
+    // Poison shows as the rider icon beside the attack stat — don't repeat it
+    // in the text or it renders a second inline icon.
+    description: 'Sentinel.',
+  });
+}
+
+// Bite (Roper) — the body's only card, and the payoff for all that Poison: a
+// heavy single hit (10) that grows by 2 per Poison stack already on the target, with
+// Overwhelm spilling overkill off a dying ally onto the player.
+export function createRoperBite() {
+  return new Card({
+    id: 'roper_bite',
+    name: 'Bite',
+    description: 'Deal 10 Damage + 2 per Poison on target.\nOverwhelm.',
+    shortDesc: '10 Dmg +2/Poison\nOverwhelm',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage_per_poison_stack', 2, TargetType.SINGLE_ENEMY),
+    ],
+    priority: 10,
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { damage: 2 },
+  });
+}
+
+// Rock Skin (Umber Hulk) — the defensive quarter of the hulk's deck, and a
+// REACTIVE card: it never burns the hulk's own turn, it fires when the player's
+// blow is about to land. Scrubs 1 Ailment stack off itself; if it is
+// clean, it hardens instead for a permanent +1 base Armor. Either way it takes
+// Block 3 and draws. That makes it a wall against Bleed/Poison strategies AND
+// a slow armor climb against parties that can't inflict anything — no dead
+// draw either way.
+export function createRockSkin() {
+  return new Card({
+    id: 'rock_skin',
+    name: 'Rock Skin',
+    description: 'Recharge -> Heal 1 Ailment, or Gain 1 Armor if none to heal.\nBlock 3, Draw.',
+    shortDesc: 'R->Heal 1 Ail\n(else +1 Armor)\nBlock 3, Draw',
+    subtype: 'armor',
+    // DEFENSE — the hulk never spends its own turn on this. The reactive
+    // defense pass (enemyAutoPlayDefenses) plays it out of hand the moment the
+    // player's damage is about to land, same as the troll's Dire Hide.
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('heal_ailments_or_armor', 1, TargetType.SELF),
+      new CardEffect('block', 3, TargetType.SELF),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    priority: 4,
+    tier: 3,
+    rarity: 'common',
+    gamePlusOffset: { block: 1 },
   });
 }
 

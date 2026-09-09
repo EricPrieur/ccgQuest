@@ -651,12 +651,1203 @@ export function createUnderdarkGnollEntranceMap() {
     { id: 'ug_4', name: 'The Deep Fork', description: 'The passage splits and rejoins around a great stone pillar, gnoll-sign scratched into its base.', encounterId: '', connections: ['ug_3', 'ug_5'], position: [590, 260], ...D },
     { id: 'ug_5', name: 'Whispering Dark', description: 'Something moves in the black beyond your torchlight — or the dark itself is breathing.', encounterId: '', connections: ['ug_4', 'ug_6'], position: [1070, 330], ...D },
     // The Long Deep forks in two, on into the Underdark proper.
-    { id: 'ug_6', name: 'The Long Deep', description: 'The cavern opens into a vast, lightless gulf. The Underdark proper waits below — the way splits ahead.', encounterId: '', connections: ['ug_5', 'ug_7', 'ug_8'], position: [1130, 670], ...D },
+    { id: 'ug_6', name: 'The Long Deep', description: 'The cavern opens into a vast, lightless gulf. The Underdark proper waits below — the way splits ahead.', connections: ['ug_5', 'ug_7', 'ug_8'], position: [1130, 670], ...D, encounterId: 'underdark_brad_meeting', canRevisit: false },
     { id: 'ug_7', name: 'The Sunless Sea', description: 'One fork drops toward the lap of black water against unseen stone — a sea that has never known the sun.', connections: ['ug_6'], position: [860, 870], ...D, encounterId: 'underdark_sunless_sea', canRevisit: false },
-    { id: 'ug_8', name: 'The Deepening Way', description: 'The other fork bores on downward, the dark thickening with every step into the roots of the world.', encounterId: '', connections: ['ug_6'], position: [1160, 840], ...D },
+    // The Deepening Way is a teleporter down to the second Underdark map
+    // (UnderdarkGnollEntrance02). Walk-onto / click-on-self hops both ways.
+    { id: 'ug_8', name: 'The Deepening Way', description: 'The other fork bores on downward, the dark thickening with every step into the roots of the world.', encounterId: '', connections: ['ug_6'], position: [1160, 840], ...D, passthroughTo: 'ud2_entry' },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'ug_entry';
+  return map;
+}
+
+// Underdark Gnoll Entrance 02 — the second Underdark map, reached down The
+// Deepening Way (ug_8) on the first Underdark map. 7 nodes in a line, boring
+// deeper into the true dark. ud2_entry is the threshold: it teleports back up to
+// ug_8 (passthroughTo + arriveAtNode branch). No random encounters here yet.
+export function createUnderdarkGnollEntrance02Map() {
+  const map = new GameMap('underdark_gnoll_entrance_2', 'The Underdark');
+  const AREA = 'underdark_gnoll_entrance_2';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnollEntrance02.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Deepening Way (ug_8). Always visible.
+    { id: 'ud2_entry', name: 'The Deepening Descent', description: 'The way down opens out again — the dwarf-cut steps long gone, only raw stone worn smooth by ages of black water. The path back up climbs behind you.', encounterId: '', connections: ['ud2_2'], position: [370, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'ug_8' },
+    { id: 'ud2_2', name: 'Dripstone Hall', description: 'A cathedral of stone teeth, water ticking off a thousand points in the dark.', encounterId: '', connections: ['ud2_entry', 'ud2_3'], position: [40, 340], ...D },
+    { id: 'ud2_3', name: 'The Blind Warren', description: 'Tunnels branch and rejoin like the burrow of something vast and long gone.', encounterId: '', connections: ['ud2_2', 'ud2_4'], position: [490, 430], ...D },
+    { id: 'ud2_4', name: 'Spore Cavern', description: 'The air thickens with drifting spores that glow a faint, sickly green.', encounterId: '', connections: ['ud2_3', 'ud2_5'], position: [880, 120], ...D },
+    { id: 'ud2_5', name: 'The Sunken Stair', description: 'A grand stair, half-drowned, spirals down into a pool of perfect black.', encounterId: '', connections: ['ud2_4', 'ud2_6'], position: [1180, 560], ...D },
+    { id: 'ud2_6', name: 'Whisperwell', description: 'A round shaft plunges away beneath your feet, and out of it rises a sound almost like voices.', encounterId: '', connections: ['ud2_5', 'ud2_7'], position: [720, 770], ...D },
+    // The Far Deep teleports on down to the third Underdark map.
+    { id: 'ud2_7', name: 'The Far Deep', description: 'The tunnel gives onto a lightless immensity — the deep roads of the Underdark, running on past any torch.', encounterId: '', connections: ['ud2_6'], position: [680, 510], ...D, passthroughTo: 'ud3_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ud2_entry';
+  return map;
+}
+
+// Underdark Gnoll Entrance 03 — the third Underdark map, reached on from The Far
+// Deep (ud2_7) on the second Underdark map. 6 nodes in a line, out along the deep
+// roads of the Underdark proper. ud3_entry is the threshold: it teleports back to
+// ud2_7 (passthroughTo + arriveAtNode branch). No random encounters here yet.
+export function createUnderdarkGnollEntrance03Map() {
+  const map = new GameMap('underdark_gnoll_entrance_3', 'The Underdark');
+  const AREA = 'underdark_gnoll_entrance_3';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnollEntrance03.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Far Deep (ud2_7). Always visible.
+    { id: 'ud3_entry', name: 'The Deep Roads', description: 'You come out onto a road — an actual road, cut and paved by hands long dead, running straight into the black. Something built this, once. The way back climbs behind you.', encounterId: '', connections: ['ud3_2'], position: [300, 50], mapArea: AREA, canRevisit: true, passthroughTo: 'ud2_7' },
+    { id: 'ud3_2', name: 'The Ghostlight Span', description: 'A bridge of pale stone arcs across a chasm, lit from below by a cold, sourceless glow.', encounterId: '', connections: ['ud3_entry', 'ud3_3'], position: [100, 220], ...D },
+    { id: 'ud3_3', name: 'The Silent March', description: 'A long colonnade runs on into the dark, every pillar carved with faces worn smooth.', encounterId: '', connections: ['ud3_2', 'ud3_3b'], position: [200, 580], ...D },
+    { id: 'ud3_3b', name: 'The Watchers', description: 'The carved faces give way to statues — tall, hooded figures lining the road, heads bowed as if they are still listening for something.', encounterId: '', connections: ['ud3_3', 'ud3_4'], position: [440, 290], ...D },
+    { id: 'ud3_4', name: 'The Rift', description: 'The road skirts the lip of a rift so deep the dropped stone never lands.', encounterId: '', connections: ['ud3_3b', 'ud3_5'], position: [830, 140], ...D },
+    { id: 'ud3_5', name: 'The Broken Bridge', description: 'The road ends at a bridge sheared in two — the far span lost across the gulf.', encounterId: '', connections: ['ud3_4', 'ud3_6'], position: [850, 610], ...D },
+    // The Underhome teleports on to the South Crossroad map.
+    { id: 'ud3_6', name: 'The Underhome', description: 'Far below and ahead, points of light — too ordered to be anything but a city. Something down here is awake.', encounterId: '', connections: ['ud3_5'], position: [1070, 870], ...D, passthroughTo: 'usx_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ud3_entry';
+  return map;
+}
+
+// Underdark South Crossroad — the fourth Underdark map, reached on from The
+// Underhome (ud3_6). A crossroad laid out as a "+": a 2-node entry arm leads in
+// to the central crossroad (usx_xroad), and three more 2-node branches strike
+// off north / west / east. 9 nodes total. usx_entry is the threshold: it
+// teleports back up to ud3_6. No random encounters here yet.
+export function createUnderdarkSouthXRoad04Map() {
+  const map = new GameMap('underdark_south_xroad_4', 'The Underdark');
+  const AREA = 'underdark_south_xroad_4';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthXRoad04.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Entry arm — threshold teleports back up to The Underhome (ud3_6). Fires
+    // the crossroad arrival dialog once, the moment the party enters this map.
+    { id: 'usx_entry', name: 'The Southward Road', description: 'The city lights fall behind you and the road opens out into the deep of the Underdark. The way back to the Underhome climbs behind you.', encounterId: 'underdark_south_xroad_arrival', connections: ['usx_2'], position: [306, 220], mapArea: AREA, canRevisit: false, passthroughTo: 'ud3_6' },
+    { id: 'usx_2', name: 'The Waystone', description: 'A worn marker-stone stands at the roadside, its carved runes long since scoured blank.', encounterId: '', connections: ['usx_entry', 'usx_xroad'], position: [456, 330], ...D },
+    // The crossroad — the "+" hub.
+    { id: 'usx_xroad', name: 'The South Crossroad', description: 'The road opens into a vast chamber, ways running off into the dark on every side.', encounterId: '', connections: ['usx_2', 'usx_n1', 'usx_w1', 'usx_e1'], position: [616, 434], ...D },
+    // North branch (Thorb's road).
+    { id: 'usx_n1', name: 'The Northreach', description: 'The north road climbs, the air growing dry and dead as it goes.', encounterId: '', connections: ['usx_xroad', 'usx_n2'], position: [796, 250], ...D },
+    // The Sealed Arch teleports on to North Path 26 — the gate stands open now.
+    { id: 'usx_n2', name: 'The Sealed Arch', description: 'A vast arch of black stone spans the way north, its gate long sealed — and standing open a hand\'s width, on dark that goes back a very long way.', encounterId: '', connections: ['usx_n1'], position: [946, 30], ...D, passthroughTo: 'unp26_entry' },
+    // South-ish branch (Raena's water / rest road).
+    { id: 'usx_w1', name: 'The Westward Dark', description: 'This road slopes down toward the sound of running water, somewhere out in the dark.', encounterId: '', connections: ['usx_xroad', 'usx_w2'], position: [490, 644], ...D },
+    // The Weeping Gallery teleports on to the South Path map (rest/resupply road).
+    { id: 'usx_w2', name: 'The Weeping Gallery', description: 'Water runs endlessly down the walls of a long gallery, pooling black on the floor — a place a party might rest, and drink. The road runs on south from here.', encounterId: '', connections: ['usx_w1'], position: [360, 854], ...D, passthroughTo: 'usp_entry' },
+    // East branch (Val's mushroom-lit road).
+    { id: 'usx_e1', name: 'The Eastward Dark', description: 'A faint bloom of pale mushroom-light glows somewhere down the eastern road.', encounterId: '', connections: ['usx_xroad', 'usx_e2'], position: [790, 584], ...D },
+    { id: 'usx_e2', name: 'The Sunken Market', description: 'The east road runs through the ruin of a market — empty stalls of stone under a soft glow of luminous fungus, drowned to the knees in still water. Past the far stalls a path picks its way on, deeper east into the glow.', encounterId: '', connections: ['usx_e1'], position: [940, 694], ...D, passthroughTo: 'uep14_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usx_entry';
+  return map;
+}
+
+// Underdark South Path — the fifth Underdark map, reached on south from The
+// Weeping Gallery (usx_w2) on the South Crossroad map. 5 nodes in a line, the
+// road running on toward running water. usp_entry is the threshold: it teleports
+// back to usx_w2. No random encounters here yet.
+export function createUnderdarkSouthPath05Map() {
+  const map = new GameMap('underdark_south_path_5', 'The Underdark');
+  const AREA = 'underdark_south_path_5';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath05.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Weeping Gallery (usx_w2). Always visible.
+    { id: 'usp_entry', name: 'The Weeping Road', description: 'The gallery narrows to a road again, water running with you now down a channel worn smooth in the stone. The way back to the crossroad climbs behind you.', encounterId: '', connections: ['usp_2'], position: [80, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'usx_w2' },
+    { id: 'usp_2', name: 'The Runnels', description: 'A dozen little streams thread the floor, all running the same way — downhill, into the dark.', encounterId: '', connections: ['usp_entry', 'usp_3'], position: [430, 200], ...D },
+    { id: 'usp_3', name: 'The Still Pool', description: 'The streams gather into a wide, motionless pool, its surface black and perfect as glass.', encounterId: '', connections: ['usp_2', 'usp_4'], position: [670, 370], ...D },
+    { id: 'usp_4', name: 'The Cistern Steps', description: 'Broad, shallow steps descend into the water and out the far side, dwarf-cut and ancient.', encounterId: '', connections: ['usp_3', 'usp_5'], position: [890, 600], ...D },
+    // The Underspring teleports on to the next stretch of the South Path.
+    { id: 'usp_5', name: 'The Underspring', description: 'A spring wells clean and cold out of the living rock — the first good water since the surface. The road runs on south beyond it.', encounterId: '', connections: ['usp_4'], position: [960, 860], ...D, passthroughTo: 'usp6_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp_entry';
+  return map;
+}
+
+// Underdark South Path 06 — the sixth Underdark map, reached on south from The
+// Underspring (usp_5). 5 nodes in a line, the water road running deeper. usp6_entry
+// is the threshold: it teleports back to usp_5. No random encounters here yet.
+export function createUnderdarkSouthPath06Map() {
+  const map = new GameMap('underdark_south_path_6', 'The Underdark');
+  const AREA = 'underdark_south_path_6';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath06.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Underspring (usp_5). Always visible.
+    { id: 'usp6_entry', name: 'The Springhead Trail', description: 'The road picks up again below the spring, following the new stream down into the deeper dark. The way back to the water climbs behind you.', encounterId: '', connections: ['usp6_2'], position: [1090, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'usp_5' },
+    { id: 'usp6_2', name: 'The Fluted Narrows', description: 'The passage tightens to a fluted slot, its walls carved into ribs by ages of running water.', encounterId: '', connections: ['usp6_entry', 'usp6_3'], position: [810, 110], ...D },
+    { id: 'usp6_3', name: 'The Glowpool Cavern', description: 'A cavern of still pools, each ringed with a faint blue-white glow from the things that live in them.', encounterId: '', connections: ['usp6_2', 'usp6_4'], position: [550, 270], ...D },
+    { id: 'usp6_4', name: 'The Drowned Steps', description: 'A flight of steps runs down under the water and does not come back up.', encounterId: '', connections: ['usp6_3', 'usp6_5'], position: [320, 500], ...D },
+    // The Underfalls teleports on down to the next stretch of the South Path.
+    { id: 'usp6_5', name: 'The Underfalls', description: 'The stream pours over a lip of black stone into a roaring dark below — and a slick path picks its way down beside the falls.', encounterId: '', connections: ['usp6_4'], position: [70, 770], ...D, passthroughTo: 'usp7_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp6_entry';
+  return map;
+}
+
+// Underdark South Path 07 — the seventh Underdark map, reached down beside The
+// Underfalls (usp6_5). 9 nodes: a 2-node entry, then a diamond loop where the
+// road forks in two (the High and Low roads, 2 nodes each) and rejoins at The
+// Confluence, then runs on 2 more to The Deep Gate. usp7_entry is the threshold:
+// it teleports back to usp6_5. No random encounters here yet.
+export function createUnderdarkSouthPath07Map() {
+  const map = new GameMap('underdark_south_path_7', 'The Underdark');
+  const AREA = 'underdark_south_path_7';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath07.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Entry — threshold teleports back up to The Underfalls (usp6_5).
+    { id: 'usp7_entry', name: 'The Falls Base', description: 'The path lets you down at last onto flat stone at the foot of the falls, spray hanging cold in the torchlight. The climb back up runs behind you.', encounterId: '', connections: ['usp7_2'], position: [370, 150], mapArea: AREA, canRevisit: true, passthroughTo: 'usp6_5' },
+    // Fork.
+    { id: 'usp7_2', name: 'The Forked Way', description: 'The cavern divides around a spur of black rock — a high road and a low road, both running on into the dark.', encounterId: '', connections: ['usp7_entry', 'usp7_l1', 'usp7_r1'], position: [480, 240], ...D },
+    // High road (upper branch).
+    { id: 'usp7_l1', name: 'The High Road', description: 'The high road hugs a dry ledge above the water, the going quick but the drop close on one side.', encounterId: '', connections: ['usp7_2', 'usp7_l2'], position: [710, 210], ...D },
+    { id: 'usp7_l2', name: 'The Dry Gallery', description: 'A long dry gallery, dust thick on the floor where no water has run in an age.', encounterId: '', connections: ['usp7_l1', 'usp7_c'], position: [890, 340], ...D },
+    // Low road (lower branch).
+    { id: 'usp7_r1', name: 'The Low Road', description: 'The low road wades the streambed itself, water to the ankle and the current pulling gently onward.', encounterId: '', connections: ['usp7_2', 'usp7_r2'], position: [380, 450], ...D },
+    { id: 'usp7_r2', name: 'The Wet Gallery', description: 'A flooded gallery, the water rising to the knee, cold and black and slow.', encounterId: '', connections: ['usp7_r1', 'usp7_c'], position: [510, 600], ...D },
+    // Rejoin, then the tail on to the gate.
+    { id: 'usp7_c', name: 'The Confluence', description: 'High road and low road spill back together where the water gathers again, the cavern opening out ahead.', encounterId: '', connections: ['usp7_l2', 'usp7_r2', 'usp7_d'], position: [810, 570], ...D },
+    { id: 'usp7_d', name: 'The Long Landing', description: 'A broad landing of worked stone, the first sign in a long while that the road was built for something to walk it.', encounterId: '', connections: ['usp7_c', 'usp7_e'], position: [970, 690], ...D },
+    // The Deep Gate opens on down to the next stretch of the South Path.
+    { id: 'usp7_e', name: 'The Deep Gate', description: 'The road ends at a gate — dwarf-work, or older, but it stands open a crack, and the way on runs through it.', encounterId: '', connections: ['usp7_d'], position: [1130, 830], ...D, passthroughTo: 'usp8_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp7_entry';
+  return map;
+}
+
+// Underdark South Path 08 — the eighth Underdark map, reached through The Deep
+// Gate (usp7_e). 4 nodes in a line, on beyond the gate. usp8_entry is the
+// threshold: it teleports back to usp7_e. No random encounters here yet.
+export function createUnderdarkSouthPath08Map() {
+  const map = new GameMap('underdark_south_path_8', 'The Underdark');
+  const AREA = 'underdark_south_path_8';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath08.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Deep Gate (usp7_e). Always visible.
+    { id: 'usp8_entry', name: 'Beyond the Gate', description: 'The gate groans shut behind you, and the road runs on into air that has not been breathed in a very long time. The way back climbs behind you.', encounterId: '', connections: ['usp8_2'], position: [90, 90], mapArea: AREA, canRevisit: true, passthroughTo: 'usp7_e' },
+    { id: 'usp8_2', name: 'The Warded Hall', description: 'A long hall lined with dwarf-runes that still hold a faint, watchful charge, prickling at the skin as you pass.', encounterId: '', connections: ['usp8_entry', 'usp8_3'], position: [400, 310], ...D },
+    { id: 'usp8_3', name: 'The Sentinel Well', description: 'A dry well at the hall\'s heart, ringed by broken statues that once stood guard over it.', encounterId: '', connections: ['usp8_2', 'usp8_4'], position: [720, 590], ...D },
+    // The Inner Door opens on to the next stretch of the South Path.
+    { id: 'usp8_4', name: 'The Inner Door', description: 'The hall ends at a second door, smaller and stranger than the last — you work the bar loose and it swings open on the dark beyond.', encounterId: '', connections: ['usp8_3'], position: [380, 860], ...D, passthroughTo: 'usp9_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp8_entry';
+  return map;
+}
+
+// Underdark South Path 09 — the ninth Underdark map, reached through The Inner
+// Door (usp8_4). 3 nodes in a line; the middle node fires Raena's dialog (they've
+// been following an underground river and should be near the lake now).
+// usp9_entry is the threshold: it teleports back to usp8_4. No random encounters.
+export function createUnderdarkSouthPath09Map() {
+  const map = new GameMap('underdark_south_path_9', 'The Underdark');
+  const AREA = 'underdark_south_path_9';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath09.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Inner Door (usp8_4). Always visible.
+    { id: 'usp9_entry', name: 'The River Path', description: 'Beyond the inner door the road meets running water again — a real river now, broad and black, sliding through the dark. The way back climbs behind you.', encounterId: '', connections: ['usp9_2'], position: [1000, 230], mapArea: AREA, canRevisit: true, passthroughTo: 'usp8_4' },
+    // Middle node — Raena's "following the river, near the lake" beat.
+    { id: 'usp9_2', name: 'The Underground River', description: 'The river runs on beside the road, wide and slow and cold.', encounterId: 'underdark_south_river', connections: ['usp9_entry', 'usp9_3'], position: [650, 540], ...D, canRevisit: false },
+    // The Widening Dark opens on to the next stretch of the South Path.
+    { id: 'usp9_3', name: 'The Widening Dark', description: 'The cavern opens out ahead, the far walls falling away — and the river\'s voice broadens, as if it is spilling into something vast.', encounterId: '', connections: ['usp9_2'], position: [250, 860], ...D, passthroughTo: 'usp10_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp9_entry';
+  return map;
+}
+
+// Underdark South Path 10 — the tenth Underdark map, reached on from The Widening
+// Dark (usp9_3). 7 nodes in a line, the river running out toward the lakeshore.
+// usp10_entry is the threshold: it teleports back to usp9_3. No random encounters.
+export function createUnderdarkSouthPath10Map() {
+  const map = new GameMap('underdark_south_path_10', 'The Underdark');
+  const AREA = 'underdark_south_path_10';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath10.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back up to The Widening Dark (usp9_3). Always visible.
+    { id: 'usp10_entry', name: 'The River Mouth', description: 'The tunnel gives out onto a wide shelf of stone where the river slows and spreads — the cavern beyond is huge, and full of the sound of water. The way back climbs behind you.', encounterId: '', connections: ['usp10_2'], position: [1050, 230], mapArea: AREA, canRevisit: true, passthroughTo: 'usp9_3' },
+    { id: 'usp10_2', name: 'The Shallows', description: 'The path runs along a shingle beach, the black water lapping quiet at its edge.', encounterId: '', connections: ['usp10_entry', 'usp10_3'], position: [890, 330], ...D },
+    { id: 'usp10_3', name: 'The Reed Forest', description: 'Pale, root-like growths crowd the shallows in a drowned thicket, swaying though there is no wind.', encounterId: '', connections: ['usp10_2', 'usp10_4'], position: [730, 440], ...D },
+    { id: 'usp10_4', name: 'The Broken Jetty', description: 'A ruined jetty of black stone runs out into the water and stops short, its far end long collapsed.', encounterId: '', connections: ['usp10_3', 'usp10_5'], position: [520, 540], ...D },
+    { id: 'usp10_5', name: 'The Ferry Stones', description: 'A line of great flat stones steps out across the water — a crossing, for anyone bold enough to use it.', encounterId: '', connections: ['usp10_4', 'usp10_6'], position: [320, 630], ...D },
+    { id: 'usp10_6', name: 'The Far Shore', description: 'The path climbs onto a farther shore, and the ceiling lifts away into a dark that feels, for the first time, almost open.', encounterId: '', connections: ['usp10_5', 'usp10_7'], position: [250, 780], ...D },
+    // The Lake's Edge opens on to the final stretch of the South Path.
+    { id: 'usp10_7', name: 'The Lake\'s Edge', description: 'The cavern opens at last onto a vast underground lake, its surface black and still and endless — and somewhere far across it, a faint grey suggestion of light.', encounterId: '', connections: ['usp10_6'], position: [360, 880], ...D, passthroughTo: 'usp11_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp10_entry';
+  return map;
+}
+
+// Underdark South Path 11 — the eleventh Underdark map, reached along the shore
+// from The Lake's Edge (usp10_7). 6 nodes in a line, following the lakeshore
+// toward the grey hint of daylight. usp11_entry is the threshold: it teleports
+// back to usp10_7. No random encounters here yet.
+export function createUnderdarkSouthPath11Map() {
+  const map = new GameMap('underdark_south_path_11', 'The Underdark');
+  const AREA = 'underdark_south_path_11';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath11.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Along the shore of the underground lake.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Lake's Edge (usp10_7). Always visible.
+    { id: 'usp11_entry', name: 'The Shoreline Path', description: 'A path picks its way along the lakeshore, the great black water on one hand and the cavern wall on the other. The way back runs behind you.', encounterId: '', connections: ['usp11_2'], position: [950, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'usp10_7' },
+    { id: 'usp11_2', name: 'The Pale Strand', description: 'A crescent of pale, gritty sand, littered with the clean-picked bones of things that came to drink and did not leave.', encounterId: '', connections: ['usp11_entry', 'usp11_3'], position: [1050, 200], ...D },
+    { id: 'usp11_3', name: 'The Drowned Wood', description: 'Petrified trees stand in the shallows, drowned when the lake was young, grey and hard as stone.', encounterId: '', connections: ['usp11_2', 'usp11_4'], position: [1070, 370], ...D },
+    { id: 'usp11_4', name: 'The Fisher\'s Camp', description: 'The cold remains of a camp — a fire-ring, a drying-rack, nets rotted to lace. Someone lived down here, once.', encounterId: '', connections: ['usp11_3', 'usp11_5'], position: [1060, 530], ...D },
+    { id: 'usp11_5', name: 'The Cave Mouth', description: 'Ahead the cavern narrows to a mouth, and through it the grey light is stronger now — daylight, real daylight, off water.', encounterId: '', connections: ['usp11_4', 'usp11_6'], position: [1000, 720], ...D },
+    // Threshold of Day — now a forward teleporter into South Path 12 (usp12_entry).
+    { id: 'usp11_6', name: 'The Threshold of Day', description: 'The path climbs the last stretch toward the light and the open air beyond — the way out of the Underdark, at last.', encounterId: '', connections: ['usp11_5'], position: [860, 870], ...D, passthroughTo: 'usp12_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp11_entry';
+  return map;
+}
+
+// The Underdark — South Path 12. Beyond The Threshold of Day (usp11_6). Two
+// entry nodes (the stem) that fork into a Y: a short 3-node branch and a longer
+// 5-node branch. Entry teleports back to the Threshold of Day.
+export function createUnderdarkSouthPath12Map() {
+  const map = new GameMap('underdark_south_path_12', 'The Underdark');
+  const AREA = 'underdark_south_path_12';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath12.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper along the underground way.', mapArea: AREA };
+  const nodes = [
+    // Stem (2 entry nodes). The threshold teleports back to usp11_6. Always visible.
+    { id: 'usp12_entry', name: 'Past the Threshold', description: 'You step through toward the pale light — and find not the open sky, but a vast lit cavern, daylight falling in a shaft from some sinkhole far overhead. The way back climbs behind you.', encounterId: '', connections: ['usp12_2'], position: [270, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'usp11_6' },
+    { id: 'usp12_2', name: 'The Parting of Ways', description: 'The lit cavern floor splits the road in two — one way short and close, the other winding off long into the greater dark.', encounterId: '', connections: ['usp12_entry', 'usp12_a1', 'usp12_b1'], position: [460, 160], ...D },
+    // Branch A — the short way (3 nodes).
+    { id: 'usp12_a1', name: 'The Fern Hollow', description: 'Pale ferns crowd a hollow lit by the shaft above, thriving where the daylight reaches.', encounterId: '', connections: ['usp12_2', 'usp12_a2'], position: [350, 340], ...D },
+    { id: 'usp12_a2', name: 'The Weeping Wall', description: 'Water threads down a sheer wall in a hundred bright rills, catching the light.', encounterId: '', connections: ['usp12_a1', 'usp12_a3'], position: [210, 510], ...D },
+    { id: 'usp12_a3', name: 'The Quiet Pool', description: 'The short way ends at a still, clear pool fed by the weeping wall — untainted water, apart from the black lake.', encounterId: 'quiet_pool', connections: ['usp12_a2'], position: [370, 690], ...D },
+    // Branch B — the long way (5 nodes). The Far Arch teleports on to South Path 13.
+    { id: 'usp12_b1', name: 'The Root Bridge', description: 'A great root, thick as a tree, arches the way onward like a bridge over the dark.', encounterId: '', connections: ['usp12_2', 'usp12_b2'], position: [650, 280], ...D },
+    { id: 'usp12_b2', name: 'The Glowing Shelf', description: 'A shelf of stone furred with soft blue glow-moss, cool light in the deepening dark.', encounterId: '', connections: ['usp12_b1', 'usp12_b3'], position: [840, 420], ...D },
+    { id: 'usp12_b3', name: 'The Deep Landing', description: 'A wide worked landing where the daylight fails at last and the true dark begins again.', encounterId: '', connections: ['usp12_b2', 'usp12_b4'], position: [1050, 560], ...D },
+    { id: 'usp12_b4', name: 'The Old Stair', description: 'Dwarf-cut steps climb away into the black, worn smooth by ages of feet.', encounterId: '', connections: ['usp12_b3', 'usp12_b5'], position: [900, 740], ...D },
+    { id: 'usp12_b5', name: 'The Far Arch', description: 'A tall arch of old stone marks the end of the long way — and the dark road presses on through it, deeper still.', encounterId: '', connections: ['usp12_b4'], position: [760, 880], ...D, passthroughTo: 'usp13_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp12_entry';
+  return map;
+}
+
+// The Underdark — South Path 13. Beyond The Far Arch (usp12_b5). 3 nodes in a
+// line, ending at The Bottomless Lake. Entry teleports back to the Far Arch.
+export function createUnderdarkSouthPath13Map() {
+  const map = new GameMap('underdark_south_path_13', 'The Underdark');
+  const AREA = 'underdark_south_path_13';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkSouthPath13.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper along the underground way.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Far Arch (usp12_b5). Always visible.
+    { id: 'usp13_entry', name: 'Beyond the Arch', description: 'Through the old arch the road runs on into a colder, blacker dark, the last of the daylight lost behind you.', encounterId: '', connections: ['usp13_2'], position: [1130, 50], mapArea: AREA, canRevisit: true, passthroughTo: 'usp12_b5' },
+    { id: 'usp13_2', name: 'The Black Shore', description: 'The passage opens onto a shore of wet black stone, and the sound of vast, still water breathing in the dark.', encounterId: '', connections: ['usp13_entry', 'usp13_3'], position: [1180, 300], ...D },
+    // The Bottomless Lake — the Deep Kraken reveal + fight-or-flee dialog.
+    { id: 'usp13_3', name: 'The Bottomless Lake', description: 'A lake without a far shore fills the cavern, black and depthless, fed by a waterfall out of the dark far above.', encounterId: 'bottomless_lake', connections: ['usp13_2'], position: [1060, 460], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'usp13_entry';
+  return map;
+}
+
+// Underdark East Path 14 — the eastern road off the South Crossroad, reached on
+// east from The Sunken Market (usx_e2). 4 nodes in a line through the fungal deep
+// (the mushroom-light Valdrisa clocked and Brad tied to the Svirfneblin). uep14_entry
+// is the threshold: it teleports back to usx_e2. The last node (uep14_4) teleports
+// on to East Path 15. No random encounters here yet.
+export function createUnderdarkEastPath14Map() {
+  const map = new GameMap('underdark_east_path_14', 'The Underdark');
+  const AREA = 'underdark_east_path_14';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath14.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the eastern dark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Sunken Market (usx_e2). Always visible.
+    { id: 'uep14_entry', name: 'The Glowcap Road', description: 'The road picks up past the drowned market, the pale fungal light thickening with every step east. The way back to the crossroad lies behind you.', encounterId: '', connections: ['uep14_2'], position: [90, 90], mapArea: AREA, canRevisit: true, passthroughTo: 'usx_e2' },
+    { id: 'uep14_2', name: 'The Spore Drifts', description: 'Slow clouds of luminous spores drift across the road, glowing a soft blue-green where your torch stirs them.', encounterId: '', connections: ['uep14_entry', 'uep14_3'], position: [380, 390], ...D },
+    { id: 'uep14_3', name: 'The Luminous Grove', description: 'A forest of towering mushrooms crowds the cavern, their caps throwing a cold, steady glow across everything.', encounterId: '', connections: ['uep14_2', 'uep14_4'], position: [720, 540], ...D },
+    // The last node teleports on to East Path 15.
+    { id: 'uep14_4', name: 'The Myconid Hollow', description: 'The grove opens into a still hollow where the fungus grows in ordered rings — too ordered. Something tends this place. The road runs on east.', encounterId: '', connections: ['uep14_3'], position: [800, 870], ...D, passthroughTo: 'uep15_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep14_entry';
+  return map;
+}
+
+// Underdark East Path 15 — the second eastern stretch, reached from The Myconid
+// Hollow (uep14_4). 4 nodes through the outskirts of deep-gnome country. uep15_entry
+// teleports back to uep14_4; the last node (uep15_4) teleports on to East Path 16.
+export function createUnderdarkEastPath15Map() {
+  const map = new GameMap('underdark_east_path_15', 'The Underdark');
+  const AREA = 'underdark_east_path_15';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath15.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the eastern dark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Myconid Hollow (uep14_4). Always visible.
+    { id: 'uep15_entry', name: "The Warren's Edge", description: 'Past the hollow the walls grow pocked with small, round doorways, cut low and neat. Someone lives out here. The way back to the grove lies behind you.', encounterId: '', connections: ['uep15_2'], position: [240, 50], mapArea: AREA, canRevisit: true, passthroughTo: 'uep14_4' },
+    { id: 'uep15_2', name: 'The Whistling Dark', description: 'A thin, wandering whistle threads the tunnels ahead — a signal, passed hand to hand through the black by watchers you never see.', encounterId: '', connections: ['uep15_entry', 'uep15_3'], position: [320, 330], ...D },
+    { id: 'uep15_3', name: 'The Rope Bridges', description: 'Slender rope-and-stone bridges span a lattice of chasms, strung by hands far smaller than yours.', encounterId: '', connections: ['uep15_2', 'uep15_4'], position: [540, 500], ...D },
+    // The last node teleports on to East Path 16.
+    { id: 'uep15_4', name: 'The Svirfneblin Gate', description: 'A low gate of fitted stone bars the road, carved with the wary sigils of the deep gnomes. It stands open a crack — an invitation, or a warning. The road runs on beyond it.', encounterId: '', connections: ['uep15_3'], position: [860, 860], ...D, passthroughTo: 'uep16_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep15_entry';
+  return map;
+}
+
+// Underdark East Path 16 — the third eastern stretch, reached from The Svirfneblin
+// Gate (uep15_4). 4 nodes into deep-gnome country proper. uep16_entry teleports back
+// to uep15_4. The final node (uep16_4) is a dead end for now — the road stops here
+// until the eastern content continues.
+export function createUnderdarkEastPath16Map() {
+  const map = new GameMap('underdark_east_path_16', 'The Underdark');
+  const AREA = 'underdark_east_path_16';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath16.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the eastern dark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Svirfneblin Gate (uep15_4). Always visible.
+    // Fires the one-shot "caverns have shifted" dialog on first arrival. canRevisit:false
+    // (like usx_entry) so the beat plays once; the passthroughTo teleporter still works
+    // (handled by the arriveAtNode/isCrossMapGate pair, not canRevisit).
+    { id: 'uep16_entry', name: 'Beyond the Gate', description: 'Through the deep-gnome gate the tunnels turn tidy and worked, the stone smoothed by small careful hands. The gate lies behind you.', encounterId: 'underdark_east_gate', connections: ['uep16_2'], position: [210, 60], mapArea: AREA, canRevisit: false, passthroughTo: 'uep15_4' },
+    { id: 'uep16_2', name: 'The Stone Gardens', description: 'Beds of pale, cultivated fungus grow in neat stone plots, tended and trimmed — a farm, of a kind, in the lightless deep.', encounterId: '', connections: ['uep16_entry', 'uep16_3'], position: [460, 390], ...D },
+    { id: 'uep16_3', name: 'The Lantern Path', description: 'Tiny glowstone lanterns line the road at knee height, lit and cared for, leading on into the dark.', encounterId: '', connections: ['uep16_2', 'uep16_4'], position: [790, 590], ...D },
+    { id: 'uep16_4', name: 'The Deep Gnome Outpost', description: 'The lanterns lead to a huddle of low stone dwellings dug into the cavern wall — a Svirfneblin outpost, watchful and still. A tended path runs on past it, deeper east.', encounterId: '', connections: ['uep16_3'], position: [1120, 840], ...D, passthroughTo: 'uep17_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep16_entry';
+  return map;
+}
+
+// Underdark East Path 17 — the fourth eastern stretch, reached past The Deep Gnome
+// Outpost (uep16_4). 5 nodes in a line, the tended road running on through the
+// deep-gnome reach. uep17_entry teleports back to uep16_4; the last node (uep17_5)
+// teleports on to East Path 18.
+export function createUnderdarkEastPath17Map() {
+  const map = new GameMap('underdark_east_path_17', 'The Underdark');
+  const AREA = 'underdark_east_path_17';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath17.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the eastern dark.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Deep Gnome Outpost (uep16_4). Always visible.
+    { id: 'uep17_entry', name: 'The Tended Road', description: 'Past the outpost the road stays worked and clean, glowstone lanterns marking the way on into deep-gnome country. The outpost lies behind you.', encounterId: '', connections: ['uep17_2'], position: [900, 180], mapArea: AREA, canRevisit: true, passthroughTo: 'uep16_4' },
+    { id: 'uep17_2', name: 'The Glimmer Terraces', description: 'The road climbs past terraced beds of luminous fungus, each step tended and trimmed with small, patient care.', encounterId: '', connections: ['uep17_entry', 'uep17_3'], position: [700, 420], ...D },
+    { id: 'uep17_3', name: 'The Quiet Bells', description: 'Tiny stone chimes hang from the cavern roof, turning slow and soundless in the still, dead air.', encounterId: '', connections: ['uep17_2', 'uep17_4'], position: [400, 580], ...D },
+    { id: 'uep17_4', name: 'The Warden Stones', description: 'Squat carved sentinels line the road, deep-gnome wards watching the way with blind stone eyes.', encounterId: '', connections: ['uep17_3', 'uep17_5'], position: [700, 750], ...D },
+    // The last node teleports on to East Path 18.
+    { id: 'uep17_5', name: 'The Deepening Reach', description: 'The lanterns thin and the cavern widens ahead, the tended road giving way to something older and less kept. The way runs on east.', encounterId: '', connections: ['uep17_4'], position: [1110, 820], ...D, passthroughTo: 'uep18_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep17_entry';
+  return map;
+}
+
+// Underdark East Path 18 — the fifth eastern stretch, reached from The Deepening
+// Reach (uep17_5). Branching layout: a 3-node entry line (uep18_entry → _2 → _3),
+// then _3 forks into two paths — a 2-node spur (uep18_p1a → uep18_p1b, the Sealed
+// Vault, which teleports on to East Path 19) and a single node (uep18_c1) that
+// opens onto a 5-node loop (c1 → c2 → c3 → c4 → c5 → back to c1). uep18_entry
+// teleports back to uep17_5.
+export function createUnderdarkEastPath18Map() {
+  const map = new GameMap('underdark_east_path_18', 'The Underdark');
+  const AREA = 'underdark_east_path_18';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath18.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the eastern dark.', mapArea: AREA };
+  const nodes = [
+    // Entry line (3 nodes). Threshold teleports back to The Deepening Reach (uep17_5).
+    { id: 'uep18_entry', name: 'The Old Deep', description: 'Beyond the tended reach the caverns turn wild and old again, the deep-gnome road petering out into raw, worked-once stone. The way back lies behind you.', encounterId: '', connections: ['uep18_2'], position: [570, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'uep17_5' },
+    { id: 'uep18_2', name: 'The Sunken Colonnade', description: 'A row of broken pillars marches off into the dark, half-drowned in still black water.', encounterId: '', connections: ['uep18_entry', 'uep18_3'], position: [330, 260], ...D },
+    // The fork — splits into the dead-end spur and the loop.
+    { id: 'uep18_3', name: 'The Parting of Ways', description: 'The passage divides around a great fallen slab: one way climbs, the other drops toward a ring of deeper dark.', encounterId: '', connections: ['uep18_2', 'uep18_p1a', 'uep18_c1'], position: [270, 590], ...D },
+    // Path 1 — 2-node dead-end spur.
+    { id: 'uep18_p1a', name: 'The High Gallery', description: 'The climbing way opens onto a dry gallery, dust thick and undisturbed underfoot.', encounterId: '', connections: ['uep18_3', 'uep18_p1b'], position: [170, 740], ...D },
+    // The Sealed Vault teleports on to East Path 19 (behind the vault door).
+    { id: 'uep18_p1b', name: 'The Sealed Vault', description: 'The gallery ends at a vault door, barred from the far side and long since gone silent. It stands ajar now, a hand\'s width of deeper black beyond it.', encounterId: '', connections: ['uep18_p1a'], position: [60, 870], ...D, passthroughTo: 'uep19_entry' },
+    // Path 2 — single node that opens onto the loop (c1 is the loop start).
+    { id: 'uep18_c1', name: 'The Ringway', description: 'The lower way opens into a great round cavern, a ring-road running away into the dark on both hands.', encounterId: '', connections: ['uep18_3', 'uep18_c2', 'uep18_c5'], position: [480, 580], ...D },
+    // The four beds on the ring — someone farms this loop. Each carries the
+    // `mushroom_farm` harvest encounter (50% for one pick, once per rest; see
+    // the startNodeEncounter special-case). The Spore Garden also holds the
+    // one and only Rare Mushroom, guaranteed on its first harvest.
+    { id: 'uep18_c2', name: 'The Watered Beds', description: 'Water beads down a black stone arch and runs off along cut channels, feeding row after row of pale caps below.', encounterId: 'mushroom_farm', connections: ['uep18_c1', 'uep18_c3'], position: [650, 410], ...D },
+    { id: 'uep18_c3', name: 'The Spore Garden', description: 'A basin at the ring\'s far edge brims with glowing water, and the beds around it are the best-kept in the whole loop — thinned, weeded, and heavy with growth.', encounterId: 'mushroom_farm', connections: ['uep18_c2', 'uep18_c4'], position: [880, 390], ...D },
+    { id: 'uep18_c4', name: 'The Compost Midden', description: 'A drift of old bones and cave litter has been raked into a long heap against the ring wall, and mushrooms grow out of it in fat, deliberate rows.', encounterId: 'mushroom_farm', connections: ['uep18_c3', 'uep18_c5'], position: [830, 630], ...D },
+    { id: 'uep18_c5', name: 'The Cap Rows', description: 'The ring curves back on itself past rank upon rank of planted caps, each row spaced a small arm\'s length from the next.', encounterId: 'mushroom_farm', connections: ['uep18_c4', 'uep18_c1'], position: [630, 680], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep18_entry';
+  return map;
+}
+
+// Underdark East Path 19 — behind The Sealed Vault (uep18_p1b). 9 nodes, all
+// branches, no loop. uep19_entry is the doorway itself (teleports back to
+// uep18_p1b) and links only to uep19_2, which forks into two ways. The left way
+// is a 2-node dead-end spur (uep19_a1 → uep19_a2). The right way runs two nodes
+// (uep19_b1 → uep19_b2), then uep19_b2 forks again — the Suspicious Entrance
+// (uep19_c1, which teleports on to Gnome Village 20) and a 3-node descent
+// (uep19_d1 → uep19_d2 → uep19_d3).
+export function createUnderdarkEastPath19Map() {
+  const map = new GameMap('underdark_east_path_19', 'The Underdark');
+  const AREA = 'underdark_east_path_19';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath19.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the vault.', mapArea: AREA };
+  const nodes = [
+    // Threshold — the doorway itself. Teleports back to The Sealed Vault
+    // (uep18_p1b) and links on to Beyond the Vault Door. Always visible.
+    { id: 'uep19_entry', name: 'The Vault Door', description: 'The great door stands open on its ruined bar, the gallery at your back and the vault breathing its dry, dead air out past you.', encounterId: '', connections: ['uep19_2'], position: [820, 50], mapArea: AREA, canRevisit: true, passthroughTo: 'uep18_p1b' },
+    // The fork — splits into the left spur and the right way.
+    { id: 'uep19_2', name: 'Beyond the Vault Door', description: 'Past the door the air is dry and dead as a tomb, and the hall beyond splits two ways around a fallen strongbox.', encounterId: '', connections: ['uep19_entry', 'uep19_a1', 'uep19_b1'], position: [780, 170], ...D },
+    // Left way — 2-node dead-end spur.
+    { id: 'uep19_a1', name: 'The Toppled Shelves', description: 'Rows of stone shelving lie thrown down across the floor, their contents long since carried off or crumbled to dust.', encounterId: '', connections: ['uep19_2', 'uep19_a2'], position: [840, 480], ...D },
+    { id: 'uep19_a2', name: 'The Dry Cistern', description: 'A great basin sits empty in the floor, its channels cracked and its stone bleached pale by centuries without water.', encounterId: '', connections: ['uep19_a1'], position: [1160, 780], ...D },
+    // Right way — 2 nodes, then a second fork at uep19_b2.
+    { id: 'uep19_b1', name: 'The Coin Drift', description: 'Old coin lies scattered along the hall like gravel, blackened past reading and not worth the stooping.', encounterId: '', connections: ['uep19_2', 'uep19_b2'], position: [550, 280], ...D },
+    { id: 'uep19_b2', name: "The Warden's Antechamber", description: 'A cramped guardroom where the hall divides — one door barred, one stair falling away into the dark.', encounterId: '', connections: ['uep19_b1', 'uep19_c1', 'uep19_d1'], position: [250, 480], ...D },
+    // Fork 1 — the way on to the deep gnome village (Gnome Village 20).
+    { id: 'uep19_c1', name: 'Suspicious Entrance', description: 'Behind the barred door the stone turns worked and tidy — a low round doorway cut for smaller folk, swept clean and lately used.', encounterId: '', connections: ['uep19_b2'], position: [140, 350], ...D, passthroughTo: 'ugv20_entry' },
+    // Fork 2 — 3-node descent.
+    { id: 'uep19_d1', name: 'The Long Stair', description: 'The stair drops in a straight, narrow flight, each step worn hollow by feet that stopped coming a long age ago.', encounterId: '', connections: ['uep19_b2', 'uep19_d2'], position: [170, 680], ...D },
+    { id: 'uep19_d2', name: 'The Under-Vault', description: 'The stair bottoms out in a low chamber under the vault proper, its ceiling held up by squat, over-thick pillars.', encounterId: '', connections: ['uep19_d1', 'uep19_d3'], position: [500, 810], ...D },
+    // The Black Coffer teleports on to East Path 23.
+    { id: 'uep19_d3', name: 'The Black Coffer', description: 'A single coffer of black stone stands at the chamber\'s end, lidless and empty, and far too heavy to have been carried here. Behind it the wall is broken through, and a corridor runs on east.', encounterId: '', connections: ['uep19_d2'], position: [660, 450], ...D, passthroughTo: 'uep23_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep19_entry';
+  return map;
+}
+
+// Underdark Gnome Village 20 — behind the Suspicious Entrance (uep19_c1), the
+// deep gnome village proper. 16 nodes. A 5-node approach (ugv20_entry → _1b →
+// _2 → _3 → _4) forks at _4 into the bridge road (ugv20_b2 → b3) and a 4-node
+// cellar spur (ugv20_s0 → s1 → s1b → s2). The bridge road forks again at b3 into
+// two 3-node branches — the market side (ugv20_m1 → m2 → m3) and the warren side
+// (ugv20_t1 → t2 → t3). ugv20_entry teleports back to uep19_c1; the Quiet Hearth
+// (ugv20_s2) teleports on to Gnome Village 21, and the Deep Well (ugv20_m3) on
+// to Gnome Village 22.
+//
+// The village is INHABITED — the Svirfneblin are home, just hiding from the
+// party at first (shutters closing, faces ducking back). Keep that read in any
+// new node text here. All three village maps are in NO_FOG_MAPS (no black
+// overlay — you can see the town art whole) but their nodes are still
+// `discoverable`, so the nodes themselves reveal one hop at a time like the
+// rest of the Underdark.
+export function createUnderdarkGnomeVillage20Map() {
+  const map = new GameMap('underdark_gnome_village_20', 'The Underdark');
+  const AREA = 'underdark_gnome_village_20';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnomeVillage20.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the deep gnome village.', mapArea: AREA };
+  const nodes = [
+    // Approach — 5 nodes. Threshold teleports back to the Suspicious Entrance
+    // (uep19_c1).
+    // canRevisit:false so the "we actually found it" beat plays once; the
+    // passthroughTo teleporter still works (same shape as uep16_entry).
+    { id: 'ugv20_entry', name: 'The Low Door', description: 'You stoop through the little round door into a passage cut for folk half your height. Somewhere ahead a shutter claps shut, and the lamplight beyond it goes out.', encounterId: 'gnome_village_found', connections: ['ugv20_1b'], position: [630, 70], mapArea: AREA, canRevisit: false, passthroughTo: 'uep19_c1' },
+    { id: 'ugv20_1b', name: 'The Lamplit Bend', description: 'The passage bends past a row of glowstone lamps, each one freshly oiled. Small footprints cross the swept floor, all of them heading away from you.', encounterId: '', connections: ['ugv20_entry', 'ugv20_2'], position: [565, 220], ...D },
+    { id: 'ugv20_2', name: 'The Watching Niche', description: 'A carved alcove sits at shoulder height, a stool inside it still warm. Whoever was watching the road ducked out of it a heartbeat before your light arrived.', encounterId: '', connections: ['ugv20_1b', 'ugv20_3'], position: [610, 350], ...D },
+    { id: 'ugv20_3', name: 'The Glowstone Stair', description: 'Shallow steps drop away between rails of set glowstone, worn smooth by small, steady traffic. Below, a whispered argument cuts off the moment your boot lands.', encounterId: '', connections: ['ugv20_2', 'ugv20_4'], position: [480, 440], ...D },
+    // The first fork — bridge road or the cellar spur.
+    // Cornis meets the party here — one-shot (canRevisit:false), then it's a
+    // plain junction again.
+    { id: 'ugv20_4', name: 'The Village Overlook', description: 'The stair ends on a shelf of rock, and below it the chasm is full of lanterns — a whole town of them, strung across the dark on bridges. One by one, as they catch sight of you, the shutters swing closed.', encounterId: 'cornis_welcome', connections: ['ugv20_3', 'ugv20_b2', 'ugv20_s0'], position: [550, 530], ...D, canRevisit: false },
+    // Bridge road — 2 nodes, forks again at b3.
+    { id: 'ugv20_b2', name: 'The Lantern Bridge', description: 'Glowstone lamps hang the length of the span, throwing soft green light down into a chasm with no bottom you can see. Small faces watch from the far rail, and not one of them comes closer.', encounterId: '', connections: ['ugv20_4', 'ugv20_b3'], position: [680, 500], ...D },
+    { id: 'ugv20_b3', name: 'The Bridgehead', description: 'The spans meet on a broad landing where the village proper begins. A knot of deep gnomes backs away as you step off the bridge — hands full of tools, not weapons, and eyes never leaving you.', encounterId: '', connections: ['ugv20_b2', 'ugv20_m1', 'ugv20_t1'], position: [780, 450], ...D },
+    // Cellar spur — 3 nodes; the Quiet Hearth teleports on to Village 21.
+    { id: 'ugv20_s0', name: 'The Cellar Way', description: 'A side passage drops away from the shelf, cool air coming up it, and a lamp swinging where someone hurried down ahead of you.', encounterId: '', connections: ['ugv20_4', 'ugv20_s1'], position: [600, 680], ...D },
+    { id: 'ugv20_s1', name: 'The Mushroom Cellars', description: 'Racks of pale fungus stand stacked to the ceiling in the damp. Between them, a grower crouches very still with her arms around two children, hoping the dark is enough.', encounterId: '', connections: ['ugv20_s0', 'ugv20_s1b'], position: [500, 780], ...D },
+    { id: 'ugv20_s1b', name: 'The Drying Racks', description: 'Cut caps hang in rows to dry, still swinging where someone pushed through them at a run a moment before you.', encounterId: '', connections: ['ugv20_s1', 'ugv20_s2'], position: [350, 780], ...D },
+    { id: 'ugv20_s2', name: 'The Quiet Hearth', description: 'The cellars open on a little hearth room, a pot steaming over a fire nobody is tending. An inner door stands shut, and past it the lanes of the village run on.', encounterId: '', connections: ['ugv20_s1b'], position: [260, 860], ...D, passthroughTo: 'ugv21_entry' },
+    // Market side — 3 nodes.
+    { id: 'ugv20_m1', name: 'The Stone Market', description: 'Low stalls line a covered street, their goods still laid out — and every seller crouched down behind the counter, listening to you pass.', encounterId: '', connections: ['ugv20_b3', 'ugv20_m2'], position: [960, 510], ...D },
+    { id: 'ugv20_m2', name: "The Gemcutter's Row", description: 'Workbenches run the length of the street, half-cut stones still clamped and glittering. The cutters watch from their doorways, hammers down, saying nothing at all.', encounterId: '', connections: ['ugv20_m1', 'ugv20_m3'], position: [1100, 410], ...D },
+    // The Deep Well teleports on to Gnome Village 22 (the way down to the shrine).
+    { id: 'ugv20_m3', name: 'The Deep Well', description: 'The street ends at a round stone well. Two gnomes freeze at the rope as you come up, then let the bucket drop and back away without a word. A stair goes down beside the shaft, into worked dark.', encounterId: '', connections: ['ugv20_m2'], position: [1190, 260], ...D, passthroughTo: 'ugv22_entry' },
+    // Warren side — 3 nodes.
+    { id: 'ugv20_t1', name: 'The Warren Stairs', description: 'Round doorways climb the chasm wall in tiers, linked by stairs no wider than your shoulders. Doors shut in ones and twos the whole way up as you climb.', encounterId: '', connections: ['ugv20_b3', 'ugv20_t2'], position: [730, 330], ...D },
+    { id: 'ugv20_t2', name: 'The Mushroom Stairs', description: 'The stair narrows and the fungus takes over — caps crowding every tread, pale growth furring the walls to either side. Nobody has cut it back. The old keeper stands aside at the turn, hands folded, and watches you climb past.', encounterId: '', connections: ['ugv20_t1', 'ugv20_t3'], position: [830, 240], ...D },
+    { id: 'ugv20_t3', name: 'Altar of Psilofyr', description: 'At the top of the tiers a squat stone figure sits in a scooped-out alcove, and the fungus has taken it — pale caps crowding its shoulders, a soft ruff of grey growth up one arm, the face lost under it. Nobody has cleaned it. Cleaning it is the one thing you must never do.', encounterId: 'psilofyr_altar', connections: ['ugv20_t2'], position: [940, 140], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ugv20_entry';
+  return map;
+}
+
+// Underdark Gnome Village 21 — through the Quiet Hearth (ugv20_s2), the lanes of
+// the village proper. 14 nodes: a 2-node approach (ugv21_entry → _2), then _2
+// forks four ways, each branch 3 nodes — the west row (ugv21_a1 → a2 → a3,
+// houses), the fountain way (ugv21_b1 → b2 → b3), the upper terrace (ugv21_c1 →
+// c2 → c3, houses) and the far row (ugv21_d1 → d2 → d3, houses). ugv21_entry
+// teleports back to ugv20_s2. No onward link. Same inhabited-but-hiding read as
+// Village 20, and the same no-fog + still-discoverable treatment.
+export function createUnderdarkGnomeVillage21Map() {
+  const map = new GameMap('underdark_gnome_village_21', 'The Underdark');
+  const AREA = 'underdark_gnome_village_21';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnomeVillage21.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Another lane of the deep gnome village.', mapArea: AREA };
+  const nodes = [
+    // Approach — 2 nodes. Threshold teleports back to The Quiet Hearth (ugv20_s2).
+    { id: 'ugv21_entry', name: 'The Hearth Passage', description: 'Past the hearth room the passage runs out under a low arch into open lanes, warm with lamplight and far too quiet for the number of doors on it.', encounterId: '', connections: ['ugv21_2'], position: [550, 90], mapArea: AREA, canRevisit: true, passthroughTo: 'ugv20_s2' },
+    // The hub — four ways part here.
+    { id: 'ugv21_2', name: 'The Lantern Square', description: 'The lanes open on a little square hung with lamps, four ways leading off it. A ball rolls to a stop against your boot; the child who kicked it is already gone.', encounterId: '', connections: ['ugv21_entry', 'ugv21_a1', 'ugv21_b1', 'ugv21_c1', 'ugv21_d1'], position: [610, 290], ...D },
+    // West row — houses.
+    { id: 'ugv21_a1', name: 'The Low Row', description: 'A run of round doors set close together, each one shut, each one with a light moving behind its shutter.', encounterId: '', connections: ['ugv21_2', 'ugv21_a2'], position: [500, 290], ...D },
+    { id: 'ugv21_a2', name: "The Weavers' Burrows", description: 'Looms stand half-strung in the doorways, spools still rocking where they were set down in a hurry.', encounterId: '', connections: ['ugv21_a1', 'ugv21_a3', 'ugv21_cornis_house'], position: [410, 320], ...D },
+    // Cornis points out the two doors here — one-shot beat, then a plain node.
+    { id: 'ugv21_a3', name: 'The Old Burrows', description: 'The oldest doors in the village, sills worn to a dip. An ancient gnome sits out on his step and does not move, watching you come and watching you go.', encounterId: 'cornis_two_doors', connections: ['ugv21_a2', 'ugv21_our_house'], position: [280, 360], ...D, canRevisit: false },
+    // The two doors themselves — each teleports into its own little map.
+    { id: 'ugv21_cornis_house', name: "Cornis's House", description: 'A round door with a mithril hand-plate screwed to it at gnome height, polished bright where he pushes it open.', encounterId: '', connections: ['ugv21_a2'], position: [400, 240], ...D, passthroughTo: 'ch41_entry' },
+    { id: 'ugv21_our_house', name: 'Our Borrowed House', description: 'The door across the lane stands open on a dark little room nobody has lived in for a while. It is yours for the night, apparently.', encounterId: '', connections: ['ugv21_a3'], position: [270, 280], ...D, passthroughTo: 'bh42_entry' },
+    // Fountain way.
+    { id: 'ugv21_b1', name: 'The Water Steps', description: 'Wet stone steps climb between the houses, worn into channels by generations of carried buckets.', encounterId: '', connections: ['ugv21_2', 'ugv21_b2'], position: [570, 450], ...D },
+    { id: 'ugv21_b2', name: 'The Cistern Channel', description: 'A cut stone channel runs the length of the lane, clear water going by fast and cold, and washing left out along its edge.', encounterId: '', connections: ['ugv21_b1', 'ugv21_b3'], position: [470, 640], ...D },
+    { id: 'ugv21_b3', name: 'The Glowstone Fountain', description: 'The channel feeds a broad basin lit from beneath by sunk glowstone — the heart of the village, and the one place its people have not entirely abandoned to you.', encounterId: 'glowstone_fountain', connections: ['ugv21_b2'], position: [450, 810], ...D },
+    // Upper terrace — houses.
+    { id: 'ugv21_c1', name: 'The Upper Terrace', description: 'A shelf of houses stands above the square, their doorsteps swept and their shutters barred one after another as you climb.', encounterId: '', connections: ['ugv21_2', 'ugv21_c2'], position: [760, 260], ...D },
+    { id: 'ugv21_c2', name: "The Toolmakers' Doors", description: 'Picks and chisels hang in racks beside every door, and behind one shutter someone is very quietly telling a child to be still.', encounterId: '', connections: ['ugv21_c1', 'ugv21_c3', 'ugv21_c4'], position: [1000, 260], ...D },
+    // The town's toolshop. Same shape as The Spore & Sprig: canRevisit, with
+    // the dialog shortening to a one-beat greeting after the first visit.
+    { id: 'ugv21_c4', name: 'The Deep Tinker', description: 'The widest door on the terrace, propped open on a workshop that smells of hot metal and lamp oil. Something inside is ticking.', encounterId: 'deep_tinker', connections: ['ugv21_c2'], position: [1050, 190], ...D },
+    { id: 'ugv21_c3', name: 'The Nursery Burrows', description: 'The smallest doors in the village, cut for the smallest folk. Every one of them is shut, and behind them you can hear breathing.', encounterId: '', connections: ['ugv21_c2'], position: [1130, 340], ...D },
+    // Far row — houses.
+    { id: 'ugv21_d1', name: 'The Far Row', description: 'The lane runs out east past a line of newer burrows, their stone still pale where it was cut.', encounterId: '', connections: ['ugv21_2', 'ugv21_d2'], position: [740, 580], ...D },
+    { id: 'ugv21_d2', name: 'The Deep Doors', description: 'Here the houses are dug back hard into the rock, deep enough that a family could sit out a bad week without ever coming to the door.', encounterId: '', connections: ['ugv21_d1', 'ugv21_d3'], position: [940, 580], ...D },
+    { id: 'ugv21_d3', name: 'Apothecary Square', description: 'The row opens into a little square strung with drying lines, every one of them hung with caps and stalks and split fungus going slowly leathery in the lamp-warm air.', encounterId: '', connections: ['ugv21_d2', 'ugv21_d4'], position: [1090, 620], ...D },
+    // The village's one storefront. canRevisit so the shop can be walked
+    // back into; the dialog itself shortens to a one-line greeting after
+    // the first visit (see the startNodeEncounter dispatch in main.js).
+    { id: 'ugv21_d4', name: 'The Spore & Sprig', description: 'A shopfront at the low end of the square, its shutters folded back on shelves of jars, bundles and boxed caps. Somebody in there is humming.', encounterId: 'spore_and_sprig', connections: ['ugv21_d3'], position: [1110, 530], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ugv21_entry';
+  return map;
+}
+
+// Cornis's House (Village 41) — through the door off The Weavers' Burrows
+// (ugv21_cornis_house). 2 nodes: the room you step into and his workbench.
+// ch41_entry teleports back to the village lane. In NO_FOG_MAPS with the rest
+// of the village.
+export function createCornisHouseMap() {
+  const map = new GameMap('cornis_house_41', 'The Underdark');
+  const AREA = 'cornis_house_41';
+  map.mapImages = { [AREA]: 'Maps/CornisHouseGnomeVillage41.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further into the house.', mapArea: AREA };
+  const nodes = [
+    // The feast beat hangs off this node. It carries the encounterId even before
+    // the party has slept, because startNodeEncounter is only reached when a
+    // node HAS one — the gate for "not yet" lives in that handler.
+    { id: 'ch41_entry', name: "Cornis's Front Room", description: 'You come through the round door on your hands and knees and stand up into a room built for someone four feet tall — warm, low, and smelling of hot metal and mushroom bread. The lane lies behind you.', encounterId: 'cornis_feast', connections: ['ch41_bench'], position: [430, 730], mapArea: AREA, canRevisit: true, passthroughTo: 'ugv21_cornis_house' },
+    { id: 'ch41_bench', name: 'The Workbench', description: 'The back half of the room is all bench: vices, files, a small forge banked low, and a rack of spare mithril fingers, sized and numbered.', encounterId: 'cornis_workbench', connections: ['ch41_entry'], position: [740, 500], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ch41_entry';
+  return map;
+}
+
+// Our Borrowed House (Village 42) — through the door off The Old Burrows
+// (ugv21_our_house). 4 nodes: the doorway, the middle of the room, and the
+// bench and bed hanging off that middle. The bed is a full rest. bh42_entry
+// teleports back to the village lane.
+export function createBorrowedHouseMap() {
+  const map = new GameMap('borrowed_house_42', 'The Underdark');
+  const AREA = 'borrowed_house_42';
+  map.mapImages = { [AREA]: 'Maps/OurBorrowedHouseGnomeVillage42.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further into the borrowed house.', mapArea: AREA };
+  const nodes = [
+    { id: 'bh42_entry', name: 'The Borrowed Room', description: 'A single low room with a swept floor, a cold hearth, and a ceiling every one of you can touch without stretching. The lane lies behind you.', encounterId: 'borrowed_house_arrival', connections: ['bh42_center'], position: [650, 760], mapArea: AREA, canRevisit: false, passthroughTo: 'ugv21_our_house' },
+    // The middle of the room — the junction the bed and the bench hang off, so
+    // neither has to route through the doorway (which teleports).
+    { id: 'bh42_center', name: 'The Middle of the Room', description: 'Four paces of swept floor with a cold hearth on one side. Standing in it, any one of you can touch both walls.', encounterId: '', connections: ['bh42_entry', 'bh42_bench', 'bh42_bed'], position: [850, 660], ...D },
+    { id: 'bh42_bench', name: 'The Bench', description: 'A long bench runs the length of the wall under the shuttered window, worn smooth by generations of small backs.', encounterId: '', connections: ['bh42_center'], position: [400, 520], ...D },
+    { id: 'bh42_bed', name: 'The Bed', description: 'One bed, built for a gnome. Whatever happens here tonight, it is going to be undignified.', encounterId: 'borrowed_house_bed', connections: ['bh42_center'], position: [1280, 520], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'bh42_entry';
+  return map;
+}
+
+// Underdark Gnome Village 22 — down the stair beside The Deep Well (ugv20_m3).
+// A single line of 7 nodes descending from the village to its holy place, the
+// Hall of Callarduran — Callarduran Smoothhands, the Svirfneblin god of stone,
+// deep places and the quiet earth, whose sign is a signet ring set with a
+// star-cut ruby. ugv22_entry teleports back to ugv20_m3. No onward link yet.
+// Same no-fog + still-discoverable treatment as the other two village maps.
+export function createUnderdarkGnomeVillage22Map() {
+  const map = new GameMap('underdark_gnome_village_22', 'The Underdark');
+  const AREA = 'underdark_gnome_village_22';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnomeVillage22.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further down the stair below the village.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Deep Well (ugv20_m3).
+    { id: 'ugv22_entry', name: 'The Well Stair', description: 'The stair winds down around the well shaft, close enough to touch the wet rope. The market lamplight thins to nothing above you.', encounterId: '', connections: ['ugv22_2'], position: [40, 660], mapArea: AREA, canRevisit: true, passthroughTo: 'ugv20_m3' },
+    { id: 'ugv22_2', name: 'The Dripping Landing', description: 'A landing halfway down, its floor slick and its walls beaded with water. Someone has set a lamp here and left it burning.', encounterId: '', connections: ['ugv22_entry', 'ugv22_3'], position: [210, 560], ...D },
+    { id: 'ugv22_3', name: 'The Ring Gate', description: 'A low arch marks the bottom of the stair, carved over and over with the same sign — a signet ring, a star cut into its stone.', encounterId: '', connections: ['ugv22_2', 'ugv22_4'], position: [360, 420], ...D },
+    { id: 'ugv22_4', name: "The Pilgrims' Rest", description: 'Stone benches line a wide passage, worn to a shine by the sitting of small folk waiting their turn to go down.', encounterId: '', connections: ['ugv22_3', 'ugv22_5'], position: [530, 370], ...D },
+    { id: 'ugv22_5', name: 'The Star Stones', description: 'Rough boulders stand along the way, each split open to show a heart of red crystal that catches your light and holds it.', encounterId: '', connections: ['ugv22_4', 'ugv22_6'], position: [690, 480], ...D },
+    { id: 'ugv22_6', name: 'The Smooth Hall', description: 'Here the walls give up their tool marks entirely — the stone runs on smooth as poured water, shaped by no chisel you know of.', encounterId: '', connections: ['ugv22_5', 'ugv22_7'], position: [850, 600], ...D },
+    // The end of the line — the village's holy place.
+    { id: 'ugv22_7', name: 'The Hall of Callarduran', description: 'The smooth stone opens on a doorway cut for small folk, and past it the dark goes very large. Callarduran Smoothhands, who keeps the deep places, is in there. The whole village prays here, and something is answering.', encounterId: '', connections: ['ugv22_6'], position: [920, 430], ...D, passthroughTo: 'hoc_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'ugv22_entry';
+  return map;
+}
+
+// The Hall of Callarduran — the interior of the village's holy place, through
+// the small-folk doorway at the end of the well stair (ugv22_7). Two nodes: the
+// threshold you step into (fires the one-shot arrival beat, teleports back out)
+// and the hand itself, which is this chapter's enchanting altar — the same
+// two-page picker the Corrupted Shrine uses, paid in Rare Mushroom + gold.
+// NO_FOG_MAPS: it is one open room, so the hand is visible from the doorway
+// rather than fogged until you walk up on it.
+export function createHallOfCallarduranMap() {
+  const map = new GameMap('hall_of_callarduran', 'The Underdark');
+  const AREA = 'hall_of_callarduran';
+  map.mapImages = { [AREA]: 'Maps/HallOfCallarduran.jpg' };
+  const nodes = [
+    // Threshold — teleports back up to The Hall of Callarduran door (ugv22_7).
+    // canRevisit:false so the arrival description plays exactly once; the
+    // passthrough back out still works (same setup as umc25_entry).
+    { id: 'hoc_entry', name: 'The Threshold', description: 'Just inside the door, where the smooth stone opens out and the sound of your own breathing goes somewhere and does not come back.', encounterId: 'hall_of_callarduran_arrival', connections: ['hoc_altar'], position: [350, 770], mapArea: AREA, canRevisit: false, passthroughTo: 'ugv22_7' },
+    { id: 'hoc_altar', name: 'The Open Hand', description: 'A hand of living rock reaches out of the far wall, palm up and open, big enough to stand in. Something red burns low in it. The gnomes leave what they can spare on the fingers.', encounterId: 'callarduran_altar', connections: ['hoc_entry'], position: [740, 650], mapArea: AREA, canRevisit: true },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'hoc_entry';
+  return map;
+}
+
+// Underdark East Path 23 — through the broken wall behind The Black Coffer
+// (uep19_d3). 4 nodes in a line, a worked corridor running on east away from the
+// vault. uep23_entry teleports back to uep19_d3; the last node (uep23_4)
+// teleports on to East Path 24.
+export function createUnderdarkEastPath23Map() {
+  const map = new GameMap('underdark_east_path_23', 'The Underdark');
+  const AREA = 'underdark_east_path_23';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath23.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the corridor.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Black Coffer (uep19_d3). Always visible.
+    { id: 'uep23_entry', name: 'The Broken Wall', description: 'You climb through the gap behind the coffer into a corridor that was cut, not carved — square, level, and running straight off east. The under-vault lies behind you.', encounterId: '', connections: ['uep23_2'], position: [760, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'uep19_d3' },
+    { id: 'uep23_2', name: 'The Square Passage', description: 'The corridor holds its shape for a long, dull stretch, every joint in the stone still tight after all this time.', encounterId: '', connections: ['uep23_entry', 'uep23_3'], position: [700, 600], ...D },
+    { id: 'uep23_3', name: 'The Sconce Line', description: 'Iron sconces are set into the wall at even spacing, each one holding a stub of candle burned down to nothing.', encounterId: '', connections: ['uep23_2', 'uep23_4'], position: [360, 450], ...D },
+    { id: 'uep23_4', name: 'The Slumped Arch', description: 'The corridor sags where the rock above shifted, the arch here re-cut and re-braced by hands in a hurry. The way runs on east.', encounterId: '', connections: ['uep23_3'], position: [360, 320], ...D, passthroughTo: 'uep24_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep23_entry';
+  return map;
+}
+
+// Underdark East Path 24 — the corridor's second stretch, reached from The
+// Slumped Arch (uep23_4). 4 nodes in a line. uep24_entry teleports back to
+// uep23_4. No onward link yet.
+export function createUnderdarkEastPath24Map() {
+  const map = new GameMap('underdark_east_path_24', 'The Underdark');
+  const AREA = 'underdark_east_path_24';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkEastPath24.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the corridor.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Slumped Arch (uep23_4). Always visible.
+    { id: 'uep24_entry', name: 'Past the Bracing', description: 'Beyond the propped arch the corridor picks up its old square line again, colder here, and carrying a faint draught from somewhere ahead. The way back lies behind you.', encounterId: '', connections: ['uep24_2'], position: [320, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'uep23_4' },
+    { id: 'uep24_2', name: 'The Cross-Cut', description: 'A second passage crosses this one and is walled off on both hands, the blocking stone laid from your side.', encounterId: '', connections: ['uep24_entry', 'uep24_3'], position: [730, 620], ...D },
+    { id: 'uep24_3', name: 'The Drainage Grate', description: 'A grate in the floor breathes cold air up at you, and far below it something moves water in the dark.', encounterId: '', connections: ['uep24_2', 'uep24_4'], position: [420, 470], ...D },
+    // The Far Threshold teleports on to the Mushroom Circle (Map 25).
+    { id: 'uep24_4', name: 'The Far Threshold', description: 'The corridor ends at a doorway with its door long gone, and past it the air opens out — a bigger dark, waiting.', encounterId: '', connections: ['uep24_3'], position: [480, 330], ...D, passthroughTo: 'umc25_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'uep24_entry';
+  return map;
+}
+
+// Underdark Mushroom Circle 25 — past The Far Threshold (uep24_4). Only 2 nodes:
+// the chamber you step into (umc25_entry, which fires the one-shot
+// `mushroom_circle_arrival` beat — Raena feels a way through here) and the ring
+// itself (umc25_2, the `mushroom_circle` step-in / step-back choice). The entry
+// is canRevisit:false so the arrival beat plays once; its passthroughTo back to
+// uep24_4 still works (same setup as uep16_entry). The circle node stays
+// revisitable — stepping back leaves it un-completed so the choice can be taken
+// again.
+export function createUnderdarkMushroomCircle25Map() {
+  const map = new GameMap('underdark_mushroom_circle_25', 'The Underdark');
+  const AREA = 'underdark_mushroom_circle_25';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkMushroomCircle25.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Something further into the chamber.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Far Threshold (uep24_4). Fires the
+    // arrival dialog once (canRevisit:false).
+    { id: 'umc25_entry', name: 'The Ring Chamber', description: 'The corridor lets out into a round, high chamber where the air sits heavy and strangely still. The way back lies behind you.', encounterId: 'mushroom_circle_arrival', connections: ['umc25_2'], position: [370, 860], mapArea: AREA, canRevisit: false, passthroughTo: 'uep24_4' },
+    { id: 'umc25_2', name: 'The Mushroom Circle', description: 'A perfect ring of pale mushrooms grows out of the chamber floor, and the air inside it is not quite the same air as the air outside it.', encounterId: 'mushroom_circle', connections: ['umc25_entry'], position: [650, 530], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'umc25_entry';
+  return map;
+}
+
+// The Ancient Druid Circle — the far end of the Mushroom Circle ring (umc25_2),
+// and the first surface map since the party went underground: a standing ring in
+// the Silverwood, close to Kar-Eden. 2 nodes — the circle itself (adc_center,
+// where the party materializes and the one-shot `ancient_druid_circle` beat
+// fires) and the way out into the trees (adc_exit, no onward map yet).
+// adc_center is canRevisit:false so the arrival beat plays once; its
+// passthroughTo sends the party back down to umc25_2 (same setup as
+// uep16_entry). In NO_FOG_MAPS — a small open clearing, seen whole on arrival.
+export function createAncientDruidCircleMap() {
+  const map = new GameMap('ancient_druid_circle', 'The Silverwood');
+  const AREA = 'ancient_druid_circle';
+  map.mapImages = { [AREA]: 'Maps/AncientDruidCircle.jpg' };
+  const nodes = [
+    { id: 'adc_center', name: 'The Ancient Druid Circle', description: 'A ring of leaning standing stones in a forest clearing, the grass inside it worn bare. The ring leads back down into the dark.', encounterId: 'ancient_druid_circle', connections: ['adc_exit'], position: [660, 600], mapArea: AREA, canRevisit: false, passthroughTo: 'umc25_2' },
+    // The Silverwood Path teleports on to the Kar-Eden road south (map 01).
+    { id: 'adc_exit', name: 'The Silverwood Path', description: 'A track leaves the clearing under the old trees — north to Kar-Eden, south the long way round toward Qualibaf. Raena knows every step of both.', encounterId: '', connections: ['adc_center'], position: [520, 870], mapArea: AREA, canRevisit: true, passthroughTo: 'kep01_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'adc_center';
+  return map;
+}
+
+// The Kar-Eden road south — three surface maps chaining the Silverwood clearing
+// down to the North Crossroad above Qualibaf: 01 (3 nodes) → 02 (5) → 03 (5).
+// Each map's ENTRY node teleports back to the previous stretch and its LAST node
+// teleports on to the next. Outdoor trail treatment, matching the East Mountain
+// Trail: in NO_FOG_MAPS (no black overlay) but every node past the entry is
+// `discoverable`, so the road still reveals one hop at a time.
+export function createKarEdenPath01Map() {
+  const map = new GameMap('kar_eden_path_01', 'The Silverwood');
+  const AREA = 'kar_eden_path_01';
+  map.mapImages = { [AREA]: 'Maps/KarEdenPathtoQualibaf01.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further down the wood road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Silverwood Path (adc_exit).
+    { id: 'kep01_entry', name: 'The Wood Road', description: 'The track drops away south from the clearing under a roof of old silver-barked trees, the light coming down green and moving. The circle lies behind you.', encounterId: '', connections: ['kep01_2'], position: [620, 440], mapArea: AREA, canRevisit: true, passthroughTo: 'adc_exit' },
+    { id: 'kep01_2', name: 'The Elder Boughs', description: 'The oldest trees in this stretch lean their branches across the road until it runs through a green tunnel, and every sound comes back soft.', encounterId: '', connections: ['kep01_entry', 'kep01_3'], position: [460, 550], ...D },
+    // The last node teleports on to map 02.
+    { id: 'kep01_3', name: 'The Fallen Marker', description: 'A carved elven waystone lies toppled in the ferns, its script worn but still readable: south, and the number of days. The road runs on.', encounterId: '', connections: ['kep01_2'], position: [680, 860], ...D, passthroughTo: 'kep02_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'kep01_entry';
+  return map;
+}
+
+// Kar-Eden road 02 — the middle stretch, out of the deep wood and into open
+// country. 5 nodes in a line, from The Fallen Marker (kep01_3) on to map 03.
+export function createKarEdenPath02Map() {
+  const map = new GameMap('kar_eden_path_02', 'The Silverwood');
+  const AREA = 'kar_eden_path_02';
+  map.mapImages = { [AREA]: 'Maps/KarEdenPathtoQualibaf02.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further down the road south.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Fallen Marker (kep01_3).
+    { id: 'kep02_entry', name: 'Past the Marker', description: 'South of the waystone the silver trees begin to thin, and for the first time in weeks there is sky in front of you as well as above. The wood road lies behind you.', encounterId: '', connections: ['kep02_2'], position: [490, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'kep01_3' },
+    { id: 'kep02_2', name: 'The Thinning Wood', description: 'The trees stand further apart here, and grass and bramble have taken the ground between them.', encounterId: '', connections: ['kep02_entry', 'kep02_3'], position: [520, 200], ...D },
+    { id: 'kep02_3', name: 'The Ford', description: 'A shallow stream crosses the road over flat stones, cold and quick and clean — and after the black water of the deep, worth stopping for.', encounterId: '', connections: ['kep02_2', 'kep02_4'], position: [670, 500], ...D },
+    { id: 'kep02_4', name: 'The Burnt Stand', description: 'A stand of trees off the road went up years ago, black trunks still standing in a ring of new green.', encounterId: '', connections: ['kep02_3', 'kep02_5'], position: [910, 650], ...D },
+    // The last node teleports on to map 03.
+    { id: 'kep02_5', name: "The Wood's Edge", description: 'The Silverwood ends, plainly and all at once, and the road runs out of it into rolling open country. The way south lies ahead.', encounterId: '', connections: ['kep02_4'], position: [1150, 820], ...D, passthroughTo: 'kep03_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'kep02_entry';
+  return map;
+}
+
+// Kar-Eden road 03 — the last stretch, open country running down to Qualibaf.
+// 5 nodes in a line. The last node (kep03_5) teleports on to the North Crossroad
+// (north_crossroad) on the north_qualibaf map.
+export function createKarEdenPath03Map() {
+  const map = new GameMap('kar_eden_path_03', 'North of Qualibaf');
+  const AREA = 'kar_eden_path_03';
+  map.mapImages = { [AREA]: 'Maps/KarEdenPathtoQualibaf03.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further down the road to Qualibaf.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Wood's Edge (kep02_5).
+    { id: 'kep03_entry', name: 'The Open Road', description: 'Out from under the trees the road runs straight across open ground, and the wind has room to move. The Silverwood stands at your back.', encounterId: '', connections: ['kep03_2'], position: [560, 200], mapArea: AREA, canRevisit: true, passthroughTo: 'kep02_5' },
+    { id: 'kep03_2', name: 'The Long Hedge', description: 'A field hedge runs beside the road for the better part of a mile — planted, kept, and a sure sign of people not far off.', encounterId: '', connections: ['kep03_entry', 'kep03_3'], position: [880, 320], ...D },
+    { id: 'kep03_3', name: 'The Milestone', description: 'A squat road-marker gives the distance to Qualibaf in a hand you actually recognize. Somebody has scratched a rude comment under the number.', encounterId: '', connections: ['kep03_2', 'kep03_4'], position: [780, 480], ...D },
+    { id: 'kep03_4', name: 'The Cart Ruts', description: 'The track widens into a proper road, rutted deep by cart wheels and printed all over with the day\'s traffic.', encounterId: '', connections: ['kep03_3', 'kep03_5'], position: [610, 820], ...D },
+    // The last node teleports on to the Silverwood Road, the way-in node beside
+    // the North Crossroad above Qualibaf.
+    { id: 'kep03_5', name: 'The Crossroad Rise', description: 'The road tops a low rise, and there below you is a crossroad you have stood on before — and past it, smoke and rooftops. Qualibaf.', encounterId: '', connections: ['kep03_4'], position: [1060, 880], ...D, passthroughTo: 'silverwood_road' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'kep03_entry';
+  return map;
+}
+
+// Underdark North Path 26 — through The Sealed Arch (usx_n2), the north road off
+// the South Crossroad. 6 nodes: a 3-node approach (unp26_entry → _2 → _3) that
+// forks at _3 into a single node (unp26_a1, which teleports on to North Path 27)
+// and a 2-node way (unp26_b1 → b2, which teleports on to North Path 28).
+// unp26_entry teleports back to usx_n2.
+export function createUnderdarkNorthPath26Map() {
+  const map = new GameMap('underdark_north_path_26', 'The Underdark');
+  const AREA = 'underdark_north_path_26';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPath26.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the north road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Sealed Arch (usx_n2). Always visible.
+    { id: 'unp26_entry', name: 'Through the Arch', description: 'You squeeze past the sealed gate into air that has not been breathed in a very long time — dry, dead, and cold enough to ache. The crossroad lies behind you.', encounterId: '', connections: ['unp26_2'], position: [710, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'usx_n2' },
+    { id: 'unp26_2', name: 'The Dust Road', description: 'The road runs on under a finger of grey dust, unmarked by any track but your own.', encounterId: '', connections: ['unp26_entry', 'unp26_3'], position: [890, 470], ...D },
+    // The fork.
+    { id: 'unp26_3', name: 'The Split Stone', description: 'A single great slab has cracked clean down its middle, and the road goes around it both ways — one climbing, one holding level.', encounterId: '', connections: ['unp26_2', 'unp26_a1', 'unp26_b1'], position: [650, 340], ...D },
+    // Path A — one node, teleports on to North Path 27.
+    { id: 'unp26_a1', name: 'The Climbing Way', description: 'The high road rises past the slab toward a colder draught coming down out of the dark ahead.', encounterId: '', connections: ['unp26_3'], position: [710, 180], ...D, passthroughTo: 'unp27_entry' },
+    // Path B — two nodes, the second teleports on to North Path 28.
+    { id: 'unp26_b1', name: 'The Level Road', description: 'The low road holds its line, the walls closing in until the way is barely two abreast.', encounterId: '', connections: ['unp26_3', 'unp26_b2'], position: [390, 300], ...D },
+    { id: 'unp26_b2', name: 'The Narrow Gate', description: 'A doorway of fitted stone stands at the end of the low road, narrow enough that you go through it one at a time. The way runs on beyond.', encounterId: '', connections: ['unp26_b1'], position: [230, 160], ...D, passthroughTo: 'unp28_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unp26_entry';
+  return map;
+}
+
+// Underdark North Path 27 — up the high road from The Climbing Way (unp26_a1).
+// 8 nodes. unp27_entry teleports back to unp26_a1 and links ONLY to The Steps
+// Down (unp27_b0) — that node is the map's junction, connecting the landing,
+// the wall route (unp27_a0 → a1 → a2) and the floor route (b1 → b2 → b3). The
+// entry is deliberately kept off the branch-to-branch path: it's a teleporter,
+// so walking over it to cross between branches would yank the party off the
+// map. No onward links yet.
+export function createUnderdarkNorthPath27Map() {
+  const map = new GameMap('underdark_north_path_27', 'The Underdark');
+  const AREA = 'underdark_north_path_27';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPath27.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Climbing Way (unp26_a1). Forks here.
+    // Threshold — teleports back down to The Climbing Way. It links ONLY to
+    // The Steps Down, so crossing between the two branches never has to touch
+    // the landing (walking onto it would teleport the party off the map).
+    { id: 'unp27_entry', name: 'The High Landing', description: 'The climb tops out on a wide landing where the cold draught comes from. The road down lies behind you.', encounterId: '', connections: ['unp27_b0'], position: [540, 840], mapArea: AREA, canRevisit: true, passthroughTo: 'unp26_a1' },
+    // Way A — 3 nodes, reached off The Steps Down.
+    { id: 'unp27_a0', name: 'The Ledge Head', description: 'The landing narrows to a shoulder of rock where the wall-ledge begins, a single cut step marking the start of it.', encounterId: '', connections: ['unp27_b0', 'unp27_a1'], position: [350, 720], ...D },
+    { id: 'unp27_a1', name: 'The Wall Walk', description: 'A ledge runs along the cavern wall, worn smooth at shoulder height by hands that steadied themselves here.', encounterId: '', connections: ['unp27_a0', 'unp27_a2'], position: [170, 590], ...D },
+    // The Watch Cut teleports on to North Path Middle 33.
+    { id: 'unp27_a2', name: 'The Watch Cut', description: 'The ledge ends at a squared notch cut through to the open dark — a lookout, angled at the road far below. Behind the watch-post a passage runs on, back into the rock.', encounterId: '', connections: ['unp27_a1'], position: [160, 260], ...D, passthroughTo: 'unm33_entry' },
+    // Way B — 4 nodes. The Steps Down is the real junction of this map: the
+    // landing, the wall route and the floor route all meet here.
+    { id: 'unp27_b0', name: 'The Steps Down', description: 'A short flight of shallow steps drops off the landing to the cavern floor, each one dished in the middle by long use. The ways part here — one along the wall, one out across the open floor.', encounterId: '', connections: ['unp27_entry', 'unp27_a0', 'unp27_b1'], position: [620, 750], ...D },
+    { id: 'unp27_b1', name: 'The Open Floor', description: 'The floor of the cavern runs flat and bare for a long stretch, and your steps come back at you off walls you cannot see.', encounterId: '', connections: ['unp27_b0', 'unp27_b2'], position: [700, 640], ...D },
+    { id: 'unp27_b2', name: 'The Fallen Column', description: 'A worked column lies broken across the floor, its drums scattered like dropped coins.', encounterId: '', connections: ['unp27_b1', 'unp27_b3'], position: [820, 470], ...D },
+    // The Cold Draught teleports on to North Path Right 37.
+    { id: 'unp27_b3', name: 'The Cold Draught', description: 'Here the draught is strong enough to pull at your torch, coming steady out of a dark the light will not cross. Whatever it comes from is that way, and the floor runs on toward it.', encounterId: '', connections: ['unp27_b2'], position: [920, 290], ...D, passthroughTo: 'unr37_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unp27_entry';
+  return map;
+}
+
+// Underdark North Path 28 — beyond The Narrow Gate (unp26_b2). 4 nodes in a
+// line. unp28_entry teleports back to unp26_b2. No onward link yet.
+export function createUnderdarkNorthPath28Map() {
+  const map = new GameMap('underdark_north_path_28', 'The Underdark');
+  const AREA = 'underdark_north_path_28';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPath28.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the low road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Narrow Gate (unp26_b2). Always visible.
+    { id: 'unp28_entry', name: 'Past the Narrow Gate', description: 'Through the doorway the passage opens up again, the walls falling back into dark on both hands. The gate lies behind you.', encounterId: '', connections: ['unp28_2'], position: [300, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'unp26_b2' },
+    { id: 'unp28_2', name: 'The Rope Line', description: 'A rotted line of rope runs waist-high along the wall, pegged every few paces — a guide for walking this stretch blind.', encounterId: '', connections: ['unp28_entry', 'unp28_3'], position: [490, 610], ...D },
+    { id: 'unp28_3', name: 'The Dry Sump', description: 'A deep basin cut into the floor stands empty, its inflow channel choked with grey silt.', encounterId: '', connections: ['unp28_2', 'unp28_4'], position: [770, 380], ...D },
+    // The Far Dark teleports on to North Path Left 29.
+    { id: 'unp28_4', name: 'The Far Dark', description: 'The passage runs on past the reach of any light you carry, and keeps running.', encounterId: '', connections: ['unp28_3'], position: [740, 150], ...D, passthroughTo: 'unl29_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unp28_entry';
+  return map;
+}
+
+// The Underdark north-left road — four maps chaining on from The Far Dark
+// (unp28_4): 29 (5 in a line) → 30 (2 in, then a fork of two 2-node branches) →
+// the LEFT branch runs on to 31 (5 in a line) → 32 (4 in a line). The last node
+// of 32 is the current end of the road: walking onto it toasts a
+// "not built yet" notice instead of teleporting (see the arriveAtNode case).
+export function createUnderdarkNorthPathLeft29Map() {
+  const map = new GameMap('underdark_north_left_29', 'The Underdark');
+  const AREA = 'underdark_north_left_29';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathLeft29.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the left-hand road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Far Dark (unp28_4). Always visible.
+    { id: 'unl29_entry', name: 'Out of the Far Dark', description: 'The long blind stretch finally gives out, and the passage takes a definite turn left and downward. The way you came lies behind you.', encounterId: '', connections: ['unl29_2'], position: [670, 830], mapArea: AREA, canRevisit: true, passthroughTo: 'unp28_4' },
+    { id: 'unl29_2', name: 'The Leftward Bend', description: 'The road holds its new heading, bending steadily left as though it were going around something very large.', encounterId: '', connections: ['unl29_entry', 'unl29_3'], position: [880, 620], ...D },
+    { id: 'unl29_3', name: 'The Chalk Marks', description: 'Somebody has drawn a run of chalk marks along the wall at knee height — counting something, in a hand that got shakier as it went.', encounterId: '', connections: ['unl29_2', 'unl29_4'], position: [1120, 420], ...D },
+    { id: 'unl29_4', name: 'The Slumped Wall', description: 'A whole section of wall has slumped inward, and the road picks its way over the spill in a rough scramble.', encounterId: '', connections: ['unl29_3', 'unl29_5'], position: [920, 230], ...D },
+    // The last node teleports on to map 30.
+    { id: 'unl29_5', name: 'The Quiet Reach', description: 'Past the spill the passage runs straight and clean again, and quiet — quiet enough that you find yourself listening for what is missing. The way runs on.', encounterId: '', connections: ['unl29_4'], position: [770, 40], ...D, passthroughTo: 'unl30_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unl29_entry';
+  return map;
+}
+
+// North Path Left 30 — from The Quiet Reach (unl29_5). 6 nodes: a 2-node entry
+// (unl30_entry → _2) that forks at _2 into a 2-node left branch (unl30_l1 → l2,
+// which teleports on to map 31) and a 2-node right branch (unl30_r1 → r2, a dead
+// end for now). unl30_entry teleports back to unl29_5.
+export function createUnderdarkNorthPathLeft30Map() {
+  const map = new GameMap('underdark_north_left_30', 'The Underdark');
+  const AREA = 'underdark_north_left_30';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathLeft30.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the left-hand road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Quiet Reach (unl29_5). Always visible.
+    { id: 'unl30_entry', name: 'The Long Approach', description: 'The road runs on out of the quiet into a wider dark, the floor swept oddly clean underfoot. The way back lies behind you.', encounterId: '', connections: ['unl30_2'], position: [480, 840], mapArea: AREA, canRevisit: true, passthroughTo: 'unl29_5' },
+    // The fork.
+    { id: 'unl30_2', name: 'The Parting Stone', description: 'A standing stone sits square in the middle of the way, worn smooth on both sides where traffic has gone by it left and right.', encounterId: '', connections: ['unl30_entry', 'unl30_l1', 'unl30_r1'], position: [680, 630], ...D },
+    // Left branch — runs on to map 31.
+    { id: 'unl30_l1', name: 'The Left Hand Way', description: 'The left road keeps to the level and holds its heading, the walls squared off by old tools.', encounterId: '', connections: ['unl30_2', 'unl30_l2'], position: [510, 510], ...D },
+    { id: 'unl30_l2', name: 'The Worked Passage', description: 'Here the tool marks are everywhere — floor, walls, ceiling — all of it cut by hand, and all of it going somewhere. The way runs on.', encounterId: '', connections: ['unl30_l1'], position: [410, 300], ...D, passthroughTo: 'unl31_entry' },
+    // Right branch — dead end for now.
+    { id: 'unl30_r1', name: 'The Right Hand Way', description: 'The right road climbs a little and narrows, the cut stone giving way to raw rock within a dozen paces.', encounterId: '', connections: ['unl30_2', 'unl30_r2'], position: [1020, 500], ...D },
+    // Not blind after all — the far side of the rock face opens onto the
+    // middle road (unm34_a1). Two-way once the party finds it from either end.
+    { id: 'unl30_r2', name: 'The Blind End', description: 'The right road stops at a face of raw rock — but the fall of stone at its foot is loose, and behind it the dark keeps going. Whatever dug this from the far side very nearly met the diggers coming this way.', encounterId: '', connections: ['unl30_r1'], position: [1170, 270], ...D, passthroughTo: 'unm34_a1' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unl30_entry';
+  return map;
+}
+
+// North Path Left 31 — from The Worked Passage (unl30_l2). 5 nodes in a line;
+// the last teleports on to map 32. unl31_entry teleports back to unl30_l2.
+export function createUnderdarkNorthPathLeft31Map() {
+  const map = new GameMap('underdark_north_left_31', 'The Underdark');
+  const AREA = 'underdark_north_left_31';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathLeft31.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper down the worked road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Worked Passage (unl30_l2). Always visible.
+    { id: 'unl31_entry', name: 'The Cut Road', description: 'The worked passage opens into a proper cut road, squared and level and running dead straight ahead. The way back lies behind you.', encounterId: '', connections: ['unl31_2'], position: [520, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'unl30_l2' },
+    { id: 'unl31_2', name: 'The Drain Grooves', description: 'Shallow grooves run the length of the road on both sides, cut to carry water that has not run here in a very long time.', encounterId: '', connections: ['unl31_entry', 'unl31_3'], position: [610, 620], ...D },
+    { id: 'unl31_3', name: 'The Empty Sockets', description: 'Square sockets are cut into the walls at even spacing, every one of them empty — whatever stood in them was taken, not broken.', encounterId: '', connections: ['unl31_2', 'unl31_4'], position: [380, 620], ...D },
+    { id: 'unl31_4', name: 'The Turning Post', description: 'A squat stone post stands where the road widens, its top dished and polished by rope.', encounterId: '', connections: ['unl31_3', 'unl31_5'], position: [180, 400], ...D },
+    // The last node teleports on to map 32.
+    { id: 'unl31_5', name: 'The Under Gate', description: 'The road ends at a gateway cut clean through the rock, its lintel a single stone longer than your party standing end to end. Beyond it, the road goes on.', encounterId: '', connections: ['unl31_4'], position: [130, 130], ...D, passthroughTo: 'unl32_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unl31_entry';
+  return map;
+}
+
+// North Path Left 32 — through The Under Gate (unl31_5). 4 nodes in a line and
+// the current end of this road: walking onto the last node (unl32_4) fires a
+// "this area isn't built yet" toast (handled in arriveAtNode) and leaves the
+// party standing there. unl32_entry teleports back to unl31_5.
+export function createUnderdarkNorthPathLeft32Map() {
+  const map = new GameMap('underdark_north_left_32', 'The Underdark');
+  const AREA = 'underdark_north_left_32';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathLeft32.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Beyond the under gate.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Under Gate (unl31_5). Always visible.
+    { id: 'unl32_entry', name: 'Beyond the Under Gate', description: 'Through the gate the road keeps its square, careful line, and the dark ahead has the feel of a made place rather than a dug one. The gate lies behind you.', encounterId: '', connections: ['unl32_2'], position: [980, 850], mapArea: AREA, canRevisit: true, passthroughTo: 'unl31_5' },
+    { id: 'unl32_2', name: 'The Paved Way', description: 'The floor turns to fitted paving, every slab still sitting level after however many centuries this has been down here.', encounterId: '', connections: ['unl32_entry', 'unl32_3'], position: [880, 630], ...D },
+    { id: 'unl32_3', name: 'The Marker Stones', description: 'Waist-high stones stand at intervals along the paving, each one carved with a mark none of you can read — and all of them pointing the same way on.', encounterId: '', connections: ['unl32_2', 'unl32_4'], position: [530, 470], ...D },
+    // End of the built road for now — see the toast case in arriveAtNode.
+    { id: 'unl32_4', name: 'The Road Goes On', description: 'The paving runs on into a dark that swallows your light whole, and keeps going. Whatever is down there, it is further than you can reach today.', encounterId: '', connections: ['unl32_3'], position: [380, 300], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unl32_entry';
+  return map;
+}
+
+// The Underdark north-MIDDLE road — four maps chaining on from The Watch Cut
+// (unp27_a2): 33 (4 in a line) → 34 (2 in, then a fork: a 1-node way that comes
+// out at The Blind End on Left 30, and a 2-node way on to 35) → 35 (2 in, then a
+// fork: a 4-node dead-end way and a 3-node way on to 36) → 36 (4 in a line).
+// The last node of 36 toasts the same "not built yet" notice as Left 32.
+export function createUnderdarkNorthPathMiddle33Map() {
+  const map = new GameMap('underdark_north_middle_33', 'The Underdark');
+  const AREA = 'underdark_north_middle_33';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathMiddle33.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the middle road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Watch Cut (unp27_a2). Always visible.
+    { id: 'unm33_entry', name: 'Behind the Watch', description: 'Behind the lookout the passage runs back into the rock, squared and deliberate — whoever watched that road came and went this way. The cut lies behind you.', encounterId: '', connections: ['unm33_2'], position: [810, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'unp27_a2' },
+    { id: 'unm33_2', name: 'The Guard Room', description: 'A small squared chamber off the passage, its stone bench worn to a dip and a rack on the wall with nothing left in it.', encounterId: '', connections: ['unm33_entry', 'unm33_3'], position: [630, 720], ...D },
+    { id: 'unm33_3', name: 'The Signal Post', description: 'A shaft goes up out of sight here, and a rusted bell-frame hangs at the bottom of it, its rope long since rotted away.', encounterId: '', connections: ['unm33_2', 'unm33_4'], position: [500, 530], ...D },
+    // The last node teleports on to map 34.
+    { id: 'unm33_4', name: 'The Inner Door', description: 'A door-frame of dressed stone stands open on the deeper passage, its door taken off and carried away rather than broken. The way runs on.', encounterId: '', connections: ['unm33_3'], position: [250, 380], ...D, passthroughTo: 'unm34_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unm33_entry';
+  return map;
+}
+
+// North Path Middle 34 — from The Inner Door (unm33_4). 5 nodes: a 2-node entry
+// (unm34_entry → _2) forking at _2 into a single node (unm34_a1, which teleports
+// through to The Blind End on Left 30 — the two roads very nearly met) and a
+// 2-node way (unm34_b1 → b2, on to map 35). unm34_entry teleports back to unm33_4.
+export function createUnderdarkNorthPathMiddle34Map() {
+  const map = new GameMap('underdark_north_middle_34', 'The Underdark');
+  const AREA = 'underdark_north_middle_34';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathMiddle34.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the middle road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Inner Door (unm33_4). Always visible.
+    { id: 'unm34_entry', name: 'Past the Inner Door', description: 'Beyond the empty door-frame the passage widens and the air moves again, coming from more than one direction. The door lies behind you.', encounterId: '', connections: ['unm34_2'], position: [520, 850], mapArea: AREA, canRevisit: true, passthroughTo: 'unm33_4' },
+    // The fork.
+    { id: 'unm34_2', name: 'The Draught Split', description: 'Two draughts meet here and argue over your torch — one dry and close, one long and cold. The passage divides to match.', encounterId: '', connections: ['unm34_entry', 'unm34_a1', 'unm34_b1'], position: [620, 590], ...D },
+    // Short way — comes out at The Blind End (unl30_r2) on Left 30.
+    { id: 'unm34_a1', name: 'The Unfinished Cut', description: 'The close way ends in a working face, tools\' marks still sharp on it — and a spill of loose stone at the foot where somebody, from the far side, got very nearly through.', encounterId: '', connections: ['unm34_2'], position: [330, 390], ...D, passthroughTo: 'unl30_r2' },
+    // Long way — on to map 35.
+    { id: 'unm34_b1', name: 'The Cold Way', description: 'The long draught comes down this passage steady and unbroken, carrying a faint smell of water and old stone.', encounterId: '', connections: ['unm34_2', 'unm34_b2'], position: [860, 410], ...D },
+    { id: 'unm34_b2', name: 'The Stair Head', description: 'The passage arrives at the head of a broad stair going down, wide enough for four abreast and cut with a handrail groove. The way runs on below.', encounterId: '', connections: ['unm34_b1'], position: [970, 180], ...D, passthroughTo: 'unm35_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unm34_entry';
+  return map;
+}
+
+// North Path Middle 35 — down the stair from The Stair Head (unm34_b2). 9 nodes:
+// a 2-node entry (unm35_entry → _2) forking at _2 into a 4-node dead-end way
+// (unm35_a1 → a4) and a 3-node way (unm35_b1 → b3, on to map 36).
+// unm35_entry teleports back to unm34_b2.
+export function createUnderdarkNorthPathMiddle35Map() {
+  const map = new GameMap('underdark_north_middle_35', 'The Underdark');
+  const AREA = 'underdark_north_middle_35';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathMiddle35.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper below the stair.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Stair Head (unm34_b2). Always visible.
+    { id: 'unm35_entry', name: 'The Stair Foot', description: 'The stair lets you down into a hall with a ceiling too high for your light to find. The steps climb away behind you.', encounterId: '', connections: ['unm35_2'], position: [270, 880], mapArea: AREA, canRevisit: true, passthroughTo: 'unm34_b2' },
+    // The fork.
+    { id: 'unm35_2', name: 'The Divided Hall', description: 'A spine of rock splits the hall down its length, and the floor runs on either side of it into separate dark.', encounterId: '', connections: ['unm35_entry', 'unm35_a1', 'unm35_b1'], position: [510, 870], ...D },
+    // Way A — 4 nodes, dead end.
+    { id: 'unm35_a1', name: 'The Left Aisle', description: 'The near side of the spine runs past a row of squared alcoves, each one deep enough to stand a person in.', encounterId: '', connections: ['unm35_2', 'unm35_a2'], position: [790, 810], ...D },
+    { id: 'unm35_a2', name: 'The Broken Cistern', description: 'A great cistern has split along one wall, its contents long gone and its floor crusted white.', encounterId: '', connections: ['unm35_a1', 'unm35_a3'], position: [1010, 690], ...D },
+    { id: 'unm35_a3', name: 'The Sunken Store', description: 'A storeroom sits half a step below the floor level, its shelves collapsed into a mat of grey rot.', encounterId: '', connections: ['unm35_a2', 'unm35_a4'], position: [1120, 470], ...D },
+    // Not a dead end — the back of the alcove is a doorway through to the
+    // right-hand road (unr39_a2). Two-way once found from either side.
+    { id: 'unm35_a4', name: 'The Last Alcove', description: 'The aisle ends at a final alcove, larger than the rest, with a step up into it and nothing whatsoever inside — until your light finds the back of it, and there is no back. The stone opens on a passage running away east.', encounterId: '', connections: ['unm35_a3'], position: [1110, 80], ...D, passthroughTo: 'unr39_a2' },
+    // Way B — 3 nodes, on to map 36.
+    { id: 'unm35_b1', name: 'The Right Aisle', description: 'The far side of the spine is the wider road, its floor swept by the draught coming through the hall.', encounterId: '', connections: ['unm35_2', 'unm35_b2'], position: [680, 690], ...D },
+    { id: 'unm35_b2', name: 'The Standing Pillars', description: 'Four squat pillars carry the roof here, each cut with a band of chisel-work at chest height.', encounterId: '', connections: ['unm35_b1', 'unm35_b3'], position: [780, 510], ...D },
+    { id: 'unm35_b3', name: 'The Hall Mouth', description: 'The hall narrows to a mouth of dressed stone, and past it the made road picks up again and runs on.', encounterId: '', connections: ['unm35_b2'], position: [790, 320], ...D, passthroughTo: 'unm36_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unm35_entry';
+  return map;
+}
+
+// North Path Middle 36 — through The Hall Mouth (unm35_b3). 4 nodes in a line
+// and the current end of this road: walking onto unm36_4 fires the same
+// "not built yet" toast as Left 32 (see arriveAtNode). unm36_entry teleports
+// back to unm35_b3.
+export function createUnderdarkNorthPathMiddle36Map() {
+  const map = new GameMap('underdark_north_middle_36', 'The Underdark');
+  const AREA = 'underdark_north_middle_36';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathMiddle36.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Beyond the hall mouth.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Hall Mouth (unm35_b3). Always visible.
+    { id: 'unm36_entry', name: 'Past the Hall Mouth', description: 'Through the mouth the road runs on, and the work of it is finer here — closer joints, cleaner lines, no wasted cut. The hall lies behind you.', encounterId: '', connections: ['unm36_2'], position: [800, 860], mapArea: AREA, canRevisit: true, passthroughTo: 'unm35_b3' },
+    { id: 'unm36_2', name: 'The Kerbed Road', description: 'A raised kerb runs along both sides of the way, as though something was expected to come down it fast enough to need keeping on.', encounterId: '', connections: ['unm36_entry', 'unm36_3'], position: [870, 680], ...D },
+    { id: 'unm36_3', name: 'The Wide Threshold', description: 'The road passes under a threshold three times wider than it needs to be, its jambs cut with sockets for a gate that is no longer there.', encounterId: '', connections: ['unm36_2', 'unm36_4'], position: [700, 480], ...D },
+    // End of the built road for now — see the toast case in arriveAtNode.
+    { id: 'unm36_4', name: 'The Way Ahead', description: 'Past the threshold the road runs on level and straight into a dark your light cannot dent. Whatever it was built to reach is still out there, further than today.', encounterId: '', connections: ['unm36_3'], position: [460, 330], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unm36_entry';
+  return map;
+}
+
+// The Underdark north-RIGHT road — four maps chaining on from The Cold Draught
+// (unp27_b3): 37 (4 in a line) → 38 (4 in a line) → 39 (2 in, then a fork: a
+// 2-node way that comes out at The Last Alcove on Middle 35, and a 3-node way on
+// to 40) → 40 (4 in a line). The last node of 40 toasts the same "not built yet"
+// notice as Left 32 / Middle 36.
+export function createUnderdarkNorthPathRight37Map() {
+  const map = new GameMap('underdark_north_right_37', 'The Underdark');
+  const AREA = 'underdark_north_right_37';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathRight37.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the right-hand road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Cold Draught (unp27_b3). Always visible.
+    { id: 'unr37_entry', name: 'Into the Draught', description: 'You walk into the cold coming the other way, and it does not let up. The open floor lies behind you.', encounterId: '', connections: ['unr37_2'], position: [950, 870], mapArea: AREA, canRevisit: true, passthroughTo: 'unp27_b3' },
+    { id: 'unr37_2', name: 'The Wind Gallery', description: 'The passage narrows and the draught quickens through it, moaning off some edge of stone you never find.', encounterId: '', connections: ['unr37_entry', 'unr37_3'], position: [850, 680], ...D },
+    { id: 'unr37_3', name: 'The Scoured Floor', description: 'Centuries of moving air have swept this stretch down to bare rock, polished and clean and printless.', encounterId: '', connections: ['unr37_2', 'unr37_4'], position: [1160, 270], ...D },
+    // The last node teleports on to map 38.
+    { id: 'unr37_4', name: 'The Sounding Bend', description: 'The passage turns, and the draught turns with it — and somewhere past the bend the moan drops to a note you feel in your chest more than hear. The way runs on.', encounterId: '', connections: ['unr37_3'], position: [910, 40], ...D, passthroughTo: 'unr38_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unr37_entry';
+  return map;
+}
+
+// North Path Right 38 — from The Sounding Bend (unr37_4). 4 nodes in a line;
+// the last teleports on to map 39. unr38_entry teleports back to unr37_4.
+export function createUnderdarkNorthPathRight38Map() {
+  const map = new GameMap('underdark_north_right_38', 'The Underdark');
+  const AREA = 'underdark_north_right_38';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathRight38.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the right-hand road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Sounding Bend (unr37_4). Always visible.
+    { id: 'unr38_entry', name: 'Past the Bend', description: 'Around the turn the passage runs on into the low note, and the cold comes with it. The bend lies behind you.', encounterId: '', connections: ['unr38_2'], position: [430, 870], mapArea: AREA, canRevisit: true, passthroughTo: 'unr37_4' },
+    { id: 'unr38_2', name: 'The Vent Shafts', description: 'A row of narrow shafts pierces the wall at head height, and the draught pours out of every one of them at once.', encounterId: '', connections: ['unr38_entry', 'unr38_3'], position: [500, 600], ...D },
+    { id: 'unr38_3', name: 'The Grille', description: 'A grille of black iron blocks a side opening, its bars thick as your wrist and its lock long since rusted solid.', encounterId: '', connections: ['unr38_2', 'unr38_4'], position: [790, 300], ...D },
+    // The last node teleports on to map 39.
+    { id: 'unr38_4', name: 'The Air Well', description: 'The passage passes the mouth of a shaft going straight down, and the cold is coming up out of it. Somewhere far below, something very large is breathing. The way runs on.', encounterId: '', connections: ['unr38_3'], position: [690, 90], ...D, passthroughTo: 'unr39_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unr38_entry';
+  return map;
+}
+
+// North Path Right 39 — from The Air Well (unr38_4). 7 nodes: a 2-node entry
+// (unr39_entry → _2) forking at _2 into a 2-node way (unr39_a1 → a2, which
+// teleports through to The Last Alcove on Middle 35) and a 3-node way
+// (unr39_b1 → b3, on to map 40). unr39_entry teleports back to unr38_4.
+export function createUnderdarkNorthPathRight39Map() {
+  const map = new GameMap('underdark_north_right_39', 'The Underdark');
+  const AREA = 'underdark_north_right_39';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathRight39.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the right-hand road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Air Well (unr38_4). Always visible.
+    { id: 'unr39_entry', name: 'Past the Air Well', description: 'You leave the shaft and its breathing behind, and nobody suggests looking down it again. The way back lies behind you.', encounterId: '', connections: ['unr39_2'], position: [580, 870], mapArea: AREA, canRevisit: true, passthroughTo: 'unr38_4' },
+    // The fork.
+    { id: 'unr39_2', name: 'The Crossing Ways', description: 'Two passages meet the road here at an angle neither of them was cut for — one going west into worked stone, one going on north.', encounterId: '', connections: ['unr39_entry', 'unr39_a1', 'unr39_b1'], position: [600, 730], ...D },
+    // West way — comes out at The Last Alcove (unm35_a4) on Middle 35.
+    { id: 'unr39_a1', name: 'The West Cut', description: 'The western passage is older work, its walls dressed and its floor dipping gently down.', encounterId: '', connections: ['unr39_2', 'unr39_a2'], position: [420, 770], ...D },
+    { id: 'unr39_a2', name: 'The Back Door', description: 'The cut ends at a squared opening looking into a deep stone alcove — a way in that whoever built the hall beyond plainly never meant to advertise.', encounterId: '', connections: ['unr39_a1'], position: [200, 520], ...D, passthroughTo: 'unm35_a4' },
+    // North way — on to map 40.
+    { id: 'unr39_b1', name: 'The North Way', description: 'The northern passage keeps the road\'s line and the road\'s squared walls, running level and dead straight.', encounterId: '', connections: ['unr39_2', 'unr39_b2'], position: [540, 550], ...D },
+    { id: 'unr39_b2', name: 'The Cut Steps', description: 'A short run of steps lifts the way onto a higher floor, each tread cut deep enough for boots much larger than yours.', encounterId: '', connections: ['unr39_b1', 'unr39_b3'], position: [350, 340], ...D },
+    { id: 'unr39_b3', name: 'The Upper Landing', description: 'The steps top out on a landing where the walls fall away to either side, and the road runs on into the open dark ahead.', encounterId: '', connections: ['unr39_b2'], position: [480, 100], ...D, passthroughTo: 'unr40_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unr39_entry';
+  return map;
+}
+
+// North Path Right 40 — from The Upper Landing (unr39_b3). 4 nodes in a line and
+// the current end of this road: walking onto unr40_4 fires the same
+// "not built yet" toast as Left 32 / Middle 36 (see arriveAtNode).
+// unr40_entry teleports back to unr39_b3.
+export function createUnderdarkNorthPathRight40Map() {
+  const map = new GameMap('underdark_north_right_40', 'The Underdark');
+  const AREA = 'underdark_north_right_40';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkNorthPathRight40.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Beyond the upper landing.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Upper Landing (unr39_b3). Always visible.
+    { id: 'unr40_entry', name: 'Off the Landing', description: 'The road leaves the landing and runs out across a floor whose far side your light never reaches. The landing lies behind you.', encounterId: '', connections: ['unr40_2'], position: [950, 870], mapArea: AREA, canRevisit: true, passthroughTo: 'unr39_b3' },
+    { id: 'unr40_2', name: 'The Standing Marks', description: 'Cut marks run along the floor in a straight line beside the road, spaced like the footings of something that was carried this way on rollers.', encounterId: '', connections: ['unr40_entry', 'unr40_3'], position: [630, 660], ...D },
+    { id: 'unr40_3', name: 'The Second Gate', description: 'Another gateway stands across the road, twin to the one behind you, and just as thoroughly stripped of its gate.', encounterId: '', connections: ['unr40_2', 'unr40_4'], position: [530, 350], ...D },
+    // End of the built road for now — see the toast case in arriveAtNode.
+    { id: 'unr40_4', name: 'The Long Approach North', description: 'Past the second gate the road straightens and widens and goes on, and every instinct you have says it is an approach to something. Not today, though.', encounterId: '', connections: ['unr40_3'], position: [500, 70], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'unr40_entry';
   return map;
 }
 
@@ -922,12 +2113,17 @@ export function createNorthQualibafMap() {
 
   const nodes = [
     { id: 'north_gate_return', name: 'North Gate Return', description: 'Outside the northern gate of Qualibaf.', encounterId: '', connections: ['north_crossroad'], position: [480, 947], mapArea: 'north_qualibaf', canRevisit: true },
-    { id: 'north_crossroad', name: 'North Crossroad', description: 'A crossroad north of the city.', encounterId: 'north_crossroad', connections: ['north_gate_return', 'filibaf_entrance', 'north_road'], position: [580, 170], mapArea: 'north_qualibaf', unlocks: ['filibaf_entrance'] },
+    { id: 'north_crossroad', name: 'North Crossroad', description: 'A crossroad north of the city.', encounterId: 'north_crossroad', connections: ['north_gate_return', 'filibaf_entrance', 'north_road', 'silverwood_road'], position: [580, 170], mapArea: 'north_qualibaf', unlocks: ['filibaf_entrance'] },
     { id: 'filibaf_entrance', name: 'Filibaf Entrance', description: 'The entrance to Filibaf Forest.', encounterId: 'filibaf_entrance', connections: ['north_crossroad'], position: [825, 160], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, hiddenName: '???' },
     // Armorer's-son side quest — opens once the crossroad quest dialog is
     // finished (handleEncounterChoiceClick unlocks it). Goes nowhere yet:
     // no encounter, a placeholder node for the rescue beat to come.
-    { id: 'north_road', name: 'The North Road', description: 'The road climbs north toward the smoke-hazed hills.', encounterId: '', connections: ['north_crossroad'], position: [540, 85], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'The road runs on into the northern hills.' },
+    { id: 'north_road', name: 'The North Road', description: 'The road climbs north toward the smoke-hazed hills.', encounterId: '', connections: ['north_crossroad'], position: [620, 95], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, hiddenName: '???', hiddenDescription: 'The road runs on into the northern hills.' },
+    // Chapter 3 — the road the party comes down out of the Silverwood, and the
+    // way back up it. Stays locked (and so undrawn) until they arrive from
+    // Kar-Eden road 03; the _karEdenRoadUnlocked latch re-applies the unlock in
+    // hydrateMapFromGlobalState after a reload. Teleports to kep03_5.
+    { id: 'silverwood_road', name: 'The Silverwood Road', description: 'The northwest road runs up out of the farm country toward the elven wood — and the standing stones the party came through.', encounterId: '', connections: ['north_crossroad'], position: [470, 100], mapArea: 'north_qualibaf', isLocked: true, canRevisit: true, passthroughTo: 'kep03_5' },
   ];
 
   for (const data of nodes) {

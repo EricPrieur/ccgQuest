@@ -162,4 +162,11 @@ export const LORE_ENTRIES = [
   { name: 'Templars of Bahamut', type: 'Faction', description: 'A holy order in Guk sworn to destroy the undead and shield the town from the evil rising in the depths.' },
   { name: 'Dimitri', type: 'Person', description: 'A Templar of Bahamut at Guk.' },
   { name: 'Démétan', type: 'Person', description: 'Démétan the Troll-cleaver, a champion of Guk.' },
+  { name: 'Callarduran Smoothhands', type: 'Deity', description: 'The Svirfneblin god of stone and deep places, who shaped the caverns with bare hands. His sign is a signet ring set with a star-cut ruby.' },
+  { name: 'Hall of Callarduran', type: 'Place', description: 'The deep gnome village’s holy place, down the well stair — a smooth-walled vault where a great hand of rock reaches open-palmed from the wall.' },
+  { name: 'Psilofyr', type: 'Deity', description: 'The fungal god, worshipped by the myconids and borrowed by the deep gnomes who farm their caps. His altars are never cleaned — the growth on them is the god.' },
+  { name: 'Altar of Psilofyr', type: 'Place', description: 'A fungus-covered stone figure at the top of the village warrens. The caps crowding its shoulders are the offering; scraping them off would be the sacrilege.' },
+  { name: 'Ancient Druid Circle', type: 'Place', description: 'A ring of standing stones in the Silverwood, half a day south of Kar-Eden. Paired with a mushroom ring far below — it opens only toward a place someone remembers.' },
+  { name: 'Circle Guardians', type: 'Creature', description: 'Four treants rooted around the Silverwood stone circle, sleeping as old oaks until strangers arrive. They woke for Raena, and remembered her.' },
+  { name: 'Cornis Metalhands', type: 'Person', description: 'A Svirfneblin smith of the deep gnome village. His hands are mithril from the wrist down, cut to socket a hammer, a pick, or a blade as the work demands.' },
 ];

@@ -14,9 +14,18 @@ export class CardEffect {
     this.value = value;
     this.target = target;
     this.maxTargets = maxTargets;
+    // Optional lower bound for multi-target picks. When set (and below
+    // maxTargets), the pick count is rolled per cast in the inclusive range
+    // [minTargets, maxTargets] — the Umber Hulk's Rend hits 2-3. Left at 0,
+    // maxTargets is used as a fixed count, exactly as before.
+    this.minTargets = 0;
     // optional Bleed rider applied to each target this effect hits.
     // Used by the Rampaging Troll's Rend (damage_random_split + Bleed).
     this.bleed = bleed;
+    // optional Sunder rider, same shape as `bleed` but applied BEFORE the
+    // swing resolves, so the Armor/Block it strips is already gone when the
+    // hit it rides on gets mitigated. Used by the Umber Hulk's Rend.
+    this.sunder = 0;
     // optional: the play flow will skip this effect entirely when no
     // valid target exists (e.g. Raena's Called arrow vs an invulnerable-
     // only-enemy fight). Lets the card still resolve as a pure summon
@@ -31,6 +40,8 @@ export class CardEffect {
 
   copy() {
     const c = new CardEffect(this.effectType, this.value, this.target, this.maxTargets, this.bleed);
+    c.minTargets = this.minTargets;
+    c.sunder = this.sunder;
     c.optional = this.optional;
     c.noAttackCount = this.noAttackCount;
     return c;
@@ -73,15 +84,29 @@ export class Card {
     characterClass = [],
     tier = 1,
     rarity = 'common',
+    // Secondary type trait, shown after the primary in the card's type line
+    // ("Ability — Ranged"). Purely additive: the PRIMARY subtype still drives
+    // class equip rules, deck-limit category, and codex filter. This exists so
+    // a card can be a Ranged thing for TRIGGER purposes (the Quiver) without
+    // being reclassified as a weapon.
+    subtype2 = null,
     previewCard = null,
+    previewCards = [],
     previewCreature = null,
     previewCreatures = [],
     isToken = false,
     isUnique = false,
     provision = null,
+    provisions = null,
     unplayable = false,
     gamePlusOffset = null,
     noTierOffset = false,
+    // How many times this card counts as dealing ARCANE damage. Read by the
+    // Arcane Vortex, which fires one proc per hit. Declared per card rather
+    // than sniffed from the effects: Magic Missiles is ONE effect that fires
+    // three shots, while Arcane Explosion's "Deal 1 to All" is one effect
+    // across N enemies — no automatic rule gives 3 and 2 respectively.
+    arcaneHits = 0,
     sellable = false,
     heroismDamageMult = 1,
   }) {
@@ -101,12 +126,19 @@ export class Card {
     this.characterClass = characterClass;
     this.tier = tier;
     this.rarity = rarity;
+    this.subtype2 = subtype2;
     this.previewCard = previewCard;
+    this.previewCards = previewCards;
     this.previewCreature = previewCreature;
     this.previewCreatures = previewCreatures;
     this.isToken = isToken;
     this.isUnique = isUnique;
     this.provision = provision;
+    // Optional MULTI-slot provisions. A card that fills more than one slot in
+    // one Consume (Barrelstalk: Meal + Beverage) supplies this array instead
+    // of `provision`; grant_provision iterates it. Single-slot cards keep
+    // using `provision` and nothing changes for them.
+    this.provisions = provisions;
     this.unplayable = unplayable;
     // ccgQuest+ tier-offset scaling rules — optional. Object with
     // per-effect-type bump amounts applied PER offset point. Example:
@@ -126,6 +158,7 @@ export class Card {
     // suppresses the codex red "+N?" badge for cards/powers that
     // intentionally stay flat (Overwhelm, Vanish, etc.).
     this.noTierOffset = noTierOffset;
+    this.arcaneHits = arcaneHits;
     // Opt-in flag that overrides canSellAtShop's class-restriction
     // and token gates. Used for cards a player should be allowed to
     // sell back even though they normally wouldn't qualify (the
@@ -167,7 +200,9 @@ export class Card {
       characterClass: [...this.characterClass],
       tier: this.tier,
       rarity: this.rarity,
+      subtype2: this.subtype2,
       previewCard: this.previewCard,
+      previewCards: [...(this.previewCards || [])],
       previewCreature: this.previewCreature,
       previewCreatures: [...this.previewCreatures],
       isToken: this.isToken,
@@ -189,9 +224,21 @@ export class Card {
             }))
           : this.provision.effects,
       } : this.provision,
+      // Same deep-clone treatment for the multi-slot `provisions` array, so a
+      // copy never shares provision objects with the base card.
+      provisions: Array.isArray(this.provisions) ? this.provisions.map(p => ({
+        ...p,
+        effects: Array.isArray(p.effects)
+          ? p.effects.map(e => ({
+              ...e,
+              options: Array.isArray(e.options) ? e.options.map(o => ({ ...o })) : e.options,
+            }))
+          : p.effects,
+      })) : this.provisions,
       unplayable: this.unplayable,
       gamePlusOffset: this.gamePlusOffset,
       noTierOffset: this.noTierOffset,
+      arcaneHits: this.arcaneHits,
       sellable: this.sellable,
       // Carry the Heroism multiplier (Consecration: 2) — without it a
       // drawn/recharged copy fell back to the default 1, so Heroism only
