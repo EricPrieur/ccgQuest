@@ -152,6 +152,7 @@ A bonus behind a condition is worth **half** its face value — *Armor/Shield:
 | **Stays in hand** | **×3** on the body. A stays-in-hand card's printed effect should read *weak* for its rarity, because it fires every turn. Prefer utility bodies (scout, reveal, a rider) over repeatable raw stats. |
 | **2nd target** | **half value.** *Sunder + 3 damage* = 6 on the first target, +3 for the second = 9. |
 | **ALL targets** | **×3.** Sunder All = 9 points, Poison All = 6. Prices AoE debuffs out of the low rarities. |
+| **ALL your own summons** | **roughly half the ALL-targets price — less again when the caster is excluded.** The ×3 above assumes an enemy board that is full and outside your control. Your own host is bounded by the bodies you actually have (often 1–3, sometimes 0 — and at 0 the card is dead), so it cannot be priced like a guaranteed sweep. *2 Shields across your Undead* is **4**, not 12. |
 
 ### Specialisation discount
 

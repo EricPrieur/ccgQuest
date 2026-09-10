@@ -928,19 +928,23 @@ export function createVanish() {
 // Recharge a card to either raise a fresh 1/1 Skeleton (with 1
 // Armor) when no Skeleton-trait ally is on the field, or pick a
 // random existing Skeleton ally and grant it +1 attack / +1 max HP.
-// "Armor" stays as a bare keyword so the small-card tokenizer
-// swaps it for the Armor icon at draw time. Plays bones_clatter_01
-// on use (wired in CARD_SFX_OVERRIDES so the power id routes the
-// cue). Power id stays as 'necromancer_power' for save
-// compatibility — display name is "Skeleton Mastery".
+// Both halves are named with the shared keywords — "Summon" and
+// "Bolster" — so the tokenizer tints them and hover explains the
+// +1/+1 rule, the same way the druid's "Summon or Bolster 2-3
+// Treants" reads. The old copy spelled the raise out as "1/1 Armor
+// Skeleton ... give +1/1 to one", which said the mechanic twice and
+// left Bolster unnamed. Plays bones_clatter_01 on use (wired in
+// CARD_SFX_OVERRIDES so the power id routes the cue). Power id stays
+// as 'necromancer_power' for save compatibility — display name is
+// "Skeleton Mastery".
 export function createNecromancerPower() {
   return new Power({
     id: 'necromancer_power',
     name: 'Skeleton Mastery',
     costDescription: 'Recharge 1 Card',
-    effectDescription: 'Summon a 1/1 Armor Skeleton or give +1/1 to one.',
+    effectDescription: 'Summon or Bolster one Skeleton.',
     rechargeCost: 1,
-    shortDesc: 'R1->1/1 Armor\nSkeleton, or\n+1/1 to one',
+    shortDesc: 'R1->Summon or\nBolster a Skeleton',
     // No tier-offset scaling for now — the apprentice's first power
     // stays flat across ccgQuest+ tiers.
     noTierOffset: true,

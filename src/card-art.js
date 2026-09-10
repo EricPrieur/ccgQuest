@@ -83,6 +83,13 @@ export const CARD_ART_MAP = {
   // at the same file is fine (the Rampage trap was two keys with the SAME name
   // and different files).
   aura_of_might: 'AuraofMight.jpg',
+  unholy_aura: 'UnholyAura.jpg',
+  curse_of_weakness: 'CurseofWeakness.jpg',
+  bone_wall: 'BoneWall.jpg',
+  // Filename is 'SoulHarvert' on disk (source art was named that way); the card
+  // is "Soul Harvest". Keyed to the real file — rename both together if you
+  // ever fix the spelling, or the card falls back to a brown placeholder.
+  soul_harvest: 'SoulHarvert.jpg',
   holy_steed: 'HolySteed.jpg',
   devotion_aura: 'DevotionAura.jpg',
   holy_shield: 'HolyShield.jpg',

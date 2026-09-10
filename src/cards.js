@@ -3871,18 +3871,27 @@ export function getDruidAbilityChoices() {
           createAvatarOfTheWild()];
 }
 
-// Necromancer ability pool. Tier 1: Arcane Shield (shared with
-// Wizard, the ward against the Specter), Shadow Bolt, Drain Life,
-// Army of the Dead. Tier 2: The Butcher (companion call) and Plague
-// (AoE poison burst). Cards carry their own `tier`, so the codex /
-// getAbilityChoices split them into the Tier 1 and Tier 2 decks. This
-// is the canonical list the full Necromancer class will draw from.
+// Necromancer ability pool. Tier 1: Arcane Shield (shared with Wizard, the
+// ward against the Specter), Shadow Bolt, Drain Life, Army of the Dead.
+// Tier 2: Corpse Explosion, Bone Wall (defense), Death Coil, Curse of Weakness
+// (the utility/control slot). Tier 3: The Butcher (companion call), Plague (AoE
+// poison burst), Unholy Aura (in-hand aura), Soul Harvest (single-target
+// closer). Cards carry their own `tier`, so the codex / getAbilityChoices
+// split them into the per-tier decks. This is the canonical list the full
+// Necromancer class draws from.
+//
+// Now 4/4/4, matching every other class. That matters mechanically, not just
+// cosmetically: getAbilityChoices returns the whole tier sorted alphabetically
+// once `count >= tierMatch.length`, and the level-up caller in main.js falls
+// back to Tier 1 entirely when it can't fill three slots — so a short tier is
+// both un-rolled and, below 3, unreachable. Keep every tier at 4+.
 export function getNecromancerAbilityChoices() {
   return [createArcaneShield(), createShadowBolt(), createDrainLife(),
           createArmyOfTheDeadCard(),
-          createTheButcher(), createPlague(),
-          createCorpseExplosion(), createBoneStormNecromancer(),
-          createDeathCoil()];
+          createCorpseExplosion(), createBoneWall(),
+          createDeathCoil(), createCurseOfWeakness(),
+          createTheButcher(), createPlague(), createUnholyAura(),
+          createSoulHarvest()];
 }
 
 export function getAbilityChoices(className, count = 3, tier = 1) {
@@ -4099,14 +4108,21 @@ export function createTheButcher() {
 // immediately resolves all standing Poison as damage (a festering
 // burst). Poison never decays in this engine, so the stacks linger
 // and keep ticking on later turns — Plague just front-loads them.
+// Cost reworked from Recharge to Discard. The discard pile IS the player's HP
+// track, so a plague that costs vitality to unleash reads right — and it puts
+// Plague on the same footing as Death Coil, the pool's other Discard card.
+// Budget note: a T3 rare is 13, and Discard multiplies by 1.5 → 19.5. The
+// printed effect (Poison All = 6, plus the detonate) sits well under that
+// ceiling now, so there is room to raise the Poison or add a rider later
+// without breaking the grid. Left at 1 stack deliberately — see docs/loot-budget.md.
 export function createPlague() {
   return new Card({
     id: 'plague', name: 'Plague',
-    description: 'Deal Poison to ALL.\nApply all Poison Damage.',
-    shortDesc: '+Poison to all\nDetonate Poison',
+    description: 'Discard -> Poison to ALL.\nApply all Poison Damage.',
+    shortDesc: 'D->+Poison all\nDetonate Poison',
     subtype: 'ability',
     cardType: CardType.ABILITY,
-    costType: CostType.RECHARGE,
+    costType: CostType.DISCARD,
     effects: [
       new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
       new CardEffect('apply_all_poison_damage', 0, TargetType.ALL_ENEMIES),
@@ -4116,6 +4132,124 @@ export function createPlague() {
     tier: 3,
     rarity: 'rare',
     gamePlusOffset: { apply_poison_all: 1 },
+  });
+}
+
+// Curse of Weakness — Necromancer Tier 2 (7). The class had no curse at all:
+// zero Weak, zero Sunder, zero control, despite curses being the most canonical
+// necromancer school in the game. It also fixes a shape problem — the tier-2
+// pool was three damage cards (Corpse Explosion, Bone Storm, Death Coil) with
+// no utility slot.
+//
+// Budget is an exact fit at 7: Sunder 1 (3) + Weak 1 (2) + Poison 1 (2). No
+// damage of its own on purpose — it softens a target both ways (Sunder strips
+// the armor so the bone host can chew through, Weak halves the swing coming
+// back) and leaves the killing to the skeletons.
+//
+// Bare keywords mean one stack each, per the card-text convention.
+export function createCurseOfWeakness() {
+  return new Card({
+    id: 'curse_of_weakness',
+    name: 'Curse of Weakness',
+    description: 'Deal Sunder, Weak, Poison.',
+    shortDesc: 'Sunder, Weak,\nPoison',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_weak', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_poison', 1, TargetType.SINGLE_ENEMY),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    // Poison is the cheapest of the three to bump and the most on-theme for
+    // the class, so ccgQuest+ grows the long-tail tick rather than the control.
+    gamePlusOffset: { apply_poison: 1 },
+  });
+}
+
+// Soul Harvest — Necromancer Tier 3 (13, +9 for the second card cost = 22).
+// The capstone the class was missing: every other class escalates its Tier 1
+// identity into a Tier 3 closer (Heroic Strike → Hammer of Wrath, Aimed Shot →
+// Trueshot Barrage, Sneak Attack → Assassinate), but the necromancer's biggest
+// single-target hit stopped at Death Coil in Tier 2. This is Drain Life grown
+// up — same True damage + lifesteal, at boss-killing scale.
+//
+// Spend: True 12 (12) + heal 12 (6) = 18, plus the kill-gated Specter (~2,
+// halved behind the gate) ≈ 20 against a 22 ceiling. Same two-card cost shape
+// as Assassinate, which is the anchor for a Tier 3 closer, and that cost is its
+// own gate at deck scale: a deck stuffed with these mills itself out.
+//
+// The raise is a Forgotten Specter rather than another Skeleton so it doesn't
+// simply duplicate Death Coil's rider — a 2/3 lifesteal body compounds the
+// card's own drain theme.
+export function createSoulHarvest() {
+  return new Card({
+    id: 'soul_harvest',
+    name: 'Soul Harvest',
+    description: 'Recharge a Card ->\nDeal 12 True Damage.\nHeal 1 for each Damage.\nOn Kill: Summon a\nForgotten Specter.',
+    shortDesc: 'R+1->12 True Dmg\nHeal/Dmg\nOn Kill: Specter',
+    subtype: 'ability',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // Damage first, then the heal reads _lastEffectDamageLanded — the same
+      // ordering Drain Life uses, so a partial hit (target died early, or an
+      // Ethereal damageCap clamped it) heals only what actually drained.
+      new CardEffect('unpreventable_damage', 12, TargetType.SINGLE_ENEMY),
+      new CardEffect('heal_for_landed_damage', 0, TargetType.SELF),
+      new CardEffect('summon_specter_on_kill', 1, TargetType.SUMMON),
+    ],
+    characterClass: ['necromancer'],
+    // Tier 3 abilities are rare (see the tier-3 ability line).
+    tier: 3,
+    rarity: 'rare',
+    // True-damage value scales with offset; the heal follows the damage.
+    gamePlusOffset: { unpreventable_damage: 3 },
+    // Side image on the card — same reasoning as Death Coil's Skeleton. This is
+    // the PLAYER-side Specter (True-damage swings), not the Gravekeeper's.
+    previewCreature: createForgottenSpecterAllyCreature(),
+  });
+}
+
+// Unholy Aura — Necromancer Tier 3 (13). The class's missing aura: five of the
+// seven classes carry an in-hand passive (Aura of Might, Devotion Aura, Endless
+// Quiver, Poisoned Dagger, Rallying Shout) and the summoner-commander had none.
+//
+// Like every other in-hand aura the passive is a live hand-scan in
+// getDamageModifier / maybeUnholyAuraHeal, NOT an effect on the card — holding
+// it IS the cost. Narrower than Aura of Might (Undead only, not every ally),
+// which is what pays for the lifesteal rider riding along with the damage.
+//
+// The heal follows the swinger, not the caster: the player's own attacks heal
+// the player (a card back off the discard pile, the usual Heal), and an Undead
+// ally's swing heals that creature 1 HP. That keeps a wide bone host worth
+// fielding instead of funnelling every drop into the necromancer.
+//
+// On Recharge it pays a body — the same Summon-or-Bolster step Skeleton Mastery
+// spends, so ending the aura still grows the host.
+export function createUnholyAura() {
+  return new Card({
+    id: 'unholy_aura',
+    name: 'Unholy Aura',
+    description: 'In Hand: You and your Undead\ndeal +1 Damage and Heal 1.\nOn Recharge: Summon or\nBolster a Skeleton.',
+    shortDesc: 'Hand: +1 Dmg\n+Heal 1, you + Undead\nR: Summon/Bolster',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('on_recharge_summon_or_bolster_skeleton', 1, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    // Tier 3 abilities are rare (see the tier-3 ability line).
+    tier: 3,
+    rarity: 'rare',
+    // The in-hand half is a passive scan, so there is nothing numeric here for
+    // ccgQuest+ to bump; the on-recharge step is one body either way.
+    noTierOffset: true,
   });
 }
 
@@ -4187,6 +4321,40 @@ export function createBoneBuckler() {
 //
 // 10 damage one-shots most summons and won't drop a boss, so the rider fires
 // exactly when you're clearing adds. Sweep the minions, keep the corpses.
+// The two bodies the necromancer's on-kill riders raise. Both live here as
+// creators so the CARD can carry them as `previewCreature` (side image on the
+// card + automatic codex Summons entry) AND the runtime ON_KILL_SUMMONS table
+// can build the identical body — one stat line, no drift between the preview
+// the player sees and the creature they actually get.
+//
+// Same 1/1 armored shell Army of the Dead raises, so Bone Buckler, Book of the
+// Dead, Unholy Aura and Bone Storm's bolster all recognise it through the
+// Skeleton / Undead traits. Deliberately Haste-less — see ON_KILL_SUMMONS.
+export function createNecroSkeletonCreature() {
+  return new Creature({
+    name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+    traits: ['Skeleton', 'Undead'],
+    // No description: the small box under the hover card would duplicate
+    // "Armor: 1." that the left-side card strip already shows.
+  });
+}
+
+// PLAYER-side Forgotten Specter — Soul Harvest's raise. Distinct from the
+// monster version the Plague Gravekeeper's Endless Dead horde fields (built
+// inline in main.js and deliberately left alone, since the necromancer quest
+// balances around it): this one's swings are UNPREVENTABLE, so the wraith the
+// harvest leaves behind keeps draining through Shield, Armor and Block the way
+// the card that raised it does. Lifesteal on top means it heals for the full
+// unblockable amount every swing.
+export function createForgottenSpecterAllyCreature() {
+  return new Creature({
+    name: 'Forgotten Specter', attack: 2, maxHp: 3,
+    lifesteal: true, unpreventable: true,
+    traits: ['Undead'],
+    description: 'Attacks deal True Damage.\nHeals for the damage it deals.',
+  });
+}
+
 export function createDeathCoil() {
   return new Card({
     id: 'death_coil',
@@ -4202,6 +4370,9 @@ export function createDeathCoil() {
     ],
     characterClass: ['necromancer'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { damage: 3 },
+    // Side image on the card — the body only appears on a kill, so showing it
+    // up front is the only way the player can see what they're playing for.
+    previewCreature: createNecroSkeletonCreature(),
   });
 }
 
@@ -4227,7 +4398,61 @@ export function createCorpseExplosion() {
   });
 }
 
-// Bone Storm — Necromancer Tier 2. Strips every enemy's Shield and
+// Bone Wall — Necromancer Tier 2 (7). Replaces Bone Storm in the tier-2 pool.
+// The class's only defense above Tier 1: Arcane Shield and the Bone Buckler
+// shop card were the whole defensive kit, on a cloth-armor class with the
+// smallest deck in the game.
+//
+// The fantasy is the bones taking the hit instead of you — so nothing on this
+// card touches the necromancer. That is also why it is cheap: with Sentinel up
+// the enemy cannot reach you anyway, so shielding yourself would be paying for
+// a clause that does nothing.
+//
+// Budget, exactly 7 on a single-card cost:
+//   2 Shields across your Undead   4   (see the "ALL your own summons" row in
+//                                       docs/loot-budget.md — your host is
+//                                       bounded by the bodies you have, so it
+//                                       is NOT the ×3 an enemy sweep gets)
+//   Sentinel on the host, 1 turn   2
+//   On Recharge: Bolster 1 Undead  1
+//
+// A second card cost was considered and rejected: the math allowed it, but a
+// defensive card that spends two cards to NOT attack never gets played on this
+// class. The deck-abuse ceiling is fine without it — holding the wall means
+// replaying this every turn instead of attacking, the 1/1 bodies erode as they
+// soak, and you personally gain nothing, so the moment the wall falls you are
+// fully exposed.
+//
+// On Recharge fires when the card is played (a Recharge-cost card recharges
+// itself) AND when it is spent as another card's recharge cost — so it still
+// pays out while paying for Soul Harvest. Never a dead draw once a body is up.
+export function createBoneWall() {
+  return new Card({
+    id: 'bone_wall',
+    name: 'Bone Wall',
+    description: 'Your Undead gain 2 Shields\nand Sentinel until your next turn.\nOn Recharge: Bolster 1 Undead.',
+    shortDesc: 'Undead: +2 Shields\n+Sentinel\nR: Bolster 1',
+    subtype: 'ability',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('buff_all_undead_shield', 2, TargetType.SELF),
+      new CardEffect('grant_undead_sentinel', 1, TargetType.SELF),
+      new CardEffect('on_recharge_bolster_undead', 1, TargetType.SELF),
+    ],
+    characterClass: ['necromancer'],
+    tier: 2,
+    rarity: 'uncommon',
+    gamePlusOffset: { buff_all_undead_shield: 1 },
+  });
+}
+
+// Bone Storm — Necromancer Tier 2. RETIRED from the ability pool in favor of
+// Bone Wall: four unrelated clauses (shield theft, chip AoE, a host buff, a
+// draw), and its headline "Steal ALL Shield" did nothing against an unshielded
+// board. The creator stays in CARD_REGISTRY so older saves that already hold a
+// copy still deserialize cleanly — same retirement pattern as Healing Touch.
+// Strips every enemy's Shield and
 // converts it into your own, chips all enemies for 1, and bolsters your
 // whole undead host +1/+1.
 export function createBoneStormNecromancer() {

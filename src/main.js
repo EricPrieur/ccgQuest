@@ -54,7 +54,8 @@ import {
   createChickenLeg, createWardensWhip,
   createWoodenSword, createLeatherArmor, createScraps,
   createWoodenAxe, createJaggedChopper, createGore, createBoarTusk, createBoarhideBracers, createFrenzyBloodVial, createBoarhideBandage, createWoodenGreatsword, createRockMace,
-  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createShadowBolt, createTheButcher, createPlague, createBookOfTheDead, createBoneBuckler, createCorpseExplosion, createBoneStormNecromancer, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
+  createCrackedBuckler, createBuckler, createChitinShield, createMortainsStaff, createDrainLife, createArmyOfTheDeadCard, createShadowBolt, createTheButcher, createPlague, createBookOfTheDead, createBoneBuckler, createCorpseExplosion, createBoneStormNecromancer, createBoneWall, createUnholyAura, createCurseOfWeakness, createSoulHarvest,
+  createNecroSkeletonCreature, createForgottenSpecterAllyCreature, createOldSpectralHand, createDeathSickle, createShortBow, createShortStaff,
   createSmallPouch, createKoboldSpear, createKoboldShield,
   createBoneDagger, createClothArmor, createDragonToothDagger,
   createWhiteDragonscaleShield, createWhiteDragonscaleArmor, createWinterbornRobes,
@@ -4514,7 +4515,17 @@ const CARD_REGISTRY = {
   // Necromancer Tier 2 — Corpse Explosion (sacrifice an ally for AoE +
   // Poison) and Bone Storm (steal shields, chip all, bolster undead).
   corpse_explosion: createCorpseExplosion,
+  // Bone Storm is RETIRED from the ability pool (replaced by Bone Wall) but
+  // stays registered so saves holding a copy still deserialize.
   bone_storm_necromancer: createBoneStormNecromancer,
+  bone_wall: createBoneWall,
+  // Necromancer Tier 2 — Curse of Weakness (the class's only Sunder/Weak card).
+  curse_of_weakness: createCurseOfWeakness,
+  // Necromancer Tier 3 — Unholy Aura (in-hand +1 damage / Heal 1 for the
+  // necromancer and every Undead ally; pays a Skeleton on recharge) and
+  // Soul Harvest (12 True + lifesteal, raises a Forgotten Specter on a kill).
+  unholy_aura: createUnholyAura,
+  soul_harvest: createSoulHarvest,
   // NOTE: Old Spectral Hand (Forgotten Specter) and Death Sickle
   // (Specter of Death) are MONSTER-ONLY cards — deliberately NOT in
   // CARD_REGISTRY so they never appear as player cards. They're built
@@ -22724,14 +22735,21 @@ function handleEncounterChoiceClick(x, y) {
         encounterChoiceResult = null;
         if (firstSleepHere) {
           // The FIRST real night's sleep since the surface is a level-up:
-          // tier-2 ability pick followed by a tier-2 perk pick. Routed through
+          // TIER-3 ability pick followed by a tier-2 perk pick. Routed through
           // an empty LOOT phase carrying triggersLevelUp — advanceEncounterPhase
           // short-circuits a contentless loot page straight into the level-up
           // flow, which does its own rebalance + Well Rested, so no restMode.
+          //
+          // Chapter 3's deep-gnome village is the first beat that hands out
+          // tier-3 abilities. Every class now carries a full 4-card tier-3 band,
+          // so the `choices.length < 3` guard in handleEncounterLootClick no
+          // longer trips — before that was true, asking for tier 3 here would
+          // have silently dropped the player back to the TIER-1 pool.
+          // The perk tier stays at 2 deliberately: it is a separate ladder.
           const levelPhase = new EncounterPhaseData({
             phaseType: EncounterPhase.LOOT,
             triggersLevelUp: true,
-            levelUpTier: 2,
+            levelUpTier: 3,
             perkTier: 2,
           });
           currentEncounter = new Encounter(
@@ -25820,6 +25838,16 @@ function startCombat() {
   _playerDamageTakenThisTurn = 0;
   _playerDamageTakenLastTurn = 0;
   _playerSentinelActive = false;
+  // Bone Wall's granted taunt can't leak between fights. The per-turn sweep
+  // lives in the "--- Your Turn ---" block, which a fresh combat's first turn
+  // never passes through — so a persistent Undead COMPANION (The Butcher) that
+  // was walled at the end of the last fight would still be guarding here.
+  for (const c of (player.creatures || [])) {
+    if (c && c._grantedSentinel) {
+      c.sentinel = false;
+      c._grantedSentinel = false;
+    }
+  }
   selectedCardIndex = -1;
   enemyActions = [];
   enemyArrow = null;
@@ -26887,6 +26915,16 @@ const KEYWORD_ICONS = {
              desc: 'Bring a Companion onto the battlefield. The card uses the Play destination — see Play. Revivify can bring a fallen companion back from the discard pile.' },
   summon:  { isTextKeyword: true, color: '#c898ff', label: 'Summon',
              desc: 'Create a temporary ally creature. The card itself follows its cost (Recharge / Discard); the creature stands on its own and is gone when it dies. Revivify can replay the card from the discard pile.' },
+  // Bolster — the "grow what you already have" half of every
+  // "Summon or Bolster" effect (Skeleton Mastery, Army of the Dead,
+  // Summon Treants, Treant Bark, Staff of the Ancients). Teal-green so
+  // it reads as growth and stays distinct from Summon's purple.
+  // Wording covers both shapes in the engine: the necromancer power
+  // bolsters only when a Skeleton is already standing, while the treant
+  // effects coin-flip once the grove exists and fall back to bolstering
+  // when the field is full.
+  bolster: { isTextKeyword: true, color: '#7fe0b0', label: 'Bolster',
+             desc: 'Grow a summon you already control instead of raising a new one: +1 Attack and +1 max HP, with the new HP healed in so it is not left hurt. The target is picked at random from your eligible summons. A "Summon or Bolster" effect raises a fresh body when none is standing, and bolsters once one is up.' },
   recharge:{ isTextKeyword: true, color: '#9cd6ff', label: 'Recharge',
              desc: 'Card destination: the card goes to the bottom of your draw pile after play — you\'ll see it again later in this combat.' },
   discard: { isTextKeyword: true, color: '#e89870', label: 'Discard',
@@ -27278,7 +27316,7 @@ function tokenizeKeywordText(text, opts = {}) {
   const keywordList = ['DrowPoison', 'First Attack', 'Scry\\s+\\d+', 'Scout\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
     'Fire Body', 'Ice Body',
-    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Sunder', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte',
+    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Sunder', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte', 'Bolster',
     'Paralyzed?', 'Weak',
     'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
@@ -32667,11 +32705,41 @@ function applyOnRechargeDamageAll(card) {
 // spent as another card's recharge cost.
 function applyOnRechargeTeamBuffs(card) {
   if (!card || !Array.isArray(card.currentEffects) || !player) return;
-  let teamHeroism = 0, teamShield = 0, steedHeal = 0;
+  let teamHeroism = 0, teamShield = 0, steedHeal = 0, boneSteps = 0, bolsterUndead = 0;
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'on_recharge_team_heroism') teamHeroism += eff.value;
     else if (eff.effectType === 'on_recharge_team_shield') teamShield += eff.value;
     else if (eff.effectType === 'on_recharge_heal_overheal_heroism') steedHeal += eff.value;
+    else if (eff.effectType === 'on_recharge_summon_or_bolster_skeleton') boneSteps += eff.value;
+    else if (eff.effectType === 'on_recharge_bolster_undead') bolsterUndead += eff.value;
+  }
+  // Bone Wall's parting gift — thicken the host by +1/+1. Picks at RANDOM among
+  // living Undead, matching the necromancer's own bolster idiom (Skeleton
+  // Mastery, Army of the Dead, summonOrBolsterSkeleton) rather than the
+  // first-on-the-field pick the shop cards use (Book of the Dead, Bone Buckler).
+  if (bolsterUndead > 0) {
+    for (let i = 0; i < bolsterUndead; i++) {
+      const undead = (player.creatures || []).filter(c =>
+        c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Undead'));
+      if (undead.length === 0) {
+        addLog(`  ${card.name}: no Undead to bolster.`, Colors.GRAY);
+        break;
+      }
+      const pick = undead[Math.floor(Math.random() * undead.length)];
+      pick.attack = (pick.attack || 0) + 1;
+      pick.maxHp = (pick.maxHp || 0) + 1;
+      pick.currentHp = (pick.currentHp || 0) + 1;
+      spawnHealOnTarget(pick, 1);
+      addLog(`  ${card.name}: ${pick.name} thickens (+1/+1).`, Colors.PURPLE);
+    }
+  }
+  // Unholy Aura's parting gift — the aura ends, but the host grows. Same
+  // Summon-or-Bolster step Skeleton Mastery spends, so the two read identically.
+  if (boneSteps > 0) {
+    for (let i = 0; i < boneSteps; i++) summonOrBolsterSkeleton(player, card.name);
+    // Alias `bones_clatter` → Monster/bones_clatter_01. The raw filename is only
+    // in SOUND_PACKS, so playing it by that name would be silent.
+    playSound('bones_clatter', 0.7);
   }
   const allies = (player.creatures || []).filter(c => c && c.isAlive);
   if (teamHeroism > 0) {
@@ -34428,6 +34496,7 @@ let _snowPawsBonusLogged = false; // Snow Paws +3-first-attack log guard (per pl
 let _swiftAssaultLogged = false; // Swift Assault perk +first-attack log guard (per player turn)
 let _warBannerBonusLogged = false; // Goblin War Banner +damage-aura log guard (per player turn)
 let _auraOfMightLogged = false;   // Aura of Might +damage-aura log guard (per player turn)
+let _unholyAuraLogged = false;    // Unholy Aura +damage-aura log guard (per player turn)
 let _holySteedBonusLogged = false; // Holy Steed first-attack log guard (per player turn)
 // Tracks how much damage the most recent damage effect actually
 // landed on its target. Stamped inside every damage path (creature
@@ -35500,6 +35569,13 @@ function resolveEffect(eff, caster, target) {
         triggerSplitPower(target, actual);
         consumePoisonBuff(caster, target, actual);
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
+        // On-Kill riders. These were wired into `case 'damage'` only, so a
+        // TRUE-damage card carrying one silently never fired — Soul Harvest's
+        // Specter raise needs them here. Both helpers no-op unless the target
+        // is a dead Creature, so the call is safe on every other true-damage
+        // card (Dwarven Crossbow, Spectral Hand, Drain Life).
+        maybeFireDrawOnKill(caster, target);
+        maybeFireSummonOnKill(caster, target);
         // Stamp landed-damage snapshot so the heal_for_landed_damage
         // rider (Drain Life) heals for the capped amount actually drained.
         _lastEffectDamageLanded = actual;
@@ -36265,7 +36341,8 @@ function resolveEffect(eff, caster, target) {
     case 'on_recharge_team_heroism':
     case 'on_recharge_team_shield':
     case 'on_recharge_heal_overheal_heroism':
-      // Markers only. All three are paid by the applyOnRecharge* family, fired
+    case 'on_recharge_summon_or_bolster_skeleton':
+      // Markers only. All are paid by the applyOnRecharge* family, fired
       // from the same hooks as on_recharge_shield / on_recharge_heroism — so
       // they land when the card is played (RECHARGE cost self-recharges) and
       // when it is spent as another card's recharge cost.
@@ -37560,6 +37637,53 @@ function resolveEffect(eff, caster, target) {
       spawnTokenOnTarget(t, amt, 'Shield', Colors.ALLY_BLUE);
       break;
     }
+    case 'buff_all_undead_shield': {
+      // Bone Wall — eff.value Shield to EVERY living Undead ally. The "all"
+      // sibling of buff_one_undead_shield (Bone Buckler). Deliberately does NOT
+      // shield the caster: with Sentinel up the enemy can't reach them anyway.
+      const amt = eff.value || 1;
+      let n = 0;
+      for (const c of (caster.creatures || [])) {
+        if (!c.isAlive || !Array.isArray(c.traits) || !c.traits.includes('Undead')) continue;
+        c.shield = (c.shield || 0) + amt;
+        spawnTokenOnTarget(c, amt, 'Shield', Colors.ALLY_BLUE);
+        n++;
+      }
+      if (n > 0) addLog(`  Bone Wall: +${amt} Shield to ${n} Undead.`, Colors.ALLY_BLUE);
+      else addLog(`  No Undead to shield.`, Colors.GRAY);
+      break;
+    }
+    case 'grant_undead_sentinel': {
+      // Bone Wall — every living Undead ally taunts until the start of the
+      // player's next turn, so the bone host soaks the enemy swing instead of
+      // the necromancer. Same Sentinel pool the naturally-guarding creatures
+      // use (getLivingSentinels / pickEnemyAttackTarget), so no targeting work.
+      //
+      // Only bodies that AREN'T already Sentinel get stamped, and they carry
+      // _grantedSentinel so the turn-start sweep clears exactly what this card
+      // granted — without the flag it would strip Sentinel off a creature that
+      // came with it naturally (a Roper Tentacle joining an undead board).
+      let n = 0;
+      for (const c of (caster.creatures || [])) {
+        if (!c.isAlive || !Array.isArray(c.traits) || !c.traits.includes('Undead')) continue;
+        if (!c.sentinel) {
+          c.sentinel = true;
+          c._grantedSentinel = true;
+        }
+        n++;
+      }
+      if (n > 0) {
+        addLog(`  ${n} Undead raise the wall — Sentinel until your next turn.`, '#c8a060');
+      } else {
+        addLog(`  No Undead to raise the wall.`, Colors.GRAY);
+      }
+      break;
+    }
+    case 'on_recharge_bolster_undead':
+      // Marker only — paid by applyOnRechargeTeamBuffs, so it lands both when
+      // the card is played (a Recharge-cost card recharges itself) and when it
+      // is spent as another card's recharge cost.
+      break;
     case 'buff_all_undead': {
       // Bone Storm — +eff.value/+eff.value to EVERY living Undead ally.
       const amt = eff.value || 1;
@@ -40779,11 +40903,16 @@ function resolveEffect(eff, caster, target) {
       playSound('bones_clatter', 0.7);
       const rolls = Math.max(1, eff.value || 2);
       let lastSkel = null;
+      // Each roll says what it did. Without these the card logged nothing but
+      // the Haste line, so a 2-roll cast read as if it had done nothing at all
+      // — every sibling reports (Skeleton Mastery's "Raise!" / "grows
+      // stronger", Bone Wall's bolster, the boss power's per-roll lines).
       const bolster = (s) => {
         s.attack = (s.attack || 0) + 1;
         s.maxHp = (s.maxHp || 0) + 1;
         s.currentHp = Math.min(s.maxHp, (s.currentHp || 0) + 1);
         spawnTokenOnTarget(s, 1, 'Atk', Colors.RED);
+        addLog(`  ${s.name} grows stronger (+1/+1).`, Colors.PURPLE);
         lastSkel = s;
       };
       for (let r = 0; r < rolls; r++) {
@@ -40798,9 +40927,12 @@ function resolveEffect(eff, caster, target) {
           });
           if (caster.addCreature(skel)) {
             if (caster === player) maybeApplySkeletalStrength(skel);
+            addLog(`  Raise! A new Skeleton claws up.`, Colors.PURPLE);
             lastSkel = skel;
           } else if (skels.length > 0) {
             bolster(skels[Math.floor(Math.random() * skels.length)]); // field full → bolster
+          } else {
+            addLog(`  No room to raise another Skeleton.`, Colors.GRAY);
           }
         } else {
           bolster(skels[Math.floor(Math.random() * skels.length)]);
@@ -40989,6 +41121,7 @@ function resolveEffect(eff, caster, target) {
     }
     case 'summon_tentacle_on_kill':
     case 'summon_skeleton_on_kill':
+    case 'summon_specter_on_kill':
       // Markers only — these riders fire from maybeFireSummonOnKill once the
       // swing that carried them has actually killed something.
       break;
@@ -42518,6 +42651,12 @@ function playCardOnEnemy(handIndex) {
   // the card's own damage so the Vortex's own cast benefits from the charge
   // it just added.
   fireArcaneVortexProcs(card);
+  // Unholy Aura's Heal 1 — once per attack ACTION, however many damage effects
+  // or targets the card carries. Its own gate (cardCountsAsPlayerAttack), not
+  // the Bleed pair below, which misses damage-dealing ABILITY cards. Paid
+  // BEFORE the bleed tick so the aura's sustain can't be beaten to the punch by
+  // the player's own DoT.
+  maybeUnholyAuraHeal(player, card);
   if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
@@ -42600,6 +42739,12 @@ function playCardOnCreature(handIndex, creature) {
   // the card's own damage so the Vortex's own cast benefits from the charge
   // it just added.
   fireArcaneVortexProcs(card);
+  // Unholy Aura's Heal 1 — once per attack ACTION, however many damage effects
+  // or targets the card carries. Its own gate (cardCountsAsPlayerAttack), not
+  // the Bleed pair below, which misses damage-dealing ABILITY cards. Paid
+  // BEFORE the bleed tick so the aura's sustain can't be beaten to the punch by
+  // the player's own DoT.
+  maybeUnholyAuraHeal(player, card);
   if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
 
   _activePlayCard = null;
@@ -44501,6 +44646,10 @@ function resolveAllyAttack(ally, target) {
   _activeAttacker = null;
   countAndRemoveDeadCreatures();
 
+  // Unholy Aura's Heal 1 — one per attack ACTION, so a multiAttack ally that
+  // hit three targets still drains a single point. Same placement rule as the
+  // player-side hook: paid before the bleed tick.
+  maybeUnholyAuraHeal(ally);
   // Bleed tick fires AFTER all strikes land so the attack is never
   // robbed by a fatal bleed. Multi-attack is one swing = one tick.
   tickBleedOnAttack(ally, ally.name);
@@ -44682,12 +44831,21 @@ function noteSunderedDefenses(queued = 1) {
 // Block once Armor is gone, so a Block 3 under 3 leftover Sunder is worth
 // nothing — say so at the moment it's gained instead of letting the player
 // find out when the hit lands.
+// Works for EITHER side. It used to bail on `caster !== player`, so a sundered
+// ENEMY gaining Block logged a bare "+1 Block" and the player only found out it
+// was worthless when the hit landed with no "(blocked N)" suffix — exactly the
+// case Curse of Weakness creates against an unarmored monster, where the whole
+// Sunder stack spills straight onto Block.
 function blockGainLogSuffix(caster, amount) {
-  if (!caster || caster !== player) return '';
-  const sunder = (typeof player.getStatus === 'function') ? (player.getStatus('SUNDER') || 0) : 0;
+  if (!caster || typeof caster.getStatus !== 'function') return '';
+  const sunder = caster.getStatus('SUNDER') || 0;
   if (sunder <= 0) return '';
-  const eff = playerSunderedBlock();
-  const raw = player.currentBlock || 0;
+  const raw = caster.currentBlock || 0;
+  // sunderedDefenses is the same helper the absorb path uses, so the note can
+  // never disagree with what actually happens to the hit.
+  const eff = (typeof caster.sunderedDefenses === 'function')
+    ? caster.sunderedDefenses(raw).block
+    : raw;
   if (eff >= raw) return '';
   return eff > 0
     ? ` (Sunder ${sunder} — only ${eff} will absorb)`
@@ -45293,29 +45451,9 @@ function executePower(power) {
       // healing the bonus HP). Bones-clatter cue is routed via
       // CARD_SFX_OVERRIDES['necromancer_power'] through playCardAmbient
       // (called earlier in executePower) — no explicit playSound needed.
-      const skeletons = player.creatures.filter(c => Array.isArray(c.traits) && c.traits.includes('Skeleton'));
-      if (skeletons.length === 0) {
-        const skel = new Creature({
-          name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-          traits: ['Skeleton', 'Undead'],
-          // No description: the small box section under the hover
-          // card was duplicating "Armor: 1." when the left-side card
-          // strip already shows the armor icon + value. Empty
-          // description lets the strip carry the info on its own.
-        });
-        if (player.addCreature(skel)) {
-          addLog(`  Raise! A new Skeleton claws up beside you.`, Colors.PURPLE);
-          maybeApplySkeletalStrength(skel);
-        } else {
-          addLog(`  No room for another Skeleton.`, Colors.GRAY);
-        }
-      } else {
-        const pick = skeletons[Math.floor(Math.random() * skeletons.length)];
-        pick.attack += 1;
-        pick.maxHp += 1;
-        pick.currentHp += 1;
-        addLog(`  ${pick.name} grows stronger (+1/+1).`, Colors.PURPLE);
-      }
+      // The raise/bolster itself lives in summonOrBolsterSkeleton so this power
+      // and Unholy Aura's on-recharge spend the identical step.
+      summonOrBolsterSkeleton(player);
       break;
     }
     case 'feral_form': {
@@ -46564,6 +46702,102 @@ function killEndOfTurnDeathCreatures(character) {
   character.removeDeadCreatures();
 }
 
+// === Unholy Aura (Necromancer Tier 3) =======================================
+// Live hand-scan, the same shape as Aura of Might / Boarhide Bracers: the aura
+// is on while the card sits in the player's hand and ends the moment it is
+// spent. Nothing is stamped on the character, so there is no state to clean up
+// when the card leaves.
+function unholyAuraInHand() {
+  return !!(player && player.deck && Array.isArray(player.deck.hand)
+    && player.deck.hand.some(c => c && c.id === 'unholy_aura'));
+}
+
+// Who the aura covers: the necromancer herself and her UNDEAD allies. Deliberately
+// trait-gated rather than "every ally" (that's Aura of Might's job) — Thorb and
+// Raena get nothing out of it, a raised Skeleton or The Butcher does. Enemy-side
+// attackers are excluded outright so the aura can never leak across the field,
+// even when an enemy fields Undead of its own.
+function unholyAuraBenefits(character) {
+  if (!character || !unholyAuraInHand()) return false;
+  if (character === player) return true;
+  if (!player || !Array.isArray(player.creatures) || !player.creatures.includes(character)) return false;
+  return Array.isArray(character.traits) && character.traits.includes('Undead');
+}
+
+// The Heal 1 half. Fired from the per-attack funnels (the two card-play hooks
+// and resolveAllyAttack) alongside tickBleedOnAttack, so it obeys the same
+// "one tick per attack ACTION" rule Bleed does — a multi-attack ally swing or a
+// multi-effect attack card heals once, not once per hit.
+//
+// The heal follows the SWINGER: the player's own attack heals the player on her
+// own engine (healPlayer pulls a card back off the discard pile, clearing
+// Ailments first), while an Undead ally's swing heals that creature 1 HP.
+// `card` is supplied on the player-side hooks (the heal only pays when the card
+// actually swung); an ally swing needs no card, since reaching resolveAllyAttack
+// IS the attack.
+function maybeUnholyAuraHeal(attacker, card = null) {
+  if (!attacker || !unholyAuraBenefits(attacker)) return;
+  if (card && !cardCountsAsPlayerAttack(card)) return;
+  if (attacker === player) {
+    healPlayer(1);
+    spawnHealOnTarget(player, 1);
+    addLog(`  Unholy Aura: Heal 1`, Colors.PURPLE);
+    return;
+  }
+  if (!attacker.isAlive) return;
+  const before = attacker.currentHp || 0;
+  attacker.currentHp = Math.min(attacker.maxHp || 0, before + 1);
+  const healed = attacker.currentHp - before;
+  if (healed > 0) {
+    spawnHealOnTarget(attacker, healed);
+    addLog(`  Unholy Aura: ${attacker.name} heals ${healed} (HP:${attacker.currentHp}/${attacker.maxHp})`, Colors.PURPLE);
+  }
+}
+
+// Grow the bone host by one step — the Summon-or-Bolster the necromancer's
+// Skeleton Mastery power and Unholy Aura's on-recharge both spend. Mirrors
+// summonOrBolsterTreant, minus the coin flip: the necromancer's rule is strict,
+// so a fresh Skeleton is raised whenever none is standing and the step always
+// bolsters once one is up. No scaleCreatureWithOffset — the raise is flat
+// across ccgQuest+ tiers, matching what Skeleton Mastery has always done.
+// Returns 'summoned' | 'bolstered' | null (nothing possible at all).
+//
+// `label` prefixes the log lines with the source's name. It matters for the
+// on-recharge callers: paying a card as another card's recharge cost resolves
+// at PICK time, while the "Recharge: <name>" summary prints only after the card
+// it paid for has finished resolving — so the payout line lands above the play
+// it belongs to and its receipt lands below. Naming the source is what stops
+// those two halves from looking like unrelated events.
+function summonOrBolsterSkeleton(side = null, label = null) {
+  const pre = label ? `${label}: ` : '';
+  const host = side || player;
+  const skeletons = (host.creatures || []).filter(c =>
+    c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Skeleton'));
+  if (skeletons.length > 0) {
+    const pick = skeletons[Math.floor(Math.random() * skeletons.length)];
+    pick.attack += 1;
+    pick.maxHp += 1;
+    pick.currentHp += 1;
+    spawnHealOnTarget(pick, 1);
+    addLog(`  ${pre}${pick.name} grows stronger (+1/+1).`, Colors.PURPLE);
+    return 'bolstered';
+  }
+  const skel = new Creature({
+    name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+    traits: ['Skeleton', 'Undead'],
+    // No description: the small box section under the hover card was
+    // duplicating "Armor: 1." when the left-side card strip already shows the
+    // armor icon + value. Empty description lets the strip carry it alone.
+  });
+  if (host.addCreature(skel)) {
+    addLog(`  ${pre}Raise! A new Skeleton claws up beside you.`, Colors.PURPLE);
+    if (host === player) maybeApplySkeletalStrength(skel);
+    return 'summoned';
+  }
+  addLog(`  ${pre}No room for another Skeleton.`, Colors.GRAY);
+  return null;
+}
+
 // Get damage modifier from ice/shock for a Character OR Creature.
 // Shock applies as a flat per-attack penalty (-1 dmg dealt per
 // stack) and also decays at end of turn. Ice is intentionally NOT
@@ -46658,6 +46892,19 @@ function getDamageModifier(character) {
     if (!_auraOfMightLogged) {
       _auraOfMightLogged = true;
       addLog(`  Aura of Might: +1 Damage`, Colors.GOLD);
+    }
+  }
+  // Unholy Aura — the necromancer's in-hand aura. Same live hand-scan and
+  // player-side gate as Aura of Might above, but narrower: it buffs the
+  // necromancer and her UNDEAD allies only, not every ally on the field.
+  // (The Heal 1 half rides maybeUnholyAuraHeal off the per-attack funnel —
+  // it can't live here, because several cards call getDamageModifier twice
+  // for one swing and would drain double.)
+  if (unholyAuraBenefits(character)) {
+    mod += 1;
+    if (!_unholyAuraLogged) {
+      _unholyAuraLogged = true;
+      addLog(`  Unholy Aura: +1 Damage`, Colors.PURPLE);
     }
   }
   if (isPlayerSide) {
@@ -46825,14 +47072,22 @@ const ON_KILL_SUMMONS = {
     log: 'On Kill! The severed tendril keeps moving — Roper Tentacle joins you.',
   },
   summon_skeleton_on_kill: {
-    // Same stat line as Army of the Dead's raise, so Bone Buckler, Book of the
-    // Dead and Bone Storm's bolster all recognise it without extra wiring.
-    create: () => new Creature({
-      name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-      traits: ['Skeleton', 'Undead'],
-    }),
+    // Shares the creator with Death Coil's previewCreature so the side image on
+    // the card and the body the kill actually raises can never drift apart.
+    create: () => createNecroSkeletonCreature(),
     rarity: 'uncommon', subtype: 'ability', sfx: 'bones_clatter',
     log: 'On Kill! The corpse stirs — a Skeleton rises to serve you.',
+  },
+  summon_specter_on_kill: {
+    // Soul Harvest's raise — the PLAYER-side Specter, whose swings are
+    // unpreventable. Shares the creator with Soul Harvest's previewCreature.
+    // The Gravekeeper's 2/3 (no True damage) is built inline in the Endless
+    // Dead handler and stays as it is; the quest balances around that one.
+    // Haste-less like Death Coil's Skeleton — Army of the Dead's third line is
+    // what sells Haste, and this card is already paying for a big swing.
+    create: () => createForgottenSpecterAllyCreature(),
+    rarity: 'rare', subtype: 'ability', sfx: 'specter_screech',
+    log: 'On Kill! The soul does not depart — a Forgotten Specter drifts to your side.',
   },
 };
 
@@ -47900,6 +48155,22 @@ function cardIsStatusAttack(card) {
   return card.currentEffects.some(e => STATUS_ATTACK_EFFECT_TYPES.has(e.effectType));
 }
 
+// "Did the player just attack with this card?" — the gate Unholy Aura's heal
+// keys on. Deliberately NOT the `cardType === ATTACK || cardIsStatusAttack`
+// pair the Bleed tick uses: that pair misses a card that deals damage while
+// carrying a non-ATTACK cardType, which is most of the necromancer's kit
+// (Shadow Bolt, Drain Life and Corpse Explosion are all cardType ABILITY).
+// Reading the effect list instead means the aura pays out on anything that
+// actually swings, whatever the card is filed as.
+function cardCountsAsPlayerAttack(card) {
+  if (!card || !Array.isArray(card.currentEffects)) return false;
+  if (card.cardType === CardType.CREATURE) return false; // summon breath, not a swing
+  if (card.cardType === CardType.RELIC && !card.statusCountsAsAttack) return false;
+  if (card.cardType === CardType.ATTACK) return true;
+  if (card.currentEffects.some(e => DAMAGE_EFFECT_TYPES.has(e.effectType))) return true;
+  return cardIsStatusAttack(card);
+}
+
 // Sum of every standing Goblin War Banner's damage aura on the
 // attacker's OWN side (excluding the attacker itself). Owner-aware: a
 // player banner buffs the player + player allies; an enemy banner buffs
@@ -48910,7 +49181,7 @@ function startEnemyTurn() {
             // 1 Forgotten Specter — 2/3, heals for the damage it deals.
             const fs = new Creature({
               name: 'Forgotten Specter', attack: 2, maxHp: 3,
-              lifesteal: true,
+              lifesteal: true, traits: ['Undead'],
               description: 'Heals for the damage it deals.',
             });
             if (enemy.addCreature(fs)) addLog(`  -> A Forgotten Specter drifts in.`, Colors.PURPLE);
@@ -52554,6 +52825,15 @@ function completePlayerTurnTransition() {
   isPlayerTurn = true;
   _pounceHitPlayer = false; // clear any leftover Pounce lock (e.g. fully-blocked hit)
   _playerSentinelActive = false; // Bulwark's taunt lasts exactly one enemy turn
+  // Bone Wall's taunt has the same one-enemy-turn life. Clear ONLY the bodies
+  // this card stamped (_grantedSentinel) so a creature that guards naturally
+  // keeps its own Sentinel.
+  for (const c of (player.creatures || [])) {
+    if (c && c._grantedSentinel) {
+      c.sentinel = false;
+      c._grantedSentinel = false;
+    }
+  }
   player.clearBlock();
   player.readyPowers();
   player.readyCreatures();
@@ -52572,6 +52852,7 @@ function completePlayerTurnTransition() {
   _swiftAssaultLogged = false; // re-arm the Swift Assault first-attack log
   _warBannerBonusLogged = false; // re-arm the War Banner aura log
   _auraOfMightLogged = false;    // re-arm the Aura of Might log
+  _unholyAuraLogged = false;     // re-arm the Unholy Aura log
   _holySteedBonusLogged = false; // re-arm the Holy Steed first-attack log
   // Frenzy Blood Vial — apply the Bloodied Frenzy Rage for the turn (announce).
   updateFrenzyRage(true);
@@ -62569,6 +62850,15 @@ const CARD_SFX_OVERRIDES = {
   // plate slam as it takes the blow; the Hammer keeps the heavy blunt hit.
   aura_of_might:            { play: 'arcane_shield' },
   devotion_aura:            { play: 'arcane_shield' },
+  // Unholy Aura — bones rattle as the aura collapses into a fresh Skeleton,
+  // matching what Skeleton Mastery plays for the same Summon-or-Bolster step.
+  unholy_aura:              { play: 'bones_clatter' },
+  // Curse of Weakness — dark incantation, same cue the Obsidian Oracle's Curse
+  // uses. No flesh/blocked keys: the card deals no damage, it only curses.
+  curse_of_weakness:        { play: 'dark_spell_01' },
+  // Soul Harvest — the drain itself is the screech of the soul coming loose,
+  // and it doubles as the cue for the Specter the kill leaves behind.
+  soul_harvest:             { play: 'specter_screech', flesh: 'specter_screech' },
   holy_steed:               { defense: 'block_heavy', play: 'block_heavy' },
   holy_shield:              { defense: 'shield_blocked', blocked: 'shield_blocked' },
   hammer_of_wrath_t3:       { play: 'battle_fury', flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
@@ -62662,6 +62952,8 @@ const CARD_SFX_OVERRIDES = {
   army_of_the_dead:         { play: 'bones_clatter' },
   the_butcher:              { play: 'bones_clatter' },
   bone_storm_necromancer:   { play: 'bones_clatter', flesh: 'big_bone_hit' },
+  // Bone Wall — bones locking into place as the host braces.
+  bone_wall:                { play: 'bones_clatter' },
   // Gnikan's Staff cast — ice-blast cue on play so the summoned
   // Ice Elemental arrives with its signature sound. The same alias
   // bookends the elemental's swing + death via getWeaponSfxKeys /
@@ -66932,17 +67224,11 @@ function buildCodexSourceCache() {
   restlessBone._sourceRarity = 'common';
   restlessBone._sourceSubtype = 'armor'; // Loose Bone is a defense (armor) card
   addCreature(restlessBone, 'Summoned by: Loose Bone');
-  // Death Coil's raise. No card carries a previewCreature for it — the body
-  // only appears when the swing actually kills — so the Summons tab needs it
-  // listed by hand. Deliberately Haste-less; see ON_KILL_SUMMONS.
-  const deathCoilSkeleton = new Creature({
-    name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
-    traits: ['Skeleton', 'Undead'],
-  });
-  deathCoilSkeleton._codexSide = 'player';
-  deathCoilSkeleton._sourceRarity = 'uncommon';
-  deathCoilSkeleton._sourceSubtype = 'ability';
-  addCreature(deathCoilSkeleton, 'Summoned by: Death Coil (On Kill)');
+  // (Death Coil's Skeleton and Soul Harvest's Forgotten Specter used to be
+  // hand-listed here. Both cards now carry the body as `previewCreature`, so
+  // the preview scan above adds them automatically — and since addCreature
+  // skips a duplicate key outright, a hand-written entry would have been dead
+  // code shadowed by the preview pass rather than a second source line.)
   // Use the canonical base-Thorb creator so the codex reflects the real recruit
   // stat line (2/5, Armor 1 — post balance pass), not a stale hand-typed 2/6.
   // The Sentinel forms surface from the upgraded / tier-3 Thorb cards' previews.
@@ -67161,6 +67447,70 @@ function buildCodexSourceCache() {
   enemyButcherSummon._sourceRarity = 'uncommon';
   enemyButcherSummon._sourceSubtype = 'allies';
   addCreature(enemyButcherSummon, 'Summoned by: Endless Dead (Plague Gravekeeper)');
+
+  // The two specters off the same Endless Dead roll table. Like the Butcher
+  // above they're built inside the power handler at turn start, never in
+  // setupEnemyForCombat, so the sandbox scan can't see them — and unlike the
+  // Butcher they have no player-side card anchor either, so without these
+  // blocks they never appear in the codex at all.
+  //
+  // NOTE: 'Forgotten Specter' is also the name of the East Corridor BOSS (a
+  // Character, listed under Heroes & Monsters via getCodexMonsterIds). This is
+  // the 2/3 creature the Gravekeeper raises, which is a different body — the
+  // two live in separate codex tabs, so the shared name doesn't collide.
+  const hordeSrc = 'Summoned by: Endless Dead (Plague Gravekeeper)';
+  const deathSpecterSummon = new Creature({
+    name: 'Death Specter', attack: 4, maxHp: 2,
+    damageCap: 1, hitDeath: true,
+    description: 'Ethereal (max 1 dmg). Hit: Death.',
+  });
+  deathSpecterSummon._codexSide = 'enemy';
+  // Rare frame: a Hit: Death body is the scariest thing the table can roll —
+  // one point of HP damage through it ends the run.
+  deathSpecterSummon._sourceRarity = 'rare';
+  deathSpecterSummon._sourceSubtype = 'allies';
+  addCreature(deathSpecterSummon, hordeSrc);
+
+  const forgottenSpecterSummon = new Creature({
+    name: 'Forgotten Specter', attack: 2, maxHp: 3,
+    lifesteal: true, traits: ['Undead'],
+    description: 'Heals for the damage it deals.',
+  });
+  forgottenSpecterSummon._codexSide = 'enemy';
+  forgottenSpecterSummon._sourceRarity = 'uncommon';
+  forgottenSpecterSummon._sourceSubtype = 'allies';
+  addCreature(forgottenSpecterSummon, hordeSrc);
+
+  // (The player-side Forgotten Specter is auto-discovered from Soul Harvest's
+  // previewCreature — see the note by Death Coil's Skeleton above. The codex
+  // dedups by name|attack|maxHp|sentinel|side, so the enemy 2/3 registered just
+  // above and the player's True-damage 2/3 both keep their own entry.)
+
+  // Enemy-side Skeleton — raised by BOTH the Worn Floor boss's Army of the Dead
+  // power and the Gravekeeper's horde. The Skeleton entry above is stamped
+  // player-side (Necromancer Power / Death Coil), and the codex dedups by
+  // name + side, so the enemy raise needs its own entry to show up.
+  const enemySkeletonSummon = new Creature({
+    name: 'Skeleton', attack: 1, maxHp: 1, armor: 1,
+    traits: ['Skeleton', 'Undead'],
+  });
+  enemySkeletonSummon._codexSide = 'enemy';
+  enemySkeletonSummon._sourceRarity = 'common';
+  enemySkeletonSummon._sourceSubtype = 'allies';
+  addCreature(enemySkeletonSummon, 'Summoned by: Army of the Dead / Endless Dead');
+
+  // Cockroach — the Plague Cockroach's turn-start Plague Spawn add (dining-room
+  // fight, Path of the Necromancer). The plague_cockroach setup adds the boss's
+  // deck and the power but NO creature, so the sandbox scan finds an empty
+  // field and the roach never reaches the codex on its own.
+  const cockroachSummon = new Creature({
+    name: 'Cockroach', attack: 1, maxHp: 1, poisonAttack: true,
+    description: 'Hit: +Poison.',
+  });
+  cockroachSummon._codexSide = 'enemy';
+  cockroachSummon._sourceRarity = 'common';
+  cockroachSummon._sourceSubtype = 'allies';
+  addCreature(cockroachSummon, 'Summoned by: Plague Spawn (Plague Cockroach)');
 
   // Ability-choice lists (level-up / Lost Shrine pick). We don't surface a
   // "Ability choice: X" line per card — the per-card characterClass already
