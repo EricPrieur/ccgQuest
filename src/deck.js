@@ -245,6 +245,14 @@ export class Deck {
         if (typeof this.onCardDiscarded === 'function') this.onCardDiscarded(card);
         break;
     }
+    // "A card finished being played" hook. placeByCost is the one funnel every
+    // completed play routes through, and NO payment path uses it — recharge
+    // costs, power costs, Scout and discard-picks all call addToRechargePile /
+    // discardCard directly — so this fires on plays and only on plays.
+    // deck.js stays log- and game-state-agnostic, so the host installs the
+    // handler (same idiom as Character._onSpellTurned). `deck` is passed so the
+    // handler can tell the player's deck from the enemy's.
+    if (typeof Deck._onCardPlayed === 'function') Deck._onCardPlayed(card, this);
   }
 
   addToRechargePile(card) {

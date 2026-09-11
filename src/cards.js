@@ -5862,6 +5862,211 @@ export function createSailorsLuckyCompass() {
   });
 }
 
+// ============================================================
+// Deep Kraken salvage — Tier 3 epics, the Bottomless Lake boss drop.
+//
+// Replaces the six TIER-1 epics the encounter used to reuse from the surface
+// Kraken Spawn (Bloody Eye Patch, Harpoon of the Deep, Tentacle Whip, Sailor's
+// Lucky Compass, Kraken's Eye Spyglass, Barnacle-Covered Buckler). Those stay
+// registered and stay on the Spawn's own table, where they were designed to
+// live — surface-sailor flavour for a river monster.
+//
+// All six are Tier 3 EPIC (16 budget, or 16 + 15 = 31 with a second card cost
+// that isn't refunded by a Draw). The parity is deliberate: the encounter is a
+// PICK of 2 distinct, and in a pick an under-budget entry isn't a weaker option,
+// it's an option nobody ever takes. They differ by SLOT, not by power —
+// martial_2h / item / clothing / allies / relic / simple — where the old six
+// were two light armors, two simple weapons, a relic and an item.
+// ============================================================
+
+// Maw of the Deep — Tier 3 epic martial_2h. 16 + 15 (second card cost, no Draw
+// to refund it) = 31, spent exactly:
+//   Sunder All      9   (3/stack x3 for ALL)
+//   3 Bleed All     9   (1/stack x3)
+//   Deal 13        13
+// The debuffs sweep and the bite lands on one target. An earlier draft had the
+// 13 hitting ALL as well — that alone is 39 by the Whirlwind anchor (T3 rare 13
+// = Deal 3 + Bleed to All), more than a Tier 4 Legendary with a two-card cost.
+export function createMawOfTheDeep() {
+  return new Card({
+    id: 'maw_of_the_deep',
+    name: 'Maw of the Deep',
+    description: 'Recharge a Card ->\nSunder All + 3 Bleed to All.\nDeal 13.',
+    shortDesc: 'R+1->Sunder All\n+3 Bleed All\n13 Dmg',
+    subtype: 'martial_2h',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      // Debuffs BEFORE the bite so the Sunder has already stripped Armor/Block
+      // when the 13 resolves — same ordering rule as the Star-Cut / Mining
+      // Goggles riders.
+      new CardEffect('apply_sunder_all', 1, TargetType.ALL_ENEMIES),
+      new CardEffect('apply_bleed_all', 3, TargetType.ALL_ENEMIES),
+      new CardEffect('damage', 13, TargetType.SINGLE_ENEMY),
+    ],
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: { damage: 4, apply_bleed_all: 1 },
+  });
+}
+
+// Inkbladder Flask — Tier 3 epic item. 2 Ink to ALL (2/stack x2 x3 = 12) plus
+// the on-recharge drip (~2) = 14 of 16.
+//
+// Ink Cloud is the Kraken's own weapon turned around: each stack gives the
+// afflicted a 50% chance to whiff its next attack, and the stack is spent
+// whether or not the swing connected. It is Weak's gambling cousin — Weak
+// reliably halves N swings, Ink deletes about half of them outright.
+//
+// On Recharge fires when the flask is played (a Recharge-cost card recharges
+// itself) AND when it is spent as another card's cost, so it is never dead.
+export function createInkbladderFlask() {
+  return new Card({
+    id: 'inkbladder_flask',
+    name: 'Inkbladder Flask',
+    description: '2 Ink Cloud to ALL.\nOn Recharge: Ink Cloud randomly.',
+    shortDesc: '2 Ink to ALL\nR: Ink randomly',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_ink_cloud_all', 2, TargetType.ALL_ENEMIES),
+      new CardEffect('on_recharge_ink_random', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: { apply_ink_cloud_all: 1 },
+  });
+}
+
+// Drowned Lungs — Tier 3 epic clothing. The two halves pull against each other
+// on purpose: the in-hand heal rewards emptying your hand, the on-recharge
+// shield rewards holding it, and deciding when to cash out is the card.
+//
+// The heal is capped by the game's own economy rather than by a number — a heal
+// restores cards from the DISCARD pile, so it can never exceed damage already
+// taken and simply reports "Nothing to heal" on a clean pile. Without that an
+// uncapped per-card-played heal would be the strongest sustain in the game.
+export function createDrownedLungs() {
+  return new Card({
+    id: 'drowned_lungs',
+    name: 'Drowned Lungs',
+    description: 'In Hand: Heal 1 whenever\nyou play a card.\nOn Recharge: Gain 1 Shield\nfor each card in hand.',
+    shortDesc: 'Hand: Heal 1/card\nR: Shield per card',
+    subtype: 'clothing',
+    cardType: CardType.ABILITY,
+    costType: CostType.RECHARGE,
+    effects: [
+      // Passive marker — the heal is a live hand-scan fired from the card-play
+      // funnel (maybeDrownedLungsHeal), not an effect resolved here. Same shape
+      // as armor_in_hand / Aura of Might.
+      new CardEffect('heal_per_card_played_in_hand', 1, TargetType.SELF),
+      new CardEffect('on_recharge_shield_per_hand_card', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: { heal_per_card_played_in_hand: 1 },
+  });
+}
+
+// Severed Tentacle — Tier 3 epic allies, but a DEFENSE card: you play it
+// reactively and the limb takes the blow. Overflow past the tentacle's HP still
+// reaches you, and a 10+ swing kills it outright (that IS its 10 HP).
+//
+// The body is trimmed from the Kraken's own 6/10 to 5/10 to sit just under The
+// Butcher, which is a whole Tier 3 RARE card (13) for a 3/10 multi-attack hulk.
+// The Draw is genuinely free here — §3 gives defense cards one.
+export function createSeveredTentacleCreature() {
+  return new Creature({
+    name: 'Deep Tentacle', attack: 5, maxHp: 10,
+    bleedAttack: 1,
+    traits: ['Tentacle'],
+    description: 'Attacks apply Bleed.',
+  });
+}
+
+export function createSeveredTentacle() {
+  return new Card({
+    id: 'severed_tentacle',
+    name: 'Severed Tentacle',
+    description: 'Summon a Deep Tentacle\nwho blocks the attack.\nDraw.',
+    shortDesc: 'Deep Tentacle\nBlocks, Draw',
+    subtype: 'allies',
+    cardType: CardType.DEFENSE,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_tentacle_block', 1, TargetType.SUMMON),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    previewCreature: createSeveredTentacleCreature(),
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: {},
+  });
+}
+
+// Fathomless Eye — Tier 3 epic relic. A marking cantrip: it replaces itself, so
+// it costs nothing to play and you play it again every time you draw it.
+//
+// Budget: Mark Randomly (3) + the relic Draw (10) = 13, against an epic's 16.
+// Left epic deliberately — it ships alongside five other 16-point salvage picks
+// and reads as one clean idea rather than a stacked package.
+//
+// Mark is a FLAT 3, same as on Marking Shot (T2 uncommon 7 = Deal 4 + Mark,
+// Draw, where the Draw refunds the second-card cost). It doubles your next hit,
+// so it feels like it should scale with your damage — it does not, and pricing
+// it that way quietly inflates every relic above rare. See the relic cantrip
+// ladder in docs/loot-budget.md; Umber Eye Charm is the anchor that fixes the
+// Draw at 10 (rare 13 = Sunder Randomly 3 + Draw).
+export function createFathomlessEye() {
+  return new Card({
+    id: 'fathomless_eye',
+    name: 'Fathomless Eye',
+    description: 'Mark randomly, Draw.',
+    shortDesc: 'Mark randomly\nDraw',
+    subtype: 'relic',
+    cardType: CardType.RELIC,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('apply_mark_random', 1, TargetType.RANDOM_ENEMY),
+      new CardEffect('draw', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: { apply_mark_random: 1 },
+  });
+}
+
+// Abyssal Harpoon — Tier 3 epic simple weapon. Simple rather than martial by
+// the precedent Harpoon of the Deep already set on the surface Kraken's table.
+//
+// Deliberately UNDER budget: Deal 8 (8) + 2 Bleed (2) + a kill-gated Draw
+// (~2.5, half value per the conditional rule) = ~12.5 of 16. The remainder is
+// paid to the Draw on purpose — a card that replaces itself on every kill is an
+// engine on a wide board, and §4 says to price the ceiling rather than the
+// average. Deal 10 + 3 Bleed would fit the grid exactly; this is the deliberate
+// outlier, flagged here so it doesn't read as an arithmetic slip.
+export function createAbyssalHarpoon() {
+  return new Card({
+    id: 'abyssal_harpoon',
+    name: 'Abyssal Harpoon',
+    description: 'Deal 8 + 2 Bleed.\nOn Kill: Draw.',
+    shortDesc: '8 Dmg +2 Bleed\nOn Kill: Draw',
+    subtype: 'simple',
+    cardType: CardType.ATTACK,
+    costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('damage', 8, TargetType.SINGLE_ENEMY),
+      new CardEffect('apply_bleed', 2, TargetType.SINGLE_ENEMY),
+      new CardEffect('draw_on_kill', 1, TargetType.SELF),
+    ],
+    rarity: 'epic',
+    tier: 3,
+    gamePlusOffset: { damage: 3, apply_bleed: 1 },
+  });
+}
+
 // === Ore loot (Tharnag tunnels supply) ===
 // Unplayable — they sit in the deck as recharge fodder only ("can use
 // them as recharge but that's it"). Copper / Silver / Gold sell for FULL

@@ -180,6 +180,9 @@ export function saveGame(state, saveName = '') {
     // Cleared on rest so the nest re-arms for another run.
     babyRocDefeated: !!state.babyRocDefeated,
     giantBoarDefeated: !!state.giantBoarDefeated,
+    // Passage Ambush (Temple Exit sahuagin corridor) — same latch shape.
+    // Cleared on rest so the gallery re-arms for a fresh ambush.
+    passageAmbushDefeated: !!state.passageAmbushDefeated,
     // Olbrim's Mithril Remedies — one-shot greet latch. Fires the
     // first post-shrine walk-in; revisits go straight into the
     // open-revisit-then-shop flow.
@@ -296,6 +299,18 @@ export function saveGame(state, saveName = '') {
     labyrinthSeed: typeof state.labyrinthSeed === 'number' ? state.labyrinthSeed : 0,
     labyrinthEncounterChance: typeof state.labyrinthEncounterChance === 'number' ? state.labyrinthEncounterChance : 0.2,
     labyrinthComplete: !!state.labyrinthComplete,
+    // Run-flag bag — the AUTHORITATIVE copy of every per-run boolean, built
+    // from the RUN_FLAGS registry in main.js and restored from here first.
+    //
+    // A NEW flag needs ONLY a registry entry; it rides along in here with no
+    // change to this file. The individual `xxx: !!state.xxx` lines above are
+    // legacy mirrors kept so anything reading a save's top-level keys still
+    // works — they are no longer the mechanism, and must not be extended.
+    //
+    // This bag is exactly what the per-field whitelist kept getting wrong:
+    // passageAmbushDefeated and wastesNorthRestDone were both assembled by
+    // main.js, silently dropped here, and reloaded as false.
+    flags: (state.flags && typeof state.flags === 'object') ? { ...state.flags } : {},
     // Gnoll cave layout — which chasm entrance is the boss / guard / generic
     // cave. Rolled ONCE per character on first cave discovery and PERSISTED so
     // the layout is permanent for that character: a save taken inside a cave

@@ -298,6 +298,47 @@ keep new content in the same neighbourhood as what's already shipped and to
 make outliers obvious. Reference points: a Chapter 2 gnoll table is worth
 ~7.55 EV on a drop, a Chapter 3 Underdark table ~9.66.
 
+## Run-state flags — add one in 3 steps
+
+Per-run booleans (`harpiesDefeated`, `giantBoarDefeated`, `passageAmbushDefeated`
+— "this repeatable fight is dead until the next rest", plus every one-shot story
+flag) are driven by the **`RUN_FLAGS` registry** in `src/main.js`. Adding one:
+
+1. **Declare** — `let xDefeated = false;` with the other latches.
+2. **Add a registry line** —
+   `xDefeated: { g: () => xDefeated, s: v => { xDefeated = v; }, rest: true },`
+   `rest: true` means an inn-style long rest re-arms it (`setWellRested`).
+   Save, restore, both new-game resets and the rest-clear all follow from this
+   one line.
+3. **Write the gate** — wherever the flag changes behaviour (usually
+   `canRunEncounter` in `arriveAtNode`). This is the actual feature; nothing
+   automates it.
+
+If the flag latches when an encounter finishes, add the id to
+**`applyEncounterCompletionLatches()`** rather than to a completion branch. An
+encounter can end two ways — running out of phases, or a `completesEncounter`
+CHOICE — and only that helper is called from both. Anything that transitions
+maps, opens a shop or returns early is NOT a pure latch and stays at its call
+site.
+
+**Why it's a registry.** It used to be eight hand-wired sites across two files,
+seven of them pure mirroring. `saveGame()` in `src/save.js` builds its payload
+field-by-field and does **not** spread the state object, so a flag missing from
+that whitelist was assembled, dropped at the boundary, and silently reloaded as
+`false` — with no error, and only on reload. `passageAmbushDefeated` and
+`wastesNorthRestDone` both shipped broken that way. The registry writes one
+`flags` bag, so that failure mode is gone.
+
+Do **not** add new `xxx: !!state.xxx` lines to `save.js`. The ones there are
+legacy mirrors kept so anything reading a save's top-level keys still works;
+`flags` is authoritative and `runFlagsFromSave()` reads it first, falling back
+to the top-level key for saves written before the bag existed.
+
+Saves predating a flag load it as `false`. For a rest-respawn latch that's one
+extra fight on a resumed run; for anything one-shot, add a `completedEncounters`
+backstop (see the Baby Roc / shrine note in `restoreFromSave`) so an old save
+can't re-grant a reward.
+
 ## Versioning
 
 `GAME_VERSION` in `src/constants.js` is bumped manually before every push.

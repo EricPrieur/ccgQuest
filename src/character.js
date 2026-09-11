@@ -134,7 +134,23 @@ export class Character {
     this.persistentBuffs = [];
     this.buffDisplayOrder = [];
     this.heroism = 0;
-    this.shield = 0;
+    // Shield is a guarded accessor, not a plain field. An INVULNERABLE shell —
+    // General Zhost's Army, the Goblin Swarm, the Harpies, the Wolf Pack: the
+    // bosses you beat by clearing their summons rather than hurting them — can
+    // never take damage (see takeDamageFromDeck below), so Shield on it can
+    // never absorb anything. Zhost's Army runs 10 Defensive Formation, which
+    // was silently stacking Shield pips on a body nothing can hurt.
+    //
+    // Guarded here rather than at the ~7 enemy shield-gain sites in main.js so
+    // it can't be reopened by the next card that grants Shield.
+    Object.defineProperty(this, '_shield', {
+      value: 0, writable: true, enumerable: false, configurable: true,
+    });
+    Object.defineProperty(this, 'shield', {
+      get() { return this._shield || 0; },
+      set(v) { this._shield = this._invulnerable ? 0 : v; },
+      enumerable: true, configurable: true,
+    });
     this.rage = 0;
     this.ignite = 0;
     this.poisonBuff = 0;
@@ -222,6 +238,9 @@ export class Character {
   }
 
   addBlock(amount) {
+    // Same rule as shield above: an invulnerable shell takes no damage, so
+    // Block on it can never absorb anything.
+    if (this._invulnerable) return;
     this.currentBlock += amount;
   }
 

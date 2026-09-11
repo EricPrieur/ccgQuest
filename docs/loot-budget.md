@@ -133,6 +133,33 @@ This is also why **relics look weak on paper**: most carry a draw cantrip, and
 the cantrip eats most of the budget. Umber Eye Charm is a 13-point rare whose
 printed effect is only *Sunder Randomly* — the Draw is the rest of the cost.
 
+### The relic cantrip ladder
+
+A relic is *"<status> Randomly, Draw."* — and the **Draw is worth 10 of it**.
+Umber Eye Charm pins that: a Rare T3 (13) whose printed effect is only Sunder
+Randomly (3). So a relic's budget is almost entirely the cantrip, and the
+**status is the differentiator, not the payload**:
+
+| Relic budget | Status package it buys | Example |
+|---|---|---|
+| T3 uncommon (10) | ~0 — the Draw alone | a bare cantrip |
+| T3 rare (13) | **3** | Sunder Randomly (3) · Mark Randomly (3) |
+| T3 epic (16) | **6** | Mark 2 Randomly (6) · Mark + Shock (3+2) |
+| T3 legendary (19) | **9** | Sunder 3 Randomly · a stacked package |
+
+Climbing a rarity rung on a relic buys a **stronger status**, not a second
+mechanic. Keep the shape identical and change what it applies — that is what
+makes the family legible on sight.
+
+Two traps this closes:
+
+- **Don't re-price a status because the tier went up.** Mark is 3 whether it is
+  on a Tier 2 attack or a Tier 3 relic. It doubles your next hit, so it *feels*
+  like it should scale with your damage — it doesn't, and pricing it that way
+  quietly inflates every relic above rare.
+- **Statuses by cost, for reference:** Shock 2 · Weak 2 · Poison 2 · Bleed 1 ·
+  Sunder 3 · **Mark 3**.
+
 ### Conditionals
 
 A bonus behind a condition is worth **half** its face value — *Armor/Shield:

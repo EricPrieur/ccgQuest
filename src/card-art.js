@@ -646,6 +646,14 @@ export const CARD_ART_MAP = {
   deep_tentacle_grab:        'KrakenSpawn_TentacleAttack.jpg',
   deep_swallowing_bite:      'KrakenSpawn.jpg',
   deep_kraken_tentacle:      'KrakenSpawnTentacle.jpg',
+  // Deep Kraken salvage — Bottomless Lake pick-2. Severed Tentacle reuses the
+  // Kraken tentacle art for both the card and its summon preview.
+  maw_of_the_deep:           'MawoftheDeep.jpg',
+  inkbladder_flask:          'InkbladderFlask.jpg',
+  drowned_lungs:             'DrownedLungs.jpg',
+  severed_tentacle:          'KrakenSpawnTentacle.jpg',
+  fathomless_eye:            'FathomlessEye.jpg',
+  abyssal_harpoon:           'AbyssalHarpoon.jpg',
   deep_kraken_tentacle_block:'KrakenSpawnTentacle.jpg',
   deep_kraken_whip:          'KrakenSpawnTentacle.jpg',
   // Kraken loot drops (pick-2 epics after the fight).

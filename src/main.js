@@ -38,6 +38,10 @@ import {
   createFeatherCloak, createHarpyFeather, createHarpyEggOmelette, createHarpyTalonBlade, createHarpyScreamingCharm,
   createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createKrakenWhip, createInkCloud,
   createDeepTentacleCreature, createDeepTentacleGrab, createDeepKrakenTentacleCard, createDeepKrakenTentacleBlock, createDeepSwallowingBite, createDeepKrakenWhip,
+  // Deep Kraken salvage — the tier-3 epics that replace the surface Kraken's
+  // tier-1 set on the Bottomless Lake drop.
+  createMawOfTheDeep, createInkbladderFlask, createDrownedLungs,
+  createSeveredTentacle, createSeveredTentacleCreature, createFathomlessEye, createAbyssalHarpoon,
   createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
   createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
   createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish, createFrostbloom, createBagOfHerbs,
@@ -2789,12 +2793,15 @@ let lastWatchSupplyTaken = false;
 let _lakeFrogRocks = null;
 let _currentFrogRockId = null;
 // Armorer's-son quest (WIP) — Elite Kobold Patrol placement on the
-// qualibaf_bridge map. Mirrors _lakeFrogRocks: holds the bridge node ids
-// (river_climb / treeline) that still carry an unfought patrol. null =
-// not yet picked (re-rolls one node on next arrival). Cleared on rest
-// (setWellRested) so the patrol respawns. _currentBridgePatrolNode tracks
-// which node fired the active fight so the post-encounter dispatch can
-// prune it and unlock the climb forward.
+// qualibaf_bridge map. Mirrors _lakeFrogRocks: holds the bridge node ids that
+// still carry an unfought patrol.
+//
+// TWO patrols, one per zone — zone 1 is river_climb OR treeline, zone 2 is
+// bridge OR trail_north (see BRIDGE_PATROL_ZONES). null = not yet picked;
+// the pair is rolled lazily on first arrival at any candidate node. Cleared on
+// rest (setWellRested) so both respawn. _currentBridgePatrolNode tracks which
+// node fired the active fight so the post-encounter dispatch can prune it and
+// unlock the climb forward.
 let _bridgePatrolNodes = null;
 let _currentBridgePatrolNode = null;
 // Harpy / Kraken boss-flight bookkeeping. harpiesDefeated latches
@@ -2825,6 +2832,136 @@ let babyRocDefeated = false;
 // boar is beaten and clears on rest (setWellRested), so the fight repeats
 // each time the party climbs back through the pines after resting.
 let giantBoarDefeated = false;
+// Passage Ambush (Temple Exit) — the sahuagin corridor. Same latch shape as
+// direBearDefeated. The node is canRevisit so the fight CAN repeat, but it used
+// to re-fire on every single walk-through, which made the corridor an
+// unavoidable toll every time the party passed. Latches on the kill and clears
+// on the next inn-style rest, so a fresh sahuagin has moved in by then.
+let passageAmbushDefeated = false;
+
+// === Run-flag registry =====================================================
+// Every persisted per-run BOOLEAN, declared once with how to read and write it.
+//
+// These flags used to be wired by hand in eight places — declaration, the two
+// encounter-completion sites, the gate, setWellRested, BOTH new-game reset
+// blocks, the state object handed to the save, the whitelist in save.js, and
+// restoreFromSave. Seven of those were pure mirroring, and the save.js
+// whitelist failed SILENTLY when missed: the value was assembled, dropped at
+// the boundary, and reloaded as `false`. That is how passageAmbushDefeated
+// shipped broken.
+//
+// Now save / restore / reset / rest-clear are all driven from this one table.
+// Adding a flag is: declare the `let`, add a line here, and write the gate.
+//
+// Accessor pairs rather than a plain `flags` object on purpose: the ~370 read
+// sites across this file keep using the bare variable, so migrating cost no
+// call-site churn and carries no rename risk. `rest: true` means the flag is
+// cleared by setWellRested (an inn-style long rest re-arms that content).
+const RUN_FLAGS = {
+  prisonBarrelLooted: { g: () => prisonBarrelLooted, s: v => { prisonBarrelLooted = v; } },
+  shownDeckTutorial: { g: () => shownDeckTutorial, s: v => { shownDeckTutorial = v; } },
+  calmGroveRaenaJoined: { g: () => calmGroveRaenaJoined, s: v => { calmGroveRaenaJoined = v; } },
+  calmGroveBreadTaken: { g: () => calmGroveBreadTaken, s: v => { calmGroveBreadTaken = v; } },
+  antiquityShopCleared: { g: () => antiquityShopCleared, s: v => { antiquityShopCleared = v; } },
+  forgeUsed: { g: () => forgeUsed, s: v => { forgeUsed = v; } },
+  forgeRested: { g: () => forgeRested, s: v => { forgeRested = v; } },
+  volcanoHeartSacrificed: { g: () => volcanoHeartSacrificed, s: v => { volcanoHeartSacrificed = v; } },
+  cathedralPrayed: { g: () => cathedralPrayed, s: v => { cathedralPrayed = v; } },
+  cathedralRested: { g: () => cathedralRested, s: v => { cathedralRested = v; } },
+  cozySpotFishingCaught: { g: () => cozySpotFishingCaught, s: v => { cozySpotFishingCaught = v; } },
+  outpostTentRested: { g: () => outpostTentRested, s: v => { outpostTentRested = v; } },
+  supplyPileTaken: { g: () => supplyPileTaken, s: v => { supplyPileTaken = v; } },
+  lastWatchSupplyTaken: { g: () => lastWatchSupplyTaken, s: v => { lastWatchSupplyTaken = v; } },
+  krakenDefeated: { g: () => krakenDefeated, s: v => { krakenDefeated = v; } },
+  krakenLevelUpClaimed: { g: () => krakenLevelUpClaimed, s: v => { krakenLevelUpClaimed = v; } },
+  gontranGnollVictoryClaimed: { g: () => gontranGnollVictoryClaimed, s: v => { gontranGnollVictoryClaimed = v; } },
+  guildGnollRewardClaimed: { g: () => guildGnollRewardClaimed, s: v => { guildGnollRewardClaimed = v; } },
+  harpiesDefeated: { g: () => harpiesDefeated, s: v => { harpiesDefeated = v; } },
+  underdarkGnollUnlocked: { g: () => _underdarkGnollUnlocked, s: v => { _underdarkGnollUnlocked = v; } },
+  bottomlessLakeRevealed: { g: () => _bottomlessLakeRevealed, s: v => { _bottomlessLakeRevealed = v; } },
+  quietPoolUsed: { g: () => _quietPoolUsed, s: v => { _quietPoolUsed = v; } },
+  mushroomCircleUsed: { g: () => _mushroomCircleUsed, s: v => { _mushroomCircleUsed = v; } },
+  karEdenRoadUnlocked: { g: () => _karEdenRoadUnlocked, s: v => { _karEdenRoadUnlocked = v; } },
+  rareMushroomFound: { g: () => _rareMushroomFound, s: v => { _rareMushroomFound = v; } },
+  mushroomFarmIntroSeen: { g: () => _mushroomFarmIntroSeen, s: v => { _mushroomFarmIntroSeen = v; } },
+  psilofyrIntroSeen: { g: () => _psilofyrIntroSeen, s: v => { _psilofyrIntroSeen = v; } },
+  underdarkEncArmed: { g: () => _underdarkEncArmed, s: v => { _underdarkEncArmed = v; } },
+  direBearDefeated: { g: () => direBearDefeated, s: v => { direBearDefeated = v; }, rest: true },
+  rocRescued: { g: () => rocRescued, s: v => { rocRescued = v; } },
+  lastWatchPostRocClaimed: { g: () => lastWatchPostRocClaimed, s: v => { lastWatchPostRocClaimed = v; } },
+  shrineReactivated: { g: () => shrineReactivated, s: v => { shrineReactivated = v; } },
+  stormwatchersShrineActiveSeen: { g: () => stormwatchersShrineActiveSeen, s: v => { stormwatchersShrineActiveSeen = v; } },
+  babyRocDefeated: { g: () => babyRocDefeated, s: v => { babyRocDefeated = v; }, rest: true },
+  giantBoarDefeated: { g: () => giantBoarDefeated, s: v => { giantBoarDefeated = v; }, rest: true },
+  passageAmbushDefeated: { g: () => passageAmbushDefeated, s: v => { passageAmbushDefeated = v; }, rest: true },
+  mithrilRemediesOlbrimGreeted: { g: () => mithrilRemediesOlbrimGreeted, s: v => { mithrilRemediesOlbrimGreeted = v; } },
+  ancestorSpiritsDefeated: { g: () => ancestorSpiritsDefeated, s: v => { ancestorSpiritsDefeated = v; } },
+  ancestorRested: { g: () => ancestorRested, s: v => { ancestorRested = v; } },
+  workbenchRested: { g: () => workbenchRested, s: v => { workbenchRested = v; } },
+  workbenchUsed: { g: () => workbenchUsed, s: v => { workbenchUsed = v; } },
+  mapTableCopied: { g: () => mapTableCopied, s: v => { mapTableCopied = v; } },
+  mapTableRested: { g: () => mapTableRested, s: v => { mapTableRested = v; } },
+  caveEntranceDoubledBack: { g: () => caveEntranceDoubledBack, s: v => { caveEntranceDoubledBack = v; } },
+  corridorEntranceDoubledBack: { g: () => corridorEntranceDoubledBack, s: v => { corridorEntranceDoubledBack = v; } },
+  mimicTongueAcquiredThisRun: { g: () => mimicTongueAcquiredThisRun, s: v => { mimicTongueAcquiredThisRun = v; } },
+  forestCleared: { g: () => forestCleared, s: v => { forestCleared = v; } },
+  siegeComplete: { g: () => siegeComplete, s: v => { siegeComplete = v; } },
+  throneAudienceComplete: { g: () => throneAudienceComplete, s: v => { throneAudienceComplete = v; } },
+  quartersRested: { g: () => quartersRested, s: v => { quartersRested = v; } },
+  dragonSlain: { g: () => dragonSlain, s: v => { dragonSlain = v; } },
+  part2Started: { g: () => part2Started, s: v => { part2Started = v; } },
+  part2SiegeOver: { g: () => part2SiegeOver, s: v => { part2SiegeOver = v; } },
+  greatPourActivated: { g: () => greatPourActivated, s: v => { greatPourActivated = v; } },
+  chapter2Started: { g: () => chapter2Started, s: v => { chapter2Started = v; } },
+  tunnelExitLocked: { g: () => _tunnelExitLocked, s: v => { _tunnelExitLocked = v; } },
+  staircaseTopDragonDialogSeen: { g: () => staircaseTopDragonDialogSeen, s: v => { staircaseTopDragonDialogSeen = v; } },
+  mithrilRemediesVisited: { g: () => mithrilRemediesVisited, s: v => { mithrilRemediesVisited = v; } },
+  templeMoradinPrayed: { g: () => templeMoradinPrayed, s: v => { templeMoradinPrayed = v; } },
+  lastWatchRested: { g: () => lastWatchRested, s: v => { lastWatchRested = v; } },
+  lastWatchAudienceComplete: { g: () => lastWatchAudienceComplete, s: v => { lastWatchAudienceComplete = v; } },
+  dwarvenTavernFreebieGiven: { g: () => dwarvenTavernFreebieGiven, s: v => { dwarvenTavernFreebieGiven = v; } },
+  heroesOfQualibaf: { g: () => heroesOfQualibaf, s: v => { heroesOfQualibaf = v; } },
+  volcanoChoiceCompleted: { g: () => volcanoChoiceCompleted, s: v => { volcanoChoiceCompleted = v; } },
+  armorerSonQuestStarted: { g: () => armorerSonQuestStarted, s: v => { armorerSonQuestStarted = v; } },
+  chapter8SlybladeSeen: { g: () => chapter8SlybladeSeen, s: v => { chapter8SlybladeSeen = v; } },
+  valdrisaJoined: { g: () => valdrisaJoined, s: v => { valdrisaJoined = v; } },
+  studyVisited: { g: () => studyVisited, s: v => { studyVisited = v; } },
+  stoneDoorOpened: { g: () => stoneDoorOpened, s: v => { stoneDoorOpened = v; } },
+  necromancerMainGame: { g: () => _necromancerMainGame, s: v => { _necromancerMainGame = v; } },
+  upperStairsReturnSeen: { g: () => upperStairsReturnSeen, s: v => { upperStairsReturnSeen = v; } },
+  tharnagExitSeen: { g: () => tharnagExitSeen, s: v => { tharnagExitSeen = v; } },
+  labyrinthGenerated: { g: () => labyrinthGenerated, s: v => { labyrinthGenerated = v; } },
+  labyrinthComplete: { g: () => labyrinthComplete, s: v => { labyrinthComplete = v; } },
+  wastesNorthRestDone: { g: () => wastesNorthRestDone, s: v => { wastesNorthRestDone = v; } },
+};
+
+// Snapshot every run flag for the save payload.
+function runFlagsToObject() {
+  const out = {};
+  for (const [k, f] of Object.entries(RUN_FLAGS)) out[k] = !!f.g();
+  return out;
+}
+
+// Restore every run flag. Reads the `flags` bag first and falls back to the
+// TOP-LEVEL key, so saves written before the registry existed still load —
+// that fallback can be dropped once those saves are gone.
+function runFlagsFromSave(data) {
+  const bag = (data && data.flags && typeof data.flags === 'object') ? data.flags : null;
+  for (const [k, f] of Object.entries(RUN_FLAGS)) {
+    const v = (bag && k in bag) ? bag[k] : (data ? data[k] : false);
+    f.s(!!v);
+  }
+}
+
+// Clear every run flag — used by both new-game paths.
+function resetAllRunFlags() {
+  for (const f of Object.values(RUN_FLAGS)) f.s(false);
+}
+
+// Clear only the rest-respawn latches (setWellRested).
+function clearRestRunFlags() {
+  for (const f of Object.values(RUN_FLAGS)) if (f.rest) f.s(false);
+}
 // Stormwatcher's Shrine — Marthammor's reactivation arc. shrineReactivated
 // latches when Olbrim makes it back up to the shrine and lights the
 // brazier with the Frostbloom. After that the active-shrine dialog
@@ -4653,6 +4790,10 @@ const CARD_REGISTRY = {
   bloody_eye_patch: createBloodyEyePatch, harpoon_of_the_deep: createHarpoonOfTheDeep,
   tentacle_whip: createTentacleWhip, sailors_lucky_compass: createSailorsLuckyCompass,
   krakens_eye_spyglass: createKrakensEyeSpyglass, barnacle_covered_buckler: createBarnacleCoveredBuckler,
+  // Deep Kraken salvage (Bottomless Lake, pick-2 tier-3 epic table).
+  maw_of_the_deep: createMawOfTheDeep, inkbladder_flask: createInkbladderFlask,
+  drowned_lungs: createDrownedLungs, severed_tentacle: createSeveredTentacle,
+  fathomless_eye: createFathomlessEye, abyssal_harpoon: createAbyssalHarpoon,
   small_faery: createSmallFaery, raena_card: createRaenaCard, raena_card_2: createRaenaCard2,
   queens_locket: createQueensLocket, valdrisa_card: createValdrisaCard,
   // Obsidian Wastes loot
@@ -4794,6 +4935,16 @@ const DROW_LOOT_ENTRIES = [
   { creator: createDrowSleepPoison,     weight: 0.75 },
   { creator: createPiwafwi,             weight: 0.25 },
 ];
+
+// Tables the player PICKS from rather than rolls. The value is how many
+// distinct cards they keep. These live in LOOT_TABLES purely so the data has
+// one home — the codex Loot Tables tab renders them, the encounter's
+// lootPickCards expands them — but they are never weighted-rolled, so the codex
+// prints "Pick N" instead of a drop % and hides the Test Roll button. Showing
+// 17% under a card the player simply chooses would be a lie.
+const LOOT_PICK_TABLES = {
+  deep_kraken_loot: 2,
+};
 
 const LOOT_TABLES = {
   // Underdark mushroom beds (East Path 18 ring) — what a harvest turns up when
@@ -5135,6 +5286,19 @@ const LOOT_TABLES = {
   // (The Gnoll Fang of Yeenoghu drops a guaranteed Bone Flail + Ancient Bones
   // directly via the encounter's lootCards, plus a pick-one ability grant — so
   // it has no weighted loot table.)
+  // Deep Kraken salvage (Bottomless Lake boss, Chapter 3). NOT a weighted roll
+  // — the player picks 2 of the 6 on the loot-pick screen, so the weights are
+  // uniform and exist only to satisfy the table shape. See LOOT_PICK_TABLES.
+  // Every entry is a tier-3 epic on purpose: in a pick, an under-budget entry
+  // isn't a weaker option, it's one nobody ever takes. They differ by SLOT.
+  deep_kraken_loot: [
+    { creator: createMawOfTheDeep,    weight: 1.0 },
+    { creator: createInkbladderFlask, weight: 1.0 },
+    { creator: createDrownedLungs,    weight: 1.0 },
+    { creator: createSeveredTentacle, weight: 1.0 },
+    { creator: createFathomlessEye,   weight: 1.0 },
+    { creator: createAbyssalHarpoon,  weight: 1.0 },
+  ],
   // Umber Hulk drop (Chapter 3 Underdark). 50%-gated (see GATED_LOOT); on a
   // drop, pick ONE by weight. House weights — common 1.0 / uncommon 0.75 /
   // rare 0.5. Ancient Bones is tuned to ~4.5% of a roll (0.175/3.925), i.e.
@@ -5368,6 +5532,7 @@ const LOOT_TABLE_LABELS = {
   magma_mephit_loot:      'Magma Mephit',
   kobold_slyblade_loot:   'Kobold Slyblade',
   dwarven_specter_loot:   'Dwarven Specter',
+  deep_kraken_loot:       'Deep Kraken Salvage',
   overseer_gnikan_loot:   'Overseer Gnikan',
   varimatras_loot:        'Varimatras (Dragon)',
   dire_bear_loot:         'Dire Bear',
@@ -5423,6 +5588,7 @@ const LOOT_TABLE_NOTES = {
   magma_mephit_loot:      'Magma Mephit chapter-7 random encounter. 50% chance to drop a card (Magma Rock common); gold drops on every win.',
   kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
+  deep_kraken_loot:       'The Bottomless Lake boss. You PICK 2 of the 6 — not a roll, so there are no odds. All tier-3 epics, one per gear slot (2H / item / clothing / allies / relic / simple) so every class finds two it can equip.',
   overseer_gnikan_loot:   "Chapter 8 summit-ridge boss drop. Always drops Gnikan's Staff (placeholder pool until the full chapter-8 loot kit is authored).",
   varimatras_loot:        "The Dragon's Hoard — Varimatras's drop after the chapter 8 summit fight. Pick TWO distinct tier-2 epics from Dragon Tooth Dagger / White Dragonscale Shield / White Dragonscale Armor / Dragon Bone Bow / Dragon Eye Mace / Winterborn Robes.",
   dire_bear_loot:         'Dropped after defeating the Dire Bear in the Circular Ruins (resets on rest). Pick TWO distinct — Rations common, Claw / Hide Armor / Winterheart Pelt uncommon, Bear Teeth Necklace / Roaring Helm rare.',
@@ -6369,6 +6535,19 @@ Character._onSpellTurned = (char, status, stacks) => {
   const label = status ? status[0] + status.slice(1).toLowerCase() : 'effect';
   const who = (char && char.name) ? char.name : 'It';
   addLog(`  Spell Turning! ${who} turns aside ${stacks} ${label}.`, Colors.GOLD);
+};
+
+// deck.js calls this the moment a card finishes being played (placeByCost).
+// Player-side only — the same funnel carries enemy plays, so the guard matters.
+//
+// Known boundary: a card that STAYS IN HAND (Poisoned Dagger, Apprentice's
+// Spellbook) and a companion card routed to the Play pile both skip placeByCost
+// by design, so neither ticks Drowned Lungs. That is a deliberate, documented
+// gap rather than a silent one — those cards never leave your hand, so "played"
+// is genuinely ambiguous for them.
+Deck._onCardPlayed = (card, deck) => {
+  if (!player || !deck || deck !== player.deck) return;
+  maybeDrownedLungsHeal(card);
 };
 
 function addLog(text, color = Colors.WHITE, card = null, buff = null, creature = null) {
@@ -7719,6 +7898,15 @@ let _inGnikanP1Transition = false;
 let _lootPickOffered = [];   // [{ id, card }, ...]
 let _lootPickKept = [];      // ids the player has already kept
 let _lootPickRemaining = 0;
+// Confirm-on-second-click for a pick the active class can't equip. Holds the id
+// of the card the player just clicked and was warned about; clicking that SAME
+// card again takes it, clicking anything else clears the warning.
+//
+// A two-step click rather than the shop's modal: a loot pick is permanent and
+// unwindable (unlike a purchase, which can be sold back), so it needs a guard —
+// but a full modal here would sit on top of the offering the player is still
+// comparing. The inline warning keeps every card visible while they decide.
+let _lootPickWarnId = null;
 // Input grace on loot / loot-pick screens — a click carried over from the
 // preceding VICTORY screen (mashing through a boss death) must NOT register on
 // the reward screen before the player can see it. Stamped when a loot screen is
@@ -8578,6 +8766,9 @@ function resetStoryFlags() {
   lastWatchPostRocClaimed = false;
   babyRocDefeated = false;
   giantBoarDefeated = false;
+  // Clears every registry flag in one pass — a new flag needs no line here.
+  // (The individual assignments around it are legacy and now redundant.)
+  resetAllRunFlags();
   shrineReactivated = false;
   stormwatchersShrineActiveSeen = false;
   mithrilRemediesOlbrimGreeted = false;
@@ -8736,6 +8927,9 @@ function startNewGame() {
   lastWatchPostRocClaimed = false;
   babyRocDefeated = false;
   giantBoarDefeated = false;
+  // Clears every registry flag in one pass — a new flag needs no line here.
+  // (The individual assignments around it are legacy and now redundant.)
+  resetAllRunFlags();
   shrineReactivated = false;
   stormwatchersShrineActiveSeen = false;
   mithrilRemediesOlbrimGreeted = false;
@@ -9709,6 +9903,22 @@ function handleAbilitySelectClick(x, y) {
 }
 
 function drawAbilitySelect() {
+  // Clear the hover-preview channels every frame, the same way drawCombat /
+  // drawInventory / drawEncounterLootPick / the codex do. Without this the
+  // screen NEVER cleared them, so whatever was last hovered on the PREVIOUS
+  // screen stayed pinned to the cursor — walk off the Deep Kraken salvage with
+  // the Inkbladder Flask under the mouse and its preview followed you into the
+  // level-up. This screen draws its ability cards full-size itself (via the
+  // local hoveredAbilityIdx), so it never repopulates these.
+  if (isShiftFrozen()) {
+    hoveredCardPreview = shiftFreezeCard;
+    hoveredPowerPreview = shiftFreezePower;
+    hoveredCreaturePreview = shiftFreezeCreature;
+  } else {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
   // Pick a backdrop appropriate to what triggered this screen. Church and
   // chapter-end use lazy-loaded encounter backgrounds; everything else
   // falls back to the character-select art.
@@ -10160,6 +10370,11 @@ function setWellRested() {
   _currentBridgePatrolNode = null;
   // Giant Boar (Pinewood) — re-arm the ambush on rest.
   giantBoarDefeated = false;
+  // Every registry flag marked `rest: true` — currently the Dire Bear, Baby
+  // Roc, Giant Boar and Passage Ambush latches. A new rest-respawn latch needs
+  // only `rest: true` in RUN_FLAGS; it does not need a line here.
+  // (The explicit clears above are legacy and now redundant.)
+  clearRestRunFlags();
   // Part 2 — resting re-rolls which tunnel dead-end is the real exit to
   // the Gate of the Deep, and re-arms the dead-end supply searches. Once
   // the player has reached the gate the exit is LOCKED, so rest no longer
@@ -11833,9 +12048,6 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       && currentMap.id === 'east_mountain_crags_chasm_07'
       && _underdarkGnollUnlocked
       && fromNodeId !== 'ug_entry') {
-    // Debug-only gate — a non-debug party (e.g. a debug save reloaded without
-    // debug) that walks onto or clicks c7_8 gets the WIP card and stays here.
-    if (underdarkWipBlocked()) return;
     if (currentMap) _mapCache[currentMap.id] = currentMap;
     currentMap = getOrCreateMap('underdark_gnoll_entrance', createUnderdarkGnollEntranceMap);
     visitedNodes = new Set(['ug_entry']);
@@ -14533,6 +14745,14 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   if (canRunEncounter && nodeId === 'mountain_cave_ruins' && currentMap.id === 'mountain_cave' && direBearDefeated) {
     canRunEncounter = false;
   }
+  // Passage Ambush — the node stays canRevisit so the fight CAN come back, but
+  // only once a rest has cleared the latch. Without this the sahuagin jumped
+  // the party on every single walk through the corridor, which turned a
+  // repeatable ambush into an unavoidable toll on a route the player has to
+  // cross often.
+  if (canRunEncounter && nodeId === 'passage_ambush' && passageAmbushDefeated) {
+    canRunEncounter = false;
+  }
   // Nest Interior — same gate as the bear ruins. The repeat
   // dispatch above handles fresh ambushes when the rest cycle
   // re-arms babyRocDefeated; the standard pipeline never re-fires
@@ -14844,7 +15064,23 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   const BRIDGE_PATROL_CANDIDATES = BRIDGE_PATROL_ZONES.flat();
   if (!skipEncounter && currentMap.id === 'qualibaf_bridge' && BRIDGE_PATROL_CANDIDATES.includes(nodeId)) {
     if (_bridgePatrolNodes === null) {
-      _bridgePatrolNodes = BRIDGE_PATROL_ZONES.map(z => z[Math.floor(Math.random() * z.length)]);
+      _bridgePatrolNodes = BRIDGE_PATROL_ZONES.map(zone => {
+        // trail_north is off the table while the one-time north_trail_rest
+        // breather is still pending. That dialog is checked FIRST and returns,
+        // so a patrol placed there is silently skipped — and the Frontier Road
+        // is a linear climb (frontier_road → river_climb → treeline →
+        // bridge_overlook → bridge → trail_north → waterfall), so the party
+        // walks on to the falls and never comes back to collect it. That lost
+        // the second of the two patrols outright, about half the time.
+        //
+        // Costs a little placement variety on the first traversal (zone 2
+        // resolves to `bridge`); once the breather is done, later re-rolls
+        // after a long rest use the full zone again.
+        const pool = zone.filter(n => n !== 'trail_north'
+          || completedEncounters.has('north_trail_rest'));
+        const pick = pool.length > 0 ? pool : zone;
+        return pick[Math.floor(Math.random() * pick.length)];
+      });
     }
     if (_bridgePatrolNodes.includes(nodeId)) {
       _currentBridgePatrolNode = nodeId;
@@ -18202,6 +18438,37 @@ function startNodeEncounter(nodeId) {
   advanceEncounterPhase();
 }
 
+// Per-run latches that are a pure `encounter id -> boolean` mapping.
+//
+// An encounter can finish TWO ways: by running out of phases (the completion
+// branch in advanceEncounterPhase) or by ending on a `completesEncounter`
+// CHOICE (handleEncounterChoiceClick). The choice path never reaches
+// advanceEncounterPhase's completion branch, so every latch had to be written
+// in both places — and the two lists drifted. `giantBoarDefeated` and
+// `lastWatchPostRocClaimed` only ever existed in the phase path, so an
+// encounter of theirs that ended on a choice silently failed to latch.
+//
+// Both paths now call this instead. Only PURE latches belong here: anything
+// that transitions maps, opens a shop, or returns early stays at its call site,
+// because those are not safe to fire from the choice path.
+function applyEncounterCompletionLatches(id) {
+  if (!id) return;
+  if (id === 'giant_boar_ambush') giantBoarDefeated = true;
+  if (id === 'wreckage_arrival' || id === 'wreckage_harpy_revisit') harpiesDefeated = true;
+  if (id === 'circular_ruins_combat' || id === 'circular_ruins_combat_repeat') direBearDefeated = true;
+  if (id === 'passage_ambush') passageAmbushDefeated = true;
+  if (id === 'last_watch_supply_cache') lastWatchSupplyTaken = true;
+  if (id === 'last_watch_post_roc') lastWatchPostRocClaimed = true;
+  // Stormwatcher Shrine — the reactivation beat flips both flags; the two
+  // "already active" variants only mark that the intro has been seen.
+  if (id === 'stormwatchers_shrine_reactivation') shrineReactivated = true;
+  if (id === 'stormwatchers_shrine_reactivation'
+      || id === 'stormwatchers_shrine_active'
+      || id === 'stormwatchers_shrine_active_quick') {
+    stormwatchersShrineActiveSeen = true;
+  }
+}
+
 function advanceEncounterPhase() {
   if (!currentEncounter || currentEncounter.isComplete) {
     // Capture the completing encounter id BEFORE clearing it — used below to
@@ -18277,11 +18544,10 @@ function advanceEncounterPhase() {
     // node done and prune it so it won't re-fire until the next rest
     // re-arms _bridgePatrolNodes. The next node's visibility is handled by
     // `discoverable` proximity, not an unlock.
-    // Giant Boar beaten — latch so the Pinewood ambush won't re-fire until
-    // the next rest clears giantBoarDefeated.
-    if (completedEncounterId === 'giant_boar_ambush') {
-      giantBoarDefeated = true;
-    }
+    // Pure `id -> flag` latches (Giant Boar, Harpies, Dire Bear, Passage
+    // Ambush, Last Watch supply / post-Roc, Stormwatcher shrine). Shared with
+    // the completesEncounter CHOICE path so the two can't drift apart again.
+    applyEncounterCompletionLatches(completedEncounterId);
     // Kellen rescued (Forest Ambush cleared) — flee the valley and regroup at
     // the North Crossroad, where the aftermath dialog ("safe at last, take him
     // home to his parents") plays. Land directly on the crossroad node and
@@ -18311,27 +18577,8 @@ function advanceEncounterPhase() {
       }
       _currentBridgePatrolNode = null;
     }
-    // Harpies (first fight or revisit) — latch the per-run flag so
-    // walking back onto the cog skips the encounter until the next
-    // rest clears the flag again.
-    if (completedEncounterId === 'wreckage_arrival'
-        || completedEncounterId === 'wreckage_harpy_revisit') {
-      harpiesDefeated = true;
-    }
-    // Dire Bear — same shape as the harpies latch. Set after the
-    // first kill or any repeat kill so the ruins stay quiet until
-    // the next rest clears direBearDefeated.
-    if (completedEncounterId === 'circular_ruins_combat'
-        || completedEncounterId === 'circular_ruins_combat_repeat') {
-      direBearDefeated = true;
-    }
-    // Last Watch Supply Cache — one-time captain hand-off. Latches
-    // as soon as the encounter completes (the LOOT phase has rolled
-    // its dwarven_market_loot card by this point) so revisits hit
-    // the short-circuit in startNodeEncounter.
-    if (completedEncounterId === 'last_watch_supply_cache') {
-      lastWatchSupplyTaken = true;
-    }
+    // (Harpies / Dire Bear / Passage Ambush / Last Watch supply latches all
+    // moved into applyEncounterCompletionLatches above.)
     // Path of the Necromancer — bedroom trap-door reveal closes by
     // unlocking the trap_door node on the necromancer_house map so
     // the player can step onto it from the bedroom. Guarded so a
@@ -18473,25 +18720,8 @@ function advanceEncounterPhase() {
       state = GameState.MAP;
       return;
     }
-    // Post-Roc Watch Keep dialog — latches when the morning-after
-    // dialog finishes (Olbrim wake-up + Frostbloom gift).
-    if (completedEncounterId === 'last_watch_post_roc') {
-      lastWatchPostRocClaimed = true;
-    }
-    // Stormwatcher's Shrine — Marthammor reactivation. Latches when
-    // Olbrim's Frostbloom-lighting beat finishes; every subsequent
-    // shrine visit dispatches to the active-shrine encounter with
-    // the Contemplate rite. The active encounter's TEXT only plays
-    // once — flag stamps so reentries (e.g. player walked off to
-    // grab more gold) skip the intro and drop into the choice.
-    if (completedEncounterId === 'stormwatchers_shrine_reactivation'
-        || completedEncounterId === 'stormwatchers_shrine_active'
-        || completedEncounterId === 'stormwatchers_shrine_active_quick') {
-      if (completedEncounterId === 'stormwatchers_shrine_reactivation') {
-        shrineReactivated = true;
-      }
-      stormwatchersShrineActiveSeen = true;
-    }
+    // (Post-Roc Watch Keep + Stormwatcher shrine latches moved into
+    // applyEncounterCompletionLatches above.)
     currentEncounter = null;
     // Clear the chapter-7 random-encounter backdrop override so the
     // next encounter (or post-fight map) renders against its own
@@ -19349,6 +19579,18 @@ function advanceEncounterPhase() {
       if (phase.lootPickCount > 0 && Array.isArray(phase.lootPickCards) && phase.lootPickCards.length > 0) {
         const offered = [];
         for (const id of phase.lootPickCards) {
+          // An entry may be a LOOT_TABLES id — expand it into its members so a
+          // pick list has ONE home in the data (the table), which is what the
+          // codex Loot Tables tab renders. Without this the encounter and the
+          // codex would carry two hand-maintained copies of the same six cards
+          // and quietly drift apart.
+          if (LOOT_TABLES[id]) {
+            for (const entry of LOOT_TABLES[id]) {
+              const c = entry.creator();
+              offered.push({ id: c.id, card: c });
+            }
+            continue;
+          }
           const creator = CARD_REGISTRY[id];
           if (creator) offered.push({ id, card: creator() });
         }
@@ -19358,9 +19600,14 @@ function advanceEncounterPhase() {
           advanceEncounterPhase();
           return;
         }
+        // Badge anything this class can't equip, exactly as the shop shelf
+        // does. A loot pick is permanent, so seeing it BEFORE choosing matters
+        // more here than it does in a shop where you can sell the mistake back.
+        for (const o of offered) o.card._cantEquip = !canClassEquip(o.card);
         _lootPickOffered = offered;
         _lootPickRemaining = Math.min(phase.lootPickCount, offered.length);
         _lootPickKept = [];
+        _lootPickWarnId = null;
         state = GameState.ENCOUNTER_LOOT_PICK;
         _lootScreenEnteredAt = performance.now();
         // Captioned picks are the special "dark power" ability grants (the Fang
@@ -19864,14 +20111,23 @@ function setupEnemyForCombat(enemyId) {
   };
   ENEMY_HAND_SIZE.elite_kobold_patrol = 3;
   // Giant Boar — the Pinewood ambush (armorer's-son quest, WIP). A 30-HP
-  // bruiser: 15 Gore (charge attack, +damage on its first swing) and 12
+  // bruiser: 20 Gore (charge attack, +damage on its first swing) and 8
   // Dire Hide (tough-skin block). Bloodied Fury fuels its Rage once it
   // drops to half HP. Narrow 2-card hand.
+  //
+  // Ratio reworked from 15/13 to 20/8. At 13 Hide he was 43% defensive — the
+  // blockiest enemy in the game, roughly double the Rampaging Troll (19%) and
+  // nearly triple the Gnoll Pack Lord (15%), and the fight stalled into a
+  // block-wall. 8/30 = 27% puts him just above the Umber Hulk (25%) and the
+  // Gnoll Hunter (22%), which is where a bruiser of this tier belongs.
+  //
+  // Deck size is HP in this engine, so the five freed Hide slots became Gore
+  // rather than vanishing: still 30 cards, now 67% attack instead of 50%.
   ENEMY_DECKS.giant_boar = () => {
     enemy = new Character('Giant Boar');
     enemy.deck = new Deck();
-    for (let i = 0; i < 15; i++) enemy.deck.addCard(createGore());
-    for (let i = 0; i < 13; i++) enemy.deck.addCard(createDireHide());
+    for (let i = 0; i < 20; i++) enemy.deck.addCard(createGore());
+    for (let i = 0; i < 8; i++) enemy.deck.addCard(createDireHide());
     // 2 Boar Tusks in its OWN deck — each discarded by player damage stacks
     // Regen 2 on the boar. Dropped from 3 → 2 (deck still 30): with 3, an
     // early Tusk cluster started the regen cycle too soon and made him far
@@ -20541,7 +20797,11 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 4; i++) enemy.deck.addCard(createChainShirt());
     enemy.addPower(createDireFury());
   };
-  ENEMY_HAND_SIZE.general_zhost_boss = 3;
+  // Dropped 3 → 2. With three cards in hand Zhost could chain White Claw +
+  // Kobold Spear in a single turn and spike far past what the fight is meant
+  // to ask for; the Spear's "On Kill: Draw" then refilled the hand and kept the
+  // spike going. Two cards keeps the pressure without the burst.
+  ENEMY_HAND_SIZE.general_zhost_boss = 2;
 
   ENEMY_DECKS.wolf_pack = () => {
     enemy = new Character('Wolf Pack');
@@ -22655,10 +22915,6 @@ function handleEncounterChoiceClick(x, y) {
       }
 
       case 'enter_underdark_gnoll': {
-        // Underdark is debug-only content for now — non-debug players get a
-        // "Work In Progress" card and stay on the East Mountain map (no unlock,
-        // no teleport), so they can re-try the dialog but never actually enter.
-        if (underdarkWipBlocked()) return;
         // "Lets go in." — open Chapter 3 with a title card, then cross-map
         // teleport from c7_8 (Into the Dark) down to the Underdark Gnoll
         // Entrance map. Latch the unlock so the node is a plain teleporter from
@@ -23290,32 +23546,11 @@ function handleEncounterChoiceClick(x, y) {
       // be re-claimed, etc.
       const completedEncounterId = currentEncounter ? currentEncounter.id : null;
       if (completedEncounterId) completedEncounters.add(completedEncounterId);
-      if (completedEncounterId === 'wreckage_arrival'
-          || completedEncounterId === 'wreckage_harpy_revisit') {
-        harpiesDefeated = true;
-      }
-      if (completedEncounterId === 'circular_ruins_combat'
-          || completedEncounterId === 'circular_ruins_combat_repeat') {
-        direBearDefeated = true;
-      }
-      if (completedEncounterId === 'last_watch_supply_cache') {
-        lastWatchSupplyTaken = true;
-      }
-      // Stormwatcher Shrine — the reactivation + active + active_quick
-      // encounters all end on a Contemplate/Walk-on CHOICE with
-      // completesEncounter: true, so the latch block in
-      // advanceEncounterPhase never runs. Mirror it here so
-      // shrineReactivated flips the moment Olbrim's brazier-lighting
-      // beat is closed (otherwise Mithril Remedies stays stuck in the
-      // pre-shrine dialog and the shop never auto-opens).
-      if (completedEncounterId === 'stormwatchers_shrine_reactivation'
-          || completedEncounterId === 'stormwatchers_shrine_active'
-          || completedEncounterId === 'stormwatchers_shrine_active_quick') {
-        if (completedEncounterId === 'stormwatchers_shrine_reactivation') {
-          shrineReactivated = true;
-        }
-        stormwatchersShrineActiveSeen = true;
-      }
+      // Same latches the phase-completion path runs. This used to be a
+      // hand-copied SUBSET, which is how giantBoarDefeated and
+      // lastWatchPostRocClaimed ended up latching only when the encounter ran
+      // out of phases and never when it ended on a choice.
+      applyEncounterCompletionLatches(completedEncounterId);
       encounterChoiceResult = null;
       currentEncounter = null;
       // Clear any encounter-bg override (e.g. the exploding-bridge swap
@@ -25457,10 +25692,32 @@ function drawEncounterLootPick() {
   const word = remaining === 1 ? 'card' : 'cards';
   ctx.fillText(`Choose ${remaining} ${word}.`, SCREEN_WIDTH / 2, 122);
   // Optional eerie flavor caption (Fang of Yeenoghu's dark-power pick).
+  let subY = 122;
   if (phase && phase.lootCaption) {
     ctx.fillStyle = '#c9a0ff';
     ctx.font = 'italic bold 22px Georgia, serif';
     ctx.fillText(phase.lootCaption, SCREEN_WIDTH / 2, 152);
+    subY = 152;
+  }
+  // Can't-equip confirmation line. Mirrors the shop's buy-confirm warning in
+  // wording so the two read as the same rule, but it has to also say what the
+  // second click does — unlike the shop there's no Buy/Cancel pair on screen to
+  // make that obvious. Drawn below whichever subtitle line came last so it can
+  // never overlap the flavor caption.
+  if (_lootPickWarnId) {
+    const warned = (offered.find(o => o.id === _lootPickWarnId) || {}).card;
+    if (warned) {
+      const pulse = 0.75 + 0.25 * Math.abs(Math.sin(performance.now() / 260));
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = '#ff8080';
+      ctx.font = 'bold 18px Georgia, serif';
+      ctx.fillText(
+        `${selectedClass} can't equip ${warned.name} — it'll sit in your backpack. Click again to take it.`,
+        SCREEN_WIDTH / 2, subY + 30,
+      );
+      ctx.restore();
+    }
   }
   ctx.restore();
   ctx.textAlign = 'left';
@@ -25523,8 +25780,25 @@ function handleEncounterLootPickClick(x, y) {
     if (!hitTest(x, y, r)) continue;
     const { id, card } = offered[i];
     if (_lootPickKept.includes(id)) return; // already taken
+    // Can't-equip guard. First click on such a card only WARNS — the pick is
+    // permanent, and the class restriction is easy to miss mid-boss-reward.
+    // Clicking the same card again confirms; clicking any other card clears
+    // the warning, so the guard can never strand the player.
+    if (card._cantEquip && _lootPickWarnId !== id) {
+      _lootPickWarnId = id;
+      playSound('click');
+      addLog(`${selectedClass} can't equip ${card.name} — click again to take it anyway.`, Colors.RED, card);
+      return;
+    }
+    _lootPickWarnId = null;
     _lootPickKept.push(id);
     _lootPickRemaining--;
+    // The picker hands the OFFERED instance straight to the backpack (the shop
+    // builds a fresh card via creator() instead), so the shelf-only marker has
+    // to come off here or the card would wear a CAN'T EQUIP ribbon forever in
+    // the inventory — where the rebalance screen already has its own pulsing
+    // red treatment for exactly this.
+    delete card._cantEquip;
     addLootedCard(card);
     addLog(`Picked ${card.name}!`, Colors.GOLD, card);
     playSound('gold');
@@ -26933,6 +27207,15 @@ const KEYWORD_ICONS = {
              desc: 'Card destination: the card is permanently removed from your deck for the rest of the run.' },
 };
 
+// Card-text aliases for Ink Cloud. The status row and character panel look the
+// entry up by its underscore key ('ink_cloud'), but the card-text tokenizer
+// normalises a matched phrase to lowercase with single spaces — so "Ink Cloud"
+// resolves to 'ink cloud' and a bare "Ink" (used in every shortDesc) to 'ink',
+// neither of which existed. Both spellings point at the SAME object rather than
+// copying the description, which is what keeps the three surfaces in sync.
+KEYWORD_ICONS['ink cloud'] = KEYWORD_ICONS.ink_cloud;
+KEYWORD_ICONS.ink = KEYWORD_ICONS.ink_cloud;
+
 // Trigger badges used on perk cards. Emitted as `{ type: 'badge' }` tokens
 // from the leading "Combat Start:", "Turn Start:", etc. prefix. Color-
 // coded by category: combat (green) vs turn (blue).
@@ -27315,8 +27598,11 @@ function tokenizeKeywordText(text, opts = {}) {
   // list — the badge path returns before we ever reach here.
   const keywordList = ['DrowPoison', 'First Attack', 'Scry\\s+\\d+', 'Scout\\s+\\d+', 'Heal\\s+\\d+', 'Heal', 'Block\\s+\\d+', 'Strip', 'Douse', 'True', 'Heroism', 'Shields', 'Shield',
     ...(isPerk ? [] : ['Armor']),
-    'Fire Body', 'Ice Body',
-    'Fire', 'Ice', 'Poison', 'Shock', 'Bleed', 'Sunder', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte', 'Bolster',
+    'Fire Body', 'Ice Body', 'Ink Cloud',
+    // 'Ink Cloud' must stay ahead of the bare 'Ink' below — the list is matched
+    // longest-first so the full phrase wins and only the shortDescs (which
+    // abbreviate to "2 Ink to ALL") fall through to the short form.
+    'Fire', 'Ice', 'Ink', 'Poison', 'Shock', 'Bleed', 'Sunder', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte', 'Bolster',
     'Paralyzed?', 'Weak',
     'Ailments?',
     'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
@@ -28551,6 +28837,40 @@ function drawCard(card, x, y, w, h, highlighted = false, hovered = false, size =
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'left';
     }
+  }
+  // 5a-ii. CAN'T EQUIP ribbon — shop shelves only (stamped in openShop). Tells
+  // the player at a glance that this class can't put the item in their deck,
+  // instead of making them click Buy to find out.
+  //
+  // A BADGE rather than a fade on purpose: the shop already dims cards the
+  // player can't afford, so a second dimming state would be ambiguous — is it
+  // too expensive, or unusable? The two are independent and can both apply, so
+  // they need different visual channels.
+  //
+  // Anchored just ABOVE descBoxY — the top of the description box, i.e. the
+  // line where the art ends and the text begins. Sitting flush to the bottom
+  // edge put it straight over the card text. descBoxY is hoisted with a
+  // `y + h` default, so a card with no description still lands it on the
+  // bottom edge rather than off-card. Same anchor the enchant badges use.
+  if (card._cantEquip) {
+    const ribbonH = Math.max(13, Math.floor(h * 0.105));
+    const ry = descBoxY - ribbonH - (isFullSize ? 4 : 2);
+    ctx.save();
+    // Muted red so it reads as "blocked" without fighting the art for
+    // attention the way the gold RARE FIND ribbon deliberately does.
+    ctx.fillStyle = 'rgba(96,16,16,0.90)';
+    ctx.fillRect(x + 2, ry, w - 4, ribbonH);
+    ctx.strokeStyle = 'rgba(255,110,110,0.85)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 2.5, ry + 0.5, w - 5, ribbonH - 1);
+    ctx.fillStyle = '#ff9b9b';
+    ctx.font = `bold ${Math.max(8, Math.floor(w * 0.098))}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText("CAN'T EQUIP", x + w / 2, ry + ribbonH / 2 + 1);
+    ctx.restore();
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
   }
   // 5b. Paralyzed overlay (Carrion Crawler) — a cold wash plus the lightning
   // badge, so a locked card reads at a glance in a full hand. Drawn before the
@@ -32706,12 +33026,35 @@ function applyOnRechargeDamageAll(card) {
 function applyOnRechargeTeamBuffs(card) {
   if (!card || !Array.isArray(card.currentEffects) || !player) return;
   let teamHeroism = 0, teamShield = 0, steedHeal = 0, boneSteps = 0, bolsterUndead = 0;
+  let inkRandom = 0, shieldPerCard = 0;
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'on_recharge_team_heroism') teamHeroism += eff.value;
     else if (eff.effectType === 'on_recharge_team_shield') teamShield += eff.value;
     else if (eff.effectType === 'on_recharge_heal_overheal_heroism') steedHeal += eff.value;
     else if (eff.effectType === 'on_recharge_summon_or_bolster_skeleton') boneSteps += eff.value;
     else if (eff.effectType === 'on_recharge_bolster_undead') bolsterUndead += eff.value;
+    else if (eff.effectType === 'on_recharge_ink_random') inkRandom += eff.value;
+    else if (eff.effectType === 'on_recharge_shield_per_hand_card') shieldPerCard += eff.value;
+  }
+  // Inkbladder Flask's drip. Routed back through resolveEffect so the random
+  // target pool and the log line stay identical to every other "Randomly" rider.
+  if (inkRandom > 0) {
+    resolveEffect(new CardEffect('apply_ink_cloud_random', inkRandom, TargetType.RANDOM_ENEMY), player, null);
+    playSound('splash_dive', 0.55);
+  }
+  // Drowned Lungs — Shield per card still in hand. Counted AFTER the Lungs
+  // themselves have left (they are already in the recharge pile by the time the
+  // on-recharge family fires), so the card never shields for itself.
+  if (shieldPerCard > 0) {
+    const inHand = (player.deck && Array.isArray(player.deck.hand)) ? player.deck.hand.length : 0;
+    const gain = inHand * shieldPerCard;
+    if (gain > 0) {
+      player.shield = (player.shield || 0) + gain;
+      spawnTokenOnTarget(player, gain, 'Shield', Colors.ALLY_BLUE);
+      addLog(`  ${card.name}: +${gain} Shield (${inHand} card${inHand === 1 ? '' : 's'} in hand)`, Colors.ALLY_BLUE);
+    } else {
+      addLog(`  ${card.name}: no cards in hand — no Shield.`, Colors.GRAY);
+    }
   }
   // Bone Wall's parting gift — thicken the host by +1/+1. Picks at RANDOM among
   // living Undead, matching the necromancer's own bolster idiom (Skeleton
@@ -32741,7 +33084,9 @@ function applyOnRechargeTeamBuffs(card) {
     // in SOUND_PACKS, so playing it by that name would be silent.
     playSound('bones_clatter', 0.7);
   }
-  const allies = (player.creatures || []).filter(c => c && c.isAlive);
+  // Totems (Armed Trap, Arcane Vortex) are not part of "you and your allies" —
+  // they can't attack or be hit, so team Heroism / Shield on them is dead value.
+  const allies = (player.creatures || []).filter(c => c && c.isAlive && !isTotemAlly(c));
   if (teamHeroism > 0) {
     player.heroism = (player.heroism || 0) + teamHeroism;
     spawnTokenOnTarget(player, teamHeroism, 'Heroism', Colors.GOLD);
@@ -33242,6 +33587,42 @@ function handleDefendingClick(x, y) {
         player.heroism = (player.heroism || 0) + eff.value;
         addLog(`  +${eff.value} Heroism (H:${player.heroism})`, Colors.GOLD);
         spawnTokenOnTarget(player, eff.value, 'Heroism', Colors.GOLD);
+      } else if (eff.effectType === 'summon_tentacle_block') {
+        // Severed Tentacle — the player-side mirror of the Kraken's own
+        // Tentacle Block. A fresh limb takes the blow instead of you: it soaks
+        // up to its own HP out of pendingIncomingDamage and anything past that
+        // still lands, so a 10+ swing kills it outright and spills the rest.
+        const tent = createSeveredTentacleCreature();
+        tent._codexSide = 'player';
+        tent._sourceRarity = 'epic';
+        tent._sourceSubtype = 'allies';
+        scaleCreatureWithOffset(tent, playerTierOffset || 0, 'player');
+        // It arrives mid-swing, so it is NOT summoning-sick — it can act on
+        // your next turn like any body that has already been on the field.
+        tent.exhausted = false;
+        tent.justSummoned = false;
+        if (!player.addCreature(tent)) {
+          addLog(`  No room on the field — the tentacle cannot take the blow.`, Colors.GRAY);
+        } else {
+          addLog(`  A ${tent.name} lashes up to block!`, Colors.GREEN, null, null, tent);
+          playSound('splash_dive', 0.6);
+          if (pendingIncomingDamage > 0) {
+            // Cap the soak at the tentacle's pre-hit HP: takeDamage reports the
+            // full requested amount when there's no shield/armor, so without
+            // this a 14-damage swing would "absorb" 14 on a 10 HP body.
+            const hpBefore = tent.currentHp;
+            const soak = Math.min(pendingIncomingDamage, hpBefore);
+            tent.takeDamage(soak);
+            if (soak > 0) spawnDamageOnTarget(tent, soak);
+            pendingIncomingDamage = Math.max(0, pendingIncomingDamage - soak);
+            addLog(`  ${tent.name} takes ${soak} dmg — ${pendingIncomingDamage} still coming at you.`, Colors.RED);
+            if (!tent.isAlive) {
+              spawnDeathAnimation(tent);
+              addLog(`  ${tent.name} is torn apart!`, Colors.GOLD, null, null, tent);
+              countAndRemoveDeadCreatures();
+            }
+          }
+        }
       } else if (eff.effectType === 'halve_incoming_damage') {
         // Holy Steed — the horse carries you clear: halve what's still coming
         // at you, rounded DOWN (same rule as Weak). Standing Block and Shield
@@ -34511,6 +34892,14 @@ let _lastEffectDamageLanded = 0;
 // triggering. Reset every check so a fully-blocked swing doesn't carry
 // over into the next Death Sickle swing.
 let _specterDeathlyStrike = false;
+// ONE Ranger Trap per enemy attack CARD. The card path springs the trap once at
+// target-selection time (so a damage-less status attack — Kobold Shield, the
+// Warden's Whip — springs it too, not just cards that deal damage), and its
+// damage branches then call routeEnemyDamageToTarget, which has a trap hook of
+// its own. Without this flag a second armed trap would also fire on the same
+// card, which matters the moment Killing Ground puts three of them down.
+// Set by the card path, cleared when that card finishes resolving.
+let _trapSprungThisCard = false;
 let _activePlayCard = null; // the card currently being resolved (set during playCardSelf/etc.)
 // When true, summon_* handlers skip playing their entry SFX so the caller
 // (e.g. Revivify) can stagger the sound on its own timeline.
@@ -36338,6 +36727,55 @@ function resolveEffect(eff, caster, target) {
       countStatusAttack(caster, targets);
       break;
     }
+    case 'apply_sunder_all': {
+      // Maw of the Deep — AoE Sunder. Exact mirror of apply_bleed_all above,
+      // including the invulnerable-shell skip (Whirlwind's damage refuses to
+      // touch the Ancients Guardians boss body, so its riders must not either).
+      const targets = [];
+      if (enemy && enemy.isAlive && !enemy._invulnerable) targets.push(enemy);
+      for (const c of (enemy && enemy.creatures || [])) {
+        if (c && c.isAlive && !c._invulnerable) targets.push(c);
+      }
+      for (const t of targets) {
+        if (t instanceof Creature) t.sunderStacks = (t.sunderStacks || 0) + eff.value;
+        else if (typeof t.applyStatus === 'function') t.applyStatus('SUNDER', eff.value);
+        spawnTokenOnTarget(t, eff.value, 'Sunder', '#b0763c');
+      }
+      if (targets.length > 0) addLog(`  +${eff.value} Sunder on ${targets.length} target${targets.length > 1 ? 's' : ''}`, '#b0763c');
+      countStatusAttack(caster, targets);
+      break;
+    }
+    case 'apply_mark_random': {
+      // Fathomless Eye — Mark a random enemy-side target. Same flat pool the
+      // Sunder / Ice / Fire "Randomly" riders draw from.
+      const mt = pickRandomEnemyTargetForEffect();
+      if (!mt) break;
+      if (mt instanceof Creature) mt.markStacks = (mt.markStacks || 0) + eff.value;
+      else if (typeof mt.applyStatus === 'function') mt.applyStatus('MARK', eff.value);
+      addLog(`  +${eff.value} Mark on ${mt.name || 'target'}`, '#ffd070');
+      spawnTokenOnTarget(mt, eff.value, 'Mark', '#ffd070');
+      break;
+    }
+    case 'apply_ink_cloud_random': {
+      // Inkbladder Flask's on-recharge drip. Paid by applyOnRechargeTeamBuffs,
+      // but routed through resolveEffect so the targeting pool and the log line
+      // match every other "Randomly" rider.
+      const it = pickRandomEnemyTargetForEffect();
+      if (!it) break;
+      if (it instanceof Creature) it.inkCloudStacks = (it.inkCloudStacks || 0) + eff.value;
+      else if (typeof it.applyStatus === 'function') it.applyStatus('INK_CLOUD', eff.value);
+      addLog(`  +${eff.value} Ink Cloud on ${it.name || 'target'}`, '#9c80d8');
+      spawnTokenOnTarget(it, eff.value, 'Ink', '#9c80d8');
+      break;
+    }
+    // Drowned Lungs — the in-hand heal is a live hand-scan fired from the
+    // card-play funnel (maybeDrownedLungsHeal), not resolved here. Playing the
+    // card ends the passive because the card left your hand, exactly like
+    // armor_in_hand / Aura of Might.
+    case 'heal_per_card_played_in_hand':
+      break;
+    case 'on_recharge_ink_random':
+    case 'on_recharge_shield_per_hand_card':
     case 'on_recharge_team_heroism':
     case 'on_recharge_team_shield':
     case 'on_recharge_heal_overheal_heroism':
@@ -38730,6 +39168,8 @@ function resolveEffect(eff, caster, target) {
       let buffed = 0;
       for (const a of (player.creatures || [])) {
         if (!a.isAlive) continue;
+        // Totems can't be hit, so Shield on them is wasted — skip.
+        if (isTotemAlly(a)) continue;
         a.shield = (a.shield || 0) + eff.value;
         spawnTokenOnTarget(a, eff.value, 'Shield', Colors.ALLY_BLUE);
         buffed++;
@@ -39316,6 +39756,9 @@ function resolveEffect(eff, caster, target) {
       // heal_all and the ally bled out anyway.
       for (const ally of (caster.creatures || [])) {
         if (!ally.isAlive) continue;
+        // healCreature guards totems itself, but skipping here keeps them out
+        // of any per-ally logging/VFX the caller does around this loop.
+        if (isTotemAlly(ally)) continue;
         healCreature(ally, eff.value);
       }
       break;
@@ -42320,6 +42763,10 @@ function resolveEffect(eff, caster, target) {
       const liveAllies = [];
       for (const ally of allies) {
         if (!ally.isAlive) continue;
+        // Totems (Armed Trap, Arcane Vortex) are skipped: they can't attack, so
+        // Heroism on them is dead value, and a gold pip on a trap misreads the
+        // board. They also don't shout.
+        if (isTotemAlly(ally)) continue;
         ally.heroism = (ally.heroism || 0) + eff.value;
         spawnTokenOnTarget(ally, eff.value, 'Heroism', Colors.GOLD);
         liveAllies.push(ally);
@@ -42869,6 +43316,9 @@ function healCreature(creature, amount) {
   // Returns the OVERHEAL — heal beyond max HP (after ailments) that
   // couldn't land. Heroic Heal converts it to Heroism.
   if (!creature || !creature.isAlive) return 0;
+  // A totem can't be damaged, so it can't be healed either — and letting a
+  // party heal "land" on a trap would silently waste the points.
+  if (isTotemAlly(creature)) return 0;
   // Same priority as healPlayer: Bleed → Poison → HP. Each heal point
   // first scrubs a Bleed stack, then a Poison stack, then bumps HP
   // by 1. A 5-heal on a Bleed 2 / Poison 1 / 3 HP ally clears all
@@ -46754,6 +47204,34 @@ function maybeUnholyAuraHeal(attacker, card = null) {
   }
 }
 
+// === Drowned Lungs (Deep Kraken salvage) ===================================
+// Live hand-scan, the same shape as Aura of Might / Unholy Aura: the passive is
+// on while the card sits in hand and ends the moment it is spent.
+//
+// Fired from the card-play funnel for EVERY card, not just attacks — that is
+// what the card says. Naturally capped by the game's own economy: healPlayer
+// restores cards from the discard pile, so it can never out-heal damage already
+// taken and simply reports "Nothing to heal" on a clean pile.
+//
+// `card` is the card being played. The Lungs are already out of hand by the
+// time this runs on the Lungs' own play, so they never heal for themselves.
+function maybeDrownedLungsHeal(card) {
+  if (!player || !player.deck || !Array.isArray(player.deck.hand)) return;
+  const lungs = player.deck.hand.filter(c => c && c.id === 'drowned_lungs');
+  if (lungs.length === 0) return;
+  // Stacks with copies — two in hand heal 2 per card played. The discard-pile
+  // cap above is what keeps that from running away.
+  let amount = 0;
+  for (const l of lungs) {
+    const eff = (l.currentEffects || []).find(e => e.effectType === 'heal_per_card_played_in_hand');
+    amount += eff ? (eff.value || 1) : 1;
+  }
+  if (amount <= 0) return;
+  healPlayer(amount);
+  spawnHealOnTarget(player, amount);
+  addLog(`  Drowned Lungs: Heal ${amount}`, '#7cc8ff');
+}
+
 // Grow the bone host by one step — the Summon-or-Bolster the necromancer's
 // Skeleton Mastery power and Unholy Aura's on-recharge both spend. Mirrors
 // summonOrBolsterTreant, minus the coin flip: the necromancer's rule is strict,
@@ -47630,6 +48108,17 @@ function playerHasPiwafwi() {
 
 // Apply N damage from an enemy attack to an ally creature immediately.
 // Logs the result and removes the creature if it dies.
+// A totem is a marker on the field, not a body: the Armed Trap and the Arcane
+// Vortex. `_untargetableAlly` is the marker, and the damage / targeting / DoT
+// paths already respect it. This predicate is the same check named, so the
+// BUFF and STATUS sweeps can say what they mean — a totem takes no damage, no
+// bonus, no debuff and no heal. It cannot attack, so Heroism on it is wasted;
+// it cannot be hit, so Shield on it is wasted; and painting status pips on a
+// trap just lies about what is on the board.
+function isTotemAlly(c) {
+  return !!(c && c._untargetableAlly);
+}
+
 function applyDamageToAlly(ally, dmg, attacker = null, skipOverwhelm = false) {
   // Totem safety net. The targeting pools above skip _untargetableAlly, but
   // enemy AoE loops walk player.creatures directly — the Vortex bounces
@@ -48514,7 +49003,11 @@ function routeEnemyDamageToTarget(target, dmg, sourceLabel, sourceCreature = nul
   // path, which has to spring before it computes damage) pass
   // trapAlreadyChecked so a second armed trap doesn't also fire on the same
   // swing.
-  if (target === player && !trapAlreadyChecked) {
+  // _trapSprungThisCard is the card-path's equivalent of the trapAlreadyChecked
+  // flag: the enemy attack-card flow springs the trap once up front, then calls
+  // in here from its damage branches. Without it a SECOND armed trap would fire
+  // on the same card — which only shows up once Killing Ground sets three.
+  if (target === player && !trapAlreadyChecked && !_trapSprungThisCard) {
     const sprung = maybeSpringTrap(sourceCreature);
     // Ice Trap — the attack was costed upstream, so apply the fresh chill here
     // before any of the mitigation below reads `dmg`.
@@ -48718,6 +49211,9 @@ function shrinkElementalBody(target, amount, label) {
 
 function applyIceToTarget(target, amount) {
   if (!target || amount <= 0) return;
+  // Totems take no status. Guarded here rather than at the call sites so every
+  // path is covered — enemy Ice AoE walks player.creatures directly.
+  if (isTotemAlly(target)) return;
   // Ice Elemental power: instead of stacking Ice, the elemental
   // absorbs each would-be Ice stack as a permanent +1 attack / +1
   // max HP buff (and heals the new HP). Triggers before the Fire-
@@ -48793,6 +49289,8 @@ function applyIceToTarget(target, amount) {
 // no-sell, not a stack-block.
 function applyFireToTarget(target, amount) {
   if (!target || amount <= 0) return;
+  // Totems take no status — see applyIceToTarget.
+  if (isTotemAlly(target)) return;
   let applied = 0;
   if (target instanceof Creature) {
     const cancel = Math.min(target.iceStacks, amount);
@@ -50612,8 +51110,29 @@ function updateEnemyTurn(dt) {
     const enemyInkMiss = consumeInkCloudForAttack(enemy, enemy.name);
     if (enemyInkMiss) {
       _activePlayCard = null;
+      _trapSprungThisCard = false;
       tickBleedOnAttack(enemy, enemy.name);
       return;
+    }
+    // Ranger Trap — spring ONCE for the whole card, at target-selection time,
+    // the same way the creature-swing path does. Doing it here rather than
+    // inside the damage branches is what makes a damage-LESS attack card spring
+    // it: Kobold Shield and the Warden's Whip are pure Bleed with no damage
+    // effect at all, so they never reached routeEnemyDamageToTarget (where the
+    // only card-side trap hook lived) and walked past an armed trap untouched.
+    // Every status-only enemy attack — Bleed, Poison, Ice, Weak, Shock — is
+    // covered by sitting here.
+    //
+    // After the ink check on purpose: a swing that missed entirely shouldn't
+    // burn the trap.
+    let trapChilled = false;
+    if (cardTarget === player) {
+      const cSprung = maybeSpringTrap(null);
+      // Bear Trap swaps the bear in for the rest of the card — every branch
+      // below reads cardTarget, so the whole play follows it.
+      if (cSprung.redirect) cardTarget = cSprung.redirect;
+      trapChilled = cSprung.chilled;
+      _trapSprungThisCard = true;
     }
     for (const eff of card.currentEffects) {
       if (eff.effectType === 'enemy_sneak_attack' || eff.effectType === 'sneak_attack') {
@@ -50917,7 +51436,14 @@ function updateEnemyTurn(dt) {
         // returns a sentinel ally first), not always the player — the enemy
         // Darkwood Crossbow was hardcoded at `player`, so it ignored the
         // player's sentinel allies and always shot past them.
+        // cardTarget already carries any Bear Trap redirect — the trap sprang
+        // once for the whole card up at target selection.
         const utgt = cardTarget || player;
+        // Ice Trap chills mid-shot. This branch is the one damage path that
+        // never calls consumeIceForAttack (unpreventable enemy attacks ignore
+        // Ice by design), so the fresh chill has to be applied by hand over the
+        // number that was already costed above.
+        if (trapChilled) trueDmg = consumeIceOnly(enemy, trueDmg);
         // Red swing arrow from the enemy to whoever's actually hit, so the
         // shot visibly lands on the sentinel rather than silently flashing.
         const uSrc = getEnemyCenter();
@@ -50967,18 +51493,43 @@ function updateEnemyTurn(dt) {
         playSound('drain_essence', 0.8);
         const minRoll = 1;
         const maxRoll = Math.max(minRoll, eff.value);
-        const necroticDmg = minRoll + Math.floor(Math.random() * (maxRoll - minRoll + 1));
+        let necroticDmg = minRoll + Math.floor(Math.random() * (maxRoll - minRoll + 1));
+        // Ranger Trap — like the unpreventable branch above, this hand-rolls
+        // its damage straight into the deck and never touches
+        // routeEnemyDamageToTarget, so the trap has to be sprung by hand.
+        let ndTarget = player;
+        {
+          const ndSprung = maybeSpringTrap(null);
+          if (ndSprung.redirect) ndTarget = ndSprung.redirect;
+          if (ndSprung.chilled) necroticDmg = consumeIceOnly(enemy, necroticDmg);
+        }
         // takeDamageFromDeck returns the number of NON-token cards
         // actually moved out of the player's draw pile (= "drained").
         // Using `player.totalCards` delta here would always read 0
         // since damage moves cards between piles within the same
         // deck rather than removing them — that broke the heal.
-        const drained = player.takeDamageFromDeck(necroticDmg);
-        if (drained > 0) {
-          spawnDamageOnTarget(player, drained, Colors.ORANGE);
-          addLog(`  ${necroticDmg} Necrotic damage! (${drained} drained)`, Colors.PURPLE || '#a578ff');
+        //
+        // A Bear Trap puts the bear in the way: it eats the drain as plain
+        // unpreventable damage, and what the Specter heals is measured off the
+        // bear instead of the player's deck.
+        let drained;
+        if (ndTarget !== player) {
+          drained = ndTarget.takeUnpreventableDamage(necroticDmg);
+          if (drained > 0) spawnDamageOnTarget(ndTarget, drained, Colors.ORANGE);
+          addLog(`  ${necroticDmg} Necrotic damage to ${ndTarget.name}!`, Colors.PURPLE || '#a578ff');
+          if (!ndTarget.isAlive) {
+            spawnDeathAnimation(ndTarget);
+            addLog(`  ${ndTarget.name} destroyed!`, Colors.GOLD, null, null, ndTarget);
+            countAndRemoveDeadCreatures();
+          }
         } else {
-          addLog(`  ${necroticDmg} Necrotic damage — nothing to drain.`, Colors.GRAY);
+          drained = player.takeDamageFromDeck(necroticDmg);
+          if (drained > 0) {
+            spawnDamageOnTarget(player, drained, Colors.ORANGE);
+            addLog(`  ${necroticDmg} Necrotic damage! (${drained} drained)`, Colors.PURPLE || '#a578ff');
+          } else {
+            addLog(`  ${necroticDmg} Necrotic damage — nothing to drain.`, Colors.GRAY);
+          }
         }
         // Heal Specter: pop up to `drained` cards from its discard
         // pile back onto the draw pile. PY's heal_card flow.
@@ -52089,6 +52640,8 @@ function updateEnemyTurn(dt) {
       }
     }
     _activePlayCard = null;
+    // Re-arm for the NEXT attack card — one trap per card, not per turn.
+    _trapSprungThisCard = false;
     // Bleed tick after the attack card resolves so a fatal bleed
     // never robs the enemy of their swing.
     tickBleedOnAttack(enemy, enemy.name);
@@ -52327,6 +52880,22 @@ function updateEnemyTurn(dt) {
         setTimeout(() => playSound('bones_clatter', 0.75), 70);
         setTimeout(() => playSound('bones_clatter', 0.9),  150);
         setTimeout(() => playSound('bones_clatter', 0.7),  240);
+        // Ranger Trap — the storm reaches the player, so it springs. Sprung
+        // BEFORE the shield strip and the damage so a Bear Trap's bear is on
+        // the field in time to be swept up by the ally pass below.
+        let bsDmg = eff.value;
+        let bsHitsPlayer = true;
+        {
+          const bsSprung = maybeSpringTrap(null);
+          if (bsSprung.redirect) {
+            // The bear throws itself in front of the player's share. It is an
+            // ally, so the sweep below already hits it — skipping the player's
+            // portion is the whole redirect, and stops the bear being hit twice.
+            bsHitsPlayer = false;
+            addLog(`  The Bear takes the storm meant for you!`, Colors.GREEN);
+          }
+          if (bsSprung.chilled) bsDmg = consumeIceOnly(enemy, bsDmg);
+        }
         if (player.shield > 0) {
           addLog(`  Player loses ${player.shield} Shield`, Colors.ALLY_BLUE);
           player.shield = 0;
@@ -52335,11 +52904,13 @@ function updateEnemyTurn(dt) {
           if (!a.isAlive) continue;
           if ((a.shield || 0) > 0) a.shield = 0;
         }
-        const taken = player.takeDamageFromDeck(eff.value);
-        addLog(`  ${taken} dmg to ${player.name || 'you'}`, Colors.RED);
+        if (bsHitsPlayer) {
+          const taken = player.takeDamageFromDeck(bsDmg);
+          addLog(`  ${taken} dmg to ${player.name || 'you'}`, Colors.RED);
+        }
         for (const a of [...(player.creatures || [])]) {
           if (!a.isAlive) continue;
-          const actual = a.takeDamage(eff.value);
+          const actual = a.takeDamage(bsDmg);
           addLog(`  ${actual} dmg to ${a.name}`, Colors.RED);
         }
         countAndRemoveDeadCreatures();
@@ -55209,6 +55780,19 @@ let _perkSelectBgKey = null;
 let _perkSelectThenEncounterId = null;
 
 function drawPerkSelect() {
+  // Same per-frame hover reset as drawAbilitySelect above. This screen DOES set
+  // hoveredCardPreview (on a hovered perk) but never cleared it, so a preview
+  // carried in from the previous screen — or from a perk the cursor has since
+  // left — stayed on screen. The perk hover below repopulates it each frame.
+  if (isShiftFrozen()) {
+    hoveredCardPreview = shiftFreezeCard;
+    hoveredPowerPreview = shiftFreezePower;
+    hoveredCreaturePreview = shiftFreezeCreature;
+  } else {
+    hoveredCardPreview = null;
+    hoveredPowerPreview = null;
+    hoveredCreaturePreview = null;
+  }
   // Background: a per-pick override (e.g. the Stone Door blessing's
   // abbey courtyard) when set, else the leaving-prison / chapter-end
   // art that matches the ability-select screen preceding this.
@@ -57197,6 +57781,13 @@ function openShop(shopId, name) {
       card._rareFind = true;
       rareFindOnShelf = true;
     }
+    // Stamp the shelf copy when the active class can't equip it, so drawCard
+    // can badge it at a glance instead of the player finding out in the buy
+    // confirm. Stamped on the SHOP's instance only — buying calls creator()
+    // for a fresh card, so the marker never follows the purchase (same
+    // reasoning as _rareFind above). Class can't change while a shop is open,
+    // so computing it once here is safe.
+    card._cantEquip = !canClassEquip(card);
     return { card, price, creator };
   });
   // Rare find on the shelf — a reveal sting + a nudge so the player looks. The
@@ -59817,6 +60408,7 @@ function commitSaveEditing() {
     cozySpotFishingCaught, outpostTentRested, supplyPileTaken, lastWatchSupplyTaken,
     krakenDefeated, krakenLevelUpClaimed, gontranGnollVictoryClaimed, guildGnollRewardClaimed, harpiesDefeated, direBearDefeated,
     rocRescued, lastWatchPostRocClaimed, shrineReactivated, stormwatchersShrineActiveSeen, mithrilRemediesOlbrimGreeted, babyRocDefeated, giantBoarDefeated,
+    passageAmbushDefeated,
     // Underdark progress latches.
     underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed,
     mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked,
@@ -59831,6 +60423,10 @@ function commitSaveEditing() {
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
     playerTierOffset, monsterTierOffset,
+    // Authoritative run-flag bag. The individual boolean entries above are
+    // legacy mirrors; this is what restoreFromSave reads. New flags go in the
+    // RUN_FLAGS registry and need no line here.
+    flags: runFlagsToObject(),
   }, saveEditingSlot, name);
   if (success) {
     addLog(`Game saved: ${name}`, Colors.GREEN);
@@ -60588,6 +61184,11 @@ function restoreFromSave(data) {
   deepGnollEncounterChance = typeof data.deepGnollEncounterChance === 'number' ? data.deepGnollEncounterChance : DEEP_GNOLL_ENC_STEP;
   underdarkEncounterChance = typeof data.underdarkEncounterChance === 'number' ? data.underdarkEncounterChance : UNDERDARK_ENC_STEP;
   _underdarkEncArmed = !!data.underdarkEncArmed;
+  // Run flags, authoritative. Runs AFTER the individual legacy assignments
+  // above so the registry wins: it reads data.flags when present and falls back
+  // to the top-level key for saves written before the bag existed. This is also
+  // what repairs wastesNorthRestDone, which the old whitelist never persisted.
+  runFlagsFromSave(data);
   _fountainStepReduction = typeof data.fountainStepReduction === 'number' ? data.fountainStepReduction : 0;
   // The number and the sheet icon are stored separately — re-sync so a save
   // can never show a blessing that isn't live (or hide one that is).
@@ -60647,6 +61248,9 @@ function restoreFromSave(data) {
   shrineReactivated = !!data.shrineReactivated;
   stormwatchersShrineActiveSeen = !!data.stormwatchersShrineActiveSeen;
   babyRocDefeated = !!data.babyRocDefeated;
+  // Absent in saves written before the latch existed — those load as false,
+  // which just means the corridor is armed once. Harmless either way.
+  passageAmbushDefeated = !!data.passageAmbushDefeated;
   // Belt-and-suspenders latch for the Last Watch / Roc / Shrine arc. Its boolean
   // flags were added to the save schema after the arc shipped, so an older save
   // that already finished the quest loads them as false and re-arms the whole
@@ -61921,22 +62525,10 @@ function showTitleCard(title, subtitle = '', callback = null) {
   state = GameState.TITLE_CARD;
 }
 
-// The Underdark is debug-only content for now. Every crossing from the East
-// Mountain (c7_8 "Into the Dark") into the Underdark checks here first: the
-// recognition dialog's "Lets go in" choice, and the c7_8 <-> ug_entry
-// teleporter (walk-onto AND click both funnel through the arriveAtNode
-// boundary branch). With debug OFF the party gets a "Work In Progress" title
-// card and stays put on the East Mountain map. Returns true when entry was
-// blocked (the caller must bail without teleporting / unlocking).
-function underdarkWipBlocked() {
-  if (debugMode) return false;
-  currentEncounter = null;
-  encounterChoiceResult = null;
-  showTitleCard('Work In Progress', 'To be continued…', () => {
-    state = GameState.MAP;
-  });
-  return true;
-}
+// (The Underdark used to be debug-gated: underdarkWipBlocked() showed a "Work
+// In Progress" card and refused the crossing unless debugMode was on. Chapter 3
+// is playable now, so the gate is gone and both crossings — the "Lets go in"
+// dialog choice and the c7_8 <-> ug_entry teleporter — run unconditionally.)
 
 function updateTitleCard(dt) {
   if (!titleCardPhase) return;
@@ -63063,6 +63655,12 @@ const CARD_SFX_OVERRIDES = {
   deep_swallowing_bite:     { play:  'monster_alien_scream_01' },
   deep_tentacle_grab:       { play:  'splash_dive' },
   deep_kraken_whip:         { play:  'whip_flesh' },
+  // Deep Kraken salvage. The Maw is a bite, the Flask and the Tentacle are
+  // water, the Harpoon is a thrown spike; the Eye and the Lungs are quiet.
+  maw_of_the_deep:          { play: 'big_bone_hit', flesh: 'big_bone_hit' },
+  inkbladder_flask:         { play: 'splash_dive' },
+  severed_tentacle:         { play: 'splash_dive', defense: 'splash_dive' },
+  abyssal_harpoon:          { play: 'bow_flesh', flesh: 'bow_flesh', blocked: 'bow_blocked' },
   kobold_backup:            { play: 'kobold_attack' },
   kobold_army:              { play: 'kobold_attack' },
   split:                    { play: 'ooze_attack' },
@@ -65763,29 +66361,39 @@ function drawCodexLootGrid(L) {
         ctx.fillText(note, L.gridX + 12, sy + 28);
       }
 
-      // Test Roll button (top-right)
+      // Pick tables aren't rolled, so a Test Roll button would be nonsense —
+      // show what the player actually does instead.
+      const pickN = LOOT_PICK_TABLES[e.id] || 0;
       const btnW = 100, btnH = 26;
       const btnX = L.gridX + L.gridW - btnW - 12;
       const btnY = sy + 10;
-      ctx.fillStyle = 'rgba(60, 100, 60, 0.85)';
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.strokeStyle = '#9c9';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(btnX, btnY, btnW, btnH);
-      ctx.fillStyle = '#dfd';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Test Roll', btnX + btnW / 2, btnY + btnH / 2);
-      codexClickAreas.push({ x: btnX, y: btnY, w: btnW, h: btnH, kind: 'loot-roll', tableId: e.id });
-
-      const lastRoll = codexLootRollResults[e.id];
-      if (lastRoll) {
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px sans-serif';
+      if (pickN > 0) {
+        ctx.fillStyle = '#ffd070';
+        ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`Rolled: ${lastRoll.card.name}`, btnX - 10, btnY + btnH / 2);
+        ctx.fillText(`Pick ${pickN}`, btnX + btnW, btnY + btnH / 2);
+      } else {
+        ctx.fillStyle = 'rgba(60, 100, 60, 0.85)';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.strokeStyle = '#9c9';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#dfd';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Test Roll', btnX + btnW / 2, btnY + btnH / 2);
+        codexClickAreas.push({ x: btnX, y: btnY, w: btnW, h: btnH, kind: 'loot-roll', tableId: e.id });
+
+        const lastRoll = codexLootRollResults[e.id];
+        if (lastRoll) {
+          ctx.fillStyle = '#fff';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`Rolled: ${lastRoll.card.name}`, btnX - 10, btnY + btnH / 2);
+        }
       }
 
       const rowY = sy + headerH;
@@ -65831,11 +66439,13 @@ function drawCodexLootGrid(L) {
           ctx.restore();
         }
 
-        ctx.fillStyle = '#fff';
+        // A pick table has no odds — every card is available, the player just
+        // chooses. Printing a % here would be actively wrong.
+        ctx.fillStyle = pickN > 0 ? '#ffd070' : '#fff';
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(`${pct}%`, cx + cardW / 2, rowY + cardH + 3);
+        ctx.fillText(pickN > 0 ? 'pick' : `${pct}%`, cx + cardW / 2, rowY + cardH + 3);
 
         if (fullyOrPartiallyVisible) {
           codexClickAreas.push({
@@ -67531,10 +68141,14 @@ function buildCodexSourceCache() {
     const table = LOOT_TABLES[tableId];
     const total = table.reduce((s, e) => s + e.weight, 0);
     const tableLabel = LOOT_TABLE_LABELS[tableId] || _titleCase(tableId.replace(/_loot$/, ''));
+    const pickN = LOOT_PICK_TABLES[tableId] || 0;
     for (const entry of table) {
       const pct = Math.round((entry.weight / total) * 100);
       addCard(entry.creator().id, {
-        text: `Loot: ${tableLabel} (${pct}%)`,
+        // A pick table is chosen, not rolled — say "pick 2 of 6", never a %.
+        text: pickN > 0
+          ? `Loot: ${tableLabel} (pick ${pickN} of ${table.length})`
+          : `Loot: ${tableLabel} (${pct}%)`,
         link: { type: 'loot', id: tableId },
       });
     }
@@ -67580,7 +68194,15 @@ function buildCodexSourceCache() {
         }
         if (Array.isArray(phase.lootPickCards) && phase.lootPickCards.length) {
           for (const id of phase.lootPickCards) {
-            addCard(id, `Drop: ${enc.name} (pick ${phase.lootPickCount || 1})`);
+            const src = `Drop: ${enc.name} (pick ${phase.lootPickCount || 1})`;
+            // Same expansion the live LOOT phase does — an entry may be a
+            // LOOT_TABLES id. Without this the table id would be attributed as
+            // if it were a card, and the real members would lose the line.
+            if (LOOT_TABLES[id]) {
+              for (const entry of LOOT_TABLES[id]) addCard(entry.creator().id, src);
+            } else {
+              addCard(id, src);
+            }
           }
         }
       }

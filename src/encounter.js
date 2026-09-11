@@ -6634,22 +6634,24 @@ export function createBottomlessLakeEncounter() {
       phaseType: EncounterPhase.COMBAT,
       enemyId: 'deep_kraken',
     }),
-    // Salvage pick — the SAME six tier-1 epics the Kraken Spawn drops from
-    // the wrecked hold; party keeps 2 distinct. (For now the Deep Kraken
-    // reuses the surface Kraken's loot table.)
+    // Salvage pick — six TIER-3 epics, party keeps 2 distinct. Replaces the
+    // tier-1 set this encounter used to borrow from the surface Kraken Spawn
+    // (that table stays on the Spawn, where its sailor flavour belongs).
+    //
+    // Every entry is a tier-3 epic on purpose. This is a PICK, not a weighted
+    // roll: an under-budget entry here is not a weaker option, it is an option
+    // nobody ever takes. They differ by SLOT — martial_2h / item / clothing /
+    // allies / relic / simple — so every class finds two it can equip.
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       phaseTitle: 'Sunken Salvage',
       lootTitle: 'Sunken Salvage',
       lootPickCount: 2,
-      lootPickCards: [
-        'bloody_eye_patch',
-        'harpoon_of_the_deep',
-        'tentacle_whip',
-        'sailors_lucky_compass',
-        'krakens_eye_spyglass',
-        'barnacle_covered_buckler',
-      ],
+      // A LOOT_TABLES id, not six card ids — the LOOT phase expands it. The
+      // table (deep_kraken_loot) is the single home for the list, so the codex
+      // Loot Tables tab and this pick screen can never disagree about what the
+      // Kraken drops.
+      lootPickCards: ['deep_kraken_loot'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -6658,6 +6660,17 @@ export function createBottomlessLakeEncounter() {
         new EncounterText('Among the nearer wrecks, half-swallowed by the black shallows, something the great beast dragged down long ago has washed loose — salvage worth the taking before you go.'),
         new EncounterText('Raena lets out a long breath. "That," she says, "was where the river\'s monster was born. And now it isn\'t." She still won\'t go near the water.', 'Raena'),
       ],
+    }),
+    // Empty LOOT phase → noLoot + triggersLevelUp routes straight into the
+    // level-up flow. TIER 3 abilities: the Deep Kraken is a Chapter 3 boss and
+    // the deepest thing the party has put down, so it sits on the same rung as
+    // the deep-gnome village rest. Perk tier stays at 2 — that ladder is
+    // separate and has no tier-3 band.
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      triggersLevelUp: true,
+      levelUpTier: 3,
+      perkTier: 2,
     }),
   ]);
 }

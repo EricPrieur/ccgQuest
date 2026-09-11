@@ -7,6 +7,62 @@
 export let onCreatureDodge = null;
 export function setCreatureDodgeHandler(fn) { onCreatureDodge = fn; }
 
+// Every status-stack field a creature can carry (debuffs and elemental stacks)…
+export const STATUS_STACK_FIELDS = Object.freeze([
+  'fireStacks', 'iceStacks', 'poisonStacks', 'shockStacks', 'bleedStacks',
+  'sunderStacks', 'paralyzeStacks', 'weakStacks', 'drowSleepStacks',
+  'inkCloudStacks', 'markStacks',
+]);
+
+// …and the per-creature BONUS fields. A totem can't attack, so Heroism and Rage
+// are dead value on it; it can't be hit, so Shield is too. `armor` is
+// deliberately absent — it is a constructor parameter a real creature may be
+// built with, and pinning it would fight the Creature contract rather than the
+// totem rule.
+export const BUFF_FIELDS = Object.freeze(['heroism', 'rage', 'shield']);
+
+/**
+ * Install the status-stack fields as guarded accessors on a creature.
+ *
+ * A TOTEM — the Armed Trap and the Arcane Vortex, both flagged
+ * `_untargetableAlly` — is a marker on the field, not a body. It cannot be
+ * targeted, damaged, healed or made to fight, so it must not carry statuses
+ * either: a Poison pip on a trap lies about the board, and the trap would show
+ * icons for stacks that can never do anything.
+ *
+ * This is enforced HERE rather than at the call sites because roughly 112
+ * places across main.js write these stacks directly (`c.poisonStacks += n`).
+ * Guarding each one would be enormous, and — worse — permanently leaky: every
+ * new status effect added later would reopen the hole. The damage half is
+ * already closed the same way (takeDamage / takeUnpreventableDamage return 0
+ * for a totem); this closes the status half in one place.
+ *
+ * Writes to a totem are pinned at 0. Decrements are pinned too, which is
+ * harmless — subtracting from 0 was already a no-op.
+ *
+ * Defined per-INSTANCE as own enumerable accessors (not on the prototype) so
+ * the stacks still serialize and spread like ordinary fields; the backing
+ * `_<field>` store is non-enumerable so it never doubles up in a snapshot.
+ */
+export function defineStatusStacks(creature) {
+  for (const field of [...STATUS_STACK_FIELDS, ...BUFF_FIELDS]) {
+    const key = `_${field}`;
+    // Preserve whatever the field already holds. Constructor assignments that
+    // ran BEFORE this call (shield comes straight off a constructor param)
+    // would otherwise be wiped by the fresh backing store.
+    const existing = creature[field];
+    Object.defineProperty(creature, key, {
+      value: typeof existing === 'number' ? existing : 0,
+      writable: true, enumerable: false, configurable: true,
+    });
+    Object.defineProperty(creature, field, {
+      get() { return this[key] || 0; },
+      set(v) { this[key] = this._untargetableAlly ? 0 : v; },
+      enumerable: true, configurable: true,
+    });
+  }
+}
+
 /**
  * Optional UI hook fired whenever a creature actually loses HP. Wired by
  * main.js so per-creature reaction cues (the Carrion Crawler Torso's chitter)
@@ -153,6 +209,11 @@ export class Creature {
     this.heroism = 0;
     this.rage = 0;
     this.ignite = 0;
+
+    // Status stacks are guarded ACCESSORS, not plain fields — see
+    // defineStatusStacks below. A totem (Armed Trap, Arcane Vortex) can never
+    // accumulate one, however the stack was applied.
+    defineStatusStacks(this);
 
     this.fireStacks = 0;
     this.iceStacks = 0;
