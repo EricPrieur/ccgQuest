@@ -1054,14 +1054,17 @@ export function createAimedShotCard() {
     // an Ability everywhere that matters (deck limits, class list, codex tab) —
     // the trait only changes what triggers off it.
     subtype2: 'ranged',
-    description: 'Recharge a Card -> Deal 4 Damage, Draw.\nHeroism: +2.',
-    shortDesc: 'R-Card->4 Dmg, Draw\nHeroism: +2',
+    description: 'Recharge a Card -> Deal 3 Damage, Draw.\nHeroism: +2.',
+    shortDesc: 'R-Card->3 Dmg, Draw\nHeroism: +2',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('heroism_double', 1, TargetType.SELF),
-      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      // Base 3, not 4: the +2-per-Heroism rider is the card, and with a Quiver
+      // feeding it the doubled stack already carries the swing on its own. The
+      // extra base point was paying for the scaling twice.
+      new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
       new CardEffect('draw', 1, TargetType.SELF),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -2037,9 +2040,36 @@ export function createMarkingShot() {
 // four. A genuine build-around, and a dead card for a Ranger who took neither
 // Rat Taming nor Animal Companion — the pool's only two beast sources.
 // Everything else (Beastmaster Horn, Jar of Piranhas, Pet Spider) is loot.
-// Rain of Arrows — Ranger Tier 2 (7) + 6 for the second card = 13. Five arrows,
-// each rolling 1-4 at its own randomly chosen enemy: 12.5 expected, right on
-// budget.
+// Rain of Arrows — Ranger Tier 2 (7) + 6 for the second card = 13. FOUR arrows,
+// each rolling 1-3 at its own randomly chosen enemy.
+//
+// Budgeted at its REAL play state, not a bare one. The Ranger's Take Aim power
+// banks +1 Heroism for a recharge every turn, so "1 Heroism in hand" is the
+// normal way this card is cast, and riders pay out on EVERY arrow (see below):
+//
+//   H=0  4 x 2            =  8
+//   H=1  4 x (2 + 1)      = 12   <- the assumed default; budget is 13
+//   H=2  4 x (2 + 2)      = 16
+//   H=3  4 x (2 + 3)      = 20
+//
+// Cut from 1-4 x5 after playtesting. At that roll the curve read 12.5 / 17.5 /
+// 22.5 / 27.5 — every other Tier 2 gains +1 or +2 per Heroism, this one gains
+// one per ARROW, so it ran away the moment Take Aim had banked two or three.
+//
+// The arrow COUNT is the Heroism multiplier, which is why the fix is 4 arrows
+// rather than a smaller roll over 5 or 6: dropping the roll to 1-2 and adding
+// arrows (1-2 x6 = 27 at H=3) lands straight back where it started.
+//
+// The roll stayed at 1-3 rather than 1-2 for armor. Damage is absorbed PER HIT,
+// so at a 1-2 roll a single point of Armor halves the card (5 x 0.5 = 2.5 of
+// 7.5) and two points very nearly zero it. 1-3 keeps a floor under it (4 x 1 =
+// 4 of 8) without touching the scaling.
+//
+// A two-card cost is SUPPOSED to hit hard — those effects run underpowered
+// across the board — so this is deliberately strong at H>=1 rather than merely
+// fair. Its brakes are elsewhere: five separate hits means armor absorbs per
+// hit, so the volley fares far worse into plate than one big swing of the same
+// total, and the damage is randomly spread rather than aimed.
 //
 // Replaces Explosive Shot, which was the same "Recharge a Card -> multi-hit"
 // shape but strictly narrower. Losing its Draw is deliberate — the Ranger has
@@ -2048,9 +2078,7 @@ export function createMarkingShot() {
 // Rider semantics follow Fan of Blades: Heroism, Rage, Ignite and the Vial
 // charges are snapshotted ONCE and paid out on every arrow, so a single charge
 // covers the whole volley. An arrow whose target died to an earlier arrow
-// re-rolls onto something still standing rather than being lost. Note the flip side of five separate hits — armor
-// absorbs per hit, so a volley fares far worse into plate than one big swing of
-// the same total.
+// re-rolls onto something still standing rather than being lost.
 export function createRainOfArrows() {
   return new Card({
     id: 'rain_of_arrows', name: 'Rain of Arrows',
@@ -2059,15 +2087,18 @@ export function createRainOfArrows() {
     // re-applied to EVERY arrow, which makes this the biggest quiver payoff in
     // the game; see the barrage note in resolveBarrageShot.
     subtype2: 'ranged',
-    description: 'Recharge a Card ->\nDeal 1-4 Randomly 5 times.',
-    shortDesc: 'R-Card->1-4 Dmg\nx5, random',
+    description: 'Recharge a Card ->\nDeal 1-3 Randomly 4 times.',
+    shortDesc: 'R-Card->1-3 Dmg\nx4, random',
     subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('recharge_extra', 1, TargetType.SELF),
-      // value packs the roll as min*10 + max (14 = "1 to 4"), matching
-      // damage_range; maxTargets is the arrow count.
-      new CardEffect('rain_of_arrows', 14, TargetType.ALL_ENEMIES, 5),
+      // value packs the roll as min*10 + max (13 = "1 to 3"), matching
+      // damage_range; maxTargets is the arrow count. The +1 gamePlusOffset
+      // grows the MAX only (13 -> 14 = "1 to 4" -> 15 = "1 to 5"), so the
+      // range stretches with tier instead of sliding — and it deliberately
+      // does NOT add arrows, since the count is what multiplies Heroism.
+      new CardEffect('rain_of_arrows', 13, TargetType.ALL_ENEMIES, 4),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { rain_of_arrows: 1 },
@@ -2292,37 +2323,70 @@ export function createElementalWeapon() {
   // picking at a glance. Same image is reused on the in-combat buff
   // (imageId 'buff_elemental_weapon_<element>' in the resolver).
   //
-  // Both modes now carry a swing as well as the imbue. The buff alone was a
-  // pure setup card — it did nothing the turn you spent it, which is what made
-  // it the weakest pick in the Ranger tier-2 pool. Budget is T2 uncommon (7):
-  // the Fire rider is worth ~4 and the Ice rider ~3 (Ice is mitigation, not
-  // damage), so the swing sizes are set to bring each mode to the same place.
+  // Both modes carry a swing as well as the imbue, so the card does something
+  // the turn you spend it.
+  //
+  // PRICING — this is a PERMANENT on-attack rider, and it was originally priced
+  // as if it were a consumable (Fire rider ~4, Ice ~3 against a T2 uncommon's 7
+  // on a Recharge). That was the bug. A rider that fires on EVERY attack for the
+  // rest of the fight belongs with the other permanent riders in
+  // docs/loot-budget.md §3 — Rage is 5/stack, the Bleed-on-attack rider is 4 —
+  // not with the one-shot charges. Worse, the buff stacks on every cast
+  // (main.js grant_elemental_weapon_*), so on a Recharge cost a single copy
+  // cycled three times in one fight reached 3 stacks "just playing normally",
+  // and with a barrage feeding it that was ~36 Fire damage a turn, forever.
+  //
+  // Repriced: Discard cost (T2 uncommon 7 x 1.5 = 10.5 budget, no second-card
+  // cost). Discard is the gate rather than a hard stack cap — the card sits in
+  // the discard pile until you HEAL it back, so re-stacking costs real HP-equity
+  // in a deck where deck size IS hit points.
+  //
+  //   Fire mode: rider 9 + Deal 1  = 10
+  //   Ice mode:  rider 5 + Deal 5  = 10
+  //
+  // Fire is 9 and Ice is 5 because Fire compounds and Ice does not. A Fire stack
+  // pays about twice its face in damage (the status halves rather than ticking
+  // down by 1, so the pool converges instead of draining), which puts the Fire
+  // rider near 2x Rage. Ice is mitigation with a hard ceiling: the target burns
+  // one stack per attack it makes plus one at end of turn, so against a 2-attack
+  // boss only ~3/turn ever do work no matter how many you stamp — the overflow
+  // only feeds Ice Shatter. Hence Ice hits harder NOW (5) and Fire wins the long
+  // game (1).
   //
   // The grant is ordered BEFORE the damage on purpose: this card's own hit
-  // rides its own rider, so Fire mode reads "Deal 2 + 1 Fire" and Ice mode
-  // "Deal 3 + 1 Ice" on the cast itself.
-  const fireMode = new CardMode('Attacks add 1 Fire, Deal 2', [
+  // rides its own rider, so Fire mode reads "Deal 1 + 1 Fire" and Ice mode
+  // "Deal 5 + 1 Ice" on the cast itself.
+  const fireMode = new CardMode('Attacks add Fire, Deal 1', [
     new CardEffect('grant_elemental_weapon_fire', 1, TargetType.SELF),
-    new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+    new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
   ]);
   fireMode.artId = 'buff_elemental_weapon_fire';
-  const iceMode = new CardMode('Attacks add 1 Ice, Deal 3', [
+  const iceMode = new CardMode('Attacks add Ice, Deal 5', [
     new CardEffect('grant_elemental_weapon_ice', 1, TargetType.SELF),
-    new CardEffect('damage', 3, TargetType.SINGLE_ENEMY),
+    new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
   ]);
   iceMode.artId = 'buff_elemental_weapon_ice';
   return new Card({
     id: 'elemental_weapon', name: 'Elemental Weapon',
-    description: 'Choose:\nAttacks add Fire, Deal 2,\nOR attacks add Ice, Deal 3.',
-    shortDesc: '+Fire, 2 Dmg\nOR +Ice, 3 Dmg',
+    description: 'Discard -> Choose:\nAttacks add Fire, Deal 1,\nOR attacks add Ice, Deal 5.',
+    shortDesc: 'D->+Fire, 1 Dmg\nOR +Ice, 5 Dmg',
     subtype: 'ability',
     // ATTACK now that both modes swing — same shape as Wrath, the other modal
     // attack. The mode picker resolves first, then targeting.
-    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    //
+    // First modal card in the game on a Discard cost. Safe: DISCARD is a
+    // DESTINATION in Deck.placeByCost (the card lands in the discard pile
+    // instead of the recharge pile), not a payment step, so it never interacts
+    // with the mode picker the way a second-card Recharge cost would.
+    cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [],
     modes: [fireMode, iceMode],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { modes: [{ damage: 2 }, { damage: 2 }] },
+    // The RIDER doesn't scale in ccgQuest+ (the grant has no offset), so the
+    // swing is the only thing that grows. Fire gets +1 (1 → 2 → 3) rather than
+    // the flat +2 both modes used to share: on a base of 1 a +2 step would
+    // TRIPLE the mode at a single offset. Ice keeps +2 off its base of 5.
+    gamePlusOffset: { modes: [{ damage: 1 }, { damage: 2 }] },
   });
 }
 
@@ -3545,17 +3609,22 @@ export function createSummonStorm() {
 export function createAvatarOfTheWild() {
   return new Card({
     id: 'avatar_of_the_wild', name: 'Avatar of the Wild',
-    description: 'Discard -> Gain 1 Rage,\nGain 2 Shield, Heal 4 Ailments.\nYour attacks also deal Bleed\nthis fight. Deal 4.',
-    shortDesc: 'D->Rage, 2 Shield\nHeal 4 Ailments\nAttacks Bleed, 4 Dmg',
+    description: 'Discard -> Gain 1 Rage,\nGain 2 Shield, Heal 4 Ailments.\nYour attacks also deal Bleed\nthis fight. Deal 2.',
+    shortDesc: 'D->Rage, 2 Shield\nHeal 4 Ailments\nAttacks Bleed, 2 Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [
       new CardEffect('gain_rage', 1, TargetType.SELF),
       new CardEffect('gain_shield', 2, TargetType.SELF),
       new CardEffect('heal_ailments_self', 4, TargetType.SELF),
-      // Before the swing on purpose: the Deal 4 below rides its own rider.
+      // Before the swing on purpose: the Deal 2 below rides its own rider.
       new CardEffect('grant_avatar_bleed', 1, TargetType.SELF),
-      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      // Swing cut 4 -> 2 when the Bleed-on-attack rider was repriced from 4 to
+      // 8 (docs/loot-budget.md §3). Bill against the 19.5 budget (T3 rare x1.5
+      // Discard): Rage 5 + Shield 4 + Heal 4 Ailments ~1 + rider 8 + Deal 2 = 20.
+      // The rider was always the card; the swing was paying for a rider the
+      // budget had underpriced by half.
+      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['druid'], tier: 3, rarity: 'rare',
     gamePlusOffset: { damage: 2, gain_shield: 1 },

@@ -2565,7 +2565,17 @@ let _forgeShowcaseActive = false;
 let _forgeShowcaseElapsed = 0;
 let _forgeShowcaseSoundPlayed = false;
 let _forgeShowcaseMsg = '';             // the "On Recharge: …" line shown above the card
-const FORGE_SHOWCASE_ENCHANT_DELAY = 1200; // ms hold before the enchant flashes in
+// Captured from the FORGE_PAGES row that kicked the showcase off, so the
+// animation keeps its own site's backdrop and lands the player back on the
+// right page. Before this the showcase hardcoded the smithy backdrop and
+// always returned to the Great Forge's metal-select — which dumped a player
+// enchanting at the Corrupted Shrine into the forge's ore page.
+let _forgeShowcaseBgKey = 'bg_dwarven_smithy';
+let _forgeShowcaseEnchant = null;       // CARD_ENCHANTS meta, for the drop-in glyph
+let _forgeShowcaseDone = null;          // () => void, where "click to continue" lands
+const FORGE_SHOWCASE_ENCHANT_DELAY = 1200; // ms hold before the enchant drops in
+const FORGE_SHOWCASE_DROP_MS = 280;        // the enchant travelling down onto the card
+const FORGE_SHOWCASE_SHAKE_MS = 420;       // impact shake after it lands
 // Cards the player has sold at any shop, in chronological order. The
 // Antiquity Shop offers each one back at the price it was sold for.
 // Each entry: { id, price }.
@@ -23648,6 +23658,8 @@ function handleEncounterChoiceClick(x, y) {
         forgePickerBackpackUids = eligible.backpackUids;
         forgePickerScroll = 0;
         forgePickerMode = 'weapon';
+        forgeSearchText = '';
+        forgeSearchActive = false;
         previousState = state;
         state = GameState.FORGE_WEAPON;
         return;
@@ -23666,6 +23678,8 @@ function handleEncounterChoiceClick(x, y) {
         forgePickerBackpackUids = eligible.backpackUids;
         forgePickerScroll = 0;
         forgePickerMode = 'armor';
+        forgeSearchText = '';
+        forgeSearchActive = false;
         previousState = state;
         state = GameState.FORGE_WEAPON;
         return;
@@ -25016,6 +25030,122 @@ const SHRINE_SITES = {
 let _shrineSiteId = 'corrupted_shrine';
 function activeShrineSite() {
   return SHRINE_SITES[_shrineSiteId] || SHRINE_SITES.corrupted_shrine;
+}
+
+// === FORGE_PAGES — every page the FORGE_WEAPON picker can render ===
+// Keyed by forgePickerMode. Each row owns its own backdrop, title, instruction
+// line, the enchant it will apply (drawn in the rich pill+icon format), whether
+// it gets a search box, and where Back / the confirm animation land.
+//
+// Before this table those five things were five separate ternary ladders spread
+// across drawForgeWeaponOverlay, cancelForgeWeapon, confirmForgeWeapon and
+// getActiveForgeCards — and the two OLDEST sites had quietly drifted behind the
+// newer altars: the Dwarven Workbench and the Obsidian Forge had no search box,
+// no confirm animation, and described their buff in prose instead of drawing it
+// the way it appears on the card. Parameterising the page is what puts all five
+// on the same rails. Adding a sixth site is a row here plus an eligibility
+// collector — no new render branches.
+//
+// Row shape:
+//   title/bgKey/instruction/backLabel  () => string
+//   enchant      () => CARD_ENCHANTS meta | null — drawn under the instruction
+//   searchHint   () => string | null — null means "no search box on this page"
+//   back         () => void — Back/Esc, and where the showcase returns to
+//   apply/logLine/sfx/choiceId — free one-shot sites only (see confirmForgeWeapon)
+function forgeActiveLabel() {
+  return _forgeActiveMetal ? _forgeActiveMetal.label : 'Mithril';
+}
+function forgeActiveEnchant() {
+  return _forgeActiveMetal ? (CARD_ENCHANTS[_forgeActiveMetal.enchant] || null) : null;
+}
+// Page 2 of the Great Forge is the same page for every metal — which one is
+// being folded in lives in _forgeActiveMetal, so both modes share one row.
+const FORGE_REFORGE_PAGE = {
+  title: () => `Choose Gear to Reforge with ${forgeActiveLabel()}`,
+  bgKey: () => 'bg_dwarven_smithy',
+  instruction: () => `The smiths fold the ${forgeActiveLabel()} in — costs 1 ${forgeActiveLabel()} Ore + ${FORGE_REFORGE_COST}g (you have ${gold}g):`,
+  enchant: () => forgeActiveEnchant(),
+  searchHint: () => 'Search gear…',
+  backLabel: () => 'Back',
+  back: () => backToForgeMetalSelect(),
+};
+const FORGE_PAGES = {
+  // --- The Great Forge (Tharnag), page 1: pick an ore ---
+  metal_select: {
+    title: () => 'The Great Forge',
+    bgKey: () => 'bg_dwarven_smithy',
+    instruction: () => 'Click a metal to reforge a weapon or piece of armor with it.',
+    enchant: () => null,
+    searchHint: () => null,
+    backLabel: () => 'Leave the forge',
+    back: () => leaveForge(),
+  },
+  // --- The Great Forge, page 2: pick the gear ---
+  mithril: FORGE_REFORGE_PAGE,
+  adamantine: FORGE_REFORGE_PAGE,
+  // --- Shrine / altar (Corrupted Shrine, Hall of Callarduran), page 1 ---
+  shrine_select: {
+    title: () => activeShrineSite().title,
+    bgKey: () => activeShrineSite().bgKey,
+    instruction: () => {
+      const site = activeShrineSite();
+      const mats = Object.values(site.materials).map(m => m.label).join(' / ');
+      return `${site.selectHint}   Costs 1 ${mats} + ${SHRINE_ENCHANT_COST}g — you have ${gold}g.`;
+    },
+    enchant: () => null,
+    searchHint: () => null,
+    backLabel: () => 'Leave the Shrine',
+    back: () => leaveForge(),
+  },
+  // --- Shrine / altar, page 2: pick the card ---
+  shrine_enchant: {
+    title: () => activeShrineSite().pickTitle(forgeActiveLabel()),
+    bgKey: () => activeShrineSite().bgKey,
+    instruction: () => activeShrineSite().costLine(forgeActiveLabel(), SHRINE_ENCHANT_COST),
+    enchant: () => forgeActiveEnchant(),
+    searchHint: () => activeShrineSite().searchHint,
+    backLabel: () => 'Back',
+    back: () => backToShrineMaterialSelect(),
+  },
+  // --- The Dwarven Workbench (Ch.2) — one free armor reinforcement ---
+  armor: {
+    title: () => 'The Dwarven Workbench',
+    bgKey: () => 'bg_dwarven_smithy',
+    instruction: () => 'The dwarven workbench reinforces one piece of armor — free, and only once:',
+    enchant: () => CARD_ENCHANTS.dwarven_workbench,
+    searchHint: () => 'Search armor…',
+    backLabel: () => 'Cancel (Esc)',
+    back: () => exitForgeToEncounter(),
+    apply: (card) => {
+      applyDwarvenWorkbench(card);
+      propagateEnchantToActivePiles(card, 'dwarven_workbench');
+      workbenchUsed = true;
+    },
+    logLine: (card) => `Reinforced ${card.name} at the dwarven workbench!`,
+    sfx: ['blunt_1h_flesh', 0.7],
+    choiceId: 'workbench_armor',
+  },
+  // --- The Obsidian Forge (Ch.1) — one free weapon enchant ---
+  weapon: {
+    title: () => 'The Obsidian Forge',
+    bgKey: () => 'bg_obsidian_forge_map',
+    instruction: () => 'The obsidian takes to one weapon — free, and only once:',
+    enchant: () => CARD_ENCHANTS.obsidian_forge,
+    searchHint: () => 'Search weapons…',
+    backLabel: () => 'Cancel (Esc)',
+    back: () => exitForgeToEncounter(),
+    apply: (card) => {
+      applyObsidianForge(card);
+      propagateEnchantToActivePiles(card, 'obsidian_forge');
+      forgeUsed = true;
+    },
+    logLine: (card) => `Forged ${card.name} with obsidian!`,
+    sfx: ['sword_clang_01', 0.8],
+    choiceId: 'forge_weapon',
+  },
+};
+function activeForgePage() {
+  return FORGE_PAGES[forgePickerMode] || FORGE_PAGES.weapon;
 }
 
 // Eligible shrine targets: any ability card (subtype 'ability') in masterDeck or
@@ -27106,7 +27236,7 @@ const KEYWORD_ICONS = {
   shield: { iconKey: 'icon_shield', label: 'Shield', desc: 'Absorbs damage before HP. Persists between turns.' },
   shields: { iconKey: 'icon_shield', label: 'Shield', desc: 'Absorbs damage before HP. Persists between turns.' },
   armor: { iconKey: 'icon_armor', label: 'Armor', desc: 'Absorbs damage from each hit (permanent)' },
-  fire: { iconKey: 'icon_fire', label: 'Fire', desc: 'Deals damage equal to stacks each turn, decays by 1' },
+  fire: { iconKey: 'icon_fire', label: 'Fire', desc: 'Start of turn: deals damage equal to stacks (absorbed by Block/Shield/Armor), then loses half the stacks (rounded down, at least 1). Burns hot and fades fast — Poison and Bleed are the slow grinders.' },
   // Text keyword (no icon) — Fire and Ignite both used icon_fire which
   // made "1 Fire" and "1 Ignite" indistinguishable on a glance. Render
   // Ignite as orange text instead so the rider mechanic reads cleanly
@@ -37114,6 +37244,10 @@ function resolveEffect(eff, caster, target) {
       spawnPlayerArrowBatch(roaSrc, roaPicks, 550);
       screenFlashTimer = 200;
       const ROA_STAGGER = 110;
+      // Arrows actually loosed. Counted rather than assumed: the loop breaks
+      // early when the board is wiped mid-volley, and an arrow that was never
+      // fired shouldn't feed Sneak Attack.
+      let roaFired = 0;
       for (let i = 0; i < roaPicks.length; i++) {
         // The picks were rolled up front so the whole volley could paint as one
         // arrow batch — but that means a later arrow can be aimed at something
@@ -37155,7 +37289,14 @@ function resolveEffect(eff, caster, target) {
         if (taken > 0) applyElementalWeaponRider(t, taken);
         if (taken > 0) applyBleedWeaponRider(t, taken);
         maybeFireDrawOnKill(caster, t);
+        roaFired++;
       }
+      // Every arrow is its own attack. The volley used to bump attacksThisTurn
+      // by NOTHING at all — so a four-arrow barrage fed Sneak Attack / Ruga's
+      // Spiked Gauntlets zero, and left the turn still looking like no attack
+      // had happened, which also handed the NEXT card a First-Attack window
+      // (Boarhide Bracers +2, Charge's draw) it had no business getting.
+      attacksThisTurn += roaFired;
       countAndRemoveDeadCreatures();
       break;
     }
@@ -46710,6 +46851,22 @@ function reconcileAllCreatureRegenVsDots() {
 }
 
 // --- Status Effects ---
+// How many stacks a halving status sheds per tick: half, rounded down, but
+// never zero (or a stack of 1 would burn forever). 1→1, 2→1, 3→1, 4→2, 5→2,
+// 10→5, 25→12. Regen, Fire and the Ice Shatter all use this, so "this status
+// winds down by half" means the same thing everywhere.
+//
+// Why Fire uses it: with a flat -1 the TOTAL damage of a stack is n(n+1)/2 —
+// quadratic, so every extra stack was worth more than the last one. A rider
+// that re-stamps per hit (Elemental Weapon through a Rain of Arrows volley)
+// therefore scaled off a cliff: 25 Fire was 325 guaranteed damage over 25
+// turns. Halving makes the total ~2n instead, and — because of the min-1
+// floor — stacks of 1-3 are completely unchanged (1, 3 and 6 damage, same as
+// before). Only the runaway gets cut: 10 → 21 instead of 55, 25 → 52.
+function halveStacks(n) {
+  return Math.max(1, Math.floor(n / 2));
+}
+
 function processStatusEffects(character, label) {
   // Regen: heal equal to stacks at the start of the turn, then decay by 1.
   // Regen and the negative DoTs (Fire/Poison/Bleed) cancel on application
@@ -46740,12 +46897,14 @@ function processStatusEffects(character, label) {
     // Armored Troll — _regen/_regenMax below) regains toward a cap and never
     // decays, so those stay no-decay too.
     if (!character._regenNoDecay) {
-      character.removeStatus('REGEN', Math.max(1, Math.floor(regen / 2)));
+      character.removeStatus('REGEN', halveStacks(regen));
     }
   }
-  // Fire: deal damage equal to stacks (reduced by armor/shield), then reduce by 1.
-  // fire_immune characters no-sell the damage but the stack still
-  // decays — keeps Ice cancellation symmetric.
+  // Fire: deal damage equal to stacks (reduced by armor/shield), then lose HALF
+  // the stacks — same winding-down rule as Regen (see halveStacks). Fire is the
+  // burst element: it hits hardest the turn it lands and fades, where Poison and
+  // Bleed are the grinders. fire_immune characters no-sell the damage but the
+  // stack still decays — keeps Ice cancellation symmetric.
   const fire = character.getStatus('FIRE');
   if (fire > 0) {
     if (character.fireImmune) {
@@ -46763,7 +46922,7 @@ function processStatusEffects(character, label) {
       // pays for so a burning turn still counts toward the 4+ threshold.
       if (character === player) _playerDamageTakenThisTurn += taken;
     }
-    character.removeStatus('FIRE', 1);
+    character.removeStatus('FIRE', halveStacks(fire));
   }
   // Poison: deal damage equal to stacks (unpreventable). Stacks do NOT decay —
   // they can only be removed by healing.
@@ -46864,11 +47023,11 @@ function processStatusEffects(character, label) {
     }
     if (c.fireStacks > 0) {
       // fire_immune creatures (Magma Mephit, Magma Drake) still stack
-      // Fire visually and the icon still decays by 1/turn (so Ice can
+      // Fire visually and the icon still winds down by half (so Ice can
       // cancel it normally) — they just no-sell the DoT damage.
       if (c.fireImmune) {
         addLog(`  ${c.name} no-sells the Fire (immune)`, Colors.ORANGE);
-        c.fireStacks = Math.max(0, c.fireStacks - 1);
+        c.fireStacks = Math.max(0, c.fireStacks - halveStacks(c.fireStacks));
       } else {
         const fireDmg = c.fireStacks;
         const actual = c.takeDamage(fireDmg); // goes through armor/shield
@@ -46876,7 +47035,7 @@ function processStatusEffects(character, label) {
         const absorbed = fireDmg - actual;
         const bs = absorbed > 0 ? ` (${absorbed} absorbed)` : '';
         addLog(`  ${c.name} takes ${actual} Fire damage!${bs}`, Colors.RED);
-        c.fireStacks = Math.max(0, c.fireStacks - 1);
+        c.fireStacks = Math.max(0, c.fireStacks - halveStacks(fireDmg));
         if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
       }
     }
@@ -54637,8 +54796,8 @@ function maybeIceShatter(target) {
       }
     }
   }
-  // 3) Reduce stacks: lose max(1, floor(stacks/2)).
-  const lose = Math.max(1, Math.floor(stacks / 2));
+  // 3) Reduce stacks by half — the same winding-down rule Regen and Fire use.
+  const lose = halveStacks(stacks);
   if (target instanceof Creature) {
     target.iceStacks = Math.max(0, stacks - lose);
   } else if (typeof target.removeStatus === 'function') {
@@ -56373,7 +56532,8 @@ const FORGE_PICKER_ROWS_VISIBLE = 2;
 // The forge cards to actually show — in a gear-pick mode the search box
 // filters them by name (metal-select / armor / weapon modes are unfiltered).
 function getActiveForgeCards() {
-  if ((forgePickerMode === 'mithril' || forgePickerMode === 'adamantine' || forgePickerMode === 'shrine_enchant') && forgeSearchText) {
+  // A page has a search box iff its FORGE_PAGES row names a hint for it.
+  if (activeForgePage().searchHint() && forgeSearchText) {
     const q = forgeSearchText.toLowerCase();
     return forgePickerCards.filter(c => c && (c.name || '').toLowerCase().includes(q));
   }
@@ -56405,12 +56565,47 @@ function layoutForgePickerRects() {
 
 let forgeCancelRect = null;
 
+// Kick off the confirm animation for whichever site the player is standing in.
+// Every enchanting site routes through here, so they all get the same beat:
+// the card held up, the enchant dropping onto it, the impact shake, then a
+// click back to the page the site says to return to.
+function startForgeShowcase(card, msg) {
+  const page = activeForgePage();
+  _forgeShowcaseCard = card;
+  _forgeShowcaseActive = true;
+  _forgeShowcaseElapsed = 0;
+  _forgeShowcaseSoundPlayed = false;
+  _forgeShowcaseMsg = msg;
+  _forgeShowcaseBgKey = page.bgKey();
+  _forgeShowcaseEnchant = page.enchant();
+  _forgeShowcaseDone = page.back;
+  forgeSearchActive = false;
+}
+
 function dismissForgeShowcase() {
+  const done = _forgeShowcaseDone;
   _forgeShowcaseActive = false;
   _forgeShowcaseCard = null;
   _forgeShowcaseMsg = '';
+  _forgeShowcaseEnchant = null;
+  _forgeShowcaseDone = null;
   playSound('click');
-  backToForgeMetalSelect();
+  if (done) done();
+  else backToForgeMetalSelect();
+}
+
+// Close the picker and hand control back to the encounter that opened it.
+// Used by the one-shot free sites (workbench / obsidian forge), which have no
+// material page to step back to.
+function exitForgeToEncounter() {
+  forgePickerCards = [];
+  forgePickerBackpackUids = new Set();
+  forgePickerScroll = 0;
+  forgeCancelRect = null;
+  forgeSearchRect = null;
+  forgeSearchText = '';
+  forgeSearchActive = false;
+  state = GameState.ENCOUNTER_CHOICE;
 }
 
 function handleForgeWeaponClick(x, y) {
@@ -56476,23 +56671,9 @@ function leaveForge() {
 
 function cancelForgeWeapon() {
   if (_forgeShowcaseActive) { dismissForgeShowcase(); return; } // click/Esc dismisses the showcase
-  // From a metal's gear-pick, the cancel button steps BACK to metal-select;
-  // from metal-select it leaves the forge.
-  if (forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') {
-    backToForgeMetalSelect();
-    return;
-  }
-  // Corrupted Shrine — from the ability-pick, step back to material-select;
-  // from material-select, leave the shrine.
-  if (forgePickerMode === 'shrine_enchant') { backToShrineMaterialSelect(); return; }
-  if (forgePickerMode === 'shrine_select') { leaveForge(); return; }
-  if (forgePickerMode === 'metal_select') { leaveForge(); return; }
-  // Legacy weapon/armor (volcano forge / workbench) — back to the encounter.
-  forgePickerCards = [];
-  forgePickerBackpackUids = new Set();
-  forgePickerScroll = 0;
-  forgeCancelRect = null;
-  state = GameState.ENCOUNTER_CHOICE;
+  // Where Back goes is the site's business — a page-2 pick steps back to its
+  // material page, a page-1 leaves the site, a one-shot returns to the encounter.
+  activeForgePage().back();
 }
 
 function confirmForgeWeapon(card) {
@@ -56526,13 +56707,8 @@ function confirmForgeWeapon(card) {
     consumeOneOre(material.oreId);
     addLog(site.logLine(card), Colors.GOLD);
     playSound(site.sfx[0], site.sfx[1]);
-    _forgeShowcaseCard = card;
-    _forgeShowcaseActive = true;
-    _forgeShowcaseElapsed = 0;
-    _forgeShowcaseSoundPlayed = false;
     const ench = CARD_ENCHANTS[material.enchant];
-    _forgeShowcaseMsg = `${card.name}: ${ench ? ench.tooltip : material.label}`;
-    forgeSearchActive = false;
+    startForgeShowcase(card, `${card.name}: ${ench ? ench.tooltip : material.label}`);
     return;
   }
   // Metal reforge — armor/shield gets the metal's On Recharge enchant
@@ -56555,27 +56731,17 @@ function confirmForgeWeapon(card) {
     const what = metal.enchant === 'adamantine' ? 'Gain Heroism' : 'Gain Shield';
     addLog(`Reforged ${card.name} with ${metal.label} at the forge!`, Colors.GOLD);
     playSound('blunt_1h_flesh', 0.7);
-    // Kick off the reforge showcase — holds the card up (message above it)
-    // until the player clicks anywhere.
-    _forgeShowcaseCard = card;
-    _forgeShowcaseActive = true;
-    _forgeShowcaseElapsed = 0;
-    _forgeShowcaseSoundPlayed = false;
-    _forgeShowcaseMsg = `${card.name}: On Recharge, ${what}`;
-    forgeSearchActive = false;
+    startForgeShowcase(card, `${card.name}: On Recharge, ${what}`);
     return;
   }
-  const armorMode = forgePickerMode === 'armor';
-  if (armorMode) {
-    applyDwarvenWorkbench(card);
-    propagateEnchantToActivePiles(card, 'dwarven_workbench');
-    workbenchUsed = true;
-  } else {
-    applyObsidianForge(card);
-    propagateEnchantToActivePiles(card, 'obsidian_forge');
-    forgeUsed = true;
-  }
-  const stampedChoiceId = armorMode ? 'workbench_armor' : 'forge_weapon';
+  // Free one-shot sites (Dwarven Workbench armor, Obsidian Forge weapon) — the
+  // enchant, the log line and the cue all come off the FORGE_PAGES row.
+  const page = activeForgePage();
+  // Guard: a paid page only reaches here if _forgeActiveMetal went missing
+  // (shouldn't happen). Refuse rather than falling through to a free enchant.
+  if (typeof page.apply !== 'function') { playSound('click'); return; }
+  page.apply(card);
+  const stampedChoiceId = page.choiceId;
   // Stamp the choice exhausted on the node so the gray-out persists
   // across saves (mirrors the auto-exhaust path for returnToChoices
   // choices — needed here because this choice resolves via the
@@ -56597,20 +56763,13 @@ function confirmForgeWeapon(card) {
       }
     }
   }
-  if (armorMode) {
-    addLog(`Reinforced ${card.name} at the dwarven workbench!`, Colors.GOLD);
-    showStyledToast(`${card.name}: When Recharged, Gain Shield`, 'recharge', 2800);
-    playSound('blunt_1h_flesh', 0.7);
-  } else {
-    addLog(`Forged ${card.name} with obsidian!`, Colors.GOLD);
-    showStyledToast(`${card.name} now deals +2 vs Armor/Shield`, 'recharge', 2800);
-    playSound('sword_clang_01', 0.8);
-  }
-  forgePickerCards = [];
-  forgePickerBackpackUids = new Set();
-  forgePickerScroll = 0;
-  forgeCancelRect = null;
-  state = GameState.ENCOUNTER_CHOICE;
+  addLog(page.logLine(card), Colors.GOLD);
+  playSound(page.sfx[0], page.sfx[1]);
+  // The showcase replaces the old fire-and-forget toast: the player watches the
+  // enchant land on the card and clicks through, same as every paid site. The
+  // page's back() (exitForgeToEncounter) is what the dismiss lands on.
+  const ench = page.enchant();
+  startForgeShowcase(card, `${card.name}: ${ench ? ench.tooltip : ''}`);
 }
 
 // Reforge showcase — the just-reforged card centered, the enchant flashing
@@ -56633,8 +56792,51 @@ function drawForgeShowcaseToast(msg, cx, cy) {
   ctx.textAlign = 'left';
 }
 
+// The enchant glyph on its way down: a glowing puck carrying the enchant's
+// icon (or its initial, if the art never loaded) drawn at an arbitrary size.
+function drawForgeEnchantGlyph(meta, cx, cy, size, alpha) {
+  const color = (meta && meta.color) || '#ffe182';
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = size * 0.7;
+  ctx.fillStyle = 'rgba(18, 14, 26, 0.9)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // Same centered square crop the on-card enchant badge uses, so the thing
+  // flying down is visibly the badge the player ends up with.
+  const art = meta && meta.artId ? getCardArt(meta.artId) : null;
+  if (art) {
+    const side = Math.min(art.width, art.height);
+    const sx = (art.width - side) / 2, sy = (art.height - side) / 2;
+    const s = size * 0.74;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, s / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(art, sx, sy, side, side, cx - s / 2, cy - s / 2, s, s);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = color;
+    ctx.font = `bold ${Math.round(size * 0.5)}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((meta && meta.name ? meta.name[0] : '?'), cx, cy);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+  }
+  ctx.restore();
+}
+
 function drawForgeShowcase() {
-  const bgImg = getEncounterBgImage('bg_dwarven_smithy');
+  // The site's own backdrop (smithy / shrine / obsidian forge), so the
+  // animation reads as happening where the player is standing.
+  const bgImg = getEncounterBgImage(_forgeShowcaseBgKey);
   if (bgImg) ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   else { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); }
   ctx.fillStyle = 'rgba(0,0,0,0.78)';
@@ -56645,57 +56847,83 @@ function drawForgeShowcase() {
   const scW = 280, scH = 392;
   const scX = Math.floor((SCREEN_WIDTH - scW) / 2);
   const scY = Math.floor((SCREEN_HEIGHT - scH) / 2);
-  const enchantPhase = _forgeShowcaseElapsed >= FORGE_SHOWCASE_ENCHANT_DELAY;
+  // Three beats: hold the card up → the enchant drops onto it → it lands,
+  // the card jolts, and the badge is there.
+  const te = _forgeShowcaseElapsed - FORGE_SHOWCASE_ENCHANT_DELAY;
+  const dropping = te >= 0 && te < FORGE_SHOWCASE_DROP_MS;
+  const landed = te >= FORGE_SHOWCASE_DROP_MS;
 
   // Purple "toaster" message above the card (once the enchant lands).
-  if (enchantPhase && _forgeShowcaseMsg) {
+  if (landed && _forgeShowcaseMsg) {
     drawForgeShowcaseToast(_forgeShowcaseMsg, SCREEN_WIDTH / 2, scY - 48);
   }
 
+  // Impact shake — a short decaying jolt the moment the enchant bites. Drawn
+  // as a translate so the card, its glow ring and the badge all move together.
+  let shakeX = 0, shakeY = 0;
+  if (landed) {
+    const ts = te - FORGE_SHOWCASE_DROP_MS;
+    if (ts < FORGE_SHOWCASE_SHAKE_MS) {
+      const amp = 11 * (1 - ts / FORGE_SHOWCASE_SHAKE_MS);
+      shakeX = Math.sin(ts / 17) * amp;
+      shakeY = Math.cos(ts / 12) * amp * 0.55;
+    }
+  }
+
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
   ctx.globalAlpha = fadeIn;
-  // Hide the enchant badge during the hold so it "appears" on the flash.
+  // Hide the enchant badge until the glyph actually lands, so it "arrives"
+  // on the card rather than having been there the whole time.
   const savedEnch = card._enchants;
-  if (!enchantPhase) card._enchants = [];
+  if (!landed) card._enchants = [];
   drawCard(card, scX, scY, scW, scH, false, false, 'full');
   card._enchants = savedEnch;
   ctx.globalAlpha = 1;
 
-  if (enchantPhase) {
-    const te = _forgeShowcaseElapsed - FORGE_SHOWCASE_ENCHANT_DELAY;
-    const pulse = 0.35 + 0.45 * Math.abs(Math.sin(te / 90));
-    ctx.save();
+  if (landed) {
+    const pulse = 0.35 + 0.45 * Math.abs(Math.sin((te - FORGE_SHOWCASE_DROP_MS) / 90));
     ctx.shadowColor = `rgba(255, 225, 130, ${pulse})`;
     ctx.shadowBlur = 26;
     ctx.strokeStyle = `rgba(255, 225, 130, ${pulse})`;
     ctx.lineWidth = 4;
     ctx.strokeRect(scX - 4, scY - 4, scW + 8, scH + 8);
-    ctx.restore();
+  }
+  ctx.restore();
+
+  // The glyph itself, travelling from the message line down onto the card's
+  // art and shrinking as it seats. Only while it's in flight — after that the
+  // card's own enchant badge is the thing on screen.
+  if (dropping && _forgeShowcaseEnchant) {
+    const t = te / FORGE_SHOWCASE_DROP_MS;
+    const ease = t * t;                      // accelerates into the impact
+    const fromY = scY - 70, toY = scY + scH * 0.34;
+    drawForgeEnchantGlyph(
+      _forgeShowcaseEnchant,
+      SCREEN_WIDTH / 2,
+      fromY + (toY - fromY) * ease,
+      86 - 40 * ease,
+      Math.min(1, t * 3),
+    );
   }
 
-  ctx.fillStyle = enchantPhase ? '#cfcfcf' : Colors.GOLD;
-  ctx.font = enchantPhase ? '15px sans-serif' : 'bold 24px Georgia, serif';
+  ctx.fillStyle = landed ? '#cfcfcf' : Colors.GOLD;
+  ctx.font = landed ? '15px sans-serif' : 'bold 24px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText(enchantPhase ? 'Click anywhere to continue' : 'Reforging…', SCREEN_WIDTH / 2, scY + scH + 28);
+  ctx.fillText(landed ? 'Click anywhere to continue' : 'Enchanting…', SCREEN_WIDTH / 2, scY + scH + 28);
   ctx.textAlign = 'left';
 }
 
 function drawForgeWeaponOverlay() {
   // Reforge showcase takes over the whole screen while it plays.
   if (_forgeShowcaseActive && _forgeShowcaseCard) { drawForgeShowcase(); return; }
-  // Forge/workbench backdrop — same art the encounter draws behind
-  // the choice prompt, so the picker reads as a continuation of the
-  // same scene. forgePickerMode picks between the obsidian forge
-  // (weapon-side) and the dwarven workbench (armor-side).
-  const armorMode = forgePickerMode === 'armor';
-  const metalSelect = forgePickerMode === 'metal_select';
-  const reforgeMode = forgePickerMode === 'mithril' || forgePickerMode === 'adamantine';
-  const shrineMode = forgePickerMode === 'shrine_enchant';  // page 2 — target pick
-  const shrineSelect = forgePickerMode === 'shrine_select'; // page 1 — material pick
-  const anyShrine = shrineMode || shrineSelect;
-  // Corrupted Shrine backdrop for BOTH shrine pages; forge/workbench keep theirs.
-  const bgKey = anyShrine ? activeShrineSite().bgKey
-    : (armorMode || metalSelect || reforgeMode) ? 'bg_dwarven_smithy' : 'bg_obsidian_forge_map';
-  const bgImg = getEncounterBgImage(bgKey);
+  // Everything that differs between the forge, the workbench, the obsidian
+  // forge and the two altars comes off the site's FORGE_PAGES row — backdrop,
+  // title, instruction line, the enchant it will apply, search box, Back label.
+  const page = activeForgePage();
+  const pageEnchant = page.enchant();
+  const searchHint = page.searchHint();
+  const bgImg = getEncounterBgImage(page.bgKey());
   if (bgImg) {
     ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -56705,43 +56933,33 @@ function drawForgeWeaponOverlay() {
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 
-  const metalLabel = _forgeActiveMetal ? _forgeActiveMetal.label : 'Mithril';
-  const metalEnchant = _forgeActiveMetal ? CARD_ENCHANTS[_forgeActiveMetal.enchant] : null;
   ctx.fillStyle = Colors.GOLD;
   ctx.font = 'bold 30px Georgia, serif';
   ctx.textAlign = 'center';
-  ctx.fillText(metalSelect ? 'The Great Forge'
-    : shrineSelect ? activeShrineSite().title
-    : shrineMode ? activeShrineSite().pickTitle(metalLabel)
-    : reforgeMode ? `Choose Gear to Reforge with ${metalLabel}`
-    : armorMode ? 'Choose Armor to Reinforce' : 'Choose a Weapon to Forge', SCREEN_WIDTH / 2, 70);
+  ctx.fillText(page.title(), SCREEN_WIDTH / 2, 70);
 
   ctx.fillStyle = Colors.WHITE;
   ctx.font = '16px sans-serif';
-  if ((reforgeMode || shrineMode) && metalEnchant) {
-    // Plain instruction, then the enchant in the SAME rich pill+icon format
-    // the game uses for card text (drawIconText is centered).
-    const costLine = shrineMode
-      ? activeShrineSite().costLine(metalLabel, SHRINE_ENCHANT_COST)
-      : `The smiths fold the ${metalLabel} in — costs 1 ${metalLabel} Ore + ${FORGE_REFORGE_COST}g (you have ${gold}g):`;
-    ctx.fillText(costLine, SCREEN_WIDTH / 2, 94);
-    drawIconText(metalEnchant.tooltip, SCREEN_WIDTH / 2, 104, 700, 15, '#eaeaea');
+  if (pageEnchant) {
+    // The instruction (what it costs, or that it's free and one-time), then
+    // the enchant itself in the SAME rich pill+icon format the game uses for
+    // card text — so the player sees the buff the way it will appear on the
+    // card before committing, at every site.
+    ctx.fillText(page.instruction(), SCREEN_WIDTH / 2, 94);
+    drawIconText(pageEnchant.tooltip, SCREEN_WIDTH / 2, 104, 700, 15, '#eaeaea');
   } else {
-    // Material page — say the price here too. It's the page the player stands
-    // on while deciding, and the gold cost was only visible one page deeper.
-    const siteMats = Object.values(activeShrineSite().materials).map(m => m.label).join(' / ');
-    ctx.fillText(metalSelect
-      ? 'Click a metal to reforge a weapon or piece of armor with it.'
-      : shrineSelect
-      ? `${activeShrineSite().selectHint}   Costs 1 ${siteMats} + ${SHRINE_ENCHANT_COST}g — you have ${gold}g.`
-      : armorMode
-      ? 'The dwarven workbench will grant Shield each time the card recharges.'
-      : 'The obsidian will grant +2 damage vs Armor/Shield.', SCREEN_WIDTH / 2, 100);
+    // Material page — no single enchant to show (the player hasn't picked a
+    // material yet), so the line carries the price on its own. It's the page
+    // they stand on while deciding, and the gold cost used to be visible only
+    // one page deeper.
+    ctx.fillText(page.instruction(), SCREEN_WIDTH / 2, 100);
   }
 
-  // Gear search box — top-left, just above the gear grid (gear + shrine modes).
+  // Gear search box — top-left, just above the gear grid. Every page that
+  // names a search hint gets one (the two one-shot sites included; their
+  // eligible lists can run past a page just as easily as the forge's).
   forgeSearchRect = null;
-  if (reforgeMode || shrineMode) {
+  if (searchHint) {
     const gridW = FORGE_PICKER_COLS * 200 + (FORGE_PICKER_COLS - 1) * 20;
     const gridX = Math.floor((SCREEN_WIDTH - gridW) / 2);
     const sr = { x: gridX, y: 128, w: 230, h: 28 };
@@ -56763,7 +56981,7 @@ function drawForgeWeaponOverlay() {
       ctx.fillText('×', sr.x + sr.w - 14, sr.y + sr.h / 2);
     } else {
       ctx.fillStyle = '#888';
-      ctx.fillText(shrineMode ? activeShrineSite().searchHint : 'Search gear…', sr.x + 8, sr.y + sr.h / 2);
+      ctx.fillText(searchHint, sr.x + 8, sr.y + sr.h / 2);
     }
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
@@ -56836,11 +57054,7 @@ function drawForgeWeaponOverlay() {
   ctx.font = 'bold 22px Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(forgePickerMode === 'metal_select' ? 'Leave the forge'
-    : shrineSelect ? 'Leave the Shrine'
-    : shrineMode ? 'Back'
-    : (forgePickerMode === 'mithril' || forgePickerMode === 'adamantine') ? 'Back' : 'Cancel (Esc)',
-    cx + cw / 2, cy + ch / 2);
+  ctx.fillText(page.backLabel(), cx + cw / 2, cy + ch / 2);
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 }
@@ -61850,7 +62064,7 @@ const HELP_CONTENT = [
     { text: 'Ignite: your next damaging attack also applies Fire equal to stacks. Consumed on attack.', color: '#ff8c40' },
   ]},
   { title: 'Status Effects', items: [
-    { text: 'Fire: deals damage equal to stacks at start of turn, decays by 1. Applying Fire to a target with Ice cancels the Ice instead (1-for-1).', color: '#dc8c28' },
+    { text: 'Fire: deals damage equal to stacks at start of turn, then loses half the stacks (rounded down, at least 1) — it burns hot and fades fast. Applying Fire to a target with Ice cancels the Ice instead (1-for-1).', color: '#dc8c28' },
     { text: 'Regen: the INVERSE of every damage-over-time. Heal equal to stacks at the start of the turn, then it decays by half its stacks (rounded down, at least 1) — same for you and monsters. Fire, Poison, and Bleed each cancel Regen 1-for-1 on contact (and Regen cancels them back) — like Fire/Ice — so a Regen-holder never also carries Fire, Poison, or Bleed. Instant True Damage burns Regen 1-for-1 too.', color: '#7cff9c' },
     { text: 'Ice: reduces damage dealt by stacks, decays by 1 per turn. Applying Ice to a target with Fire cancels the Fire instead (1-for-1).', color: '#78c8ff' },
     { text: 'Poison: deals damage equal to stacks each turn. Removed by healing — each point of Heal cancels 1 Poison stack before any actual healing lands (1-for-1).', color: '#3cc83c' },
@@ -63459,7 +63673,11 @@ const CARD_SFX_OVERRIDES = {
   healing_touch:            { play: 'heal_touch' },
   // Ice Block layers a second sound (ice_flesh) inline in playCardAmbient.
   ice_block:                { play: 'arcane_shield' },
-  ice_nova:                 { flesh: 'ice_flesh', blocked: 'ice_flesh' },
+  // Ice Nova — the cold gust on the cast, then the staggered ice_flesh bursts
+  // as it lands (STAGGERED_AOE fires flesh 3x). Same shape as Shatter Storm and
+  // Gnikan's Staff, the other two frost AoEs; without the `play` key Gnikan's
+  // board-clear went off silently until the first hit connected.
+  ice_nova:                 { play: 'cold_whoosh', flesh: 'ice_flesh', blocked: 'ice_flesh' },
   piercing_shot:            { flesh: 'bow_flesh', blocked: 'bow_blocked' },
   revivify:                 { play: 'heal_revivify' },
   shield_wall:              { playMulti: { key: 'hit_blocked', count: 3, stagger: 110 } },

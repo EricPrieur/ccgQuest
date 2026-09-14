@@ -120,6 +120,67 @@ handlers read `getIncomingDamageModifier`), so "Shock then Deal 2" is a 3-damage
 card wearing a 2-damage description. Put the damage first unless you're paying
 for the bump.
 
+### Permanent riders are not consumables — price them separately
+
+A **consumable** rider (Heroism, Ignite, Vial of Poison, Sahuagin Eye, Obsidian
+Core, Feral Wrath) is snapshotted once and spent on one card play. Its multiplier
+is that card's hit count, and then it's gone.
+
+A **permanent** rider fires on every attack **for the rest of the fight**. Its
+multiplier is your whole remaining turn count, so it is a different category of
+effect and belongs with these prices, never with the one-shot charges:
+
+| Permanent rider | Points |
+|---|---|
+| **Rage** | **5** — +1 damage on every attack |
+| **Bleed-on-attack, rest of fight** | **8** — see the tempo warning below |
+| **Elemental Weapon — Fire** | **9** — +1 Fire on every attack |
+| **Elemental Weapon — Ice** | **5** — +1 Ice on every attack |
+
+**Why Fire is nearly double Rage.** Fire halves rather than ticking down by 1, so
+a stack that keeps getting topped up *converges* instead of draining — steady-state
+Fire damage per turn lands at roughly **2× the Fire stamped per turn**. It also
+beats Rage into armour: armour absorbs per hit, so Rage's +1 is eaten on every
+swing while Fire arrives as one lump absorbed once. Against that: fire-immune
+enemies no-sell it, Ice cancels it 1-for-1, and the tick is delayed so a killing
+blow wastes it. Net ≈ 1.8× Rage.
+
+**Why Ice is only 5.** Ice is mitigation with a hard ceiling. The target burns one
+stack per attack it makes plus one at end of turn, so against a 2-attack boss only
+about 3 stacks a turn ever do work no matter how many you stamp; the overflow only
+feeds Ice Shatter. It cannot run away the way Fire can.
+
+**Why Bleed is 8, and why that number is unstable.** Measured against the Rage
+anchor over a 6-turn fight with the enemy attacking twice a turn, one stack of the
+Bleed rider delivers 1.5–1.7× Rage at 2–3 player hits a turn — and it is
+*unpreventable* where Rage is absorbed on every hit, so the real gap is wider.
+That is the 8. But the number has a **cliff**, because Bleed's decay is flat:
+−1 per attack the bleeder makes, −1 more at end of their turn. Against a
+twice-attacking enemy that is 3/turn, so:
+
+| player hits/turn | vs decay 3 | behaviour | implied price |
+|---|---|---|---|
+| 2–3 | at or under | self-limiting | 7.5–8.3 |
+| 4 | +1/turn | **runs away** — total goes quadratic | ~15 |
+| 6 | +3/turn | runs away hard | ~22 |
+
+Price it at 8 for a class that plays 2–3 attacks a turn. If a Bleed rider ever
+lands somewhere with a higher hit count — a barrage class, or a card that stamps
+per hit across an AoE board — re-derive it, because the flat decay means it does
+not have one price.
+
+**Every permanent rider needs a brake, and the brake is part of the price.** The
+options are a stack cap, or a **Discard** cost so re-stacking costs HP-equity
+(deck size *is* hit points, and a discarded card only returns on a heal). Elemental
+Weapon shipped with neither — priced at 4 as if it were a consumable, on a Recharge,
+stacking unbounded — so one copy cycled three times in a fight reached 3 stacks in
+ordinary play and, fed by a barrage, produced ~36 Fire damage a turn indefinitely.
+It is now T2 uncommon on a Discard (7 × 1.5 = 10.5): Fire 9 + Deal 1, Ice 5 + Deal 5.
+
+*(Plain Fire and Ice stacks are still unpriced in the table above. Fire lands near
+1.5/stack — cheaper than Poison's 2, which never decays and is unpreventable —
+but that number has not been pinned down against shipped cards yet.)*
+
 ### Draw is deliberately rare
 
 **Most cards in this game cost nothing to play.** A recharge is not a resource
