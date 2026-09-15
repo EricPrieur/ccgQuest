@@ -460,11 +460,13 @@ export function createDragonBoneBow() {
     subtype: 'ranged',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     // dragon_bow_barrage fires 3 sequential shots at one target with
-    // descending damage starting from eff.value (4 → 3 → 2). All
-    // riders (Vial of Poison, Sahuagin Eye, Obsidian Core) snapshot
-    // once and apply to every shot; heroism/rage/ice consumed once
-    // and fold into the base. Each shot bumps attacksThisTurn so
-    // Sneak Attack scales correctly.
+    // descending damage starting from eff.value (4 → 3 → 2). Consumable
+    // charges (Heroism, Ignite, Vial of Poison, Sahuagin Eye, Obsidian
+    // Core, Ice) are spent once and so pay out on the FIRST shot only;
+    // rage and the permanent riders ride every shot. The descending
+    // pattern makes that land well — the biggest arrow is the one the
+    // charges buff. Each shot bumps attacksThisTurn so Sneak Attack
+    // scales correctly.
     effects: [
       new CardEffect('recharge_extra', 1, TargetType.SELF),
       new CardEffect('dragon_bow_barrage', 4, TargetType.SINGLE_ENEMY),
@@ -2075,30 +2077,36 @@ export function createMarkingShot() {
 // shape but strictly narrower. Losing its Draw is deliberate — the Ranger has
 // the deepest card engine in the game and the doc flags draw as the abuse axis.
 //
-// Rider semantics follow Fan of Blades: Heroism, Rage, Ignite and the Vial
-// charges are snapshotted ONCE and paid out on every arrow, so a single charge
-// covers the whole volley. An arrow whose target died to an earlier arrow
-// re-rolls onto something still standing rather than being lost.
+// Rider semantics: a CONSUMED charge (Heroism, Ignite, the Vial / Eye /
+// Obsidian buffs, the Ice penalty) is spent once, so it pays out on the first
+// arrow only — one consumption, one payout. Rage and the permanent riders are
+// never consumed and ride every arrow. An arrow whose target died to an earlier
+// arrow re-rolls onto something still standing rather than being lost.
 export function createRainOfArrows() {
   return new Card({
     id: 'rain_of_arrows', name: 'Rain of Arrows',
     // Five arrows — it reads as a bow more than Aimed Shot does, so it feeds a
-    // Quiver too. Note the buffs a quiver grants are snapshotted once and
-    // re-applied to EVERY arrow, which makes this the biggest quiver payoff in
-    // the game; see the barrage note in resolveBarrageShot.
+    // Quiver too. A quiver's charges now pay out on the first arrow only (one
+    // consumption, one payout), so the arrow count no longer multiplies them.
     subtype2: 'ranged',
-    description: 'Recharge a Card ->\nDeal 1-3 Randomly 4 times.',
-    shortDesc: 'R-Card->1-3 Dmg\nx4, random',
+    description: 'Recharge a Card ->\nDeal 1-4 Randomly 5 times.',
+    shortDesc: 'R-Card->1-4 Dmg\nx5, random',
     subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('recharge_extra', 1, TargetType.SELF),
-      // value packs the roll as min*10 + max (13 = "1 to 3"), matching
+      // value packs the roll as min*10 + max (14 = "1 to 4"), matching
       // damage_range; maxTargets is the arrow count. The +1 gamePlusOffset
-      // grows the MAX only (13 -> 14 = "1 to 4" -> 15 = "1 to 5"), so the
-      // range stretches with tier instead of sliding — and it deliberately
-      // does NOT add arrows, since the count is what multiplies Heroism.
-      new CardEffect('rain_of_arrows', 13, TargetType.ALL_ENEMIES, 4),
+      // grows the MAX only (14 -> 15 = "1 to 5" -> 16 = "1 to 6"), so the
+      // range stretches with tier instead of sliding, and the arrow count
+      // stays put.
+      //
+      // 1-4 over 5 arrows averages 12.5 against a 13 budget (T2 uncommon 7,
+      // +6 for the second-card cost). It was cut to 1-3 over 4 while a single
+      // Heroism stack was being re-applied to every arrow — the count was
+      // doing the damage, not the printed numbers. With charges now paying
+      // once, the printed numbers have to carry the card.
+      new CardEffect('rain_of_arrows', 14, TargetType.ALL_ENEMIES, 5),
     ],
     characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { rain_of_arrows: 1 },
@@ -2962,19 +2970,42 @@ export function createFanOfBlades() {
 }
 
 // Blade Flurry — Rogue Tier 2, alongside Fan of Blades. A 5-shot barrage
-// (1 dmg each): click once, aim each strike at any target (same enemy to
-// focus, or spread). Every shot carries all riders (Heroism, poison buffs,
-// Ignite, etc.) via resolveBarrageShot. Where Fan of Blades is a flat
-// hit-everything sweep, this one lets the player choose the spread.
+// — two strikes of 2, aimed independently, then READY every exhausted Weapon
+// you are holding.
+//
+// The old card was 5 strikes of 1, and 1 damage a strike is the worst possible
+// shape in this game: armour absorbs PER HIT, so any target with 1 Armor took
+// literally nothing from the whole card. It only looked playable because a
+// single Heroism stack was being re-applied to all five strikes; once charges
+// went to one-consumption-one-payout the card was 5 raw damage against a budget
+// of 7 with a floor of zero.
+//
+// The refresh is the rebuild. Only stays-in-hand weapons are ever exhausted in
+// hand, so this reads as "play your daggers again" — a build-around that does
+// nothing on its own and pays off in a dagger deck. It also readies the rogue's
+// Quick Strike, which carries the Weapon trait (subtype2) rather than being
+// named here, so any future weapon-matters card picks it up for free.
+//
+// Budget (T2 uncommon = 7): 2x2 damage = 4, leaving ~3 for the refresh. That is
+// honest for the typical case (Poisoned Dagger + Quick Strike ≈ 4 bonus) and
+// deliberately generous at the top end — a hand holding three daggers gets well
+// past it. That ceiling is the point of the card; it is paid for in deck slots,
+// since every stays-in-hand weapon is a card that is never doing anything else.
+//
+// Consumed charges (Heroism, poison buffs, Ignite) land on the first strike only
+// via resolveBarrageShot; rage and permanent riders carry both strikes. Where Fan
+// of Blades is a flat hit-everything sweep, this one lets the player choose the
+// spread.
 export function createBladeFlurry() {
   return new Card({
     id: 'blade_flurry', name: 'Blade Flurry',
-    description: 'Deal 1 Damage X 5.',
-    shortDesc: '1 Dmg X5', subtype: 'ability',
+    description: 'Deal 2 Twice.\nRefresh your Exhausted Weapons.',
+    shortDesc: '2 Dmg x2\nRefresh Weapons', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
-    effects: [new CardEffect('blade_flurry_barrage', 1, TargetType.SINGLE_ENEMY)],
+    effects: [new CardEffect('blade_flurry_barrage', 2, TargetType.SINGLE_ENEMY)],
     characterClass: ['rogue'], tier: 2, rarity: 'uncommon',
-    // +1 damage per strike per offset.
+    // +1 damage per strike per offset. The refresh does not scale — it is
+    // already the strongest half of the card and scales with the player's kit.
     gamePlusOffset: { blade_flurry_barrage: 1 },
   });
 }
@@ -3740,16 +3771,19 @@ export function getRangerAbilityChoices() {
 // Trueshot Barrage - Ranger Tier 3. Three unpreventable shots, and the ranger's
 // answer to the armoured things waiting in the Underdark.
 //
-// Runs through the barrage flow rather than three stacked effects, and that IS
-// the design: resolveBarrageShot snapshots Heroism, Ignite and the poison buff
-// ONCE and re-applies them to every shot, so a quiver fed to this card pays out
-// three times. Three separate unpreventable_damage effects would consume the
-// Heroism on shot one and the poison buff on the first hit, and the whole quiver
-// package would do nothing here.
+// Runs through the barrage flow rather than three stacked effects so each shot
+// is its own attack (Sneak Attack / Ruga's Gauntlets count them, armour absorbs
+// them separately, and each can pick its own target).
 //
-// 5x3 = 15 True. At roughly 1.4x normal damage that prices near 21 against a
-// tier-3 rare with a card cost (25), deliberately leaving headroom, because
-// every point of Heroism on this card is worth 3 damage rather than 1.
+// 6x3 = 18 True. At roughly 1.4x normal damage that prices at 25.2 against a
+// tier-3 rare with a card cost (25) — on budget.
+//
+// Was 5x3 (15 True, ~21) while consumable charges re-applied to every shot: a
+// point of Heroism here was worth 3 damage rather than 1, so the card was worth
+// more than it printed and the ~4 points of slack were paying for that. Once
+// charges went to one-consumption-one-payout (see resolveBarrageShot) the slack
+// stopped being a discount and became unpaid-for headroom, so the printed number
+// absorbs it instead.
 //
 // It must NEVER gain a Draw: an unconditional draw cancels the second-card cost
 // bonus outright, dropping the budget from 25 to 13 and leaving this at nearly
@@ -3758,14 +3792,14 @@ export function createTrueshotBarrage() {
   return new Card({
     id: 'trueshot_barrage',
     name: 'Trueshot Barrage',
-    description: 'Recharge a Card ->\nDeal 5 True Damage 3 times.',
-    shortDesc: 'R Card->5 True\nx3',
+    description: 'Recharge a Card ->\nDeal 6 True Damage 3 times.',
+    shortDesc: 'R Card->6 True\nx3',
     subtype: 'ability',
     subtype2: 'ranged',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('trueshot_barrage', 5, TargetType.SINGLE_ENEMY),
+      new CardEffect('trueshot_barrage', 6, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 3, rarity: 'rare',
@@ -7638,11 +7672,23 @@ export function createBloodInTheWater() {
   // priest's row + bumps the priest's own Rage by 1 each cast. The
   // Shark itself carries Bloodfrenzy in its creature description so
   // we don't repeat it here.
+  //
+  // The count is deliberately NOT printed: 1-2 while the priest has 0-1 Sharks
+  // out, exactly 1 once there are 2+ (throttle lives in the summon_shark_random
+  // handler). Spelling that out turned a monster card into a rules paragraph and
+  // told the player how to play around it; "Summon Sharks" reads as the threat
+  // it is and the diminishing returns are felt rather than read.
+  //
+  // Side effect worth knowing: with no digit left in the shark clause, the
+  // ccgQuest+ description rewriter finds nothing to swap for summon_shark_random
+  // and leaves the line alone at every offset — which is exactly what we want,
+  // since a higher offset should raise the ceiling without announcing it. The
+  // "Gain 1 Rage" clause still carries its own number and still scales.
   return new Card({
     id: 'blood_in_the_water',
     name: 'Blood in the Water',
-    description: 'Recharge -> Summon 1-2 Sharks. Gain 1 Rage.',
-    shortDesc: 'R->Summon 1-2\nSharks, +1 Rage',
+    description: 'Recharge -> Summon Sharks. Gain 1 Rage.',
+    shortDesc: 'R->Summon Sharks\n+1 Rage',
     subtype: 'spell',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,

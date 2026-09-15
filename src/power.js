@@ -18,9 +18,15 @@ export class Power {
     maxUsesPerTurn = 1,
     gamePlusOffset = null,
     noTierOffset = false,
+    subtype2 = null,
   }) {
     this.id = id;
     this.name = name;
+    // Secondary trait, same slot and same purpose as Card.subtype2: a power can
+    // BE a Weapon for TRIGGER purposes without being reclassified as one. Quick
+    // Strike carries 'weapon' so Blade Flurry's "Refresh your Exhausted Weapons"
+    // picks it up without the card text having to special-case the power.
+    this.subtype2 = subtype2;
     this.costDescription = costDescription;
     this.effectDescription = effectDescription;
     this.rechargeCost = rechargeCost;
@@ -92,6 +98,14 @@ export function createCleave() {
     effectDescription: 'Deal 1 Damage to up to 2 Creatures. 2 Targets: Draw.',
     rechargeCost: 1,
     shortDesc: 'R1->1 Dmg\nto 2 targets\n2 Targets: Draw',
+    // Cleave is a weapon swing, so it carries the Weapon trait alongside the
+    // rogue's Quick Strike — those two are the only class powers that actually
+    // swing something. Take Aim and Battle Fury are buffs, Elemental Infusion is
+    // magic, Feral Form is claws and Skeleton Mastery is a summon; none of them
+    // are weapons. No live consumer on the Paladin side yet (Blade Flurry, the
+    // only "Refresh your Exhausted Weapons" card, is rogue-only) — the trait is
+    // here so the data is right and a future weapon-matters card gets it free.
+    subtype2: 'weapon',
     // Base damage 1, +1 per player tier offset. Codex preview reads
     // this and rewrites "Deal X Damage" / "X Dmg" in the descriptions.
     gamePlusOffset: { damage: 1 },
@@ -135,6 +149,11 @@ export function createQuickStrike() {
     effectDescription: 'Deal 1 Damage, Draw.',
     rechargeCost: 1,
     shortDesc: 'R1->1 Dmg\nDraw',
+    // The rogue's power is a knife, so it carries the Weapon trait and is
+    // refreshed by "Refresh your Exhausted Weapons" (Blade Flurry) alongside the
+    // daggers in hand. Trait rather than a named exception on the card so any
+    // future weapon-matters card picks it up for free.
+    subtype2: 'weapon',
     // Offset transforms Quick Strike into a barrage — +1 swing per
     // offset point (always 1 damage each). The codex text rewrites
     // "Deal 1 Damage" → "Deal 1 Damage N times" via a custom branch.

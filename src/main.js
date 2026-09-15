@@ -4535,14 +4535,18 @@ let barrageShotDamage = 1;        // per-shot base damage from the MM card
 let barrageBonusPoison = 0;       // intrinsic per-shot Poison (Poisoned Daggers "1 + Poison")
 let barrageStaysInHand = false;   // card stays in hand on finish (no recharge/draw)
 let barrageDrawOnFinish = 1;      // cards drawn when a non-stays barrage finishes (MM = 1, Blade Flurry = 0)
+// Blade Flurry — ready every exhausted Weapon (and weapon-trait power) when the
+// volley finishes. Same finish-hook shape as barrageDrawOnFinish above.
+let barrageRefreshWeaponsOnFinish = false;
 // Dragon Bone Bow variant: when true, each shot's base damage tapers
 // down by (shotsFired - 1) from barrageShotDamage. Top damage = 4 →
 // shot 1 = 4, shot 2 = 3, shot 3 = 2. Reset in finishBarrage /
 // cancelBarrage alongside the rest of the barrage state.
 let barrageDescending = false;
-// Consumable on-attack buff snapshots — taken on the FIRST shot of a
-// barrage so every subsequent shot in the same card play benefits.
-// Mirrors the multi_damage / picker-flow pattern.
+// Consumable on-attack buff snapshots — taken on the FIRST shot of a barrage,
+// spent on that shot, then zeroed (see the clear at the end of
+// resolveBarrageShot). One consumption, one payout: a charge is worth the same
+// whether you spend it on a single swing or a five-shot volley.
 let barragePoisonStacks = 0;
 // Trueshot Barrage — every shot in this volley bypasses block/shield/armor.
 // Set when the barrage is armed, cleared alongside the rest of the barrage state.
@@ -4550,20 +4554,23 @@ let barrageUnpreventable = false;
 let barrageDrowSleepStacks = 0; // Drow Sleep buff snapshot for the active barrage
 let barrageEyeBonus = 0;
 let barrageObsBonus = 0;
-// Heroism / ice snapshots — consumed ONCE on shot 1 (logged + zeroed
-// on the caster) and reused as a flat bonus / penalty on every
-// subsequent shot in the same barrage. Matches the rest of the
-// "one attack action, one consumption" snapshot family above so a
-// single Heroism stack pumps every shot of the volley.
+// Heroism / ice snapshots — consumed ONCE on shot 1 (logged + zeroed on the
+// caster), applied to that shot, then cleared with the rest of the consumables.
 let barrageHeroism = 0;
-let barrageIceReduction = 0;
 let barrageIgnite = 0;
-// Boarhide Bracers first-attack +2, snapshotted on the barrage's first
-// shot. attacksThisTurn is bumped before each shot's getDamageModifier
-// call, so the bracer's "first attack of the turn" check would see ≥1
-// and never fire mid-barrage. Snapshot it like heroism so the whole
-// volley gets +2 per shot (the same generosity heroism gets).
+// Boarhide Bracers / Snow Paws first-attack bonus, snapshotted on the barrage's
+// first shot. attacksThisTurn is bumped before each shot's getDamageModifier
+// call, so the bracer's "first attack of the turn" check would see ≥1 and never
+// fire mid-barrage — hence the snapshot. It is a FIRST-attack bonus, so it pays
+// out on the first shot only.
 let barrageBracerBonus = 0;
+// Set by a multi-shot handler that ticked the player's Bleed per SHOT (Rain of
+// Arrows, the barrage flow). Ice and Bleed are afflictions the attacker carries,
+// not charges they spend, so every shot is its own swing for them: each shot
+// burns an Ice stack and blunts by what's left, and each shot takes the Bleed
+// tick and sheds a stack. The once-per-card tick in playCardOnEnemy /
+// playCardOnCreature reads this so a volley isn't billed an extra time.
+let _bleedTickedPerShot = false;
 
 // Elemental-barrage state (Wand of Fire / Gravechill Shard: N staggered
 // element shots, each picks its own target — same enemy or different).
@@ -27331,6 +27338,14 @@ const KEYWORD_ICONS = {
              desc: 'Grow a summon you already control instead of raising a new one: +1 Attack and +1 max HP, with the new HP healed in so it is not left hurt. The target is picked at random from your eligible summons. A "Summon or Bolster" effect raises a fresh body when none is standing, and bolsters once one is up.' },
   recharge:{ isTextKeyword: true, color: '#9cd6ff', label: 'Recharge',
              desc: 'Card destination: the card goes to the bottom of your draw pile after play — you\'ll see it again later in this combat.' },
+  // Refresh — readies something you have ALREADY used this turn so you can use
+  // it again right now. Deliberately gold rather than Recharge's blue: the two
+  // are easy to confuse by name, but Recharge is about where a card GOES after
+  // you play it, while Refresh is about un-spending something still in front of
+  // you. Only things that exhaust can be refreshed — stays-in-hand cards (which
+  // grey out with a Zzz after use) and class powers.
+  refresh: { isTextKeyword: true, color: '#ffd27f', label: 'Refresh',
+             desc: 'Ready something you have already used this turn so you can use it again immediately. It applies to cards that Stay in Hand (they grey out once used, and normally only ready at the start of your next turn) and to your class Power. Refreshing does NOT replay the card for you — it just makes it usable again, so you still have to play it. Not the same as Recharge, which is about where a card goes after you play it.' },
   discard: { isTextKeyword: true, color: '#e89870', label: 'Discard',
              desc: 'Card destination: the card goes to the discard pile — that\'s the HP cost (your HP equals deck size). Healing can move cards back from discard into your deck.' },
   consume: { isTextKeyword: true, color: '#b878d8', label: 'Consume',
@@ -27735,7 +27750,9 @@ function tokenizeKeywordText(text, opts = {}) {
     'Fire', 'Ice', 'Ink', 'Poison', 'Shock', 'Bleed', 'Sunder', 'Mark', 'Rage', 'Regen', 'Ignite', 'Sentinel', 'Haste', 'Riposte', 'Bolster',
     'Paralyzed?', 'Weak',
     'Ailments?',
-    'Play', 'Call', 'Summon', 'Recharge', 'Discard', 'Consume'];
+    // 'Refresh' sits ahead of 'Recharge' only for readability — they share no
+    // prefix, so order is not load-bearing here the way 'Ink Cloud' vs 'Ink' is.
+    'Play', 'Call', 'Summon', 'Refresh', 'Recharge', 'Discard', 'Consume'];
   const pattern = new RegExp(`\\b(${keywordList.join('|')})\\b`, 'g');
   let lastIdx = 0;
   let match;
@@ -30101,6 +30118,28 @@ function drawPowerPreviewCard(power, x, y, w, h) {
   }
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
+
+  // 2b. Secondary trait under the name ("Weapon" on Quick Strike). Powers have
+  // no type line of their own — they never route through getSubtypeLabel — so
+  // without this the trait would be mechanically live but invisible, and a
+  // player would have no way to learn that "Refresh your Exhausted Weapons"
+  // readies their power too.
+  const pwrTrait = (power.subtype2 || '').toLowerCase();
+  if (pwrTrait) {
+    const TRAIT_LABELS = { weapon: 'Weapon', ranged: 'Ranged' };
+    const label = TRAIT_LABELS[pwrTrait];
+    if (label) {
+      ctx.save();
+      ctx.font = 'italic ' + Math.max(8, Math.floor(w * 0.055)) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,0.95)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = '#d8c8a0';
+      ctx.fillText(`— ${label} —`, x + w / 2, nameY + nameH + lineH * (nameLines.length - 1) + 4);
+      ctx.restore();
+    }
+  }
 
   // 3. Description box at bottom — same insets as drawCard's full layout.
   // Passive powers with "Start of Turn:" / "End of Turn:" prefixes render
@@ -32947,8 +32986,9 @@ function handleCombatClick(x, y) {
           barrageDescending = false;
           barrageCardIndex = i;
           barrageRechargedCard = null;
-          barrageShotsTotal = 5;
-          barrageShotsLeft = 5;
+          barrageShotsTotal = 2;
+          barrageShotsLeft = 2;
+          barrageRefreshWeaponsOnFinish = true;
           barrageShotsFired = 0;
           barrageShotDamage = fluryBarrageEff.value || 1;
           barrageBonusPoison = 0;
@@ -32956,7 +32996,7 @@ function handleCombatClick(x, y) {
           barrageDrawOnFinish = 0;
           _handOrderSnapshot = [...player.deck.hand];
           state = GameState.TARGETING;
-          showStyledToast(`${card.name}: 5 attacks — click a target (each picks its own, Done to stop)`, 'multi');
+          showStyledToast(`${card.name}: 2 attacks — click a target (each picks its own, Done to stop)`, 'multi');
           return;
         }
         // Check for Arcane Beam — click cards to charge (+N dmg each),
@@ -33323,6 +33363,23 @@ function isRangedCard(card) {
   // its secondary trait.
   return (card.subtype || '').toLowerCase() === 'ranged'
     || (card.subtype2 || '').toLowerCase() === 'ranged';
+}
+
+// Is this thing a Weapon for TRIGGER purposes? Mirrors isRangedCard: the primary
+// subtype carries it for real weapons, and the secondary slot carries it as an
+// explicit trait for things that are not classified as weapons but should behave
+// like one (the Quick Strike power). The secondary slot only accepts the literal
+// 'weapon' tag — a subtype2 of 'ranged' (Aimed Shot) marks a card as arrow-like
+// for quivers, which is a different question and must not make it a weapon here.
+// Works on Powers as well as Cards; Powers have no primary subtype, only the tag.
+// Reuses the WEAPON_SUBTYPES set the class-equip rules already maintain (~3203),
+// plus the bare 'weapon' subtype that gear like Bone Dagger can carry, so there
+// is one definition of "is a weapon" rather than a second list to drift.
+function isWeaponCard(card) {
+  if (!card) return false;
+  const sub = (card.subtype || '').toLowerCase();
+  return sub === 'weapon' || WEAPON_SUBTYPES.has(sub)
+    || (card.subtype2 || '').toLowerCase() === 'weapon';
 }
 
 function applyOnRechargeHeroism(card, payeeCard = null) {
@@ -34627,36 +34684,31 @@ function resolveBarrageShot(target) {
     barrageEyeBonus = snapshotEyeBuff(player);
     barrageObsBonus = snapshotObsidianBuff(player);
     barrageIgnite = consumePlayerIgnite();
-    // Heroism + ice — snapshot once and reuse so every shot in the
-    // barrage benefits from the stack instead of evaporating on shot 1.
+    // Heroism — spent once, so it pays out on shot 1 only (cleared at the
+    // bottom of this function along with the rest of the consumables).
     barrageHeroism = player.heroism || 0;
     if (barrageHeroism > 0) {
-      addLog(`  (Heroism +${barrageHeroism} per shot)`, Colors.GOLD);
+      addLog(`  (Heroism +${barrageHeroism} on the first shot)`, Colors.GOLD);
       player.heroism = 0;
     }
     // Boarhide Bracers first-attack +2 — captured here on shot 0 while
-    // attacksThisTurn is still 0 (it's bumped just below), then applied
-    // to EVERY shot of the barrage. Be generous like heroism: the whole
-    // volley counts as the "first attack" for the bracer bonus.
+    // attacksThisTurn is still 0 (it's bumped just below), because the
+    // bracer's own "first attack of the turn" check would see >= 1 from
+    // shot 2 onward and never fire mid-volley. It is a first-attack bonus,
+    // so it lands on the first shot and no further.
     barrageBracerBonus = 0;
     if (attacksThisTurn === 0 && player.deck && Array.isArray(player.deck.hand)) {
       if (player.deck.hand.some(c => c && c.id === 'boarhide_bracers')) barrageBracerBonus += 2;
       if (player.deck.hand.some(c => c && c.id === 'snow_paws')) barrageBracerBonus += 3;
     }
     if (barrageBracerBonus > 0) {
-      addLog(`  First Attack: +${barrageBracerBonus} per shot`, Colors.GOLD);
+      addLog(`  First Attack: +${barrageBracerBonus}`, Colors.GOLD);
     }
-    // consumeIceForAttack applies the reduction AND burns 1 stack.
-    // We just need the reduction amount to reapply per shot; the
-    // dummy 100 forces consumeIceForAttack to return (100 - stacks)
-    // so we can derive `stacks` once and burn the stack with it.
-    const iceBefore = (player.getStatus && player.getStatus('ICE')) || 0;
-    if (iceBefore > 0) {
-      consumeIceForAttack(player, 100);
-      barrageIceReduction = iceBefore;
-    } else {
-      barrageIceReduction = 0;
-    }
+    // Ice is NOT snapshotted with the charges above. It's an affliction the
+    // attacker carries rather than a resource they spend, so every shot is its
+    // own swing for it: each one burns a stack and is blunted by what's left.
+    // 4 Ice into a 3-shot Magic Missiles blunts all three and leaves 1 stack.
+    // Applied per shot, further down.
   }
   barrageShotsLeft--;
   barrageShotsFired++;
@@ -34674,11 +34726,12 @@ function resolveBarrageShot(target) {
   if (barrageDescending) {
     shotBase = Math.max(1, (barrageShotDamage || 1) - Math.max(0, barrageShotsFired - 1));
   }
-  // Heroism + ice snapshot applies to EVERY shot, not just the first.
-  // Rage and shock-on-caster modifiers are passive (no consumption)
-  // so they're read live each shot.
+  // The consumable snapshots are non-zero on shot 1 only — see the clear at the
+  // bottom of this function. Rage and shock-on-caster modifiers are passive (no
+  // consumption) so they're read live and apply to every shot.
   let dmg = shotBase + barrageHeroism + barrageBracerBonus + (player.rage || 0) + getDamageModifier(player);
-  dmg = Math.max(0, dmg - barrageIceReduction);
+  // Ice: this shot burns one stack and is blunted by what's on the player now.
+  dmg = consumeIceForAttack(player, Math.max(0, dmg));
   dmg += getIncomingDamageModifier(target);
   dmg += applyEyeBonus(target, barrageEyeBonus);
   dmg += applyObsidianBonus(target, barrageObsBonus);
@@ -34752,6 +34805,45 @@ function resolveBarrageShot(target) {
   }
   countAndRemoveDeadCreatures();
 
+  // ONE CONSUMPTION, ONE PAYOUT. Every snapshot above came from a resource that
+  // was spent exactly once (Heroism zeroed, Ignite consumed, the Vial/Eye/
+  // Obsidian buffs spliced off), so it pays out on the FIRST shot and then it's
+  // gone. It used to be re-added to every shot, which meant a single Heroism
+  // stack bought +1 damage on a basic attack but +5 on Blade Flurry — a 5x
+  // arbitrage on the same consumable, and one that was just as good against a
+  // lone boss as against a full board. That is what let a barrage out-damage a
+  // damage-to-ALL card on the one body where ALL collects nothing.
+  //
+  // Cleared here rather than at the ~12 read sites above so a new rider added to
+  // this function can't quietly miss the rule.
+  //
+  // NOT cleared (deliberately): rage and getDamageModifier are read live and
+  // were never consumed; the Elemental Weapon / Avatar Bleed riders are
+  // PERMANENT buffs, priced as such in docs/loot-budget.md §3; barrageUnpreventable
+  // is Trueshot Barrage's own card text, not a charge; Mark already self-consumes
+  // inside applyMarkBonus. Ice and Bleed are not in this list either — they are
+  // afflictions the attacker carries, not charges they spend, so they run per
+  // shot (see the consumeIceForAttack and tickBleedOnAttack calls above).
+  if (barrageShotsFired === 1) {
+    barrageHeroism = 0;
+    barrageBracerBonus = 0;
+    barrageIgnite = 0;
+    barragePoisonStacks = 0;
+    barrageDrowSleepStacks = 0;
+    barrageEyeBonus = 0;
+    barrageObsBonus = 0;
+  }
+
+  // Bleed on the ATTACKER: each shot is its own swing, so it takes a tick of the
+  // current stack and sheds one (2 Bleed across a volley = 2, then 1, then
+  // nothing). Barrage cards never reached the once-per-card tick in
+  // playCardOnEnemy / playCardOnCreature at all — they resolve through this flow
+  // instead — so a bleeding player firing Magic Missiles used to take NO bleed
+  // damage whatsoever. Fires after the shot lands so a fatal bleed can't rob it.
+  tickBleedOnAttack(player, 'You');
+  _bleedTickedPerShot = true;
+  if (!player.isAlive) { finishBarrage(); checkCombatEnd(); return; }
+
   _activePlayCard = null;
   if (barrageShotsLeft <= 0 || checkCombatEnd()) {
     finishBarrage();
@@ -34763,6 +34855,35 @@ function resolveBarrageShot(target) {
     const label = liveCard ? liveCard.name : 'Barrage';
     showStyledToast(`${label}: ${barrageShotsLeft} shot${barrageShotsLeft > 1 ? 's' : ''} left — click target or Done`, 'multi');
   }
+}
+
+// Blade Flurry's payoff: ready every exhausted WEAPON the player is holding,
+// plus any power carrying the Weapon trait (the rogue's Quick Strike). Only
+// stays-in-hand weapons are ever exhausted in hand, so in practice this is "play
+// your daggers again" — which is why the card is a build-around: it does nothing
+// on its own and scales with how much of that kit you're running.
+//
+// Deliberately un-exhausts rather than re-drawing: the cards never left hand, so
+// this is the same operation startPlayerTurn does at the top of a turn.
+function refreshExhaustedWeapons() {
+  const readied = [];
+  for (const c of (player.deck?.hand || [])) {
+    if (c && c.exhausted && isWeaponCard(c)) { c.exhausted = false; readied.push(c.name); }
+  }
+  for (const pw of (player.powers || [])) {
+    // isWeaponCard reads the shared subtype2 trait slot, so a Power qualifies
+    // the same way a Card does. Passive powers have nothing to ready.
+    if (pw && pw.exhausted && !pw.isPassive && isWeaponCard(pw)) {
+      pw.ready();
+      readied.push(pw.name);
+    }
+  }
+  if (readied.length === 0) {
+    addLog('  Nothing exhausted to ready.', Colors.GRAY);
+  } else {
+    addLog(`  Ready again: ${readied.join(', ')}`, Colors.GOLD);
+  }
+  return readied.length;
 }
 
 // Finish barrage: draw 1, pay card cost, clean up
@@ -34788,7 +34909,11 @@ function finishBarrage() {
       // RECHARGE-cost barrage weapons fire their on_recharge enchants too.
       if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
     }
+    // Blade Flurry's refresh fires AFTER the card has been placed, so the
+    // flurry itself can't ready the very card that just resolved.
+    if (barrageRefreshWeaponsOnFinish) refreshExhaustedWeapons();
   }
+  barrageRefreshWeaponsOnFinish = false;
   barrageBonusPoison = 0;
   barrageStaysInHand = false;
   barrageDrawOnFinish = 1;
@@ -34807,7 +34932,6 @@ function finishBarrage() {
   barrageIgnite = 0;
   barrageHeroism = 0;
   barrageBracerBonus = 0;
-  barrageIceReduction = 0;
   barrageCardIndex = -1;
   selectedCardIndex = -1;
   state = GameState.COMBAT;
@@ -34856,7 +34980,6 @@ function cancelBarrage() {
   barrageIgnite = 0;
   barrageHeroism = 0;
   barrageBracerBonus = 0;
-  barrageIceReduction = 0;
   barrageCardIndex = -1;
 }
 
@@ -36705,9 +36828,10 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'blade_flurry_barrage': {
-      // ENEMY / non-barrage fallback for Blade Flurry — 5 hits of value
-      // damage. The player path runs the UI barrage instead.
-      for (let s = 0; s < 5; s++) {
+      // ENEMY / non-barrage fallback for Blade Flurry — 2 hits of value
+      // damage. The player path runs the UI barrage instead (and that path is
+      // the only one that gets the weapon refresh).
+      for (let s = 0; s < 2; s++) {
         resolveEffect(new CardEffect('damage', eff.value, eff.target), caster, target);
       }
       break;
@@ -37204,25 +37328,34 @@ function resolveEffect(eff, caster, target) {
     case 'rain_of_arrows': {
       // Rain of Arrows — eff.maxTargets shots, each rolling its own damage in
       // the min..max packed into eff.value (14 = "1 to 4") at its OWN randomly
-      // picked enemy. Follows the Fan of Blades rule for riders: the caster
-      // stack is folded in ONCE and then applies to every arrow, so a single
-      // Heroism / Ignite / Vial charge pays out across the whole volley rather
-      // than evaporating on the first shot.
+      // picked enemy.
       //
-      // Five separate hits is the point: armor absorbs per hit, so a volley is
-      // much worse into plate than one big swing of the same total — the price
-      // it pays for spreading across a board.
+      // ONE CONSUMPTION, ONE PAYOUT (same rule as resolveBarrageShot): Heroism,
+      // Ignite, the Vial/Eye/Obsidian charges and the Ice penalty are each spent
+      // exactly once, so they land on the FIRST arrow and no further. They used
+      // to be folded into `roaBonus` and re-added to every arrow, which made one
+      // Heroism stack worth +4 here and +1 on a basic attack — and worth that
+      // full +4 against a lone boss, where a damage-to-ALL card (which pays a x3
+      // budget tax for the privilege) collects exactly once.
+      //
+      // Rage and the shock-on-caster modifier are NOT consumed, so they stay on
+      // every arrow. Permanent riders (Elemental Weapon, Avatar Bleed) likewise
+      // fire per hit below — they're priced for it in docs/loot-budget.md §3.
+      //
+      // Several separate hits is still the point: armor absorbs per hit, so a
+      // volley is much worse into plate than one big swing of the same total.
       const roaMin = Math.floor(eff.value / 10);
       const roaMax = eff.value % 10;
       const roaShots = Math.max(1, eff.maxTargets || 5);
       const roaHeroism = caster.heroism || 0;
-      if (roaHeroism > 0) { addLog(`  (Heroism +${roaHeroism} per arrow)`, Colors.GOLD); caster.heroism = 0; }
-      let roaBonus = roaHeroism + (caster.rage || 0) + getDamageModifier(caster);
-      // Ice is consumed once for the volley, not per arrow — one swing, one
-      // stack, same as every other multi-hit card.
-      const roaIcePre = 100;
-      const roaIceCut = roaIcePre - consumeIceForAttack(caster, roaIcePre);
-      roaBonus -= roaIceCut;
+      if (roaHeroism > 0) { addLog(`  (Heroism +${roaHeroism} on the first arrow)`, Colors.GOLD); caster.heroism = 0; }
+      // Split: `roaEvery` rides every arrow, `roaFirst` only the first.
+      const roaEvery = (caster.rage || 0) + getDamageModifier(caster);
+      const roaFirst = roaHeroism;
+      // Ice is NOT in that split. It's an affliction the archer carries, not a
+      // charge they spend, so every arrow is its own swing for it: each one
+      // burns a stack and is blunted by what's left (4 Ice over a 4-arrow volley
+      // blunts all four and leaves the archer on 0). Applied per arrow below.
       const roaEye = snapshotEyeBuff(caster);
       const roaObs = snapshotObsidianBuff(caster);
       const roaPoison = snapshotPoisonBuff(caster);
@@ -37262,11 +37395,20 @@ function resolveEffect(eff, caster, target) {
           // Nothing left standing — the rest of the volley has nowhere to go.
           if (!t) break;
         }
+        // First arrow actually loosed — the one the consumed charges ride.
+        // Keyed off roaFired (bumped at the bottom of the loop) rather than the
+        // index, so an arrow the loop skipped never burns the charges.
+        const roaIsFirst = roaFired === 0;
         const rolled = roaMin + Math.floor(Math.random() * (roaMax - roaMin + 1));
-        let d = Math.max(0, rolled + roaBonus);
+        let d = Math.max(0, rolled + roaEvery + (roaIsFirst ? roaFirst : 0));
+        // Ice: this arrow burns one stack and is blunted by what was on the
+        // archer when it loosed. Per arrow, so a deep Ice stack eats the volley.
+        d = consumeIceForAttack(caster, d);
         d += getIncomingDamageModifier(t);
-        d += applyEyeBonus(t, roaEye);
-        d += applyObsidianBonus(t, roaObs);
+        if (roaIsFirst) {
+          d += applyEyeBonus(t, roaEye);
+          d += applyObsidianBonus(t, roaObs);
+        }
         d = applyMarkBonus(t, Math.max(0, d));
         let taken = 0;
         if (t === enemy) {
@@ -37284,12 +37426,24 @@ function resolveEffect(eff, caster, target) {
           triggerSplitPower(t, taken);
         }
         playAttackHitSfx(d, taken, i * ROA_STAGGER);
-        applyPoisonRider(t, roaPoison, taken);
-        if (taken > 0) applyIgniteRider(t, roaIgnite);
+        // Consumed charges ride the first arrow only; the permanent riders
+        // (Elemental Weapon, Avatar Bleed) fire on every hit that lands.
+        applyPoisonRider(t, roaIsFirst ? roaPoison : 0, taken);
+        if (roaIsFirst && taken > 0) applyIgniteRider(t, roaIgnite);
         if (taken > 0) applyElementalWeaponRider(t, taken);
         if (taken > 0) applyBleedWeaponRider(t, taken);
         maybeFireDrawOnKill(caster, t);
+        // Bleed on the ARCHER: each arrow is its own swing, so it takes a tick
+        // of the current stack and sheds one (2 Bleed over a volley = 2, then 1,
+        // then nothing). Fires after the arrow lands so a fatal bleed never robs
+        // the shot. The flag suppresses the once-per-card tick at the end of
+        // playCardOnEnemy / playCardOnCreature.
+        if (caster === player) {
+          tickBleedOnAttack(player, 'You');
+          _bleedTickedPerShot = true;
+        }
         roaFired++;
+        if (!player.isAlive) break;   // bled out mid-volley
       }
       // Every arrow is its own attack. The volley used to bump attacksThisTurn
       // by NOTHING at all — so a four-arrow barrage fed Sneak Attack / Ruga's
@@ -43158,6 +43312,7 @@ function playCardOnEnemy(handIndex) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  _bleedTickedPerShot = false;
   _wasBurningAtCardStart = (player.getStatus('FIRE') || 0) > 0;
   _shieldAtCardStart = player.shield || 0;
   // Snapshot the card's hand rect BEFORE we lift it — used as the
@@ -43245,7 +43400,13 @@ function playCardOnEnemy(handIndex) {
   // BEFORE the bleed tick so the aura's sustain can't be beaten to the punch by
   // the player's own DoT.
   maybeUnholyAuraHeal(player, card);
-  if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
+  // Multi-shot cards tick Bleed per SHOT inside their own handler (each shot is
+  // its own swing, so the bleed winds down across the volley: 2 → 1 → 0). They
+  // set _bleedTickedPerShot so this once-per-card tick doesn't add another on top.
+  if (!_bleedTickedPerShot
+      && (card.cardType === CardType.ATTACK || cardIsStatusAttack(card))) {
+    tickBleedOnAttack(player, 'You');
+  }
 
   _activePlayCard = null;
   modalCard = null;
@@ -43259,6 +43420,7 @@ function playCardOnCreature(handIndex, creature) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  _bleedTickedPerShot = false;
   // Snapshot the card's hand rect BEFORE we lift it.
   const handRectsC = getHandCardRects(player.deck.hand);
   if (handRectsC[handIndex]) {
@@ -43333,7 +43495,13 @@ function playCardOnCreature(handIndex, creature) {
   // BEFORE the bleed tick so the aura's sustain can't be beaten to the punch by
   // the player's own DoT.
   maybeUnholyAuraHeal(player, card);
-  if (card.cardType === CardType.ATTACK || cardIsStatusAttack(card)) tickBleedOnAttack(player, 'You');
+  // Multi-shot cards tick Bleed per SHOT inside their own handler (each shot is
+  // its own swing, so the bleed winds down across the volley: 2 → 1 → 0). They
+  // set _bleedTickedPerShot so this once-per-card tick doesn't add another on top.
+  if (!_bleedTickedPerShot
+      && (card.cardType === CardType.ATTACK || cardIsStatusAttack(card))) {
+    tickBleedOnAttack(player, 'You');
+  }
 
   _activePlayCard = null;
   modalCard = null;
@@ -45991,21 +46159,28 @@ function executePower(power) {
     case 'quick_strike': {
       // Quick Strike — barrage: 1 base attack, +1 per player offset.
       // Each swing is its own damage application + log line so the
-      // sfx + screen flash read naturally. Consumable on-attack buffs
-      // (Vial of Poison, Sahuagin Eye, Obsidian Core, Ignite) snapshot
-      // once and apply to every shot — same rule as Magic Missiles /
-      // multi_damage cards.
+      // sfx + screen flash read naturally.
+      //
+      // Every hit lands on the SAME body, so this is a barrage, not a cleave —
+      // at playerTierOffset 0 it's a single strike, but in ccgQuest+ it grows to
+      // 2-4 hits. Consumable charges therefore ride the FIRST hit only, the same
+      // rule resolveBarrageShot and Rain of Arrows use: one consumption, one
+      // payout. Without this a single Heroism stack would quietly be worth 4x
+      // here at high Game+ offsets.
       const attacks = 1 + (playerTierOffset || 0);
       const heroismBonus = player.heroism;
-      if (heroismBonus > 0) { addLog(`  (Heroism +${heroismBonus})`, Colors.GOLD); player.heroism = 0; }
+      if (heroismBonus > 0) { addLog(`  (Heroism +${heroismBonus} on the first hit)`, Colors.GOLD); player.heroism = 0; }
       const qsPoisonStacks = snapshotPoisonBuff(player);
       const qsEyeBonus = snapshotEyeBuff(player);
       const qsObsBonus = snapshotObsidianBuff(player);
       const qsIgnite = consumePlayerIgnite();
       for (let i = 0; i < attacks; i++) {
-        let dmg = 1 + heroismBonus;
-        dmg += applyEyeBonus(enemy, qsEyeBonus);
-        dmg += applyObsidianBonus(enemy, qsObsBonus);
+        const qsIsFirst = i === 0;
+        let dmg = 1 + (qsIsFirst ? heroismBonus : 0);
+        if (qsIsFirst) {
+          dmg += applyEyeBonus(enemy, qsEyeBonus);
+          dmg += applyObsidianBonus(enemy, qsObsBonus);
+        }
         dmg += getIncomingDamageModifier(enemy); // +Shock
         dmg = Math.max(0, dmg);
         const [blocked, taken] = enemy.takeDamageWithDefense(dmg);
@@ -46013,8 +46188,8 @@ function executePower(power) {
         if (blocked > 0) addLog(`  Shot ${i + 1}: (${blocked} blocked)`, Colors.BLUE);
         addLog(`  Shot ${i + 1}: ${taken} dmg to ${enemy.name}`, Colors.RED);
         playAttackHitSfx(dmg, taken, i * 120);
-        applyPoisonRider(enemy, qsPoisonStacks, taken);
-        if (taken > 0) applyIgniteRider(enemy, qsIgnite);
+        applyPoisonRider(enemy, qsIsFirst ? qsPoisonStacks : 0, taken);
+        if (qsIsFirst && taken > 0) applyIgniteRider(enemy, qsIgnite);
         if (taken > 0) applyElementalWeaponRider(enemy, taken);
         if (taken > 0) applyBleedWeaponRider(enemy, taken);
       }
@@ -52721,11 +52896,11 @@ function updateEnemyTurn(dt) {
         // arrows faded. The standard 375ms inter-action delay governs once
         // the last arrow clears.
       } else if (eff.effectType === 'blade_flurry_barrage') {
-        // Blade Flurry — FIVE rapid staggered strikes, each re-rolling its
+        // Blade Flurry — two rapid staggered strikes, each re-rolling its
         // target.
         let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
         if (enemy.heroism > 0) enemy.heroism = 0;
-        const shots = 5;
+        const shots = 2;
         const speed = getEnemySpeedMul();
         const stagger = 240 * speed;
         const sfxCard = _activePlayCard;
@@ -53314,8 +53489,20 @@ function updateEnemyTurn(dt) {
         // (summon_shark_random), Sahuagin Staff fires the fixed-N
         // variant (summon_shark) — both share the same shark stats.
         const cap = Math.max(1, eff.value || 1);
+        // Diminishing returns on Blood in the Water: the full 1..cap roll only
+        // happens while the water is still thin (0-1 Sharks out). Once the
+        // priest already has 2+, the card adds exactly one more. Five copies in
+        // a 20-card deck meant repeat casts could stack Sharks faster than the
+        // player could clear them, and each Shark carries Bleed + "Bleeding: +2"
+        // so the board compounds. Throttling the top end leaves the opening
+        // cast as strong as it was and only clips the runaway.
+        //
+        // Deliberately NOT applied to the fixed-N `summon_shark` (Sahuagin
+        // Staff) — that card promises an exact count and the player can read it.
+        const liveSharks = (enemy.creatures || [])
+          .filter(c => c && c.isAlive && c.name === 'Shark').length;
         const want = eff.effectType === 'summon_shark_random'
-          ? 1 + Math.floor(Math.random() * cap)
+          ? (liveSharks >= 2 ? 1 : 1 + Math.floor(Math.random() * cap))
           : cap;
         let summoned = 0;
         let lastShark;
@@ -62050,6 +62237,7 @@ const HELP_CONTENT = [
     { text: 'Discard: card goes to the discard pile — that\'s the HP cost (your HP equals deck size). Healing can move cards back from discard into your deck.', color: '#e89870' },
     { text: 'Consume: card is permanently removed from your deck for the rest of the run.', color: '#b878d8' },
     { text: 'Play: card goes to the Play area while its linked Companion is alive. At end of combat it recharges (companion survived) or moves to the discard pile (companion died).', color: '#e8d59a' },
+    { text: 'Refresh: NOT a destination — it readies something you already used this turn so you can use it again right now. Applies to cards that Stay in Hand (they grey out once used and would otherwise only ready next turn) and to your class Power. It does not replay the card for you; you still have to play it.', color: '#ffd27f' },
     { text: 'Some cards Exhaust for a turn (Zzz overlay) and can be used next turn.' },
   ]},
   { title: 'Combat Keywords', items: [
