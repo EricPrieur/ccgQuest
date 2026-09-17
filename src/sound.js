@@ -534,6 +534,14 @@ export const SOUND_MAP = {
   // distinct warp cue for Dark Vision. Same file names as the SOUND_PACKS
   // entries; this map wires the SOUND_MAP keys callers reference.
   dark_spell_01:    'Magic/dark_spell_01',
+  // Gnoll Fang of Yeenoghu's shadow suite (Shadow Clone / Floating Skulls /
+  // Shadow Drain) plus the two bodies they raise. Direct-named aliases like the
+  // rest of this dark_ family so a caller reads the file it is asking for.
+  // dark_crystals_01 already ships as `bone_wand_cast`; this is the same sample
+  // under its own name, so the Floating Skull's bite isn't asking for a wand.
+  dark_crystals_01:    'Magic/dark_crystals_01',
+  dark_impact_deep_02: 'Magic/dark_impact_deep_02',
+  dark_slime_gore:     'Magic/dark_slime_gore_01',
   dark_warp_01:     'Magic/dark_warp_01',
   // Direct alias for the heavier warp variant — Shadow Bolt's cast
   // (CARD_SFX_OVERRIDES). Same file as drain_essence below.

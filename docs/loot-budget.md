@@ -90,6 +90,7 @@ A **gated** draw is different, because it does not reliably hand the card back:
 | Effect | Points |
 |---|---|
 | Damage | 1 per point |
+| **True (unpreventable) Damage** | **1.3 per point** — bypasses Block, Shield and Armor |
 | Block | 1 per point |
 | Shield | 2 per point |
 | **Sunder** | **3 per stack** |
@@ -111,6 +112,29 @@ point. Scrubbing an Ailment is cheaper still: it's conditional (worth nothing
 when you're clean) and the ailments it removes were mostly going to decay on
 their own. Don't be shy with the numbers on a cleanse line — "Heal 4 Ailments"
 reads generous and costs about a point.
+
+**True damage is 1.3, and it is the most situational number in this table.**
+It bypasses Block, Shield and Armor, which is worth nothing against a naked
+target and a great deal against plate — 1.3 is the average, not a promise. The
+number is fitted to the two shipped cards that are pure True damage with no
+riders muddying them:
+
+| card | budget | True | implied |
+|---|---|---|---|
+| Dwarven Crossbow (T2 common) | 5 | 4 | 1.25× |
+| Partially Digested Bone (T1 uncommon) | 4 | 3 | 1.33× |
+
+Do **not** fit the multiplier to Drain Life, Soul Harvest, Spectral Hand or the
+Darkwood Hand Crossbow: those read as 2.0×–4.5×, but only because lifesteal,
+poison-per-damage and on-kill summons are carrying value this table does not
+price. They say nothing about True.
+
+**Multi-hit True is worth more than single-hit True**, because armour absorbs
+*per hit*: a 3-shot volley into 2 Armor loses 6 damage where one big swing of the
+same total loses 2. So a barrage that goes unpreventable is buying its way out of
+a bigger problem, and ~1.4 is fair there. Trueshot Barrage is priced on that
+basis (6×3 = 18 True → 25.2 against a 25 budget); read it as the multi-hit case,
+not as the baseline.
 
 **Shock is the two-way debuff.** It's the only status that both blunts the
 target's swing and softens them for yours, which is why it matches Weak's price

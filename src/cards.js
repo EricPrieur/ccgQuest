@@ -3037,13 +3037,44 @@ export function createPoisonedDagger() {
     // A single poisoned throw (1 dmg + 1 Poison). Still routed through the
     // barrage flow at one shot so it keeps that path's rider handling
     // (Heroism, poison buffs, Ignite, etc.) and the intrinsic Poison stamp.
+    // maxTargets IS the throw count and is read by every handler — the monster
+    // version below throws twice off the same effect type.
     effects: [
-      new CardEffect('poison_dagger_barrage', 1, TargetType.SINGLE_ENEMY),
+      new CardEffect('poison_dagger_barrage', 1, TargetType.SINGLE_ENEMY, 1),
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     characterClass: ['rogue'], tier: 2,
     rarity: 'uncommon',
     // +1 dmg per shot per offset.
+    gamePlusOffset: { poison_dagger_barrage: 1 },
+  });
+}
+
+// Poisoned Daggers — the MONSTER version (Kobold Slyblade, Khydhani). Two
+// throws, where the player's card is one.
+//
+// It exists because the two sides drifted: the player's Poisoned Dagger was cut
+// to a single throw, and because both enemies reused the player creator they
+// silently lost their second dagger with it. Khydhani's own deck comment still
+// read "Ambush turn = ONLY the Poisoned Dagger (attacks twice)" while the
+// handler had been hardcoded to one shot, so his whole opening beat was quietly
+// halved. Splitting the card means the player-side balance pass can move without
+// reaching into a monster's kit again.
+//
+// Deliberately NOT in CARD_REGISTRY — monster-only cards surface under the codex
+// Enemy Cards tab via cache.enemyOnlyCards instead of cluttering Player Cards
+// (same treatment as Cold Breath and the Varimatras attack cards).
+export function createPoisonedDaggerEnemy() {
+  return new Card({
+    id: 'poisoned_dagger_enemy', name: 'Poisoned Daggers',
+    description: 'Deal 1 + Poison, Twice.\nStays in hand.',
+    shortDesc: '1 + Poison x2\nStays', subtype: 'simple',
+    cardType: CardType.ATTACK, costType: CostType.FREE,
+    effects: [
+      new CardEffect('poison_dagger_barrage', 1, TargetType.SINGLE_ENEMY, 2),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'uncommon',
     gamePlusOffset: { poison_dagger_barrage: 1 },
   });
 }
@@ -3775,8 +3806,13 @@ export function getRangerAbilityChoices() {
 // is its own attack (Sneak Attack / Ruga's Gauntlets count them, armour absorbs
 // them separately, and each can pick its own target).
 //
-// 6x3 = 18 True. At roughly 1.4x normal damage that prices at 25.2 against a
-// tier-3 rare with a card cost (25) — on budget.
+// 6x3 = 18 True, priced at 25.2 against a tier-3 rare with a card cost (25).
+//
+// That uses 1.4x, not the 1.3x baseline in docs/loot-budget.md §3, and the gap
+// is deliberate: armour absorbs PER HIT, so three separate shots into 2 Armor
+// would lose 6 damage where one swing of the same total loses 2. Going
+// unpreventable is worth more to a volley than to a single hit, which is exactly
+// the multi-hit case the doc calls out.
 //
 // Was 5x3 (15 True, ~21) while consumable charges re-applied to every shot: a
 // point of Heroism here was worth 3 damage rather than 1, so the card was worth
@@ -8277,8 +8313,18 @@ export function createTrollSkinJacket() {
 export function createTrollBloodVial() {
   return new Card({
     id: 'troll_blood_vial', name: 'Troll Blood Vial',
-    description: 'Gain 3 Regen, Gain 2 Regen for 3 turns.',
-    shortDesc: '+3 Regen\n+2 Regen 3t',
+    // Tagged like every other drink in the game (Dwarven Brew, Whitescale Brew,
+    // Ale): "Consume ->" for the immediate half, then the Beverage pill for the
+    // slot it fills. Both words are inlineBadgeRe tokens, so they render as
+    // badges rather than prose. It was the only beverage missing the tag, which
+    // made it read as a plain item and hid that it competes for the Beverage
+    // slot with whatever else you are drinking.
+    //
+    // Two anchors must survive any future edit here — applyGamePlusOffsetInPlace
+    // rewrites this card by regex: "for N turns" in the description and
+    // "Regen Nt" in the shortDesc.
+    description: 'Consume -> Gain 3 Regen.\nBeverage: 2 Regen for 3 turns.',
+    shortDesc: 'C->+3 Regen\nBeverage: 2 Regen 3t',
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
     effects: [
       new CardEffect('apply_regen', 3, TargetType.SELF),
@@ -10267,37 +10313,78 @@ export function createBoneFlail() {
   });
 }
 
-// Shadow Clone — Epic Tier 2 Ability. Kills one of the foe's summons (Sentinel
-// first, else random) and raises a Shadow Copy of it on the caster's side: same
-// stats, a very dark tint, 1 Poison, and it can't attack the turn it's made.
-// Caster-aware `shadow_clone` — a player cast steals an enemy summon; the Fang's
-// cast steals one of the player's allies. Built-in recharge cost.
+// Shadow Clone — Epic Tier 2 Ability. Strike for 4 True, or 8 True if you aim
+// at a summon, then raise a Shadow on your side. Caster-aware `shadow_clone`.
+// Built-in recharge cost.
+//
+// The Shadow it raises depends on what the strike did, and that is DELIBERATELY
+// not printed on the card:
+//   • the strike killed a summon  → a full dark COPY of it (whole combat kit,
+//     Sentinel / multi-attack / on-death riders and all) + 1 Poison
+//   • it hit the boss, or the summon survived → a plain 3/3 + 1 Poison
+// Keeping the text at "Deal 5 True Damage (10 to a summon). Summon a Shadow
+// Clone." leaves the copy as something the player discovers, and the card is
+// never worse than its printed floor.
+//
+// The old version could ONLY claim an existing summon and fizzled outright
+// against a boss with an empty board — a dead card in exactly the fights an
+// Epic Tier 2 ability is supposed to answer. 8 True removes most summons
+// outright, so aiming at one still lands the copy nearly every time.
+// The generic Shadow — what the card raises when it did NOT kill a summon (it
+// hit the boss, or the summon survived). Shared by the card's previewCreature
+// and the shadow_clone handler so the side image and the real body can't drift.
+//
+// No artId: the name slugs to `shadow_clone`, which falls through to
+// CARD_ART_MAP.shadow_clone — the card's own ShadowClone.jpg. Same trick the
+// Floating Skull summon uses to reuse its card art, so this needs no new asset.
+export function createShadowCloneCreature() {
+  const c = new Creature({
+    name: 'Shadow Clone', attack: 3, maxHp: 3,
+    description: 'A shape torn loose from the dark.',
+  });
+  c._sourceRarity = 'epic';
+  c._sourceSubtype = 'ability';
+  return c;
+}
+
 export function createShadowClone() {
-  return new Card({
+  const card = new Card({
     id: 'shadow_clone', name: 'Shadow Clone',
-    description: 'Kill an enemy summon and create a Shadow Copy with 1 Poison.',
-    shortDesc: 'Kill a summon\nRaise a Shadow',
+    description: 'Deal 4 True Damage\n(8 to a summon).\nSummon a Shadow Clone.',
+    shortDesc: '4 True (8 vs summon)\nSummon a Shadow',
     subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('shadow_clone', 1, TargetType.SELF),
+      new CardEffect('shadow_clone', 1, TargetType.SINGLE_ENEMY),
     ],
     tier: 2, rarity: 'epic',
   });
+  // Side image shows the GUARANTEED body (the 3/3). The copy branch can't be
+  // previewed — it depends on what you kill — and showing the floor is the
+  // honest thing anyway: the copy is the upside, not the promise.
+  card.previewCreature = createShadowCloneCreature();
+  return card;
 }
 
 // Floating Skulls — Epic Tier 2 Ability. Summons one Floating Skull per foe (the
 // enemy boss + each of its allies count). Caster-aware `summon_floating_skulls`.
 // Built-in recharge cost. previewCreature surfaces the skull in the codex.
+//
+// On Recharge: Summon a Floating Skull. The cast alone was the problem — "1 per
+// enemy" gives a LONE BOSS exactly one 1/1, which is nothing for an Epic Tier 2
+// card, and it paid out most on a wide board where the player was already
+// winning. The on-recharge rider gives the card a floor it never had: feed it to
+// any Recharge cost and you still get a body out of it, so it is never a blank.
 export function createFloatingSkulls() {
   const card = new Card({
     id: 'floating_skulls', name: 'Floating Skulls',
-    description: 'Summon 1 Floating Skulls per enemy.',
-    shortDesc: '1 Skull\nper enemy',
+    description: 'Summon 1 Floating Skull per enemy.\nOn Recharge: Summon a Floating Skull.',
+    shortDesc: '1 Skull per enemy\nOn Rech: 1 Skull',
     subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('summon_floating_skulls', 1, TargetType.SELF),
+      new CardEffect('on_recharge_summon_skull', 1, TargetType.SELF),
     ],
     tier: 2, rarity: 'epic',
   });
@@ -10305,15 +10392,41 @@ export function createFloatingSkulls() {
   return card;
 }
 
-// Shadow Drain — Epic Tier 2 Ability. Every one of the caster's allies loses 1
-// life (TRUE, unpreventable — it can kill them); then deal 1 to all foes and
-// heal the caster 1 per life lost that way. DISCARD cost — like Bandage, the
-// card lands in the discard pile after it resolves. Caster-aware `shadow_drain`.
+// Shadow Drain — Epic Tier 2 Ability. X = the number of foes (the boss counts,
+// plus each of its summons). Deal X to ALL of them and Heal X, minimum 1.
+// DISCARD — like Bandage, the card lands in the discard pile after it resolves.
+// Caster-aware `shadow_drain`.
+//
+// REBUILT. The old card made every one of the CASTER'S allies lose 1 life and
+// paid 1 damage + 1 heal per life spent. Two things were wrong with that: it had
+// a floor of zero (no allies, no card), and even with a full board of four it
+// came to ~8.8 against a 16.5 budget — about half — while costing you the board
+// you had just built. Scaling off the ENEMY count instead makes it a board-clear
+// that answers the situation it is drawn into, costs you nothing of your own,
+// and can never be a blank: one foe still means Deal 1 / Heal 1.
+//
+// Note the shape is quadratic — X damage to X bodies — so it is deliberately
+// weak against a lone boss and strong against a wide field. That is the job.
 export function createShadowDrain() {
   return new Card({
     id: 'shadow_drain', name: 'Shadow Drain',
-    description: 'Each ally lose 1 life.\nDeal to All + Heal, 1 per life lost.',
-    shortDesc: 'Allies -1 life\nDrain: AoE + Heal',
+    // The Discard was always intentional (see the shadow_drain handler in
+    // main.js) but the text never announced it, so a player holding this card
+    // had no way to know it leaves the deck — which, with deck size = HP, is the
+    // most expensive thing a card can do.
+    //
+    // TRAILING "Discard.", not a leading "Discard ->": the card is not paid for
+    // by discarding, it resolves and THEN goes to the discard pile. That is the
+    // Bandages shape ("Heal 4. Discard.") — the prefix form is the other
+    // mechanic entirely (Rampage, Avatar of the Wild discard a card AS the cost).
+    //
+    // Consequence worth preserving: the card's own Heal can NOT return Shadow
+    // Drain itself. The effects resolve inside resolveEffect while the card is
+    // in flight — out of hand, not yet in the discard pile (placeByCost runs
+    // after the effect loop) — so the heal scans a pile this card is not in yet.
+    // Getting it back needs a different heal, later. Do not "fix" the ordering.
+    description: 'X = number of enemies.\nDeal X to All and Heal X.\nDiscard.',
+    shortDesc: 'X = enemies\nX to All, Heal X, D',
     subtype: 'ability',
     cardType: CardType.ABILITY, costType: CostType.DISCARD,
     effects: [
@@ -11568,7 +11681,7 @@ export function createDrowWarriorCreature() {
 }
 
 // Carrion Crawler Torso — the segments of the crawler's body. They never
-// attack; they just sit there soaking, 3 Armor over 12 HP, and burst into a
+// attack; they just sit there soaking, 3 Armor over 10 HP, and burst into a
 // cloud of spores when cut down (On Death: Poison to All). Killing all five is
 // the win condition — the crawler's head itself is invulnerable.
 //
@@ -11579,7 +11692,10 @@ export function createCarrionCrawlerTorsoCreature() {
   const c = new Creature({
     name: 'Carrion Crawler Torso',
     attack: 0,
-    maxHp: 12,
+    // 10, down from 12. Five segments behind 3 Armor each is the whole fight
+    // (you win by clearing the field), so every point of segment HP is paid
+    // five times over while the head keeps biting twice a turn.
+    maxHp: 10,
     armor: 3,
     onDeathPoisonAll: 1,
     description: "Can't attack.\nOn Death: Poison to All.",
@@ -11593,20 +11709,26 @@ export function createCarrionCrawlerTorsoCreature() {
 }
 
 // Bite (Carrion Crawler) — the head's swing. Solid damage plus a variable
-// 1-3 Poison, so the toxin load builds fast across a long clear.
+// 1-2 Poison, so the toxin load builds across a long clear without running away.
+//
+// The head bites TWICE a turn and the fight is won by clearing the field, so
+// both halves of this card are paid twice per round against a party that cannot
+// kill the (invulnerable) head to stop it. 5 + 1-3 was 10 damage and up to 6
+// Poison a turn on its own; 4 + 1-2 keeps the grind without the spike.
 export function createCarrionCrawlerBite() {
   return new Card({
     id: 'carrion_crawler_bite',
     name: 'Bite',
-    description: 'Deal 5 Damage + 1 to 3 Poison.',
-    shortDesc: '5 Dmg\n+1-3 Poison',
+    description: 'Deal 4 Damage + 1 to 2 Poison.',
+    shortDesc: '4 Dmg\n+1-2 Poison',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
-      // Rolls 1-3 at resolve time (see apply_poison_random in the enemy path).
-      new CardEffect('apply_poison_random', 3, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 4, TargetType.SINGLE_ENEMY),
+      // Rolls 1-N at resolve time (see apply_poison_random in the enemy path),
+      // so the value IS the upper bound.
+      new CardEffect('apply_poison_random', 2, TargetType.SINGLE_ENEMY),
     ],
     priority: 10,
     tier: 3,
@@ -11623,7 +11745,11 @@ export function createRoperTentacleCreature() {
   return new Creature({
     name: 'Roper Tentacle',
     attack: 1,
-    maxHp: 4,
+    // 3, down from 4. These are Sentinels behind 2 Armor, so the party has to
+    // chew every one down before it can touch the body — and the Roper's own
+    // power tops the ring back up each turn. Shaving a point is what makes the
+    // wall clearable rather than a treadmill.
+    maxHp: 3,
     armor: 2,
     poisonAttack: true,
     sentinel: true,
@@ -11634,19 +11760,23 @@ export function createRoperTentacleCreature() {
 }
 
 // Bite (Roper) — the body's only card, and the payoff for all that Poison: a
-// heavy single hit (10) that grows by 2 per Poison stack already on the target, with
-// Overwhelm spilling overkill off a dying ally onto the player.
+// heavy single hit (8) that grows by 2 per Poison stack already on the target,
+// with Overwhelm spilling overkill off a dying ally onto the player.
+//
+// Base cut 10 -> 8. The +2-per-Poison rider is the real damage here and the
+// tentacles exist to feed it, so the base was double-charging for a fight that
+// already guarantees stacks on you by the time the body swings.
 export function createRoperBite() {
   return new Card({
     id: 'roper_bite',
     name: 'Bite',
-    description: 'Deal 10 Damage + 2 per Poison on target.\nOverwhelm.',
-    shortDesc: '10 Dmg +2/Poison\nOverwhelm',
+    description: 'Deal 8 Damage + 2 per Poison on target.\nOverwhelm.',
+    shortDesc: '8 Dmg +2/Poison\nOverwhelm',
     subtype: 'ability',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('damage', 10, TargetType.SINGLE_ENEMY),
+      new CardEffect('damage', 8, TargetType.SINGLE_ENEMY),
       new CardEffect('damage_per_poison_stack', 2, TargetType.SINGLE_ENEMY),
     ],
     priority: 10,

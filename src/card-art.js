@@ -186,6 +186,9 @@ export const CARD_ART_MAP = {
   blade_flurry: 'BladeFlurry.jpg',
   backstab: 'Backstab.jpg',
   poisoned_dagger: 'PoisonedDagger.jpg',
+  // Monster version (Kobold Slyblade, Khydhani) — two throws instead of one.
+  // Same art; it's the same weapon, just a nastier hand throwing it.
+  poisoned_dagger_enemy: 'PoisonedDagger.jpg',
   sprint: 'Sprint.jpg',
   // Rogue tier 1 / tier 3 — the fight-dirty line.
   hamstring: 'Hamstring.jpg',

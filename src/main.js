@@ -132,7 +132,8 @@ import {
   createRoperTentacleCreature, createRoperBite,
   createCarrionCrawlerTorsoCreature, createCarrionCrawlerBite,
   createDrowPriestessCreature, createDrowWarriorCreature,
-  createFloatingSkullCreature, createShadowClone, createFloatingSkulls, createShadowDrain,
+  createFloatingSkullCreature, createShadowClone, createShadowCloneCreature,
+  createFloatingSkulls, createShadowDrain,
   createPounce, createCatReflexes, createCatClaws,
   createMountainPredatorFang, createCloakOfTheSilentProwler, createSnowPaws, createCatsEyePendant,
   createPackHyenaCreature, createBeastCollar, createBoneCleaver, createCrackedMarrowBone, createBeastmasterHorn, createHuntersRecurveBow,
@@ -160,7 +161,7 @@ import {
   createArcaneVortexCard, createArcaneVortexCreature, arcaneVortexStageFor, createPolymorph,
   arcaneVortexDescription,
   createVarimatrasBite, createVarimatrasClaw, createVarimatrasTail, createVarimatrasWing, createVarimatrasScale,
-  createFanOfBlades, createBladeFlurry, createBackstab, createPoisonedDagger, createSprint, createSprintEnemy,
+  createFanOfBlades, createBladeFlurry, createBackstab, createPoisonedDagger, createPoisonedDaggerEnemy, createSprint, createSprintEnemy,
   createBestialWrath, createRainOfArrows, createTrack,
   createQuiver, createEndlessQuiver, createBoneQuiver, createMephitSkinQuiver,
   createKillingGround, createTrueshotBarrage,
@@ -356,6 +357,13 @@ const UNDERDARK_NO_SPAWN_MAPS = new Set([
   'cornis_house_41', 'borrowed_house_42',
   'underdark_mushroom_circle_25',
   'hall_of_callarduran',
+  // The South Crossroad — neutral ground. Every power fighting over the
+  // Underdark needs this junction, so none of them holds it and nothing hunts
+  // here. The whole map is excluded (not just the hub), which is what makes the
+  // breather at usx_xroad safe to offer and the calm the player feels real
+  // rather than luck. Arriving also wipes the accumulated climb, so leaving the
+  // crossroad starts the count fresh.
+  'underdark_south_xroad_4',
 ]);
 const UNDERDARK_ENC_STEP = 0.02;
 let underdarkEncounterChance = UNDERDARK_ENC_STEP;
@@ -418,10 +426,21 @@ const UNDERDARK_SPAWN_TABLE = [
   { creator: createDrowWarpartyEncounter, weight: 0.5 },
 ];
 // Cornis's cameo — while the party is in an Underdark random encounter, the
-// little smith keeps wandering in to help. Set when the spawn table fires,
-// cleared when the fight ends, so scripted Underdark fights (the Kraken, the
-// gnoll beats) never get him.
-let _cornisCameoFight = false;
+// little smith keeps wandering in to help. Scripted Underdark fights (the
+// Kraken, the gnoll beats) never get him, and neither does anything outside the
+// Underdark.
+//
+// The arming flag lives ON THE ENCOUNTER (`currentEncounter._cornisCameo`), not
+// in a module global. It used to be a global cleared by the victory and flee
+// teardowns — which meant DYING left it armed, because a defeat runs neither.
+// The flag then rode into the next fight anywhere on the map, and Cornis turned
+// up to help against a surface Gnoll Hunter. A reload had the same effect (the
+// global was never persisted OR reset on restore). Hanging it on the encounter
+// makes the scope structural: a new encounter is a new object, so there is
+// nothing to leak and no teardown to forget.
+function isCornisCameoFight() {
+  return !!(currentEncounter && currentEncounter._cornisCameo);
+}
 // Toast text held back while the combat-intro splash is on screen, so the
 // cameo's "a small figure joins you" notice doesn't cover the monster
 // showcase. Flushed when combatIntroTimer runs out (or on the intro click).
@@ -451,7 +470,7 @@ function playerHasCornisCard() {
 // player swings with him the same turn; at end of turn he vanishes outright (no
 // card, no hand slot) and re-rolls next turn.
 function maybeSummonCornisCameo() {
-  if (!_cornisCameoFight || !player || !enemy || !enemy.isAlive) return;
+  if (!isCornisCameoFight() || !player || !enemy || !enemy.isAlive) return;
   if (_playerTurnInFight < 2) return;
   if (playerHasCornisCard()) return;
   if (player.creatures.some(c => c && c._cornisCameo)) return;
@@ -586,7 +605,8 @@ function forceUnderdarkEncounter(stepThrough = false, forcedIndex = null) {
   }
   currentEncounter = stepThrough ? entry.creator() : rollUnderdarkSpawn();
   if (!currentEncounter) return;
-  _cornisCameoFight = true;
+  // Arm the cameo on THIS encounter — see isCornisCameoFight.
+  currentEncounter._cornisCameo = true;
   _cornisCameoGuaranteed = false;
   if (currentEncounter.id === 'gnome_merchants' || currentEncounter.id === 'gnome_merchants_cornis') {
     _lastMusicArea = null;
@@ -733,15 +753,24 @@ let _gnollGuardsPackLordDone = new Set();
 // Boss gnoll cave — the Reeking Den (`_a3`) forces a guaranteed Gnoll Warrior
 // fight and the Pack-Leader's Den (`_b3`) a guaranteed Gnoll Pack Lord fight.
 // Session Sets of cleared dens (keyed by the cave map/entrance), cleared on a
-// long rest so a fresh pack reclaims the den — UNLESS the Fang of Yeenoghu is
-// already dead, in which case the warren is broken and neither respawns (the
-// arrival intercept gates on completedEncounters for the Fang).
+// long rest so a fresh pack reclaims the den. The Fang of Yeenoghu is the only
+// gnoll fight that never comes back, and it guards itself with its own
+// completedEncounters check on the `_a5` node — these dens are NOT gated on it.
 let _gnollDenWarriorDone = new Set();
 let _gnollDenPackLordDone = new Set();
 // Underdark entrance (c7_8 "Into the Dark" ↔ ug_entry). False until the party
 // chooses "Lets go in." at the recognition dialog; once true the two nodes act
 // as a plain bidirectional teleporter (the dialog no longer gates entry).
 let _underdarkGnollUnlocked = false;
+// Underdark Threshold short rest — one breather (Heal 8) per long rest, offered
+// when the party descends onto ug_entry from the surface. Registered in
+// RUN_FLAGS with rest:true, so setWellRested re-arms it and it persists across
+// saves without a line in save.js.
+let _underdarkShortRestUsed = false;
+// South Crossroad breather — one rest (Heal 8) per long rest at usx_xroad, the
+// neutral junction nothing in the Underdark can afford to hold. Same RUN_FLAGS
+// rest:true treatment as the Threshold breather above.
+let _underdarkXroadRestUsed = false;
 // Bottomless Lake (usp13_3) — set once the party has seen the Deep Kraken
 // reveal and made the fight-or-flee choice. On a later approach (after
 // fleeing) the intro dialog is skipped and we jump straight to the choice.
@@ -2890,6 +2919,10 @@ const RUN_FLAGS = {
   underdarkGnollUnlocked: { g: () => _underdarkGnollUnlocked, s: v => { _underdarkGnollUnlocked = v; } },
   bottomlessLakeRevealed: { g: () => _bottomlessLakeRevealed, s: v => { _bottomlessLakeRevealed = v; } },
   quietPoolUsed: { g: () => _quietPoolUsed, s: v => { _quietPoolUsed = v; } },
+  // rest:true — clearRestRunFlags re-arms the Threshold breather on a long rest,
+  // so this needs no explicit line in setWellRested.
+  underdarkShortRestUsed: { g: () => _underdarkShortRestUsed, s: v => { _underdarkShortRestUsed = v; }, rest: true },
+  underdarkXroadRestUsed: { g: () => _underdarkXroadRestUsed, s: v => { _underdarkXroadRestUsed = v; }, rest: true },
   mushroomCircleUsed: { g: () => _mushroomCircleUsed, s: v => { _mushroomCircleUsed = v; } },
   karEdenRoadUnlocked: { g: () => _karEdenRoadUnlocked, s: v => { _karEdenRoadUnlocked = v; } },
   rareMushroomFound: { g: () => _rareMushroomFound, s: v => { _rareMushroomFound = v; } },
@@ -2971,6 +3004,48 @@ function resetAllRunFlags() {
 // Clear only the rest-respawn latches (setWellRested).
 function clearRestRunFlags() {
   for (const f of Object.values(RUN_FLAGS)) if (f.rest) f.s(false);
+}
+
+// === RUN_SETS — the Set-valued sibling of RUN_FLAGS ===
+// Same three-step contract as RUN_FLAGS (declare, add a line here, write the
+// gate) and the same reason for existing: these were session-only Sets that
+// `saveGame`'s field whitelist never carried, so every cleared gnoll den re-armed
+// on reload and a death could be save-scummed into a fresh cave. They are meant
+// to re-arm on a LONG REST and nothing else.
+//
+// `rest: true` means setWellRested empties it. All four dens are rest-respawning
+// fights; only the Fang of Yeenoghu is one-shot, and it guards itself with its
+// own completedEncounters check rather than living here.
+const RUN_SETS = {
+  gnollCaveCombatDone:     { g: () => _gnollCaveCombatDone,     s: v => { _gnollCaveCombatDone = v; },     rest: true },
+  gnollGuardsPackLordDone: { g: () => _gnollGuardsPackLordDone, s: v => { _gnollGuardsPackLordDone = v; }, rest: true },
+  gnollDenWarriorDone:     { g: () => _gnollDenWarriorDone,     s: v => { _gnollDenWarriorDone = v; },     rest: true },
+  gnollDenPackLordDone:    { g: () => _gnollDenPackLordDone,    s: v => { _gnollDenPackLordDone = v; },    rest: true },
+};
+
+// Build the `sets` bag for saveGame (arrays; save.js does the final copy).
+function runSetsToObject() {
+  const out = {};
+  for (const [k, f] of Object.entries(RUN_SETS)) out[k] = Array.from(f.g() || []);
+  return out;
+}
+
+// Restore every run Set. Missing key (older save) => empty Set, which re-arms
+// the den — the same permissive default those saves already had.
+function runSetsFromSave(data) {
+  const bag = (data && data.sets && typeof data.sets === 'object') ? data.sets : null;
+  for (const [k, f] of Object.entries(RUN_SETS)) {
+    const v = bag && Array.isArray(bag[k]) ? bag[k] : [];
+    f.s(new Set(v));
+  }
+}
+
+function resetAllRunSets() {
+  for (const f of Object.values(RUN_SETS)) f.s(new Set());
+}
+
+function clearRestRunSets() {
+  for (const f of Object.values(RUN_SETS)) if (f.rest) f.s(new Set());
 }
 // Stormwatcher's Shrine — Marthammor's reactivation arc. shrineReactivated
 // latches when Olbrim makes it back up to the shrine and lights the
@@ -3338,6 +3413,10 @@ let _levelUpTier = 1;
 // before COMPANION_UPGRADE state is entered. Each entry is
 // { name, oldCreature, newCreature }.
 let companionUpgrades = [];
+// Optional continuation for the COMPANION_UPGRADE screen. null = the default
+// level-up behaviour (advance to the ability picker). Set alongside
+// companionUpgrades by callers that need the screen to lead somewhere else.
+let _companionUpgradeThen = null;
 let perkChoices = [];
 // Tier of the perks currently offered on the PERK_SELECT screen. Drives the
 // gold-reroll cost (tier 1 = 10g, tier 2 = 50g) and gates the reroll button:
@@ -4003,6 +4082,12 @@ let journalClickAreas = []; // refilled each frame for hit-testing
 // enters a TEXT phase; used as the default selection when the J key
 // opens the journal so the player lands on the beat they just read.
 let lastSeenDialog = null;
+// Set by openJournal: on the next drawJournal pass, scroll the left-hand list so
+// the preselected entry is actually visible. Deferred to draw time because the
+// row's y position only exists once the list has been laid out (collapsed
+// sections, hidden unseen rows and variable part/chapter headers all move it),
+// and there is no layout pass outside the renderer. Cleared once applied.
+let _journalScrollToSelected = false;
 // Collapsed parts / chapters. Holds part ids ('part_1') and chapter
 // ids ('chapter_1') that the player has clicked to minimize. Click
 // the header again to expand. Persisted only in-memory (collapse
@@ -4547,11 +4632,12 @@ let barrageDescending = false;
 // spent on that shot, then zeroed (see the clear at the end of
 // resolveBarrageShot). One consumption, one payout: a charge is worth the same
 // whether you spend it on a single swing or a five-shot volley.
-let barragePoisonStacks = 0;
+// Both venom coatings (Vial of Poison + Drow Sleep Poison) as one snapshot —
+// see snapshotVenomBuffs. null when nothing is coated.
+let barrageVenom = null;
 // Trueshot Barrage — every shot in this volley bypasses block/shield/armor.
 // Set when the barrage is armed, cleared alongside the rest of the barrage state.
 let barrageUnpreventable = false;
-let barrageDrowSleepStacks = 0; // Drow Sleep buff snapshot for the active barrage
 let barrageEyeBonus = 0;
 let barrageObsBonus = 0;
 // Heroism / ice snapshots — consumed ONCE on shot 1 (logged + zeroed on the
@@ -5668,6 +5754,19 @@ let _quiverReturnsThisTurn = new Set();
 // also goes to hand if there's room, otherwise it's recharged under the
 // draw pile so the next combat (or refresh) picks it up. Without this
 // gate, looting at a full hand silently overflows past MAX_HAND_SIZE.
+// An INERT crafting material — ore, Ancient Bones, a Rare Mushroom. Two things
+// have to be true: the card can't be played, AND it has no effects at all, so it
+// does literally nothing wherever it sits.
+//
+// Both halves matter. `unplayable` alone is NOT the test: Wolf Fang, the four
+// Quivers, Harpy Feather and the Sailor's Lucky Compass are all unplayable but
+// carry on_recharge / on_draw effects that only fire from inside the deck —
+// moving those to the backpack would silently break them.
+function isCraftingMaterial(card) {
+  return !!card && card.unplayable === true
+    && Array.isArray(card.effects) && card.effects.length === 0;
+}
+
 function addLootedCard(card) {
   if (!player || !player.deck) return;
   // ccgQuest+ loot scaling — apply playerTierOffset to the looted
@@ -5677,6 +5776,17 @@ function addLootedCard(card) {
   // resolveCompanionCardForTierOffset (no double bump).
   if (playerTierOffset > 0 && !card._companionTierSwapped) {
     applyGamePlusOffsetInPlace(card, playerTierOffset);
+  }
+  // Crafting materials go straight to the BACKPACK, never the deck. In the deck
+  // they are pure dead weight: they can't be played, so every one drawn is a
+  // wasted card in hand, and the forge / shrine / altar that consume them
+  // already search the backpack (countOre, collectShrineMaterials) — as does
+  // the shop's sell UI, which only lists backpack cards. So the deck was the one
+  // place holding a material actively hurt.
+  if (isCraftingMaterial(card)) {
+    backpack.push(card);
+    addLog(`  ${card.name} goes into your backpack.`, Colors.GRAY, card);
+    return;
   }
   player.deck.masterDeck.push(card);
   if (player.deck.hand.length < MAX_HAND_SIZE) {
@@ -7214,18 +7324,7 @@ function handleKeyDown(key, event) {
       // Deliberately not opening from MENU — the title screen has no
       // in-game context to return to, and the journal is meant as an
       // in-run companion (only relevant once the player is on the map).
-      playSound('book_open');
-      journalReturnState = state;
-      journalScrollY = 0;
-      journalListScrollY = 0;
-      // Preselect the most recently read dialog so the right pane
-      // opens on the beat the player just experienced. Falls back to
-      // whichever entry the player last clicked in a prior session,
-      // and to no-selection if neither exists.
-      if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
-        journalSelectedEncounter = lastSeenDialog;
-      }
-      state = GameState.JOURNAL;
+      openJournal(state);
     }
   }
   // M: open the in-game menu (save / load / options / quit). Mirrors
@@ -8711,7 +8810,7 @@ function resetStoryFlags() {
   if (player && Array.isArray(player.persistentBuffs)) {
     player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== 'glowstone_fountain_blessing');
   }
-  _cornisCameoFight = false;
+  _cornisCameoGuaranteed = false;
   _gnollCaveTypes = null; // reroll the cave assignment on a fresh run
   _underdarkGnollUnlocked = false;
   _bottomlessLakeRevealed = false;
@@ -8727,10 +8826,7 @@ function resetStoryFlags() {
   _psilofyrOffering = 0;
   _psilofyrIntroSeen = false;
   _quietPoolUsed = false;
-  _gnollCaveCombatDone = new Set();
-  _gnollGuardsPackLordDone = new Set();
-  _gnollDenWarriorDone = new Set();
-  _gnollDenPackLordDone = new Set();
+  resetAllRunSets();
   gontranGnollVictoryClaimed = false;
   guildGnollRewardClaimed = false;
   staircaseTopDragonDialogSeen = false;
@@ -8868,7 +8964,7 @@ function startNewGame() {
   if (player && Array.isArray(player.persistentBuffs)) {
     player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== 'glowstone_fountain_blessing');
   }
-  _cornisCameoFight = false;
+  _cornisCameoGuaranteed = false;
   _gnollCaveTypes = null; // reroll the cave assignment on a fresh run
   _underdarkGnollUnlocked = false;
   _bottomlessLakeRevealed = false;
@@ -8884,10 +8980,7 @@ function startNewGame() {
   _psilofyrOffering = 0;
   _psilofyrIntroSeen = false;
   _quietPoolUsed = false;
-  _gnollCaveCombatDone = new Set();
-  _gnollGuardsPackLordDone = new Set();
-  _gnollDenWarriorDone = new Set();
-  _gnollDenPackLordDone = new Set();
+  resetAllRunSets();
   gontranGnollVictoryClaimed = false;
   guildGnollRewardClaimed = false;
   staircaseTopDragonDialogSeen = false;
@@ -10405,13 +10498,12 @@ function setWellRested() {
   // to the 2% step. The armed latch is NOT cleared: once the party has been in
   // the deep, the deep knows they're there.
   underdarkEncounterChance = UNDERDARK_ENC_STEP;
-  // Generic gnoll caves re-arm their lurking-pack fight on a long rest.
-  _gnollCaveCombatDone = new Set();
-  // The guards-cave Pack Lord den re-arms too — a fresh pack reclaims it (the
-  // freed prisoners stay freed, tracked separately in completedEncounters).
-  _gnollGuardsPackLordDone = new Set();
-  _gnollDenWarriorDone = new Set();
-  _gnollDenPackLordDone = new Set();
+  // Every gnoll den re-arms on a long rest — the generic caves' lurking pack,
+  // the guards-cave Pack Lord, and both boss-cave dens. A fresh pack reclaims
+  // each one (freed prisoners stay freed; that's completedEncounters, separate).
+  // One pass over RUN_SETS; a new den Set needs only `rest: true` in the
+  // registry, not a line here.
+  clearRestRunSets();
   // Quiet Pool (Underdark) — a full rest elsewhere lets the untainted river
   // refill: the party can drink from it again for another full heal + beverage.
   _quietPoolUsed = false;
@@ -10925,7 +11017,8 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       }
       underdarkEncounterChance = UNDERDARK_ENC_STEP;
       currentEncounter = rollUnderdarkSpawn();
-      _cornisCameoFight = true;
+      // Arm the cameo on THIS encounter — see isCornisCameoFight.
+      if (currentEncounter) currentEncounter._cornisCameo = true;
       _cornisCameoGuaranteed = false;
       // Deep Gnome Merchants — a lit, busy, friendly beat in the middle of the
       // deep, so it gets the city-festivities bed instead of cave ambience.
@@ -12070,6 +12163,40 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     visitedNodes = new Set(['ug_entry']);
     currentMap.currentNodeId = 'ug_entry';
     arriveAtNode('ug_entry', 'c7_8');
+    return;
+  }
+  // South Crossroad breather — the "+" hub is neutral ground (nothing in the
+  // Underdark can afford to hold a junction everything needs), so the party can
+  // stop here once per long rest. Fires on arrival while the flag is unspent;
+  // after that, walking through the hub is silent. Its whole map is also out of
+  // the roaming roll — see UNDERDARK_NO_SPAWN_MAPS.
+  if (!skipEncounter && nodeId === 'usx_xroad'
+      && currentMap.id === 'underdark_south_xroad_4'
+      && !_underdarkXroadRestUsed
+      && ENCOUNTER_REGISTRY.underdark_xroad_rest) {
+    currentEncounter = ENCOUNTER_REGISTRY.underdark_xroad_rest();
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    visitedNodes.add(nodeId);
+    advanceEncounterPhase();
+    return;
+  }
+  // Underdark Threshold breather — offered when the party steps DOWN from the
+  // surface (fromNodeId 'c7_8') and only while the flag is unspent, so it is one
+  // dialog per long rest rather than one on every descent. Climbing back OUT is
+  // the branch below (fromNodeId !== 'c7_8'), which never reaches this.
+  if (!skipEncounter && nodeId === 'ug_entry'
+      && currentMap.id === 'underdark_gnoll_entrance'
+      && fromNodeId === 'c7_8'
+      && !_underdarkShortRestUsed
+      && ENCOUNTER_REGISTRY.underdark_short_rest) {
+    currentEncounter = ENCOUNTER_REGISTRY.underdark_short_rest();
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    visitedNodes.add(nodeId);
+    advanceEncounterPhase();
     return;
   }
   if (nodeId === 'ug_entry'
@@ -15204,12 +15331,19 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   }
   // Boss gnoll cave — the Reeking Den (`..._a3`) forces a guaranteed Gnoll
   // Warrior fight and the Pack-Leader's Den (`..._b3`) a guaranteed Gnoll Pack
-  // Lord fight. Both re-arm on a long rest (a fresh pack reclaims the den) UNTIL
-  // the Fang of Yeenoghu falls — once the boss is dead the warren is broken and
-  // neither respawns. Mirrors the guards-cave `_g3` den pattern above.
+  // Lord fight. Both re-arm on a long rest (a fresh pack reclaims the den),
+  // exactly like the guards-cave `_g3` den above and the generic-cave lurking
+  // fight in maybeTriggerGnollCaveCombat.
+  //
+  // This used to ALSO require `!completedEncounters.has('gnoll_fang_of_yeenoghu')`
+  // on the theory that killing the boss broke the warren. That gate was both
+  // wrong and far-reaching: the Fang has its OWN one-shot gate on `_a5` above,
+  // so this second copy did nothing to protect it — all it did was permanently
+  // empty the `_a3` and `_b3` dens of EVERY gnoll cave on the map the moment the
+  // Fang died, including caves the player had not visited yet. The dens are
+  // ordinary rest-respawning fights; only the Fang is one-shot.
   if (!skipEncounter
-      && typeof currentMap.id === 'string' && currentMap.id.startsWith('gnoll_cave_')
-      && !completedEncounters.has('gnoll_fang_of_yeenoghu')) {
+      && typeof currentMap.id === 'string' && currentMap.id.startsWith('gnoll_cave_')) {
     const denKey = currentMap._caveEntrance || currentMap.id;
     const fireDen = (doneSet, encId) => {
       doneSet.add(denKey);
@@ -15389,14 +15523,7 @@ function handleMapClick(x, y) {
   // routes to the matching screen.
   const ar = getMapActionButtonRects();
   if (hitTest(x, y, ar.journal)) {
-    playSound('book_open');
-    journalReturnState = state;
-    journalScrollY = 0;
-    journalListScrollY = 0;
-    if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
-      journalSelectedEncounter = lastSeenDialog;
-    }
-    state = GameState.JOURNAL;
+    openJournal(state);
     return;
   }
   if (hitTest(x, y, ar.backpack)) {
@@ -19712,8 +19839,9 @@ function advanceEncounterPhase() {
       }
       // Prospector perk: when the player gained gold, each stack rolls a
       // 10% chance to ALSO turn up a chunk of raw ore (from ore_cache). The
-      // ore lands in the same loot list, so it shows on the loot screen and
-      // enters the deck like any other drop.
+      // ore lands in the same loot list, so it shows on the loot screen like
+      // any other drop — then addLootedCard files it in the BACKPACK, since
+      // ore is an inert crafting material (see isCraftingMaterial).
       if (lootGoldAmount > 0 && player && player.getPerkStacks) {
         const oreStacks = player.getPerkStacks('loot_ore_chance');
         for (let i = 0; i < oreStacks; i++) {
@@ -21000,7 +21128,10 @@ function setupEnemyForCombat(enemyId) {
     // Poisoned Dagger plays BEFORE Sly Blade so the Poison stack is
     // on the target when Sly Blade's `poison_bonus_damage` triggers
     // (+2 if Poisoned). Same ordering as PY.
-    for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createPoisonedDagger, 26));
+    // Monster version of the dagger (two throws) — the player's card is a
+    // single throw and the two were sharing a creator, so a player-side
+    // balance pass silently halved the slyblade's signature opener.
+    for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createPoisonedDaggerEnemy, 26));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createSlyBlade, 22));
     for (let i = 0; i < 1; i++) enemy.deck.addCard(withPriority(createSprintEnemy, 18));
     for (let i = 0; i < 2; i++) enemy.deck.addCard(withPriority(createPetSpider, 15));
@@ -21062,7 +21193,7 @@ function setupEnemyForCombat(enemyId) {
     // (the user wants daggers second). startCombat preserves cards already
     // in deck.hand; there's no poisoned_dagger in the master deck, so it's
     // a clean bonus with no duplicate to strip.
-    const pd = createPoisonedDagger();
+    const pd = createPoisonedDaggerEnemy();
     pd.priority = 28;
     enemy.deck.hand.push(pd);
     // Ambush turn = ONLY the Poisoned Dagger (attacks twice). No opening
@@ -21435,12 +21566,17 @@ function setupEnemyForCombat(enemyId) {
     enemy.addPower(createArmorPower(3));
     enemy.addPower(createOverwhelm());
     enemy.addPower(createTentaclesPower());
-    // Opens with 3 tentacles. These are placed at setup, so startEnemyTurn's
-    // ready() pass frees them and all three lash on the ambush turn. Tentacles
-    // also fires that turn and rolls 1-3 more, but anything grown INSIDE the
-    // power loop comes in exhausted (ready() already ran) and only swings from
-    // the following turn — hence starting at 3 rather than 2.
-    for (let i = 0; i < 3; i++) enemy.addCreature(createRoperTentacleCreature());
+    // Opens with 2 tentacles. These are placed at setup, so startEnemyTurn's
+    // ready() pass frees them and BOTH lash on the ambush turn — anything the
+    // Tentacles power grows that same turn comes in exhausted (ready() already
+    // ran) and only swings from the following turn, so this number IS the
+    // ambush.
+    //
+    // Was 3. The ambush is a free surprise round the player cannot answer, and
+    // three lashes — each with a Poison rider feeding Bite's +2-per-stack —
+    // front-loaded the fight before the party had acted once. Two still opens
+    // with a wall and a toxin start; the ring regrows to 6 from there anyway.
+    for (let i = 0; i < 2; i++) enemy.addCreature(createRoperTentacleCreature());
     // Ambush: the Roper was a stalagmite until you walked past it, so it takes
     // the surprise turn. _ambushOpeningHandOnly with nothing cheated in means
     // it opens with 0 cards — the ambush is tentacles only, no Bite. Its hand
@@ -21454,7 +21590,7 @@ function setupEnemyForCombat(enemyId) {
   // it down) riding five Carrion Crawler Torso segments: _cantAttack, 3 Armor over
   // 10 HP, and On Death: Poison to All, so every segment you fell gasses the
   // whole party. Win by clearing the field (_clearFieldToWin). Meanwhile the
-  // head bites twice a turn (5 + 1-3 Poison each) and Tentacle Lashes locks TWO
+  // head bites twice a turn (4 + 1-2 Poison each) and Tentacle Lashes locks TWO
   // cards anywhere in your deck per turn for the rest of the fight — the clock
   // is your shrinking pool of playable cards, not the crawler's HP.
   ENEMY_DECKS.carrion_crawler = () => {
@@ -21571,10 +21707,31 @@ function setupEnemyForCombat(enemyId) {
     enemy._enemy_surprise = true;
     enemy._ambushOpeningHandOnly = true;
     // Cheat 1 Mark (priority 30) into the opening hand so the ambush opens by
-    // marking for just Mark(2) (not the old Mark(6) from three). startCombat
-    // pulls the matching deck copy out of the draw pile (one per held id), so
-    // it's held — not duplicated. The other Marks stay in the deck to re-mark.
-    for (let i = 0; i < 1; i++) { const m = createHuntersMark(); m.priority = 30; enemy.deck.hand.push(m); }
+    // marking for just Mark(1). startCombat pulls the matching deck copy out of
+    // the draw pile (one per held id), so it's held — not duplicated. The other
+    // Marks stay in the deck to re-mark.
+    //
+    // The AMBUSH copy marks for 1, not the card's usual 2.
+    //
+    // The ambush turn itself is harmless — _ambushOpeningHandOnly means he opens
+    // with ONLY this card and takes no fresh draw, so he marks and does nothing
+    // else. The cost is deferred: a Mark stack is consumed one per attack and
+    // DOUBLES that hit, so Mark(2) bought him two doubled swings on his following
+    // turns, by which point he has drawn a full hand. This hunter is built to
+    // cash those: Patient Hunter keeps him off you while a summon stands, Heroic
+    // Tumble banks Heroism reactively, and Aimed Shot spends it at +2 a stack —
+    // so the doubled hit is a doubled BIG hit, twice. At Mark(1) he gets one.
+    // Deck copies are untouched at 2 so he can still re-mark mid-fight.
+    for (let i = 0; i < 1; i++) {
+      const m = createHuntersMark();
+      m.priority = 30;
+      const mk = (m.effects || []).find(e => e.effectType === 'apply_mark');
+      if (mk) mk.value = 1;
+      // Bare keyword = 1 stack, per the card-text convention.
+      m.description = 'Add Mark to an enemy.\nOn Attack: Consume a Mark\nto deal 2X damage.';
+      m.shortDesc = 'Mark\nOn atk: 2X dmg';
+      enemy.deck.hand.push(m);
+    }
   };
   ENEMY_HAND_SIZE.gnoll_hunter = 4;
 
@@ -22168,16 +22325,7 @@ function getMapActionButtonRects() {
 function drawMapActionButtons() {
   const rects = getMapActionButtonRects();
   // Journal (book/diary icon) — same flow as pressing J.
-  drawIconButton(rects.journal, 'icon_journal', () => {
-    playSound('book_open');
-    journalReturnState = state;
-    journalScrollY = 0;
-    journalListScrollY = 0;
-    if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
-      journalSelectedEncounter = lastSeenDialog;
-    }
-    state = GameState.JOURNAL;
-  }, 'J');
+  drawIconButton(rects.journal, 'icon_journal', () => openJournal(state), 'J');
   // Inventory (backpack icon).
   drawIconButton(rects.backpack, 'icon_backpack', () => {
     playSound('book_open');
@@ -22758,6 +22906,52 @@ function handleEncounterChoiceClick(x, y) {
         state = GameState.MAP;
         return;
       }
+      case 'underdark_short_rest_take': {
+        // Threshold breather — Heal 10, once per long rest. NOT a full rest: no
+        // monster respawns, no level-up, no well-rested stamp. The flag carries
+        // rest:true in RUN_FLAGS, so setWellRested re-arms it (and it persists
+        // through the flags bag, so a reload can't hand out a second one).
+        //
+        // 10 rather than 8: this is Tier 3 content, and a heal is measured in
+        // CARDS restored from the discard pile — at Tier 3 deck sizes 8 was a
+        // thinner patch than it reads. Kept level with the South Crossroad
+        // breather so neither one is the obviously better place to stop.
+        healPlayer(10);
+        _underdarkShortRestUsed = true;
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
+        return;
+      }
+      case 'underdark_xroad_rest_take': {
+        // South Crossroad breather — Heal 10, once per long rest. Same shape as
+        // the Threshold one: NOT a full rest (no respawns, no level-up, no
+        // well-rested stamp), and the flag carries rest:true so setWellRested
+        // re-arms it and the flags bag persists it across saves. Same 10 as the
+        // Threshold, deliberately — see the note there.
+        healPlayer(10);
+        _underdarkXroadRestUsed = true;
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
+        return;
+      }
+      case 'underdark_xroad_rest_skip': {
+        // Declined — the breather stays available for this rest cycle, and the
+        // crossroad is a hub the party will cross again.
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
+        return;
+      }
+      case 'underdark_short_rest_skip': {
+        // Declined — the breather stays available, so the party can come back up
+        // and take it later in this same rest cycle.
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
+        return;
+      }
       case 'mushroom_farm_harvest': {
         // Bank the outcome rolled in startNodeEncounter. The bed is spent for
         // this rest whether or not the picking turned anything up (you worked
@@ -22942,13 +23136,32 @@ function handleEncounterChoiceClick(x, y) {
         _underdarkGnollUnlocked = true;
         currentEncounter = null;
         encounterChoiceResult = null;
-        showTitleCard('Chapter 3: Into the Dark', '', () => {
-          if (currentMap) _mapCache[currentMap.id] = currentMap;
-          currentMap = getOrCreateMap('underdark_gnoll_entrance', createUnderdarkGnollEntranceMap);
-          visitedNodes = new Set(['ug_entry']);
-          currentMap.currentNodeId = 'ug_entry';
-          arriveAtNode('ug_entry', 'c7_8');
-        });
+        // The descent into Chapter 3 is where the party grows into TIER 3.
+        // Thorb, Raena and Valdrisa have carried the run this far at tier 2;
+        // the Underdark is the step up, so the upgrade screen runs BEFORE the
+        // title card — the player sees who they're taking down with them, then
+        // the chapter opens.
+        const enterUnderdark = () => {
+          showTitleCard('Chapter 3: Into the Dark', '', () => {
+            if (currentMap) _mapCache[currentMap.id] = currentMap;
+            currentMap = getOrCreateMap('underdark_gnoll_entrance', createUnderdarkGnollEntranceMap);
+            visitedNodes = new Set(['ug_entry']);
+            currentMap.currentNodeId = 'ug_entry';
+            arriveAtNode('ug_entry', 'c7_8');
+          });
+        };
+        // baseTargetIdx 2 = tier 3. Companions already at (or above) tier 3 —
+        // a ccgQuest+ run can rescue them there — are skipped, and if nobody
+        // upgrades the screen is skipped entirely rather than showing an empty
+        // page.
+        const t3 = upgradeCompanions(2);
+        if (t3 && t3.length > 0) {
+          companionUpgrades = t3;
+          _companionUpgradeThen = enterUnderdark;
+          state = GameState.COMPANION_UPGRADE;
+          return;
+        }
+        enterUnderdark();
         return;
       }
       case 'inn_rest': {
@@ -26689,20 +26902,24 @@ function continueCombatPhase2() {
   startEnemyTurn();
 }
 
-function upgradeCompanions() {
-  // Swap Thorb / Raena base cards for their tier-up versions. Triggered
-  // by the tier-2 level-up flow (Welcome to Tharnag, Cathedral Shrine).
-  // Mirrors PY upgrade_companions(). Returns the list of upgrades as
-  // { name, oldCreature, newCreature } tuples so the caller can render
-  // the side-by-side preview screen.
-  // ccgQuest+ scaling: target tier = base upgrade tier (2) + playerTierOffset.
-  // If the player already has a same-or-higher tier in their deck (e.g.
-  // a +1 rescue handed them T2 directly), the upgrade is a no-op for
-  // that companion — no duplicates added, no in-place change.
+function upgradeCompanions(baseTargetIdx = 1) {
+  // Swap companion cards for their tier-up versions. Returns the list of
+  // upgrades as { name, oldCreature, newCreature } tuples so the caller can
+  // render the side-by-side preview screen.
+  //
+  // `baseTargetIdx` is the TIER INDEX to upgrade to (1 = tier 2, 2 = tier 3):
+  //   1 — the tier-2 level-up flow (Welcome to Tharnag, Cathedral Shrine)
+  //   2 — stepping into the Underdark (Chapter 3), where the party that has
+  //       carried Thorb, Raena and Valdrisa this far grows into tier 3
+  //
+  // ccgQuest+ scaling adds playerTierOffset on top, capped at chain length.
+  // If the player already holds a same-or-higher tier (a +1 rescue can hand
+  // out T2 directly), the upgrade is a no-op for that companion — no
+  // duplicates added, no in-place change.
   const off = playerTierOffset || 0;
-  // Each chain is { ids: [T1, T2, T3], creators: [..], creatures: [..] }
-  // so we can index by target tier. Upgrade picks chain[1 + off] (T2 in
-  // vanilla, T3 at +1, capped at chain length).
+  // Each chain indexes by TIER: [T1, T2, T3]. A companion who joins above
+  // tier 1 leaves the lower slots null — Valdrisa is recruited at tier 2, so
+  // she has no T1 form and only ever takes the T2 → T3 step.
   const upgrades = [
     {
       name: 'Thorb',
@@ -26719,11 +26936,21 @@ function upgradeCompanions() {
       creators: [createRaenaCard, createRaenaCard2, createRaenaCardTier3],
       creatures: [createRaenaCreature, createRaenaUpgradedCreature, createRaenaTier3Creature],
     },
+    {
+      name: 'Valdrisa',
+      // Joins at TIER 2 (Personal Quarters hallway), so index 0 is empty and
+      // the chain is a single step: valdrisa_card -> valdrisa_card_3.
+      chain: [null, 'valdrisa_card', 'valdrisa_card_3'],
+      creators: [null, createValdrisaCard, createValdrisaCardTier3],
+      creatures: [null, createValdrisaCreature, createValdrisaTier3Creature],
+    },
   ];
   const upgraded = [];
   for (const info of upgrades) {
-    const targetIdx = Math.min(info.chain.length - 1, 1 + off);
+    const targetIdx = Math.min(info.chain.length - 1, baseTargetIdx + off);
     const targetId = info.chain[targetIdx];
+    // A chain with an empty slot at the target tier has nothing to offer.
+    if (!targetId || !info.creators[targetIdx] || !info.creatures[targetIdx]) continue;
     // Find the current owned tier across all piles. Skip if it's
     // already at or above target.
     const piles = [player.deck.masterDeck, player.deck.hand, player.deck.drawPile,
@@ -30077,6 +30304,14 @@ function drawCreaturePreviewCard(creature, x, y, w, h, isCodex = false) {
 }
 
 // Draw a full-size preview of a power card (similar to a card but without modes/etc)
+// Readable names for a Power's secondary trait (Power.subtype2). Same slot and
+// same idea as Card.subtype2 — a thing can BE something for TRIGGER purposes
+// without being reclassified — so the labels mirror getSubtypeLabel's LABELS.
+// Kept as its own small map rather than calling getSubtypeLabel: that function
+// reads card.subtype first and would render the primary type, which a Power
+// does not have.
+const POWER_TRAIT_LABELS = { weapon: 'Weapon', ranged: 'Ranged' };
+
 function drawPowerPreviewCard(power, x, y, w, h) {
   const art = images[`power_${power.id}`];
 
@@ -30118,28 +30353,6 @@ function drawPowerPreviewCard(power, x, y, w, h) {
   }
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
-
-  // 2b. Secondary trait under the name ("Weapon" on Quick Strike). Powers have
-  // no type line of their own — they never route through getSubtypeLabel — so
-  // without this the trait would be mechanically live but invisible, and a
-  // player would have no way to learn that "Refresh your Exhausted Weapons"
-  // readies their power too.
-  const pwrTrait = (power.subtype2 || '').toLowerCase();
-  if (pwrTrait) {
-    const TRAIT_LABELS = { weapon: 'Weapon', ranged: 'Ranged' };
-    const label = TRAIT_LABELS[pwrTrait];
-    if (label) {
-      ctx.save();
-      ctx.font = 'italic ' + Math.max(8, Math.floor(w * 0.055)) + 'px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(0,0,0,0.95)';
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetY = 1;
-      ctx.fillStyle = '#d8c8a0';
-      ctx.fillText(`— ${label} —`, x + w / 2, nameY + nameH + lineH * (nameLines.length - 1) + 4);
-      ctx.restore();
-    }
-  }
 
   // 3. Description box at bottom — same insets as drawCard's full layout.
   // Passive powers with "Start of Turn:" / "End of Turn:" prefixes render
@@ -30228,6 +30441,34 @@ function drawPowerPreviewCard(power, x, y, w, h) {
       x: alX, y: badgeY, w: alW, h: badgeH,
       label: 'Attack Phase',
     });
+
+    // 5b. Secondary-trait label immediately right of the A, exactly where a
+    // CARD prints its subtype ("Ability — Ranged" on Rain of Arrows). Powers
+    // have no primary subtype to print, so the trait stands alone: Cleave and
+    // Quick Strike read "Weapon". Without this the trait would be mechanically
+    // live but invisible, and nothing would tell the player that "Refresh your
+    // Exhausted Weapons" readies their power too.
+    const traitLabel = POWER_TRAIT_LABELS[(power.subtype2 || '').toLowerCase()];
+    if (traitLabel) {
+      const accent = getFrameAccentColorFromHex('#8c3c8c');
+      ctx.font = `${badgeFontSize}px sans-serif`;
+      const tlW = ctx.measureText(traitLabel).width + padX * 2;
+      const tlX = alX + alW + 3;   // same 3-px gap drawCard leaves after the badge
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(tlX, badgeY, tlW, badgeH);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tlX, badgeY, tlW, badgeH);
+      ctx.fillStyle = accent;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(traitLabel, tlX + tlW / 2, badgeY + badgeH / 2 + 1);
+      ctx.textBaseline = 'alphabetic';
+      cardBadgeHitAreas.push({
+        x: tlX, y: badgeY, w: tlW, h: badgeH,
+        label: traitLabel,
+      });
+    }
   }
 
   ctx.textAlign = 'left';
@@ -32839,6 +33080,25 @@ function handleCombatClick(x, y) {
       if (selectedCardIndex !== i) {
         selectedCardIndex = i;
         playSound('click');
+        // Selecting a NEW card invalidates any hand snapshot left over from an
+        // earlier play. _handOrderSnapshot is a module global written by 13
+        // sites (recharge picks, discard picks, barrages, drag-targeting) and
+        // read back as `player.deck.hand = _handOrderSnapshot` by the cancel
+        // paths — so a stale one does not just mis-order the hand, it REPLACES
+        // it with an older copy and the cards drawn since vanish.
+        //
+        // Most flows cleared it on their way out, which hid this. The modal
+        // entry just below never did: it was previously only reachable for
+        // modal cards that ALSO had a recharge cost, and that path cleared the
+        // snapshot at 33667 before opening the picker. Elemental Weapon moving
+        // from Recharge to Discard made the direct entry reachable for the first
+        // time, so cancelling out of its mode/targeting restored whatever hand
+        // the last snapshot happened to hold.
+        //
+        // Clearing at selection is the choke point: every set site below runs
+        // after this line, so a flow that needs a snapshot still takes a fresh
+        // one, and a flow that does not can't inherit a stale one.
+        _handOrderSnapshot = null;
         // Animal Companion smart cast — filters the modal based on
         // who's already on the field. Both alive → no-op + recharge.
         // Only one missing → skip the picker and call that one. Only
@@ -32964,8 +33224,9 @@ function handleCombatClick(x, y) {
           barrageDescending = false;
           barrageCardIndex = i;
           barrageRechargedCard = null;
-          barrageShotsTotal = 1;
-          barrageShotsLeft = 1;
+          const pdThrows = Math.max(1, poisonBarrageEff.maxTargets || 1);
+          barrageShotsTotal = pdThrows;
+          barrageShotsLeft = pdThrows;
           barrageShotsFired = 0;
           barrageShotDamage = poisonBarrageEff.value || 1;
           barrageBonusPoison = 1;
@@ -33126,6 +33387,8 @@ function applyOnRechargeShield(card, payeeCard = null) {
   applyOnRechargeHeroism(card, payeeCard);
   // ...and Entangling Roots' poison drip, same deal.
   applyOnRechargePoison(card);
+  // Floating Skulls — a skull for feeding the card to a recharge cost.
+  applyOnRechargeSummonSkull(card);
   // Paladin aura line — team Heroism / team Shield / the Steed's parting heal.
   applyOnRechargeTeamBuffs(card);
   // Arcane Explosion — the blast that goes off whether you cast it or feed it.
@@ -34679,8 +34942,7 @@ function resolveBarrageShot(target) {
   // Sahuagin Eye / Obsidian Core / Ignite stack applies to the whole
   // barrage instead of evaporating after shot 1.
   if (barrageShotsFired === 0) {
-    barragePoisonStacks = snapshotPoisonBuff(player);
-    barrageDrowSleepStacks = snapshotDrowSleepBuff(player);
+    barrageVenom = snapshotVenomBuffs(player);
     barrageEyeBonus = snapshotEyeBuff(player);
     barrageObsBonus = snapshotObsidianBuff(player);
     barrageIgnite = consumePlayerIgnite();
@@ -34751,8 +35013,7 @@ function resolveBarrageShot(target) {
     triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken, Colors.ORANGE);
     playAttackHitSfx(dmg, Math.max(taken, 1));
     addLog(`  ${enemy.name}: ${taken} true dmg`, Colors.ORANGE);
-    applyPoisonRider(enemy, barragePoisonStacks, taken);
-    applyDrowSleepRider(enemy, barrageDrowSleepStacks);
+    applyVenomRiders(enemy, barrageVenom, taken);
     if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
     if (taken > 0) applyElementalWeaponRider(enemy, taken);
     if (taken > 0) applyBleedWeaponRider(enemy, taken);
@@ -34762,8 +35023,7 @@ function resolveBarrageShot(target) {
     if (actual > 0) spawnDamageOnTarget(target, actual, Colors.ORANGE);
     playAttackHitSfx(dmg, Math.max(actual, 1));
     addLog(`  ${target.name}: ${actual} true dmg`, Colors.ORANGE);
-    applyPoisonRider(target, barragePoisonStacks, actual);
-    applyDrowSleepRider(target, barrageDrowSleepStacks);
+    applyVenomRiders(target, barrageVenom, actual);
     if (actual > 0) applyIgniteRider(target, barrageIgnite);
     if (actual > 0) applyElementalWeaponRider(target, actual);
     if (actual > 0) applyBleedWeaponRider(target, actual);
@@ -34775,8 +35035,7 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, taken);
     const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
-    applyPoisonRider(enemy, barragePoisonStacks, taken);
-    applyDrowSleepRider(enemy, barrageDrowSleepStacks);
+    applyVenomRiders(enemy, barrageVenom, taken);
     if (barrageBonusPoison > 0) {
       enemy.applyStatus('POISON', barrageBonusPoison);
       spawnTokenOnTarget(enemy, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -34791,8 +35050,7 @@ function resolveBarrageShot(target) {
     if (actual > 0) spawnDamageOnTarget(target, actual);
     playAttackHitSfx(dmg, actual);
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
-    applyPoisonRider(target, barragePoisonStacks, actual);
-    applyDrowSleepRider(target, barrageDrowSleepStacks);
+    applyVenomRiders(target, barrageVenom, actual);
     if (barrageBonusPoison > 0 && target.isAlive) {
       target.poisonStacks = (target.poisonStacks || 0) + barrageBonusPoison;
       spawnTokenOnTarget(target, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -34828,8 +35086,7 @@ function resolveBarrageShot(target) {
     barrageHeroism = 0;
     barrageBracerBonus = 0;
     barrageIgnite = 0;
-    barragePoisonStacks = 0;
-    barrageDrowSleepStacks = 0;
+    barrageVenom = null;
     barrageEyeBonus = 0;
     barrageObsBonus = 0;
   }
@@ -34924,9 +35181,8 @@ function finishBarrage() {
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
   barrageShotDamage = 1;
-  barragePoisonStacks = 0;
+  barrageVenom = null;
   barrageUnpreventable = false;
-  barrageDrowSleepStacks = 0;
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
@@ -34972,9 +35228,8 @@ function cancelBarrage() {
   barrageBonusPoison = 0;
   barrageStaysInHand = false;
   barrageDrawOnFinish = 1;
-  barragePoisonStacks = 0;
+  barrageVenom = null;
   barrageUnpreventable = false;
-  barrageDrowSleepStacks = 0;
   barrageEyeBonus = 0;
   barrageObsBonus = 0;
   barrageIgnite = 0;
@@ -35240,6 +35495,7 @@ function needsTarget(card) {
      e.effectType === 'first_strike_poison_attack' || e.effectType === 'bone_javelin_attack' ||
      e.effectType === 'apply_fire_multi' || e.effectType === 'apply_ice_multi' ||
      e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
+     e.effectType === 'shadow_clone' ||
      e.effectType === 'apply_bleed' || e.effectType === 'apply_sunder' ||
      e.effectType === 'apply_weak' || e.effectType === 'apply_shock' ||
      e.effectType === 'ancients_staff_strike' ||
@@ -35603,12 +35859,18 @@ function resolveEffect(eff, caster, target) {
     case 'damage': {
       // `noAttackCount` means this damage effect is NOT a player swing
       // (currently only Raena's Called arrow). For these the rider
-      // should skip every buff consumption — Ice, Heroism, Rage, Eye /
+      // should skip every buff CONSUMPTION — Ice, Heroism, Rage, Eye /
       // Obsidian / Poison / Ignite, Mark, Elemental / Bleed weapon
-      // riders, on-hit reactions. Just land flat eff.value damage so
-      // the arrow doesn't drain player resources or fire combo riders.
+      // riders, on-hit reactions — so the arrow doesn't drain player
+      // resources or fire combo riders.
+      //
+      // Shock is the exception, because it is none of those things: it is a
+      // debuff sitting on the TARGET (+1 damage taken per stack), not something
+      // the player banked and not a charge that gets spent. Skipping it wasn't
+      // protecting a resource, it just made the arrow the one hit in the game
+      // that ignored a Shocked enemy. Mark stays skipped — that one IS consumed.
       if (eff.noAttackCount) {
-        let raw = Math.max(0, eff.value);
+        let raw = Math.max(0, eff.value + getIncomingDamageModifier(target));
         // fromAlly (Raena's Called arrow): attribute the shot to the ally
         // that was just summoned by this same card (the last alive ally),
         // so a Riposte lashes back at HER, not the player. Cleared right
@@ -36519,7 +36781,7 @@ function resolveEffect(eff, caster, target) {
       // every target the chain damages.
       const mdEyeBonus = snapshotEyeBuff(caster);
       const mdObsBonus = snapshotObsidianBuff(caster);
-      const mdPoisonStacks = snapshotPoisonBuff(caster);
+      const mdVenom = snapshotVenomBuffs(caster);
       // Feral Wrath — one swing = one charge, regardless of how many
       // targets the multi-attack lands on. Snapshot the charge once;
       // every target then gets the half-damage / half-bleed split.
@@ -36557,14 +36819,14 @@ function resolveEffect(eff, caster, target) {
           target.takeUnpreventableDamage(tDmg);
           if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
           addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
-          applyPoisonRider(target, mdPoisonStacks, tDmg);
+          applyVenomRiders(target, mdVenom, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(tDmg);
           const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, target.shield || 0);
           addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
-          applyPoisonRider(target, mdPoisonStacks, actual);
+          applyVenomRiders(target, mdVenom, actual);
           playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!target.isAlive) addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target);
@@ -36575,12 +36837,12 @@ function resolveEffect(eff, caster, target) {
           target.takeDamageFromDeck(tDmg);
           triggerSplitPower(target, tDmg); if (tDmg > 0) spawnDamageOnTarget(target, tDmg, Colors.ORANGE);
           addLog(`  ${tDmg} true dmg to ${target.name}`, Colors.ORANGE);
-          applyPoisonRider(target, mdPoisonStacks, tDmg);
+          applyVenomRiders(target, mdVenom, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
-          applyPoisonRider(target, mdPoisonStacks, taken);
+          applyVenomRiders(target, mdVenom, taken);
           playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
@@ -36594,14 +36856,14 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           c.takeUnpreventableDamage(tDmg);
           addLog(`  ${tDmg} true dmg to ${c.name}`, Colors.ORANGE);
-          applyPoisonRider(c, mdPoisonStacks, tDmg);
+          applyVenomRiders(c, mdVenom, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const shieldBefore = c.shield || 0;
           const actual = c.takeDamage(tDmg);
           const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
-          applyPoisonRider(c, mdPoisonStacks, actual);
+          applyVenomRiders(c, mdVenom, actual);
           playAttackHitSfx(tDmg, actual, hits * SFX_STAGGER_MS);
         }
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -36612,12 +36874,12 @@ function resolveEffect(eff, caster, target) {
         if (unpreventable) {
           enemy.takeDamageFromDeck(tDmg);
           addLog(`  ${tDmg} true dmg to ${enemy.name}`, Colors.ORANGE);
-          applyPoisonRider(enemy, mdPoisonStacks, tDmg);
+          applyVenomRiders(enemy, mdVenom, tDmg);
           playAttackHitSfx(tDmg, tDmg, hits * SFX_STAGGER_MS);
         } else {
           const [blocked, taken] = enemy.takeDamageWithDefense(tDmg);
           addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
-          applyPoisonRider(enemy, mdPoisonStacks, taken);
+          applyVenomRiders(enemy, mdVenom, taken);
           playAttackHitSfx(tDmg, taken, hits * SFX_STAGGER_MS);
         }
       }
@@ -36701,7 +36963,7 @@ function resolveEffect(eff, caster, target) {
       // Consumable buff snapshots — every chain hit benefits.
       const spEyeBonus = snapshotEyeBuff(caster);
       const spObsBonus = snapshotObsidianBuff(caster);
-      const spPoisonStacks = snapshotPoisonBuff(caster);
+      const spVenom = snapshotVenomBuffs(caster);
       const spPerTarget = (t, baseDmg) => {
         let d = baseDmg + getIncomingDamageModifier(t);
         d += applyEyeBonus(t, spEyeBonus);
@@ -36721,7 +36983,7 @@ function resolveEffect(eff, caster, target) {
           playAttackHitSfx(dmg, actual, delay);
           const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
           addLog(`  ${actual} dmg to ${t.name}${absSuffix}`, Colors.RED);
-          applyPoisonRider(t, spPoisonStacks, actual);
+          applyVenomRiders(t, spVenom, actual);
           if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
         } else {
           if (t === enemy) enemyAutoPlayDefenses(dmg);
@@ -36729,7 +36991,7 @@ function resolveEffect(eff, caster, target) {
           triggerSplitPower(t, taken); if (taken > 0) spawnDamageOnTarget(t, taken);
           playAttackHitSfx(dmg, taken, delay);
           addLog(`  ${t.name}: ${taken} dmg`, Colors.RED);
-          applyPoisonRider(t, spPoisonStacks, taken);
+          applyVenomRiders(t, spVenom, taken);
           if (caster === player && t === enemy) onPlayerHitEnemy(taken);
         }
         hitIdx++;
@@ -36810,9 +37072,13 @@ function resolveEffect(eff, caster, target) {
     case 'poison_dagger_barrage': {
       // The PLAYER path runs the UI barrage (handleHandClick / resolve
       // BarrageShot, each shot carrying all riders). This case is only
-      // reached for the ENEMY (or any non-barrage caster) playing
-      // Poisoned Daggers — resolve as 2 hits of (value dmg + 1 Poison).
-      for (let s = 0; s < 2; s++) {
+      // reached for the ENEMY (or any non-barrage caster) playing Poisoned
+      // Daggers — resolve as N hits of (value dmg + 1 Poison), where N is the
+      // card's own throw count (player card 1, monster card 2). Was hardcoded
+      // to 2 here while the animated enemy path was hardcoded to 1, so the two
+      // enemy routes disagreed with each other.
+      const pdShots = Math.max(1, eff.maxTargets || 1);
+      for (let s = 0; s < pdShots; s++) {
         resolveEffect(new CardEffect('damage', eff.value, eff.target), caster, target);
         resolveEffect(new CardEffect('apply_poison', 1, eff.target), caster, target);
       }
@@ -37161,6 +37427,11 @@ function resolveEffect(eff, caster, target) {
     case 'on_recharge_damage_all':
       // Marker — paid by applyOnRechargeDamageAll from the on-recharge hooks.
       break;
+    case 'on_recharge_summon_skull':
+      // Marker only — paid by applyOnRechargeSummonSkull from the on-recharge
+      // hooks, so it fires on a cast, on being fed to another card's Recharge
+      // cost, and on an end-of-turn self-recharge alike.
+      break;
     case 'on_recharge_poison_random':
       // Marker only. The drip is paid by applyOnRechargePoison, fired from the
       // same on-recharge hooks as on_recharge_shield / on_recharge_heroism.
@@ -37358,7 +37629,7 @@ function resolveEffect(eff, caster, target) {
       // blunts all four and leaves the archer on 0). Applied per arrow below.
       const roaEye = snapshotEyeBuff(caster);
       const roaObs = snapshotObsidianBuff(caster);
-      const roaPoison = snapshotPoisonBuff(caster);
+      const roaVenom = snapshotVenomBuffs(caster);
       const roaIgnite = (caster === player) ? consumePlayerIgnite() : 0;
       // Collect the picks first so the whole volley paints as one arrow batch —
       // a per-shot spawn would overwrite the previous arrow and only the last
@@ -37428,7 +37699,7 @@ function resolveEffect(eff, caster, target) {
         playAttackHitSfx(d, taken, i * ROA_STAGGER);
         // Consumed charges ride the first arrow only; the permanent riders
         // (Elemental Weapon, Avatar Bleed) fire on every hit that lands.
-        applyPoisonRider(t, roaIsFirst ? roaPoison : 0, taken);
+        applyVenomRiders(t, roaIsFirst ? roaVenom : null, taken);
         if (roaIsFirst && taken > 0) applyIgniteRider(t, roaIgnite);
         if (taken > 0) applyElementalWeaponRider(t, taken);
         if (taken > 0) applyBleedWeaponRider(t, taken);
@@ -38677,8 +38948,29 @@ function resolveEffect(eff, caster, target) {
       // Shield / Block / Armor (not true damage).
       const dprRounds = 3;
       const dprFoeBoss = (caster === player) ? enemy : player;
-      const dprHit = Math.max(0, eff.value || 0);
       const dprIsPlayer = (caster === player);
+      // This used to swing a BARE packet — `eff.value` and nothing else — so the
+      // flail ignored the entire damage stack: Shock on the target (+1/stack),
+      // Heroism, Rage, Mark, the caster's own Shock sap, Ice, and every rider.
+      // It is a player-holdable Epic weapon (the Fang's rare drop), so a player
+      // banking Heroism or Shocking a target saw no payoff at all.
+      //
+      // Split the same way Rain of Arrows does, per docs/loot-budget.md §3:
+      //   dprEvery  — never consumed, so it rides EVERY strike
+      //   dprFirst  — spent once, so it pays out on the FIRST strike only
+      // Target-side modifiers (Shock, Mark) are read per target inside the loop,
+      // since they belong to whoever got hit rather than to the swing.
+      const dprEvery = (caster.rage || 0) + getDamageModifier(caster);
+      let dprFirst = caster.heroism || 0;
+      if (dprFirst > 0) {
+        addLog(`  (Heroism +${dprFirst} on the first lash)`, Colors.GOLD);
+        caster.heroism = 0;
+      }
+      const dprEye = snapshotEyeBuff(caster);
+      const dprObs = snapshotObsidianBuff(caster);
+      const dprVenom = snapshotVenomBuffs(caster);
+      const dprIgnite = dprIsPlayer ? consumePlayerIgnite() : 0;
+      const dprBase = Math.max(0, eff.value || 0);
       const dprSrc = dprIsPlayer
         ? ((_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true))
         : getEnemyCenter();
@@ -38696,7 +38988,19 @@ function resolveEffect(eff, caster, target) {
         }
         if (!dprCands.length) break;
         const t = dprCands[Math.floor(Math.random() * dprCands.length)];
-        const dealDmg = dprHit;
+        const dprIsFirst = (r === 0);
+        // Base + always-on stack + (first lash only) the consumed charges.
+        let dealDmg = dprBase + dprEvery + (dprIsFirst ? dprFirst : 0);
+        // Ice blunts and burns one stack per lash — every strike is its own
+        // swing for an affliction the caster is carrying.
+        dealDmg = consumeIceForAttack(caster, Math.max(0, dealDmg));
+        // Target-side: Shock's +1/stack is exactly what was missing.
+        dealDmg += getIncomingDamageModifier(t);
+        if (dprIsFirst) {
+          dealDmg += applyEyeBonus(t, dprEye);
+          dealDmg += applyObsidianBonus(t, dprObs);
+        }
+        dealDmg = applyMarkBonus(t, Math.max(0, dealDmg));
         let taken = 0, blocked = 0, killed = false;
         if (dprIsPlayer) {
           // Player swings at the enemy side — resolve immediately; Shield /
@@ -38720,8 +39024,29 @@ function resolveEffect(eff, caster, target) {
           if (t instanceof Creature) t.poisonStacks = (t.poisonStacks || 0) + 1;
           else if (t && typeof t.applyStatus === 'function') t.applyStatus('POISON', 1);
         }
+        // Riders: the Vial / Ignite charges were spent once so they ride the
+        // first lash; Elemental Weapon and Avatar Bleed are permanent and ride
+        // every lash that actually landed damage.
+        // Poison and Drow Sleep are caster-agnostic — they just stamp the
+        // target — so they fire for an ENEMY caster too. The Fang can carry a
+        // venom buff the same way the player can, and snapshotting one above
+        // without applying it here would quietly eat the charge. Elemental
+        // Weapon and Avatar Bleed read player.combatBuffs, so those stay gated.
+        applyVenomRiders(t, dprIsFirst ? dprVenom : null, taken);
+        if (dprIsPlayer) {
+          if (dprIsFirst && taken > 0) applyIgniteRider(t, dprIgnite);
+          if (taken > 0) applyElementalWeaponRider(t, taken);
+          if (taken > 0) applyBleedWeaponRider(t, taken);
+        }
         dprStrikes.push({ t, dmg: dealDmg, taken, blocked, killed });
       }
+      // Every lash is its own attack. This bumped attacksThisTurn by NOTHING, so
+      // a three-strike flail fed Sneak Attack and Ruga's Spiked Gauntlets zero —
+      // and left the turn still reading as "no attack yet", which wrongly handed
+      // the NEXT card a First-Attack window (Boarhide Bracers +2, Charge's draw).
+      // Same bug Rain of Arrows had. Counted from the strikes actually thrown,
+      // not the loop bound: the loop breaks early when the board is wiped.
+      if (caster === player) attacksThisTurn += dprStrikes.length;
       countAndRemoveDeadCreatures();
       // Staggered visuals — each strike fires ~260 ms after the previous.
       const dprDelay = 260;
@@ -39008,19 +39333,39 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'shadow_clone': {
-      // Shadow Clone — kill one of the foe's summons (Sentinel first, else
-      // random) and raise a dark Shadow Copy of it on the caster's side: same
-      // stats, 1 Poison, and it can't attack the turn it's made (default summon
-      // sickness). Caster-aware: a player cast steals an enemy summon; the
-      // Fang's cast steals one of the player's allies.
+      // Shadow Clone — strike for 5 True (10 True if the target is a SUMMON),
+      // then raise a Shadow on the caster's side. What the Shadow IS depends on
+      // what the strike did:
+      //   • killed a summon  → a dark COPY of it (full combat kit) + 1 Poison
+      //   • hit the boss, or the summon lived → a plain 3/3 + 1 Poison
+      //
+      // The card text deliberately says only "Deal 5 True Damage (10 to a
+      // summon). Summon a Shadow Clone." — the copy-vs-3/3 branch is a discovery,
+      // not a rules paragraph, and the card is never worse than "5 True + a 3/3".
+      //
+      // This replaces a version that could only claim an existing summon and did
+      // NOTHING against a boss with an empty board: a dead card in exactly the
+      // fights an Epic Tier 2 ability should matter in.
+      //
+      // Caster-aware. The player picks a target (needsTarget lists shadow_clone);
+      // the enemy path hands in `player`, so an enemy caster re-aims at one of
+      // the player's summons when there is one — Sentinels first, matching how
+      // the old version claimed.
       const scFoeBoss = (caster === player) ? enemy : player;
+      let scTarget = target;
       const scPool = ((scFoeBoss && scFoeBoss.creatures) || []).filter(c => c && c.isAlive && !c._invulnerable);
-      if (!scPool.length) { addLog(`  Shadow Clone fizzles — no summon to claim.`, Colors.GRAY); break; }
-      // Sentinel priority — a guarding sentinel must be claimed first.
-      const scSentinels = scPool.filter(c => c.sentinel);
-      const scVictim = scSentinels.length
-        ? scSentinels[Math.floor(Math.random() * scSentinels.length)]
-        : scPool[Math.floor(Math.random() * scPool.length)];
+      if (caster !== player && scPool.length) {
+        const scSentinels = scPool.filter(c => c.sentinel);
+        scTarget = scSentinels.length
+          ? scSentinels[Math.floor(Math.random() * scSentinels.length)]
+          : scPool[Math.floor(Math.random() * scPool.length)];
+      }
+      if (!scTarget || !scTarget.isAlive || scTarget._invulnerable) {
+        scTarget = (scFoeBoss && scFoeBoss.isAlive && !scFoeBoss._invulnerable) ? scFoeBoss : null;
+      }
+      if (!scTarget) { addLog(`  Shadow Clone finds nothing to reach.`, Colors.GRAY); break; }
+      const scVictim = scTarget;
+      const scHitSummon = (scVictim instanceof Creature);
       // Snapshot the full combat kit BEFORE the kill so the copy inherits the
       // original's powers/riders — Sentinel, multi-attack (Raena's 2 targets),
       // on-death bursts, elemental/bleed swings, lifesteal, Haste, etc. A Haste
@@ -39069,27 +39414,56 @@ function resolveEffect(eff, caster, target) {
       const copyRampage = !!scVictim._rampageOnKill;
       const copyPackTactics = !!scVictim.packTactics;
       const copyTurnStartShield = scVictim._turnStartShieldAllies || 0;
-      // Unpreventable claim — drop it to 0 directly (ignores shield/armor).
-      scVictim.currentHp = 0;
-      spawnDeathAnimation(scVictim);
-      addLog(`  Shadow Clone claims ${copyName}!`, Colors.PURPLE);
+      // The strike: 4 True, doubled to 8 against a summon. True damage, so it
+      // bypasses Block / Shield / Armor entirely — 8 still removes most summons
+      // outright, which keeps the copy branch the common case when you aim at
+      // one, without paying Tier 3 rates for it on a Tier 2 card.
+      const scDmg = scHitSummon ? 8 : 4;
+      if (scHitSummon) {
+        scVictim.takeUnpreventableDamage(scDmg);
+        spawnDamageOnTarget(scVictim, scDmg, Colors.PURPLE);
+        addLog(`  Shadow Clone tears ${scDmg} True from ${copyName}.`, Colors.PURPLE);
+      } else if (caster === player) {
+        const scTaken = scVictim.takeDamageFromDeck(scDmg);
+        if (scTaken > 0) spawnDamageOnTarget(scVictim, scTaken, Colors.PURPLE);
+        addLog(`  Shadow Clone tears ${scTaken} True from ${copyName}.`, Colors.PURPLE);
+        onPlayerHitEnemy(scTaken);
+      } else {
+        // Enemy cast at the player — route through the accumulator so it is paid
+        // in the normal defending window rather than straight off the deck.
+        applyEnemyAoeDamage(scVictim, scDmg);
+      }
+      const scKilledSummon = scHitSummon && !scVictim.isAlive;
+      if (scKilledSummon) {
+        spawnDeathAnimation(scVictim);
+        addLog(`  Shadow Clone claims ${copyName}!`, Colors.PURPLE);
+      }
       countAndRemoveDeadCreatures();
-      // Raise the dark copy on the caster's side. Non-Haste copies keep summon
-      // sickness (justSummoned → can't attack this turn); Haste copies are ready.
-      const shadow = new Creature(copyParams);
-      if (copyRiposte) { shadow.riposte = true; shadow.riposteAmount = copyRiposteAmt; }
-      if (copyRampage) shadow._rampageOnKill = true;
-      if (copyPackTactics) shadow.packTactics = true;
-      if (copyTurnStartShield) shadow._turnStartShieldAllies = copyTurnStartShield;
+      // Raise the Shadow. A killed summon becomes a full dark COPY (the kit
+      // snapshotted above); anything else — the boss, or a summon that survived
+      // — leaves a plain 3/3 instead, so the card always produces a body.
+      // Non-Haste copies keep summon sickness; Haste copies are ready.
+      const shadow = scKilledSummon ? new Creature(copyParams) : createShadowCloneCreature();
+      if (scKilledSummon) {
+        if (copyRiposte) { shadow.riposte = true; shadow.riposteAmount = copyRiposteAmt; }
+        if (copyRampage) shadow._rampageOnKill = true;
+        if (copyPackTactics) shadow.packTactics = true;
+        if (copyTurnStartShield) shadow._turnStartShieldAllies = copyTurnStartShield;
+        // The tint exists to make a COPIED creature read as a corrupted shade of
+        // the original, painting 62% dark over that creature's own art. The
+        // generic Shadow already renders on ShadowClone.jpg — which is a shadow
+        // — so tinting it again just turns it into a black rectangle.
+        shadow._darkTint = true;
+      }
       shadow.poisonStacks = 1;
-      shadow._darkTint = true;
       shadow._codexSide = (caster === player) ? 'player' : 'enemy';
       shadow._sourceRarity = 'epic';
       shadow._sourceSubtype = 'ability';
       if (caster && typeof caster.addCreature === 'function' && caster.addCreature(shadow)) {
         spawnTokenOnTarget(shadow, 1, 'Poison', Colors.GREEN);
         const scTail = shadow.haste ? 'Haste — can attack now.' : "can't attack this turn.";
-        addLog(`  A Shadow ${copyName} rises — 1 Poison, ${scTail}`, Colors.PURPLE);
+        const scRisen = scKilledSummon ? `A Shadow ${copyName}` : 'A Shadow Clone';
+        addLog(`  ${scRisen} rises — 1 Poison, ${scTail}`, Colors.PURPLE);
         const lastEntry = combatLog[combatLog.length - 1];
         if (lastEntry) lastEntry.creature = shadow;
       } else {
@@ -39100,10 +39474,20 @@ function resolveEffect(eff, caster, target) {
     case 'summon_floating_skulls': {
       // Floating Skulls — summon 1 Floating Skull on the caster's side per FOE
       // unit (the foe boss + each alive foe ally). Caster-aware.
+      //
+      // INVULNERABLE bodies don't count. A thing you cannot hurt isn't an enemy
+      // for scaling purposes — it's scenery. The Drow War Party's untouchable
+      // body (and Zhost's Army, the Carrion Crawler head) would otherwise pad
+      // the count and hand out free skulls for a foe the card can never act on.
+      // Matches how shadow_drain counts its X.
       const fsFoeBoss = (caster === player) ? enemy : player;
       let fsCount = 0;
-      if (fsFoeBoss && fsFoeBoss.isAlive) fsCount += 1;
-      for (const c of ((fsFoeBoss && fsFoeBoss.creatures) || [])) if (c && c.isAlive) fsCount += 1;
+      if (fsFoeBoss && fsFoeBoss.isAlive && !fsFoeBoss._invulnerable) fsCount += 1;
+      for (const c of ((fsFoeBoss && fsFoeBoss.creatures) || [])) {
+        if (c && c.isAlive && !c._invulnerable) fsCount += 1;
+      }
+      // Floor of 1 so an all-invulnerable board still yields a skull rather than
+      // a blank cast.
       if (fsCount <= 0) fsCount = 1;
       let fsMade = 0, fsLast = null;
       for (let i = 0; i < fsCount; i++) {
@@ -39122,26 +39506,28 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'shadow_drain': {
-      // Shadow Drain — each of the caster's allies loses 1 life (TRUE,
-      // unpreventable — it can kill them); then deal 1 to every foe and heal the
-      // caster 1 per life lost that way. Caster-aware. DISCARD-cost card (the
-      // play flow drops it into the discard pile afterward, like Bandage).
-      const sdAllies = ((caster && caster.creatures) || []).filter(c => c && c.isAlive);
-      let sdLivesLost = 0;
-      for (const a of sdAllies) {
-        const before = a.currentHp || 0;
-        if (before <= 0) continue;
-        a.currentHp = Math.max(0, before - 1);
-        sdLivesLost += 1;
-        spawnDamageOnTarget(a, 1, Colors.PURPLE);
-        addLog(`  ${a.name} gives 1 life.`, Colors.PURPLE);
-        if (!a.isAlive) { spawnDeathAnimation(a); addLog(`  ${a.name} withers away!`, Colors.GOLD, null, null, a); }
-      }
-      countAndRemoveDeadCreatures();
-      // Deal 1 to all foes PER life stolen (3 lives lost → 3 to All), then heal
-      // the caster the same amount. No lives lost → the drain does nothing.
-      const sdDmg = sdLivesLost;
+      // Shadow Drain — X = the number of FOES standing (the opposing boss counts,
+      // plus each of its living summons). Deal X to all of them and heal the
+      // caster X, minimum 1. Caster-aware. DISCARD-cost card (the play flow drops
+      // it into the discard pile afterward, like Bandage).
+      //
+      // It used to drain the CASTER'S OWN allies — every ally lost 1 life and the
+      // card paid 1 damage + 1 heal per life spent. That gave it a floor of zero
+      // (no allies, no card) and, even on a full board, about half the value of
+      // its budget while eating the board you had just built. Counting foes
+      // instead means the card answers the situation it is drawn into and can
+      // never be a blank.
       const sdFoeBoss = (caster === player) ? enemy : player;
+      let sdFoeCount = 0;
+      if (sdFoeBoss && sdFoeBoss.isAlive && !sdFoeBoss._invulnerable) sdFoeCount++;
+      for (const c of ((sdFoeBoss && sdFoeBoss.creatures) || [])) {
+        if (c && c.isAlive && !c._invulnerable) sdFoeCount++;
+      }
+      // Minimum 1 so the card always does something, even against an
+      // invulnerable-bodied fight where nothing counts as a target.
+      const sdLivesLost = Math.max(1, sdFoeCount);
+      const sdDmg = sdLivesLost;
+      addLog(`  Shadow Drain draws on ${sdFoeCount} foe${sdFoeCount === 1 ? '' : 's'}.`, Colors.PURPLE);
       if (sdDmg > 0) {
         addLog(`  Shadow Drain lashes ${sdDmg} at all foes.`, Colors.PURPLE);
         if (sdFoeBoss && sdFoeBoss.isAlive && !sdFoeBoss._invulnerable) {
@@ -39999,16 +40385,25 @@ function resolveEffect(eff, caster, target) {
       break;
     }
     case 'cats_eye_cleanse': {
-      // Cat's Eye Pendant — heal HALF (rounded up) of each ailment type the
-      // caster carries (Bleed/Poison/Fire/Ice/Shock), then remove ALL Marks.
+      // Cat's Eye Pendant — heal HALF (rounded up, so always at least 1) of
+      // each ailment type the caster carries, then remove ALL Marks.
+      //
+      // Driven off Character.CURE_AILMENTS — the game's single source of truth
+      // for what counts as an Ailment and in what order. It used to carry its
+      // own hardcoded list of five (Bleed/Poison/Fire/Ice/Shock) which had
+      // silently fallen behind: DROW_SLEEP, WEAK and SUNDER were all missing, so
+      // a player holding 2 Poison + 1 Drow Sleep Poison saw the card purge one
+      // Poison and ignore the Drow entirely, despite the text promising "half
+      // your Ailments". Reading the shared list means the next ailment added to
+      // the game is covered here for free.
       const ceTgt = caster;
       if (ceTgt && ceTgt.getStatus && ceTgt.removeStatus) {
-        for (const ail of ['BLEED', 'POISON', 'FIRE', 'ICE', 'SHOCK']) {
-          const have = ceTgt.getStatus(ail) || 0;
+        for (const ail of Character.CURE_AILMENTS) {
+          const have = ceTgt.getStatus(ail.key) || 0;
           if (have > 0) {
             const healed = Math.ceil(have / 2);
-            ceTgt.removeStatus(ail, healed);
-            addLog(`  Healed ${healed} ${ail[0] + ail.slice(1).toLowerCase()}`, Colors.GREEN);
+            ceTgt.removeStatus(ail.key, healed);
+            addLog(`  Healed ${healed} ${ail.label}`, ail.color || Colors.GREEN);
           }
         }
         const ceMarks = ceTgt.getStatus('MARK') || 0;
@@ -42533,7 +42928,7 @@ function resolveEffect(eff, caster, target) {
       // the rider.
       const aoeEyeBonus = snapshotEyeBuff(caster);
       const aoeObsBonus = snapshotObsidianBuff(caster);
-      const aoePoisonStacks = snapshotPoisonBuff(caster);
+      const aoeVenom = snapshotVenomBuffs(caster);
       // Per-target damage helper: applies Shock-on-target + Mark + the
       // per-target Eye / Obsidian bonus on top of the shared base
       // damage so a primed enemy still eats the bonus on an AoE swing.
@@ -42577,7 +42972,7 @@ function resolveEffect(eff, caster, target) {
           if (taken > 0) { spawnDamageOnTarget(enemy, taken); anyLanded = true; }
           addLog(`  ${taken} dmg to ${enemy.name}`, Colors.RED);
         }
-        applyPoisonRider(enemy, aoePoisonStacks, taken);
+        applyVenomRiders(enemy, aoeVenom, taken);
         // Split / on-attacked triggers fire per target — same as
         // single-target swings — so AoEs like Ice Nova spawn slimes
         // on Obsidian Body and peel armor on Obsidian Construct.
@@ -42601,7 +42996,7 @@ function resolveEffect(eff, caster, target) {
           const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         }
-        applyPoisonRider(c, aoePoisonStacks, actual);
+        applyVenomRiders(c, aoeVenom, actual);
         triggerSplitPower(c, actual);
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
       }
@@ -42681,7 +43076,7 @@ function resolveEffect(eff, caster, target) {
       const perShare = Math.ceil(pool / splitTargets.length);
       const splitEye = snapshotEyeBuff(caster);
       const splitObs = snapshotObsidianBuff(caster);
-      const splitPoison = snapshotPoisonBuff(caster);
+      const splitVenom = snapshotVenomBuffs(caster);
       const splitUnpreventable = consumeUnpreventableBuff(caster);
       const splitSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
       spawnPlayerArrowBatch(splitSrc, splitTargets, 550);
@@ -42714,7 +43109,7 @@ function resolveEffect(eff, caster, target) {
           if (tk > 0) { spawnDamageOnTarget(enemy, tk); anyLanded = true; }
           addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
         }
-        applyPoisonRider(enemy, splitPoison, lastTaken);
+        applyVenomRiders(enemy, splitVenom, lastTaken);
         triggerSplitPower(enemy, lastTaken);
         if (caster === player) onPlayerHitEnemy(lastTaken);
       }
@@ -42742,7 +43137,7 @@ function resolveEffect(eff, caster, target) {
           const absSuffix = creatureAbsorbSuffix(d, actual, shieldBefore, c.shield || 0);
           addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
         }
-        applyPoisonRider(c, splitPoison, actual);
+        applyVenomRiders(c, splitVenom, actual);
         triggerSplitPower(c, actual);
         maybeEnemyRiposte(c, caster); // Goblin Spike Trap counters (Cleave/Consecration)
         if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
@@ -42794,8 +43189,7 @@ function resolveEffect(eff, caster, target) {
       const twiceBase = dmgT;
       const twiceEye = snapshotEyeBuff(caster);
       const twiceObs = snapshotObsidianBuff(caster);
-      const twicePoison = snapshotPoisonBuff(caster);
-      const twiceDrowSleep = snapshotDrowSleepBuff(caster);
+      const twiceVenom = snapshotVenomBuffs(caster);
       const twiceUnpreventable = consumeUnpreventableBuff(caster);
       const twiceIgnite = (caster === player) ? consumePlayerIgnite() : 0;
       const twicePerTarget = (t) => {
@@ -42831,8 +43225,7 @@ function resolveEffect(eff, caster, target) {
             if (tk > 0) { spawnDamageOnTarget(enemy, tk); anyLanded = true; }
             addLog(`  ${tk} dmg to ${enemy.name}`, Colors.RED);
           }
-          applyPoisonRider(enemy, twicePoison, lastTaken);
-          applyDrowSleepRider(enemy, twiceDrowSleep);
+          applyVenomRiders(enemy, twiceVenom, lastTaken);
           triggerSplitPower(enemy, lastTaken);
           if (caster === player) onPlayerHitEnemy(lastTaken);
         }
@@ -42851,8 +43244,7 @@ function resolveEffect(eff, caster, target) {
             const absSuffix = creatureAbsorbSuffix(tDmg, actual, shieldBefore, c.shield || 0);
             addLog(`  ${actual} dmg to ${c.name}${absSuffix}`, Colors.RED);
           }
-          applyPoisonRider(c, twicePoison, actual);
-          applyDrowSleepRider(c, twiceDrowSleep);
+          applyVenomRiders(c, twiceVenom, actual);
           triggerSplitPower(c, actual);
           if (!c.isAlive) addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c);
         }
@@ -44893,7 +45285,7 @@ function resolveMultiTargeting() {
     // (same one-attack semantics as Cleave / single-target damage).
     hitDmg = consumeIceForAttack(player, hitDmg);
     // Consumable buff snapshots — every hit benefits.
-    const fsPoisonStacks = snapshotPoisonBuff(player);
+    const fsVenom = snapshotVenomBuffs(player);
     const fsEyeBonus = snapshotEyeBuff(player);
     const fsObsBonus = snapshotObsidianBuff(player);
     const fsIgnite = consumePlayerIgnite();
@@ -44911,7 +45303,7 @@ function resolveMultiTargeting() {
         triggerSplitPower(enemy, taken); if (taken > 0) spawnDamageOnTarget(enemy, taken);
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  -> Feral Swipe: ${enemy.name} takes ${taken} dmg${bs}`, Colors.WHITE);
-        applyPoisonRider(enemy, fsPoisonStacks, taken);
+        applyVenomRiders(enemy, fsVenom, taken);
         if (taken > 0) applyIgniteRider(enemy, fsIgnite);
         if (taken > 0) applyElementalWeaponRider(enemy, taken);
         if (taken > 0) applyBleedWeaponRider(enemy, taken);
@@ -44923,7 +45315,7 @@ function resolveMultiTargeting() {
         if (actual > 0) spawnDamageOnTarget(t, actual);
         const absSuffix = creatureAbsorbSuffix(perTargetDmg, actual, shieldBefore, t.shield || 0);
         addLog(`  -> Feral Swipe: ${t.name} takes ${actual} dmg${absSuffix}`, Colors.WHITE);
-        applyPoisonRider(t, fsPoisonStacks, actual);
+        applyVenomRiders(t, fsVenom, actual);
         if (actual > 0) applyIgniteRider(t, fsIgnite);
         if (actual > 0) applyElementalWeaponRider(t, actual);
         if (actual > 0) applyBleedWeaponRider(t, actual);
@@ -45083,7 +45475,7 @@ function resolveMultiTargeting() {
     const multiIgnite = consumePlayerIgnite();
     const multiEyeBonus = snapshotEyeBuff(player);
     const multiObsBonus = snapshotObsidianBuff(player);
-    const multiPoisonStacks = snapshotPoisonBuff(player);
+    const multiVenom = snapshotVenomBuffs(player);
     let hitEnemy = false;
     for (let i = 0; i < targets.length; i++) {
       const t = targets[i];
@@ -45107,7 +45499,7 @@ function resolveMultiTargeting() {
         const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
         addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
         playAttackHitSfx(dmg, taken, delay);
-        applyPoisonRider(enemy, multiPoisonStacks, taken);
+        applyVenomRiders(enemy, multiVenom, taken);
         onPlayerHitEnemy(taken);
       } else {
         const shieldBefore = t.shield || 0;
@@ -45116,7 +45508,7 @@ function resolveMultiTargeting() {
         const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, t.shield || 0);
         addLog(`  ${t.name}: ${actual} dmg${absSuffix}`, Colors.RED);
         playAttackHitSfx(dmg, actual, delay);
-        applyPoisonRider(t, multiPoisonStacks, actual);
+        applyVenomRiders(t, multiVenom, actual);
         if (!t.isAlive) { spawnDeathAnimation(t); addLog(`  ${t.name} destroyed!`, Colors.GOLD, null, null, t); }
       }
       if (dmg > 0) applyIgniteRider(t, multiIgnite);
@@ -46170,7 +46562,7 @@ function executePower(power) {
       const attacks = 1 + (playerTierOffset || 0);
       const heroismBonus = player.heroism;
       if (heroismBonus > 0) { addLog(`  (Heroism +${heroismBonus} on the first hit)`, Colors.GOLD); player.heroism = 0; }
-      const qsPoisonStacks = snapshotPoisonBuff(player);
+      const qsVenom = snapshotVenomBuffs(player);
       const qsEyeBonus = snapshotEyeBuff(player);
       const qsObsBonus = snapshotObsidianBuff(player);
       const qsIgnite = consumePlayerIgnite();
@@ -46188,7 +46580,7 @@ function executePower(power) {
         if (blocked > 0) addLog(`  Shot ${i + 1}: (${blocked} blocked)`, Colors.BLUE);
         addLog(`  Shot ${i + 1}: ${taken} dmg to ${enemy.name}`, Colors.RED);
         playAttackHitSfx(dmg, taken, i * 120);
-        applyPoisonRider(enemy, qsIsFirst ? qsPoisonStacks : 0, taken);
+        applyVenomRiders(enemy, qsIsFirst ? qsVenom : null, taken);
         if (qsIsFirst && taken > 0) applyIgniteRider(enemy, qsIgnite);
         if (taken > 0) applyElementalWeaponRider(enemy, taken);
         if (taken > 0) applyBleedWeaponRider(enemy, taken);
@@ -52843,15 +53235,20 @@ function updateEnemyTurn(dt) {
           addLog(`  Was Undamaged — ${enemy.name} draws ${drawn.length}.`, Colors.GRAY);
         }
       } else if (eff.effectType === 'poison_dagger_barrage') {
-        // Poisoned Daggers — ONE throw: red-arrow swing + dagger SFX + 1
-        // Poison. (Lives here in the ATTACK branch; the copy in the ability
+        // Poisoned Daggers — red-arrow swing + dagger SFX + 1 Poison per
+        // throw. (Lives here in the ATTACK branch; the copy in the ability
         // branch never ran for the attack card.)
         let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
         if (enemy.heroism > 0) enemy.heroism = 0;
-        const shots = 1;
+        // Throw count comes off the CARD, not a constant here: the player's
+        // Poisoned Dagger is one throw, the monster version is two. This was
+        // hardcoded to 1, which silently halved both the Slyblade's daggers and
+        // Khydhani's two-throw ambush when the player card was cut to a single
+        // throw.
+        const shots = Math.max(1, eff.maxTargets || 1);
         const speed = getEnemySpeedMul();
-        // Snappy arrows (450ms) with a stagger just past them, so the two
-        // throws still read as two distinct swings but the whole barrage
+        // Snappy arrows (450ms) with a stagger just past them, so multiple
+        // throws still read as distinct swings but the whole barrage
         // wraps in ~1s — then the queue resumes at the normal pace instead
         // of stalling for the old 875ms-arrow fade.
         const daggerArrow = 450;
@@ -52860,8 +53257,7 @@ function updateEnemyTurn(dt) {
         // Snapshot the Vial / Drow Sleep buffs ONCE — a barrage carries its
         // riders to EVERY throw, so each dagger lands the same +Poison /
         // +Drow Poison (both throws, not just the first).
-        const snapPoison = snapshotPoisonBuff(enemy);
-        const snapDrow = snapshotDrowSleepBuff(enemy);
+        const snapVenom = snapshotVenomBuffs(enemy);
         for (let s = 0; s < shots; s++) {
           const fire = () => {
             const prevCard = _activePlayCard;
@@ -52880,8 +53276,7 @@ function updateEnemyTurn(dt) {
               if (t instanceof Creature) t.poisonStacks = (t.poisonStacks || 0) + 1;
               else if (t && typeof t.applyStatus === 'function') t.applyStatus('POISON', 1);
               spawnTokenOnTarget(t, 1, 'Poison', Colors.GREEN);
-              applyPoisonRider(t, snapPoison, tDmg);  // Vial rider, every throw
-              applyDrowSleepRider(t, snapDrow);        // Drow Sleep rider, every throw
+              applyVenomRiders(t, snapVenom, tDmg); // Vial + Drow riders, every throw
               countAndRemoveDeadCreatures();
             } finally {
               _activePlayCard = prevCard;
@@ -52934,8 +53329,7 @@ function updateEnemyTurn(dt) {
         // target on BOTH waves.
         let baseDmg = Math.max(0, eff.value + enemy.heroism + enemy.rage + getDamageModifier(enemy));
         if (enemy.heroism > 0) enemy.heroism = 0;
-        const fanPoison = snapshotPoisonBuff(enemy);
-        const fanDrow = snapshotDrowSleepBuff(enemy);
+        const fanVenom = snapshotVenomBuffs(enemy);
         const speed = getEnemySpeedMul();
         const batchTimer = 550 * speed;
         const waveDelay = batchTimer + 150 * speed;
@@ -52961,8 +53355,7 @@ function updateEnemyTurn(dt) {
             tDmg += getIncomingDamageModifier(t);
             tDmg = Math.max(0, tDmg);
             applyEnemyAoeDamage(t, tDmg);
-            applyPoisonRider(t, fanPoison, tDmg);
-            applyDrowSleepRider(t, fanDrow);
+            applyVenomRiders(t, fanVenom, tDmg);
           }
           countAndRemoveDeadCreatures();
         };
@@ -54528,6 +54921,36 @@ function applyDrowSleepRider(target, stacks) {
   }
   addLog(`  (Drow Sleep Poison) +${stacks} on ${target.name}`, '#9fb8e8');
 }
+
+// === Venom buffs — ALWAYS take and apply these as a PAIR ===
+// Vial of Poison and Drow Sleep Poison are the same mechanic wearing two
+// statuses: both are one-shot coatings on the caster's next attack action, both
+// land regardless of mitigation, and both are snapshotted once and re-applied to
+// every target/hit of that action.
+//
+// They kept drifting apart because each site wired them by hand and it is easy
+// to remember the Vial and forget the Drow — nine of the fifteen multi-hit
+// handlers had the Poison half and not the Drow half, so a Drow-coated Cleave /
+// Rain of Arrows / Fan of Blades / Bone Flail silently applied nothing. These
+// two functions exist so a site cannot take one without the other:
+//
+//     const venom = snapshotVenomBuffs(caster);      // once, before the loop
+//     applyVenomRiders(target, venom, damageDealt);  // per target/hit
+//
+// For a "charges ride the FIRST hit only" handler (barrage semantics), pass
+// `first ? venom : null`.
+function snapshotVenomBuffs(caster) {
+  return {
+    poison: snapshotPoisonBuff(caster),
+    drow: snapshotDrowSleepBuff(caster),
+  };
+}
+function applyVenomRiders(target, venom, damageDealt = null) {
+  if (!venom || !target) return;
+  applyPoisonRider(target, venom.poison, damageDealt);
+  applyDrowSleepRider(target, venom.drow);
+}
+
 function snapshotSunderBuff(caster) {
   if (!caster || !(caster.sunderBuff > 0)) return 0;
   const stacks = caster.sunderBuff;
@@ -54713,6 +55136,42 @@ function fireStormLightning(caster, shockedCount) {
   }
 }
 
+// On Recharge: Summon a Floating Skull. Same family as applyOnRechargeShield /
+// applyOnRechargeHeroism and fired from the same hooks, so it pays out whether
+// the card is cast, spent as another card's recharge cost, or cycled at end of
+// turn.
+//
+// This is what makes Floating Skulls worth a slot. The cast alone was "1 skull
+// per enemy", which against a lone boss is a single 1/1 for an Epic Tier 2 card
+// — it paid out most when the board was already wide and least when the player
+// was in trouble. As recharge fodder the card now always does something: feed it
+// to any Recharge cost and a skull turns up.
+function applyOnRechargeSummonSkull(card) {
+  if (!card || !Array.isArray(card.currentEffects) || !player) return;
+  let count = 0;
+  for (const eff of card.currentEffects) {
+    if (eff.effectType === 'on_recharge_summon_skull') count += (eff.value || 1);
+  }
+  if (count <= 0) return;
+  let made = 0;
+  for (let i = 0; i < count; i++) {
+    const skull = createFloatingSkullCreature();
+    skull._codexSide = 'player';
+    if (!player.addCreature(skull)) break;
+    made++;
+  }
+  if (made > 0) {
+    addLog(`  ${card.name}: ${made} Floating Skull${made === 1 ? '' : 's'} drift up.`, Colors.PURPLE);
+    // Same eerie twang the card's own cast uses, so feeding it as fodder still
+    // sounds like Floating Skulls. Registered in CARD_SFX_HINTS so the codex
+    // Sounds tab lists the card under this file — the auto-surfaced path only
+    // covers CARD_SFX_OVERRIDES, and this one fires from a recharge hook.
+    playSound('dark_crystals_02', 0.7);
+  } else {
+    addLog(`  ${card.name}: no room for a Floating Skull.`, Colors.GRAY);
+  }
+}
+
 // On Recharge: Poison Randomly (Entangling Roots). Same family as
 // applyOnRechargeShield / applyOnRechargeHeroism and fired from the same
 // hooks, so it lands on a self-recharge play, on being spent as another
@@ -54788,13 +55247,11 @@ function consumeObsidianBuff(caster, target) {
   return applyObsidianBonus(target, total);
 }
 function consumePoisonBuff(caster, target, damageDealt = null) {
-  const stacks = snapshotPoisonBuff(caster);
-  applyPoisonRider(target, stacks, damageDealt);
-  // Piggyback the Drow Sleep Poison rider on the same hook — every
-  // attack that consumes a Vial-of-Poison buff also consumes a Drow
-  // Sleep buff if one is active (Drow Sleep Poison item).
-  const drowStacks = snapshotDrowSleepBuff(caster);
-  applyDrowSleepRider(target, drowStacks);
+  // Single-target choke point — takes BOTH venom coatings (Vial of Poison and
+  // Drow Sleep Poison) as a pair, so every single-hit attack site gets them
+  // without per-site wiring. Multi-hit handlers snapshot the same pair once and
+  // re-apply per target; see snapshotVenomBuffs.
+  applyVenomRiders(target, snapshotVenomBuffs(caster), damageDealt);
   // Crawler Skullcap — a STANDING rider (not consumed), so it lands on every
   // attack for the rest of the fight rather than just the next one.
   if (caster && caster.poisonAttacks > 0) {
@@ -55920,9 +56377,9 @@ function combatVictory() {
   swimFlashTimer = 0;
   // Clear exhausted flag on all hand cards (daggers etc.)
   for (const c of player.deck.hand) c.exhausted = false;
-  // The Underdark cameo belongs to the fight that armed it — never carry it
-  // into the next combat.
-  _cornisCameoFight = false;
+  // The Underdark cameo belongs to the encounter that armed it (the flag lives
+  // on currentEncounter), so there is nothing to clear here — only the per-fight
+  // pity counter, which IS a global.
   _cornisCameoGuaranteed = false;
   // Paralysis is per-combat — unlock every card the crawler pinned.
   clearParalyzedCards();
@@ -55933,7 +56390,7 @@ function combatVictory() {
 // teardown, then drops straight back to the map at the node the party is on
 // (arriveAtNode already ran, so it won't re-trigger).
 function combatFlee() {
-  _cornisCameoFight = false;
+  _cornisCameoGuaranteed = false;
   clearParalyzedCards();
   // Clear any open scry/scout overlay first — a Crag Cat that flees mid-scry
   // freezes input, so without this the player is stuck staring at the blue
@@ -56498,6 +56955,12 @@ function cancelModalSelect() {
   selectedCardIndex = -1;
   modalChoiceRects = [];
   modalCancelRect = null;
+  // Drop any hand snapshot along with the selection. Backing out of the mode
+  // picker means no play is in flight, so nothing should be able to restore an
+  // old hand afterwards. (Belt-and-braces with the clear at card selection —
+  // this is the path that leaves selectedCardIndex at -1, so the selection-time
+  // clear won't run again until the player picks a different card.)
+  _handOrderSnapshot = null;
   state = GameState.COMBAT;
 }
 
@@ -60828,6 +61291,9 @@ function commitSaveEditing() {
     // legacy mirrors; this is what restoreFromSave reads. New flags go in the
     // RUN_FLAGS registry and need no line here.
     flags: runFlagsToObject(),
+    // Authoritative run-SET bag (the gnoll den trackers). Same contract as
+    // `flags`: a new Set goes in the RUN_SETS registry and needs no line here.
+    sets: runSetsToObject(),
   }, saveEditingSlot, name);
   if (success) {
     addLog(`Game saved: ${name}`, Colors.GREEN);
@@ -61590,6 +62056,10 @@ function restoreFromSave(data) {
   // to the top-level key for saves written before the bag existed. This is also
   // what repairs wastesNorthRestDone, which the old whitelist never persisted.
   runFlagsFromSave(data);
+  // …and every run Set (the gnoll den trackers). A save written before the bag
+  // existed restores them empty, which re-arms the dens — the same behaviour
+  // those saves already had, so nothing regresses for an in-flight run.
+  runSetsFromSave(data);
   _fountainStepReduction = typeof data.fountainStepReduction === 'number' ? data.fountainStepReduction : 0;
   // The number and the sheet icon are stored separately — re-sync so a save
   // can never show a blessing that isn't live (or hide one that is).
@@ -63462,9 +63932,15 @@ function drawCompanionUpgrade() {
 }
 
 function handleCompanionUpgradeClick(_x, _y) {
-  // Single click anywhere advances into the ability picker.
+  // Single click anywhere advances. The level-up flow (the original caller)
+  // lands on the ability picker; other callers set _companionUpgradeThen to
+  // route somewhere else — the Underdark entry uses it to run its title card
+  // and cross-map teleport once the player has seen the upgrades.
   playSound('click');
   companionUpgrades = [];
+  const then = _companionUpgradeThen;
+  _companionUpgradeThen = null;
+  if (typeof then === 'function') { then(); return; }
   state = GameState.ABILITY_SELECT;
 }
 
@@ -63772,6 +64248,7 @@ const CARD_SFX_OVERRIDES = {
   // same path Magic Missiles uses for its per-shot missile_flesh).
   blade_flurry:             { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   poisoned_dagger:          { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
+  poisoned_dagger_enemy:    { flesh: 'dagger_flesh',  blocked: 'dagger_blocked' },
   // Rogue tier 1 / tier 3 — knifework, with a cast cue on the venom.
   hamstring:                { play: 'dagger_flesh', flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
   exploit:                  { flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
@@ -63853,6 +64330,15 @@ const CARD_SFX_OVERRIDES = {
   // Soul Harvest — the drain itself is the screech of the soul coming loose,
   // and it doubles as the cue for the Specter the kill leaves behind.
   soul_harvest:             { play: 'specter_screech', flesh: 'specter_screech' },
+  // === Gnoll Fang of Yeenoghu's shadow suite ===
+  // All three are dark magic, so they draw from the Magic pack's dark_ family
+  // and stay distinct from one another: a warp for the shadow being torn loose,
+  // an eerie crystal twang for the skulls rising, wet gore for the drain.
+  // Shadow Clone also deals True damage, so it gets a deep impact on the hit.
+  shadow_clone:             { play: 'dark_warp_02', flesh: 'dark_impact_deep_02',
+                              blocked: 'dark_impact_deep_02' },
+  floating_skulls:          { play: 'dark_crystals_02' },
+  shadow_drain:             { play: 'dark_slime_gore', flesh: 'dark_slime_gore' },
   holy_steed:               { defense: 'block_heavy', play: 'block_heavy' },
   holy_shield:              { defense: 'shield_blocked', blocked: 'shield_blocked' },
   hammer_of_wrath_t3:       { play: 'battle_fury', flesh: 'blunt_2h_flesh', blocked: 'blunt_blocked' },
@@ -64129,6 +64615,10 @@ const CARD_SFX_OVERRIDES = {
 const CARD_SFX_HINTS = {
   // splash_fire (Explosive Shot) stutters fire_flesh per affected enemy.
   explosive_shot:   ['fire_flesh'],
+  // Floating Skulls — the On Recharge summon fires its twang from a recharge
+  // hook (applyOnRechargeSummonSkull), outside the auto-surfaced
+  // CARD_SFX_OVERRIDES path, so it needs listing here for the codex Sounds tab.
+  floating_skulls:  ['dark_crystals_02'],
   // Crag Cat — pounce_attack / reflexes_dodge play a lion roar on cast.
   pounce:           ['lion_roar_01'],
   cat_reflexes:     ['lion_roar_01'],
@@ -64209,6 +64699,17 @@ function getWeaponSfxKeys(card = null, creature = null) {
     // gore_flesh on a clean hit, stab on a blocked one.
     if (name === 'harpy') {
       return { flesh: 'dagger_flesh', blocked: 'dagger_blocked' };
+    }
+    // The Fang of Yeenoghu's two raised bodies. Both draw from the Magic pack's
+    // dark_ family so they read as conjured shadow rather than anything with a
+    // weapon: a light eerie crystal twang for the little skull's bite, a deep
+    // dark impact for the Shadow's heavier swing. Same pair on either side of
+    // the field (the player's Floating Skulls / Shadow Clone and the Fang's).
+    if (name === 'floating skull') {
+      return { flesh: 'dark_crystals_01', blocked: 'dark_crystals_01' };
+    }
+    if (name === 'shadow clone') {
+      return { flesh: 'dark_impact_deep_02', blocked: 'dark_impact_deep_02' };
     }
     // Brad the Fox (player ally companion) — quick dagger work: gore on a
     // clean hit, a clean stab when the blow is blocked. Same dagger family
@@ -69734,6 +70235,26 @@ function _journalGetEncounterTexts(encounterId) {
   return null;
 }
 
+// Open the journal from wherever the player is. Three call sites used to repeat
+// this (the J key, the map action button, and the map-click hit test) and all
+// three reset the list scroll to the top — which parked the player at Chapter 1
+// however deep into the run they were, with the preselected entry off-screen.
+function openJournal(fromState) {
+  playSound('book_open');
+  journalReturnState = fromState;
+  journalScrollY = 0;
+  journalListScrollY = 0;
+  // Preselect the most recently read dialog so both panes open on the beat the
+  // player just experienced. Falls back to whatever they last clicked in a
+  // prior session, and to no selection if neither exists.
+  if (lastSeenDialog && seenDialogs.has(lastSeenDialog)) {
+    journalSelectedEncounter = lastSeenDialog;
+  }
+  // …and scroll the list to it on the next draw (see _journalScrollToSelected).
+  _journalScrollToSelected = !!journalSelectedEncounter;
+  state = GameState.JOURNAL;
+}
+
 function drawJournal() {
   journalClickAreas = [];
   // Semi-transparent overlay — the live map / combat / encounter
@@ -69827,6 +70348,17 @@ function drawJournal() {
         // suspenseful — the player only sees beats they've actually
         // reached. Chapter title already tells them more is coming.
         if (!isSeen) continue;
+        // Opening scroll: bring the preselected row into view. `ly` is already
+        // the on-screen y (it has journalListScrollY subtracted), so the delta
+        // needed is measured against the pane and then folded into the scroll.
+        // Parked one row below the pane top rather than flush against it so the
+        // entry reads as "here, with history above" instead of looking like the
+        // top of the list.
+        if (_journalScrollToSelected && isSel) {
+          const targetY = topY + 10 + rowH;
+          journalListScrollY = Math.max(0, journalListScrollY + (ly - targetY));
+          _journalScrollToSelected = false;
+        }
         // Row background — highlight when this row is the active one.
         if (isSel) {
           ctx.fillStyle = 'rgba(120, 95, 50, 0.55)';
@@ -69851,6 +70383,10 @@ function drawJournal() {
     ly += 12;
   }
   ctx.restore();
+  // One shot only. If the preselected row never rendered — nothing selected, or
+  // its chapter is collapsed — there was no y to scroll to, so drop the request
+  // rather than letting it fire later when the player expands that section.
+  _journalScrollToSelected = false;
 
   // ===== Right pane: dialog text =====
   ctx.fillStyle = 'rgba(0,0,0,0.78)';

@@ -311,6 +311,22 @@ export function saveGame(state, saveName = '') {
     // passageAmbushDefeated and wastesNorthRestDone were both assembled by
     // main.js, silently dropped here, and reloaded as false.
     flags: (state.flags && typeof state.flags === 'object') ? { ...state.flags } : {},
+    // Run-SET bag — the same idea as `flags` above, for per-run Sets instead of
+    // booleans. Each value is serialized as an array (Sets aren't JSON-friendly)
+    // and rehydrated in restoreFromSave.
+    //
+    // Currently the four gnoll-den trackers. They were session-only Sets, so a
+    // reload re-armed every cleared den and a player could save-scum a cave back
+    // — they are meant to re-arm on a LONG REST only. Adding another such Set
+    // needs only a RUN_SETS registry entry in main.js, not a change here.
+    sets: (() => {
+      const src = (state.sets && typeof state.sets === 'object') ? state.sets : {};
+      const out = {};
+      for (const [k, v] of Object.entries(src)) {
+        out[k] = v instanceof Set ? Array.from(v) : (Array.isArray(v) ? v.slice() : []);
+      }
+      return out;
+    })(),
     // Gnoll cave layout — which chasm entrance is the boss / guard / generic
     // cave. Rolled ONCE per character on first cave discovery and PERSISTED so
     // the layout is permanent for that character: a save taken inside a cave

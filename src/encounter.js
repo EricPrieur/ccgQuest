@@ -6675,6 +6675,79 @@ export function createBottomlessLakeEncounter() {
   ]);
 }
 
+// The Underdark Threshold short rest — fires when the party steps DOWN from the
+// surface onto ug_entry, once per long rest (gated by the underdarkShortRestUsed
+// run flag, cleared by setWellRested). A breather at the mouth of the dark: heal
+// 8, no respawns, no level-up — it is not a full rest.
+//
+// Placed on the Underdark side rather than the surface mouth (c7_8) on purpose:
+// once the entrance is unlocked, walking onto c7_8 teleports straight through
+// with no dialog, so there is no "pause at the door" beat left up there. Landing
+// on the Threshold IS the moment the party goes in, and hooking it here leaves
+// the surface teleporter seamless. Climbing back OUT never triggers it (the
+// arrival branch checks fromNodeId).
+export function createUnderdarkShortRestEncounter() {
+  return new Encounter('underdark_short_rest', 'The Threshold', 'A last patch of solid dark before the descent.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The cold comes up to meet you. Behind and above, the dwarf road still shows as a grey slot of surface light; ahead, the passage falls away into a black that your torches only dent. This ledge is the last flat, dry ground you are likely to see for a while.'),
+        new EncounterText('Thorb sets his back against the stone and blows into his hands. "Catch your breath here if you mean to," he says. "Once we are down past the first turn, we keep moving."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Take a short break.',
+          'You sit out of the draught with your back to warm-ish stone, eat a little, and let the worst of the aches settle. It is not sleep — but it is something.',
+          'underdark_short_rest_take', 0,
+        ),
+        new EncounterChoice(
+          'Press on into the dark.',
+          'You shoulder your pack without stopping and start down.',
+          'underdark_short_rest_skip', 0,
+        ),
+      ],
+    }),
+  ]);
+}
+
+// The South Crossroad breather — usx_xroad, the "+" hub of the South Crossroad
+// map. Once per long rest (underdarkXroadRestUsed, rest:true in RUN_FLAGS), the
+// party can stop and heal 8. Not a full rest: no respawns, no level-up.
+//
+// The crossroad is neutral ground, and that is the fiction the rest leans on:
+// every power fighting over the Underdark needs this junction, so none of them
+// holds it. Its whole map is also excluded from the roaming-monster roll
+// (UNDERDARK_NO_SPAWN_MAPS in main.js) — the quiet is mechanical, not flavour.
+export function createUnderdarkXroadRestEncounter() {
+  return new Encounter('underdark_xroad_rest', 'The South Crossroad', 'Neutral ground, and everyone seems to know it.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Four roads meet under a vault too high for your light to find, and the chamber is quiet — not the held-breath quiet of the deep tunnels, but something easier. No bones in the corners. No sign scratched over another sign. Whatever moves through here does not stop to fight over it.'),
+        new EncounterText('Raena turns slowly on her heel, reading the floor. "Everything down here needs this crossing," she says. "Drow, gnolls, the things with no name. Hold it and you make enemies of all of them at once. So nobody does." She lowers her bow. "We can breathe here."', 'Raena'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choices: [
+        new EncounterChoice(
+          'Rest at the crossroad.',
+          'You set your backs against the old stone and let the quiet do its work — water, food, bindings changed. The roads stay empty while you sit.',
+          'underdark_xroad_rest_take', 0,
+        ),
+        new EncounterChoice(
+          'Keep moving.',
+          'You cross the chamber without stopping and pick your road.',
+          'underdark_xroad_rest_skip', 0,
+        ),
+      ],
+    }),
+  ]);
+}
+
 // The Quiet Pool — the short-branch dead-end of South Path 12 (usp12_a3). A
 // clean pocket of running water, fed off the shaft-light above and untouched by
 // whatever watches the Bottomless Lake. Drinking heals the party to FULL HP
@@ -8533,6 +8606,8 @@ export const ENCOUNTER_REGISTRY = {
   underdark_south_river: createUnderdarkSouthRiverEncounter,
   bottomless_lake: createBottomlessLakeEncounter,
   quiet_pool: createQuietPoolEncounter,
+  underdark_short_rest: createUnderdarkShortRestEncounter,
+  underdark_xroad_rest: createUnderdarkXroadRestEncounter,
   mushroom_circle_arrival: () => createMushroomCircleArrivalEncounter(false),
   mushroom_circle_arrival_cornis: () => createMushroomCircleArrivalEncounter(true),
   mushroom_circle: () => createMushroomCircleEncounter(false),
