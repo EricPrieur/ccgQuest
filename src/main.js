@@ -9237,17 +9237,28 @@ function drawMenu() {
   // feedback / bug reports.
   {
     const npW = 320;
-    const npH = 420;
     const npX = SCREEN_WIDTH - npW - 30;
     const npY = panelY + 30;
+    const padX = 22;
+    const innerW = npW - padX * 2;
+    const body = (
+      'Welcome to ccgQuest. A big chunk of Part 2 is now in. ' +
+      'Are you brave enough to venture into the Underdark? Still more on the way. ' +
+      'Join the Discord for feedback, to report bugs, or just to chat about your run. Enjoy!'
+    );
+    // Wrap BEFORE the box is drawn so the panel is sized to the note instead of
+    // a fixed height. wrapTextLong is a pure character-count estimate, so it
+    // needs no ctx state. Height = title (36) + rule gap (28 + 18) + the wrapped
+    // body + the gap above the signature (14) + its line and bottom pad (24).
+    const lines = wrapTextLong(body, innerW, 16);
+    const lineH = 22;
+    const npH = 120 + lines.length * lineH;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
     ctx.fillRect(npX, npY, npW, npH);
     ctx.strokeStyle = 'rgba(232, 213, 154, 0.35)';
     ctx.lineWidth = 1;
     ctx.strokeRect(npX + 0.5, npY + 0.5, npW - 1, npH - 1);
 
-    const padX = 22;
-    const innerW = npW - padX * 2;
     let ty = npY + 36;
 
     ctx.fillStyle = Colors.GOLD;
@@ -9260,17 +9271,9 @@ function drawMenu() {
     ctx.fillRect(npX + padX, ty, innerW, 1);
     ty += 18;
 
-    const body = (
-      'Welcome to ccgQuest! Part 1 — all 8 chapters — is done and playable: ' +
-      'escape the Prison, enter the Volcano, and save Qualibaf! ' +
-      'Chapter 1 of Part 2 (the Great Forge) is also done, with more chapters on the way. ' +
-      'Join the Discord for feedback, to report bugs, or just to chat about your run. Enjoy!'
-    );
     ctx.fillStyle = '#e8d59a';
     ctx.font = '16px serif';
     ctx.textAlign = 'left';
-    const lines = wrapTextLong(body, innerW, 16);
-    const lineH = 22;
     for (const line of lines) {
       ctx.fillText(line, npX + padX, ty);
       ty += lineH;
