@@ -232,7 +232,7 @@ export function createBonePileEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [1, 6],
-      lootCards: ['bone_pile_loot'],
+      lootCards: ['bone_pile_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -302,7 +302,7 @@ export function createDeadEndEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [1, 6],
-      lootCards: ['slime_loot'],
+      lootCards: ['slime_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -389,7 +389,7 @@ export function createSewerJunctionEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [1, 6],
-      lootCards: ['slime_loot'],
+      lootCards: ['slime_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -699,7 +699,7 @@ export function createMountainCampEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['kobold_base_loot'],
+      lootCards: ['kobold_base_loot', 'tier1_common'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -758,7 +758,7 @@ export function createMountainPassEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['stone_giant_loot'],
+      lootCards: ['stone_giant_loot', 'tier1_common'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -1026,7 +1026,7 @@ export function createBoneValleyEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['bone_amalgam_loot'],
+      lootCards: ['bone_amalgam_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -1061,7 +1061,7 @@ export function createWolfBlizzardEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['wolf_pack_loot'],
+      lootCards: ['wolf_pack_loot', 'tier1_common'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -1255,7 +1255,7 @@ export function createPoolExitEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['sahuagin_sentinel_loot'],
+      lootCards: ['sahuagin_sentinel_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -1483,7 +1483,7 @@ export function createPassageAmbushEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['sahuagin_sentinel_loot'],
+      lootCards: ['sahuagin_sentinel_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -1787,7 +1787,7 @@ export function createCircularRuinsCombatEncounter() {
       new EncounterPhaseData({
         phaseType: EncounterPhase.LOOT,
         lootGoldDice: [3, 6],
-        lootCards: ['dire_bear_loot'],
+        lootCards: ['dire_bear_loot', 'tier2_common'],
       }),
       // Post-loot Olbrim investigation + short rest beat. Raena reads
       // the room, the party concludes Olbrim climbed the ice waterfall
@@ -1896,7 +1896,7 @@ export function createCircularRuinsRepeatCombatEncounter() {
       new EncounterPhaseData({
         phaseType: EncounterPhase.LOOT,
         lootGoldDice: [3, 6],
-        lootCards: ['dire_bear_loot'],
+        lootCards: ['dire_bear_loot', 'tier2_common'],
       }),
     ]);
 }
@@ -1967,7 +1967,7 @@ export function createNestMiddleOlbrimEncounter() {
       new EncounterPhaseData({
         phaseType: EncounterPhase.LOOT,
         lootGoldDice: [3, 6],
-        lootCards: ['baby_roc_loot'],
+        lootCards: ['baby_roc_loot', 'tier2_common'],
       }),
       // Escape sequence — the mother Roc is back on the wind. The
       // party hauls Olbrim out of the nest and runs the climb in
@@ -2084,7 +2084,7 @@ export function createNestMiddleOlbrimRepeatEncounter() {
       new EncounterPhaseData({
         phaseType: EncounterPhase.LOOT,
         lootGoldDice: [3, 6],
-        lootCards: ['baby_roc_loot'],
+        lootCards: ['baby_roc_loot', 'tier2_common'],
       }),
       new EncounterPhaseData({
         phaseType: EncounterPhase.TEXT,
@@ -2878,7 +2878,7 @@ export function createWreckageHarpyRevisitEncounter() {
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootCards: ['harpies_loot'],
+      lootCards: ['harpies_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -2912,7 +2912,7 @@ export function createWreckageArrivalEncounter() {
     // again on each rest-reset re-fight via the revisit encounter).
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootCards: ['harpies_loot'],
+      lootCards: ['harpies_loot', 'tier2_common'],
     }),
     // After the fight: catch-your-breath beat with an optional Heal 5
     // short rest (same resolver as the South Hill pre-board rest).
@@ -3050,7 +3050,7 @@ export function createGiantFrogAmbushEncounter(short = false) {
     // Roll happens via the giant_frog_loot table in main.js.
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootCards: ['giant_frog_loot'],
+      lootCards: ['giant_frog_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -3106,7 +3106,7 @@ export function createSahuaginSentinelEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['sahuagin_sentinel_loot'],
+      lootCards: ['sahuagin_sentinel_loot', 'tier1_common'],
     }),
   ]);
 }
@@ -3638,7 +3638,7 @@ export function createEliteKoboldPatrolEncounter() {
   // Always drops gold scaled to its place in the run (north of Qualibaf —
   // between the Sahuagin Sentinel's [3,6] and the chapter-7 Obsidian
   // Golem / Slime's [2,6]) plus one Kobold base loot card.
-  const lootCards = ['kobold_base_loot'];
+  const lootCards = ['kobold_base_loot', 'tier1_common'];
   return new Encounter('elite_kobold_patrol', 'Elite Kobold Patrol', 'A White Claw patrol blocks the trail.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -3678,7 +3678,7 @@ export function createGiantBoarAmbushEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['giant_boar_loot'],
+      lootCards: ['giant_boar_loot', 'tier1_common'],
     }),
   ], true);
 }
@@ -4119,7 +4119,7 @@ export function createKoboldDrakeRiderEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 6],
-      lootCards: ['drake_rider_loot'],
+      lootCards: ['drake_rider_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -4294,7 +4294,7 @@ export function createKoboldSlybladeEncounter() {
       lootGoldDice: [2, 6],
       // Pick-one slyblade pool: sundries, sly_blade, shadow_cloak,
       // kobold_smoke_bomb. (Lockpick Set is now codex-Legacy.)
-      lootCards: ['kobold_slyblade_loot'],
+      lootCards: ['kobold_slyblade_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -4321,7 +4321,7 @@ export function createDwarvenSpecterEncounter() {
       lootGoldDice: [1, 6],
       // Pick-one specter pool: gravechill_shard, soul_ward,
       // spectral_hand, specter_ectoplasm (rare).
-      lootCards: ['dwarven_specter_loot'],
+      lootCards: ['dwarven_specter_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -4441,7 +4441,7 @@ export function createZhostRevengeEncounter() {
       // 'white_claw_reforged' is the shared id (enemy deck + player loot
       // card share one creator now). drake_rider_loot is the 50%-gated
       // common-soldier drop table.
-      lootCards: ['white_claw_reforged', 'drake_rider_loot'],
+      lootCards: ['white_claw_reforged', 'drake_rider_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -4936,7 +4936,10 @@ export function createMagmaDrakeEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [4, 6],
-      lootCards: ['magma_drake_loot', 'molten_scale_armor_loot'],
+      // Mini-boss: guaranteedLoot bypasses the 50% GATED_LOOT gate that the
+      // shared magma_loot table carries for the Mephit's random encounter.
+      guaranteedLoot: true,
+      lootCards: ['magma_loot', 'molten_scale_armor_loot'],
     }),
   ]);
 }
@@ -5123,7 +5126,7 @@ export function createMagmaMephitEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['magma_mephit_loot'],
+      lootCards: ['magma_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -5186,7 +5189,7 @@ export function createObsidianGolemEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['obsidian_golem_loot'],
+      lootCards: ['obsidian_golem_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -5208,7 +5211,7 @@ export function createObsidianSlimeEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['obsidian_slime_loot'],
+      lootCards: ['obsidian_slime_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -5611,7 +5614,7 @@ export function createForgeFloorAmbushEncounter() {
       lootGoldDice: [3, 6],
       // 100% drop — khydhani_loot is NOT in GATED_LOOT, so the Assassin
       // always yields exactly one drow-themed item (pick-one by weight).
-      lootCards: ['khydhani_loot'],
+      lootCards: ['khydhani_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -5858,7 +5861,7 @@ export function createGnollHunterEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_hunter' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_hunter_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_hunter_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -5875,7 +5878,7 @@ export function createUmberHulkEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'umber_hulk' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['umber_hulk_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['umber_hulk_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -5895,7 +5898,7 @@ export function createDrowWarpartyEncounter() {
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'drow_warparty' }),
     // Same drow pool The Assassin drops from, but rank-and-file: 50%-gated
     // (GATED_LOOT) and one pick on a hit.
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['drow_warparty_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['drow_warparty_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -5913,7 +5916,7 @@ export function createCarrionCrawlerEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'carrion_crawler' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['carrion_crawler_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['carrion_crawler_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -6328,7 +6331,7 @@ export function createRoperEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'roper' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['roper_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [3, 6], lootCards: ['roper_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -6341,7 +6344,7 @@ export function createGnollWarriorEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_warrior' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_warrior_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['gnoll_warrior_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -6354,7 +6357,7 @@ export function createGnollPackLordEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_pack_lord' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -6375,7 +6378,7 @@ export function createGnollPackLordDenEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'gnoll_pack_lord' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [4, 8], lootCards: ['gnoll_pack_lord_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -6675,39 +6678,33 @@ export function createBottomlessLakeEncounter() {
   ]);
 }
 
-// The Underdark Threshold short rest — fires when the party steps DOWN from the
-// surface onto ug_entry, once per long rest (gated by the underdarkShortRestUsed
-// run flag, cleared by setWellRested). A breather at the mouth of the dark: heal
-// 8, no respawns, no level-up — it is not a full rest.
+// The Underdark Threshold — a pure story beat fired the first time the party
+// steps DOWN from the surface onto ug_entry. No choice, no heal: the two dwarves
+// read the stonework, recognise a dwarf-cut approach tunnel, and reason that an
+// entry this old was never left unwatched. That FORESHADOWS a guard outpost
+// further in — the party goes down looking for somewhere safe to stop.
+//
+// It used to be a short-rest choice (Heal 8, once per long rest). Handing the
+// player a breather at the door undercut the descent: the interesting beat is
+// the two of them working out what the tunnel implies, not a menu.
 //
 // Placed on the Underdark side rather than the surface mouth (c7_8) on purpose:
 // once the entrance is unlocked, walking onto c7_8 teleports straight through
 // with no dialog, so there is no "pause at the door" beat left up there. Landing
 // on the Threshold IS the moment the party goes in, and hooking it here leaves
 // the surface teleporter seamless. Climbing back OUT never triggers it (the
-// arrival branch checks fromNodeId).
-export function createUnderdarkShortRestEncounter() {
-  return new Encounter('underdark_short_rest', 'The Threshold', 'A last patch of solid dark before the descent.', [
+// arrival branch checks fromNodeId), and it is a ONE-SHOT — the latch never
+// clears, so later descents drop straight onto the map.
+export function createUnderdarkThresholdEncounter() {
+  return new Encounter('underdark_threshold', 'The Threshold', 'Dwarf-cut stone, and a road that was once watched.', [
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
       texts: [
-        new EncounterText('The cold comes up to meet you. Behind and above, the dwarf road still shows as a grey slot of surface light; ahead, the passage falls away into a black that your torches only dent. This ledge is the last flat, dry ground you are likely to see for a while.'),
-        new EncounterText('Thorb sets his back against the stone and blows into his hands. "Catch your breath here if you mean to," he says. "Once we are down past the first turn, we keep moving."', 'Thorb'),
-      ],
-    }),
-    new EncounterPhaseData({
-      phaseType: EncounterPhase.CHOICE,
-      choices: [
-        new EncounterChoice(
-          'Take a short break.',
-          'You sit out of the draught with your back to warm-ish stone, eat a little, and let the worst of the aches settle. It is not sleep — but it is something.',
-          'underdark_short_rest_take', 0,
-        ),
-        new EncounterChoice(
-          'Press on into the dark.',
-          'You shoulder your pack without stopping and start down.',
-          'underdark_short_rest_skip', 0,
-        ),
+        new EncounterText('The cold comes up to meet you. Behind and above, the dwarf road still shows as a grey slot of surface light; ahead, the passage falls away into a black your torches only dent. Thorb stops before the dark takes the walls and runs a thumb along the cut edge of the tunnel mouth.'),
+        new EncounterText('"Hold a moment." He turns his torch sideways, laying the light flat across the stone. "See that? Chisel work. Squared off, dressed, level with the floor — this was cut, not crawled. This is a dwarf road, and an old one."', 'Thorb'),
+        new EncounterText('Valdrisa crouches by the opposite wall and presses her palm to it, the way a smith reads a billet. "He is right. That is Deepmark scoring, and the angle is wrong for a mine. Nobody hauls ore up a grade this steep." She looks down the passage. "This is an approach. A front door."', 'Valdrisa'),
+        new EncounterText('"Aye. And we never cut a door we did not stand at." Thorb\'s voice drops. "There will be a guardhouse. Close, too — first good chamber past the descent, where the passage narrows. Walls, a hearth, a barred gate. Somewhere a body could put his back to stone and actually sleep."', 'Thorb'),
+        new EncounterText('Raena is already looking past them both, into the black. "Assuming whatever lives down here now hasn\'t moved into it," she says. "But I would rather find out than spend the night on this ledge." She starts down.', 'Raena'),
       ],
     }),
   ]);
@@ -6744,6 +6741,117 @@ export function createUnderdarkXroadRestEncounter() {
           'underdark_xroad_rest_skip', 0,
         ),
       ],
+    }),
+  ]);
+}
+
+// The Deep Fork — the payoff for the Threshold beat. Thorb spots what nobody
+// else can see, walks up to a blank stone wall, and opens the guard outpost out
+// of it. One-shot (canRevisit on the node keeps the fork walkable afterwards);
+// completing it unlocks the ug_outpost node west of the fork via
+// applyEncounterCompletionLatches.
+//
+// The reveal is deliberately his alone — he read the tunnel at the Threshold and
+// called the guardhouse before anyone had seen it, so finding the door is the
+// moment that promise pays off rather than a lucky search by the party.
+export function createUnderdarkDeepForkEncounter() {
+  return new Encounter('underdark_deep_fork', 'The Deep Fork', 'A great stone pillar, and a dwarf who has stopped walking.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The passage splits and rejoins around a pillar of rough stone, gnoll-sign scratched deep into its base. You are already choosing a side to pass it on when Thorb stops dead and throws out an arm.'),
+        new EncounterText('"There! On the left!"', 'Thorb'),
+        new EncounterText('You look. There is nothing. Wall — grey, damp, unbroken, the same wall that has run beside you since the descent. Raena raises her bow anyway and sights down it at precisely nothing.'),
+        new EncounterText('Thorb is already walking. He crosses to the blank rock, plants his torch in a crack, and lays both hands flat against the stone the way he laid his light flat at the threshold — reading it. His thumb finds a seam you would swear was a water-stain. He follows it up, across, down.', '!'),
+        new EncounterText('"Course-line," he mutters. "Third block up, always the third." He sets his shoulder, shoves UP rather than in — and a slab of wall the size of a door swings back on a pivot that has not turned in five hundred years, grinding out a breath of dry, dead, dustless air.', 'Thorb'),
+        new EncounterText('Beyond it: squared walls. A cold hearth. A barred gate standing shut on the far side, and not one scratch of gnoll-sign anywhere. The outpost has been sealed since the day the dwarves walked out of it.', '!'),
+        new EncounterText('Thorb steps back and lets the torchlight go in ahead of him, looking quietly pleased with himself. "Told you. We never cut a door we did not stand at."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// === Dwarven Guard Outpost (behind the Deep Fork door) ======================
+
+// The Hearth — a flue that still draws, so a fire here is safe AND hidden. This
+// is a FULL rest (respawns, rebalance, Well Rested), repeatable like the Tharnag
+// bed: it is the party's one safe camp in the upper Underdark, and the whole
+// point of Thorb finding the place.
+export function createOutpostHearthEncounter() {
+  return new Encounter('outpost_hearth', 'The Hearth', 'A chimney that still draws.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Thorb crouches at the hearth, holds a palm flat over the cold stone, and grins at nothing. "Draws," he says. "Flue is clear all the way up. Whatever it lets out into, it is not this passage — no smoke to smell us by, no light to see us by."'),
+        new EncounterText('Valdrisa is already breaking up the rotted shelving for kindling. "Then we are behind a stone door, under a working chimney, in a room nothing has walked into since before my grandmother was born." She strikes a spark. "I have slept worse places this month."', 'Valdrisa'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: 'Make camp at the hearth?',
+      choices: [
+        new EncounterChoice(
+          'Light the fire and rest.',
+          'The fire takes, and the old room remembers how to hold heat. You set watches out of habit and then, one by one, stop bothering. For the first time since the descent, you sleep properly.',
+          'outpost_rest', 0,
+        ),
+        new EncounterChoice(
+          'Leave it cold.',
+          'You leave the hearth as you found it and turn back to the room.',
+          'outpost_hearth_leave', 0,
+        ),
+      ],
+    }),
+  ]);
+}
+
+// Store Room — the outpost's own metal, still where they left it. One-shot.
+// Thorb's reaction to the mithril is the beat; the ore itself files straight
+// into the backpack (isCraftingMaterial), so it costs no deck slots.
+export function createOutpostStoreRoomEncounter() {
+  return new Encounter('outpost_storeroom', 'Store Room', 'Dwarves did not store their metal on wood.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The shelving has gone to black crumbs, and what it held has gone down with it — sacking, staves, rope, all of it returned to dust on the floor. But the far wall is not shelved. It is racked: iron pegs driven into dressed stone, and on the pegs, wrapped in oilcloth that has stiffened to shell, the outpost\'s own metal.'),
+        new EncounterText('Valdrisa cracks the first bundle open with her thumbs. Copper. The second, heavier: silver, barely tarnished under the wax.', 'Valdrisa'),
+        new EncounterText('The third she hands to Thorb without a word, because of the weight of it. He turns it over once. Turns it over again. Then makes a sound no one in the party has heard him make before.', '!'),
+        new EncounterText('"MITHRIL." He is not quite shouting. "A guard post. A *guard post*, and they had mithril on the rack like it was pot-iron —" He stops, collects himself with visible effort, and stows it with enormous care. "...Right. Right. We take that."', 'Thorb'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'The Outpost Rack',
+      lootCards: ['copper_ore', 'silver_ore', 'mithril_ore'],
+      guaranteedLoot: true,
+    }),
+  ]);
+}
+
+// The Far Corner — the sentry who stayed. The party raises a cairn over him, and
+// the stone they shift to do it turns up one salvaged dwarven item
+// (dwarven_market_loot, the same Obsidian Market salvage pool). One-shot.
+//
+// The loot is deliberately framed as found WHILE building the cairn rather than
+// taken off the body — the party is burying him, not looting him.
+export function createOutpostRemainsEncounter() {
+  return new Encounter('outpost_remains', 'The Far Corner', 'He never did leave his post.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('He is sitting up, or was. Back to the wall, legs out, a short axe across his knees and his helm still on. The dry air has kept him: not a skeleton so much as a dwarf gone to leather and bone, hands folded on the haft, facing the door he was set to watch.'),
+        new EncounterText('Nobody says anything for a moment. Then Thorb takes his own helm off.', '!'),
+        new EncounterText('"They sealed the road," he says quietly. "From the other side. And they left the watch on it." He crouches, and does not touch him. "He knew. You do not sit down facing a door you think is going to open."', 'Thorb'),
+        new EncounterText('Valdrisa is already gathering fallen stone into her arms. "Cairn," she says, and it is not a question. "He held the door five hundred years. He can have a roof."', 'Valdrisa'),
+        new EncounterText('You build it together, shifting the rubble of the collapsed shelving stone by stone over the old sentry until he is covered and the pile is square and honest. Raena sets the short axe on top of it. Thorb says something in Dwarvish, very fast and very low, and then puts his helm back on.', '!'),
+        new EncounterText('Under the rubble you were moving, buried where the shelves came down, there is something else the outpost never got around to using.', '!'),
+      ],
+    }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.LOOT,
+      lootTitle: 'Beneath the Rubble',
+      lootCards: ['dwarven_market_loot'],
+      guaranteedLoot: true,
     }),
   ]);
 }
@@ -7018,7 +7126,7 @@ export function createCragCatEncounter() {
       ],
     }),
     new EncounterPhaseData({ phaseType: EncounterPhase.COMBAT, enemyId: 'crag_cat' }),
-    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['crag_cat_loot'] }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.LOOT, lootGoldDice: [2, 4], lootCards: ['crag_cat_loot', 'tier3_common'] }),
   ]);
 }
 
@@ -7174,7 +7282,7 @@ export function createGoblinSwarmEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 4],
-      lootCards: ['goblin_swarm_loot'],
+      lootCards: ['goblin_swarm_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -7195,7 +7303,7 @@ export function createRampagingTrollEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [3, 5],
-      lootCards: ['rampaging_troll_loot'],
+      lootCards: ['rampaging_troll_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -7433,7 +7541,7 @@ export function createRugaSlaveMasterEncounter() {
       // PY drops Ruga's Spiked Gauntlets + the 50%-gated city drake
       // loot table. drake_rider_loot is the unified table; gauntlets
       // is the signature drop.
-      lootCards: ['rugas_spiked_gauntlets', 'drake_rider_loot'],
+      lootCards: ['rugas_spiked_gauntlets', 'drake_rider_loot', 'tier2_common'],
     }),
   ], true);
 }
@@ -7508,7 +7616,7 @@ export function createTombSarcophagusEncounter() {
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
-      lootCards: ['summon_ancestor'],
+      lootCards: ['summon_ancestor', 'tier2_common'],
     }),
     new EncounterPhaseData({
       phaseType: EncounterPhase.TEXT,
@@ -7613,7 +7721,7 @@ export function createThroneSpecterEncounter() {
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
-      lootCards: ['dwarven_specter_loot'],
+      lootCards: ['dwarven_specter_loot', 'tier2_common'],
     }),
   ]);
 }
@@ -8606,7 +8714,11 @@ export const ENCOUNTER_REGISTRY = {
   underdark_south_river: createUnderdarkSouthRiverEncounter,
   bottomless_lake: createBottomlessLakeEncounter,
   quiet_pool: createQuietPoolEncounter,
-  underdark_short_rest: createUnderdarkShortRestEncounter,
+  underdark_threshold: createUnderdarkThresholdEncounter,
+  underdark_deep_fork: createUnderdarkDeepForkEncounter,
+  outpost_hearth: createOutpostHearthEncounter,
+  outpost_storeroom: createOutpostStoreRoomEncounter,
+  outpost_remains: createOutpostRemainsEncounter,
   underdark_xroad_rest: createUnderdarkXroadRestEncounter,
   mushroom_circle_arrival: () => createMushroomCircleArrivalEncounter(false),
   mushroom_circle_arrival_cornis: () => createMushroomCircleArrivalEncounter(true),

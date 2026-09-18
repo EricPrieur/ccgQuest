@@ -533,6 +533,7 @@ export const CARD_ART_MAP = {
   magma_mephit_summon: 'MagmaMephit.jpg',
   mephit_skin_sandals: 'MephitSkinSandals.jpg',
   mephit_skin_gloves: 'MephitSkinGloves.jpg',
+  mephit_skin_bandages: 'MephitSkinBandages.jpg',
   magma_tablet: 'MagmaTablet.jpg',
   buff_magma_tablet: 'MagmaTablet.jpg',
   // Volcano's Blessing — granted at the Heart of the Volcano. PY uses
@@ -576,6 +577,12 @@ export const CARD_ART_MAP = {
   travel_rations: 'TravelRations.jpg',
   bandages: 'Bandages.jpg',
   cured_bandage: 'CuredBandage.jpg',
+  stonebound_bandages: 'StoneboundBandages.jpg',
+  fungal_bandages: 'FungalBandages.jpg',
+  // The Flask's beverage buff reuses this same art — grant_provision stamps
+  // the PersistentBuff's imageId from the card id, so no buff_ entry needed.
+  crystalwater_flask: 'CrystalwaterFlask.jpg',
+  potion_of_superior_healing: 'PotionofSuperiorHealing.jpg',
   travelers_clothing: 'TravelersClothing.jpg',
   steel_axe: 'SteelAxe.jpg',
   steel_mace: 'SteelMace.jpg',
@@ -682,6 +689,7 @@ export const CARD_ART_MAP = {
   dwarven_tower_shield: 'DwarvenTowerShield.jpg',
   dwarven_greaves: 'DwarvenGreaves.jpg',
   dwarven_brew: 'DwarvenBrew.jpg',
+  stonebread: 'Stonebread.jpg',
   whitescale_brew: 'WhitescaleBrew.jpg',
   buff_whitescale_brew: 'WhitescaleBrew.jpg',
   dwarven_warhammer: 'DwarvenWarhammer.jpg',

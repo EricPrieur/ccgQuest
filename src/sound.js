@@ -571,6 +571,31 @@ export const SOUND_MAP = {
   monster_chew_02:           'Monster/monster_chew_02', // Gnoll Bite + Giant Hyena
   monster_demon_screech_01:  'Monster/monster_demon_screech_01',
   monster_scream_01:         'Monster/monster_scream_01',
+  // The four Chapter 3 Underdark hunting fights each get their own fight-start
+  // cue, one alias per monster so the codex Sounds tab lists them by name.
+  // Audition there to swap the sample under any of them.
+  //
+  // Carrion Crawler — the head rears up out of the dark and shrieks.
+  crawler_scream:            'Monster/monster_scream_01',
+  // Umber Hulk — no shriek; a breathy rumble as something the size of a cart
+  // stops chewing rock and turns around. Sits under the reptilian hisses in
+  // pitch so the hulk reads as the heaviest thing in the chapter.
+  umber_hulk_growl:          'Monster/monster_growl_breathy_01',
+  // Roper — the "stalagmite" you walked past opens and draws a long wet
+  // breath. Deliberately not a scream: the horror is that it was never stone.
+  roper_breath:              'Monster/monster_breath_deep_01',
+  // Drow Warparty — the only humanoid ambush of the four, so it gets the one
+  // humanoid voice in the pack: a war cry as the crossbows come up. Distinct
+  // from The Assassin's male_warrior_hit_01 so the rank-and-file and the
+  // named drow don't sound like the same encounter.
+  drow_warcry:               'Misc/human_scream_01',
+  // Ancients Guardians (Silverwood circle) — wood under load. Fires three
+  // staggered times at fight start (one snap per Ancient standing in the ring,
+  // see playAncientsGuardiansBurst) and once, on its own, every time an Ancient
+  // of War falls. The boss body is invulnerable and never dies, so this cue
+  // belongs to the summons: the fight ENDS on a branch snap rather than a
+  // boss death rattle.
+  branch_snap:               'Misc/branch_snap_01',
   // Sahuagin Sentinel + Priest — same cave-monster scream bookends
   // both fights (start + end).
   sahuagin_scream:       'Monster/sahuagin_scream_01',
@@ -701,6 +726,13 @@ export const SOUND_MAP = {
   // the study fight). Same buff swell as the level-up screen so the
   // "you got a new ability" beat reads consistently across UI cues.
   power_grant:     'Magic/buff_powerup_02',
+  // Companion Upgraded screen — a short orchestral victory swell. Lives in the
+  // Music folder (it is a stinger, not a bed) and was previously listed ONLY in
+  // SOUND_PACKS, which means any caller referencing it would have played
+  // nothing: playSound resolves through SOUND_MAP. Bigger than the buff_powerup
+  // cue the level-up screen uses on purpose — the party growing a tier is a
+  // rarer, larger beat than a level.
+  companion_upgrade: 'Music/music_victory_orchestra_01',
   // Heavy seal-breaking impact — fired at the climax of the bedroom
   // trap-door dialog when the apprentice reads the symbols and the
   // ward gives way. Same alias is reusable for any future "weight

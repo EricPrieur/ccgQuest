@@ -3828,14 +3828,20 @@ export function createTrueshotBarrage() {
   return new Card({
     id: 'trueshot_barrage',
     name: 'Trueshot Barrage',
-    description: 'Recharge a Card ->\nDeal 6 True Damage 3 times.',
-    shortDesc: 'R Card->6 True\nx3',
+    description: 'Recharge a Card ->\nDeal 5 True Damage 3 times.',
+    shortDesc: 'R Card->5 True\nx3',
     subtype: 'ability',
     subtype2: 'ranged',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('trueshot_barrage', 6, TargetType.SINGLE_ENEMY),
+      // 5 per shot, not 6. The grid says 18 True Damage (x1.3 = 23.4) sits about
+      // right against a T3 rare plus a second-card cost — but the grid prices the
+      // BASE, and every per-shot rider (Heroism, Rage, the Eye, Elemental Weapon)
+      // lands three times on this card, so the real output ran far past anything
+      // else in the pool. 15 base keeps it the ranger's biggest single button
+      // without making every other tier-3 pick wrong.
+      new CardEffect('trueshot_barrage', 5, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
     characterClass: ['ranger'], tier: 3, rarity: 'rare',
@@ -6676,12 +6682,13 @@ export function createFrenzyBloodVial() {
   });
 }
 
-// Boarhide Bandage — Uncommon Tier-1 Item. A field dressing: Heal 2 and apply
-// Regen 2 (heal-over-time), then the card is discarded.
+// Boarhide Bandages — Uncommon Tier-1 Item. A field dressing: Heal 2 and apply
+// Regen 2 (heal-over-time), then the card is discarded. Name is plural to match
+// Bandages; the id stays singular so saves and loot tables don't break.
 export function createBoarhideBandage() {
   return new Card({
     id: 'boarhide_bandage',
-    name: 'Boarhide Bandage',
+    name: 'Boarhide Bandages',
     description: 'Heal 2, Regen 2. Discard.',
     shortDesc: 'Heal 2, Regen 2\nDiscard',
     subtype: 'item',
@@ -7099,26 +7106,129 @@ export function createBandages() {
   });
 }
 
-// Cured Bandage — common Tier 2 patch-up that also strips an Ailment
-// off the target. Same Discard cost + SINGLE_ALLY targeting as
-// Bandages so it slots in cleanly alongside it (Mithril Remedies
-// stocks both).
+// Cured Bandages — common Tier 2 patch-up that also strips Ailments off the
+// target. Same Discard cost + SINGLE_ALLY targeting as Bandages so it slots in
+// cleanly alongside it (Mithril Remedies stocks both). Clears 2 ailments: by
+// tier 2 the stacking ailments (Poison + Drow Poison, Weak + Shock) arrive in
+// pairs, and a one-ailment cleanse was losing the race.
 export function createCuredBandage() {
   return new Card({
     id: 'cured_bandage',
-    name: 'Cured Bandage',
-    description: 'Heal 1 Ailment, Heal 4. Discard.',
-    shortDesc: '1 Ail+Heal 4, D',
+    name: 'Cured Bandages',
+    description: 'Heal 2 Ailments, Heal 4. Discard.',
+    shortDesc: '2 Ail+Heal 4, D',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.DISCARD,
     effects: [
-      new CardEffect('heal_n_negative_effects', 1, TargetType.SINGLE_ALLY),
+      new CardEffect('heal_n_negative_effects', 2, TargetType.SINGLE_ALLY),
       new CardEffect('heal', 4, TargetType.SINGLE_ALLY),
     ],
     rarity: 'common',
     tier: 2,
     gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Stonebound Bandages — uncommon Tier 2 item. Dwarf field dressing: strips of
+// linen packed with the same binding grit that goes into mortar, so the wrap
+// sets hard over the wound. Heal 4 on play, same Discard cost and shape as
+// Bandages — the uncommon rung is bought by the rider, not the heal.
+//
+// On Discard: Gain Shield fires from the DISCARD COST of its own play (a
+// DISCARD-cost card routes through placeByCost → onCardDiscarded), so playing
+// it normally reads as "Heal 4, Gain Shield". The reason it is worded as a
+// rider rather than folded into the effects list is that it ALSO pays out when
+// the card is discarded against your will — deck damage, a monster's forced
+// discard, or spent as another card's Recharge-a-Card cost. That is the real
+// uncommon: the card is never dead weight in hand.
+//
+// SELF on the heal (not SINGLE_ALLY like Bandages) because the Shield lands on
+// the player regardless — splitting them across two bodies reads as a bug.
+export function createStoneboundBandages() {
+  return new Card({
+    id: 'stonebound_bandages',
+    name: 'Stonebound Bandages',
+    description: 'Heal 4. Discard.\nOn Discard: Gain Shield.',
+    shortDesc: 'Heal 4, D\nOn Discard: +Shield',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('heal', 4, TargetType.SELF),
+      new CardEffect('on_discard_shield', 1, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 2,
+    // Shield is a bare keyword on the card face, so only the heal scales.
+    gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Fungal Bandages — Tier 3 uncommon item. Deep-gnome field dressing: cave moss
+// and shelf fungus packed into a wrap. It knits the wound, and what it leaves
+// on your hands goes onto the next thing you hit — the same Vial of Poison buff
+// the rogue's vial grants, so it shares the badge and the on-attack hook rather
+// than inventing a parallel one.
+//
+// The flavour line is load-bearing: `roll_underdark_mushroom` gives a 25% shot
+// at one cap off the underdark_mushrooms table (Bluecap / Barrelstalk / Cave
+// Shroom), landing in hand if there is room and the recharge pile otherwise.
+// That is the uncommon rung — a Discard-cost Heal 4 is a common's worth of card
+// on its own.
+//
+// SELF throughout, like the other two bandage items: the poison buff and the
+// mushroom both land on the player whatever target were picked.
+export function createFungalBandages() {
+  return new Card({
+    id: 'fungal_bandages',
+    name: 'Fungal Bandages',
+    description: 'Heal 4 and next attack deal Poison, Discard.\nSome parts might still be edible.',
+    shortDesc: 'Heal 4, D\nNext: +Poison\nMight be edible',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('heal', 4, TargetType.SELF),
+      new CardEffect('grant_poison_buff', 1, TargetType.SELF),
+      // value = the percent chance of one cap. Left out of gamePlusOffset so
+      // NG+ scales the heal, not the forage odds.
+      new CardEffect('roll_underdark_mushroom', 25, TargetType.SELF),
+    ],
+    rarity: 'uncommon',
+    tier: 3,
+    gamePlusOffset: { heal: 2 },
+  });
+}
+
+// Crystalwater Flask — Tier 3 common beverage. Meltwater off the cave crystal,
+// which is why it reads the deck as well as the wound: a mouthful is nothing,
+// but the clarity lasts. Fills the BEVERAGE slot, so it stacks with any meal.
+export function createCrystalwaterFlask() {
+  return new Card({
+    id: 'crystalwater_flask',
+    name: 'Crystalwater Flask',
+    description: 'Consume -> Heal 1, Scry 3.\nBeverage: Heal 1 for 3 turns.',
+    shortDesc: 'C->Heal 1, Scry 3\nBev: Heal 1/3T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('scry_pick', 3, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'beverage',
+      name: 'Crystalwater Flask',
+      effectType: 'heal',
+      value: 1,
+      turnsPerCombat: 3,
+      description: 'Heal 1 each turn for 3 turns (each combat, until rest)',
+    },
+    rarity: 'common',
+    tier: 3,
+    gamePlusOffset: { heal: 1, scry_pick: 1 },
   });
 }
 
@@ -7368,7 +7478,7 @@ export function createQuiver() {
       new CardEffect('on_recharge_heroism', 1, TargetType.SELF),
       new CardEffect('on_recharge_heroism_ranged', 1, TargetType.SELF),
     ],
-    rarity: 'uncommon',
+    rarity: 'common',
     tier: 1,
     unplayable: true,
     // The description states its stacks as bare keywords (house style for a
@@ -7429,6 +7539,26 @@ export function createPotionOfGreaterHealing() {
     rarity: 'rare',
     tier: 2,
     gamePlusOffset: { heal: 4 },
+  });
+}
+
+// Potion of Superior Healing — Tier 3 rare consumable. Third rung of the
+// Minor / Greater / Superior ladder, same Consume-and-done shape, just the
+// Underdark-tier number. All three sit on their tier's common pool, each one
+// tier down weighted lower than the last.
+export function createPotionOfSuperiorHealing() {
+  return new Card({
+    id: 'potion_of_superior_healing',
+    name: 'Potion of Superior Healing',
+    description: 'Consume -> Heal 13.',
+    shortDesc: 'C->Heal 13',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [new CardEffect('heal', 13, TargetType.SELF)],
+    rarity: 'rare',
+    tier: 3,
+    gamePlusOffset: { heal: 6 },
   });
 }
 
@@ -9082,6 +9212,42 @@ export function createMephitSkinGloves() {
   });
 }
 
+/// Mephit Skin Bandages — common Tier 2 item. The mephit-hide family's medical
+// entry: wadding cured the same way the sandals and gloves are, so it smothers
+// what is burning you and leaves the heat on your hands rather than throwing it
+// away. Douse + Heal is the defensive half; the Ignite is what makes it a magma
+// card rather than a reskinned bandage.
+//
+// SELF throughout, unlike Bandages / Cured Bandages (SINGLE_ALLY): the douse and
+// the Ignite both resolve on the caster no matter which target is picked, so
+// letting the heal wander to an ally would read as a bug.
+//
+// The douse reuses `if_burning_heal_fire`, which despite the name is an
+// unconditional "strip up to N Fire" — it no-ops at 0 Fire, which is exactly
+// "Douse 4 Fire". Reusing it also keeps the NG+ description rewriter working,
+// since DESC_PATTERNS already maps that effect to /Douse (\d+) Fire/.
+export function createMephitSkinBandages() {
+  return new Card({
+    id: 'mephit_skin_bandages',
+    name: 'Mephit Skin Bandages',
+    description: 'Douse 4 Fire, Heal 3, Gain Ignite. Discard.',
+    shortDesc: 'Douse 4 Fire\nHeal 3, +Ignite, D',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.DISCARD,
+    effects: [
+      new CardEffect('if_burning_heal_fire', 4, TargetType.SELF),
+      new CardEffect('heal', 3, TargetType.SELF),
+      new CardEffect('gain_ignite', 1, TargetType.SELF),
+    ],
+    rarity: 'common',
+    tier: 2,
+    // Ignite is a bare keyword on the card face (no number), so it stays out of
+    // the offset — only the douse and the heal scale.
+    gamePlusOffset: { if_burning_heal_fire: 2, heal: 2 },
+  });
+}
+
 // Magma Tablet — uncommon scroll. Stays in hand and pings 2 Ignite
 // onto the player every turn it's held (same shape as the Apprentice's
 // Spellbook's Heroism ping).
@@ -9241,13 +9407,16 @@ export function createValdrisaCardTier3() {
   return new Card({
     id: 'valdrisa_card_3',
     name: 'Valdrisa Emberforge',
-    description: 'Recharge a card ->\nCall Valdrisa to the battle!\nDraw.\nCalled: Heal 3 (optional).',
-    shortDesc: 'Call Valdrisa, Draw\nCalled: Heal 3',
+    description: 'Recharge a card ->\nCall Valdrisa to the battle!\nDraw.\nCalled: Heal 4 (optional).',
+    shortDesc: 'Call Valdrisa, Draw\nCalled: Heal 4',
     subtype: 'allies',
     cardType: CardType.CREATURE,
     costType: CostType.RECHARGE,
     effects: (() => {
-      const callHeal = new CardEffect('heal', 3, TargetType.SINGLE_ALLY);
+      // Heal 4 to match the tier-3 creature's own Turn End: Heal 4 — the two
+      // numbers are the same smith doing the same thing, so a 3 here read as a
+      // typo. (See createValdrisaTier3Creature's endTurnHealRandomAlly.)
+      const callHeal = new CardEffect('heal', 4, TargetType.SINGLE_ALLY);
       callHeal.optional = true;
       return [
         callHeal,
@@ -9854,6 +10023,46 @@ export function createDwarvenBrew() {
     },
     tier: 2,
     // +1 Consume heal + +1 Consume shield per offset.
+    gamePlusOffset: { heal: 1, gain_shield: 1 },
+  });
+}
+
+/// Stonebread — common Tier 2 meal. Dwarven marching bread: ground with rock
+// flour, baked once and then baked again, and it keeps for a decade because
+// nothing alive wants it. Sits in the MEAL slot, so it stacks with Dwarven
+// Brew's beverage rather than replacing it — the tavern sells you both halves
+// of a dwarf's idea of a meal.
+//
+// Consume + Recharge 1: the second card cost is what buys the Shield on top of
+// the heal (see docs/loot-budget.md §2). Compare Dwarven Brew, which is Consume
+// with no second cost and pays out one less of each.
+export function createStonebread() {
+  return new Card({
+    id: 'stonebread',
+    name: 'Stonebread',
+    description: 'Consume + Recharge 1 -> Heal 3, Gain 2 Shield.\nMeal: Gain Shield for 3 turns.',
+    shortDesc: 'C+R1->Heal 3\n+2 Shield\nMeal: +Shield/3T',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 3, TargetType.SELF),
+      new CardEffect('gain_shield', 2, TargetType.SELF),
+      new CardEffect('recharge_extra', 1, TargetType.SELF),
+      new CardEffect('grant_provision', 0, TargetType.SELF),
+    ],
+    provision: {
+      slot: 'meal',
+      name: 'Stonebread',
+      effectType: 'gain_shield',
+      value: 1,
+      turnsPerCombat: 3,
+      description: '+1 Shield each turn for 3 turns (each combat, until rest)',
+    },
+    rarity: 'common',
+    tier: 2,
+    // On-play only. The meal tick is a bare keyword ("Gain Shield") on the card
+    // face, so it stays flat in NG+.
     gamePlusOffset: { heal: 1, gain_shield: 1 },
   });
 }
@@ -10980,11 +11189,15 @@ export function createStaffOfFungi() {
 // Ancient of War — a 2x2 Sentinel with 5 Armor over 10 HP. Killing one is the
 // point of the fight, and killing one is also the problem: the wood puts the
 // pieces back up as a spray of smaller Treants.
+// ENEMY Ancient of War — the three bodies of the Ancients Guardians fight.
+// The player's Force of Nature summon is a SEPARATE, smaller creature
+// (createPlayerAncientOfWarCreature, 3/10 behind 1 Armor), so the numbers
+// here only ever face the party.
 export function createAncientOfWarCreature() {
   const c = new Creature({
     name: 'Ancient of War',
     attack: 5,
-    maxHp: 15,
+    maxHp: 18,
     armor: 5,
     // Sunder rider instead of Sentinel: the Ancients don't body-block for the
     // wood, they grind your guard down. The stack lands BEFORE the swing
@@ -11118,17 +11331,25 @@ export function createCarapaceBuckler() {
 // standing rider that laces every attack you make this fight with 1 Poison.
 // The rider rides the shared consumePoisonBuff choke point, so it works on
 // every attack shape without touching the individual damage cases.
+// Crawler Skullcap — uncommon T3 heavy armor, built on the Boarhide Bracers
+// shape: line 1 is a PASSIVE while the card sits in your hand, line 2 is what
+// it does when you play it reactively as a Defense card.
+//
+// The poison line used to be a `grant_poison_attacks` EFFECT, which meant it
+// only fired when you DEFENDED with the helmet — so holding it and attacking
+// did nothing, contradicting both the card's own text and its sibling. It is
+// now read out of the hand by consumePoisonBuff (the single-target attack
+// choke point), exactly the way getDamageModifier reads Boarhide Bracers.
 export function createCrawlerSkullcap() {
   return new Card({
     id: 'crawler_skullcap',
     name: 'Crawler Skullcap',
-    description: 'Attacks also apply 1 Poison.\nBlock 5, Draw.',
-    shortDesc: 'Attacks +1 Poison\nBlock 5, Draw',
+    description: 'In Hand: Attacks also apply 1 Poison.\nDefense: Block 5, Draw.',
+    shortDesc: 'In Hand: Atk +1 Poison\nDef: Block 5, Draw',
     subtype: 'heavy_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('grant_poison_attacks', 1, TargetType.SELF),
       new CardEffect('block', 5, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
@@ -11202,6 +11423,11 @@ export function createCarrionSatchel() {
     tier: 3,
     rarity: 'rare',
     gamePlusOffset: { create_random_poisons: 1 },
+    // Side preview — the three poisons on the underdark_poisons table, in table
+    // order (Vial 1.0 / Extract 0.5 / Drow Sleep 0.25). Same idiom as Olbrim's
+    // Bag of Herbs: "Create 2-3 Poisons" says nothing about WHICH, so the minis
+    // beside the card are the only place the player can read the pool.
+    previewCards: [createVialOfPoison(), createToxicFrogExtract(), createDrowSleepPoison()],
   });
 }
 

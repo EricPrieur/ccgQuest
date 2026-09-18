@@ -74,12 +74,13 @@ import {
   createWrath, createRegrowth, createRegrowthLegacy, createFeralSwipe, createFeralSwipeLegacy,
   createSpearThrow, createIcyBreath, createShieldBashEnemy, createZhostsBuckler,
   createWhiteClaw, createGreatclub, createQuarterstaff, createAle,
-  createTravelRations, createBandages, createCuredBandage, createTravelersClothing, createSack,
+  createTravelRations, createBandages, createCuredBandage, createStoneboundBandages,
+  createFungalBandages, createCrystalwaterFlask, createTravelersClothing, createSack,
   createRatOnAStick,
   createSteelAxe, createSteelMace, createSteelSword, createSteelGreataxe,
   createBow, createSteelDagger,
   createStuddedLeatherArmor, createRingMail,
-  createScrollOfPotency, createApprenticesSpellbook, createMinorHealingPotion, createPotionOfGreaterHealing, createWandOfFire,
+  createScrollOfPotency, createApprenticesSpellbook, createMinorHealingPotion, createPotionOfGreaterHealing, createPotionOfSuperiorHealing, createWandOfFire,
   createTridentThrow, createTridentThrust, createScaleArmor,
   createBloodInTheWater, createBarnacleEncrustedPlateEnemy,
   createBarnacleEncrustedPlate, createBarnacle,
@@ -99,14 +100,14 @@ import {
   createRuneforgedBuckler, createDwarvenTowerShield,
   createTailSwipe, createFireBreath, createMoltenBite, createMoltenScaleArmor,
   createMagmaMephitSummonCard, createMagmaRock,
-  createMephitSkinSandals, createMephitSkinGloves, createMagmaTablet,
+  createMephitSkinSandals, createMephitSkinGloves, createMephitSkinBandages, createMagmaTablet,
   createDefensiveFormation, createMimicBite, createMimicTongue, createBoneStorm,
   createGoblinRocketBoots, createGoblinSapperCharges, createOgreMaul,
   createGoblinSpikeTrap, createGoblinWarBanner, createSpikedGoblinHelmet, createGoblinBossWhistle, createBagOfStolenTeeth,
   createRingOfRegeneration, createTrollSkinJacket, createTrollBloodVial, createSeveredTrollArm, createLongTrollTeeth,
   createThorbCard, createThorbUpgradedCard, createThorbTier3Card,
   createRaenaCardTier3, createValdrisaCardTier3,
-  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createWhitescaleBrew, createDwarvenScoutCard, createDwarvenCrossbowmanCard, createDwarvenBattleClericCard, createWhiteWolfCloak, createWolfFang,
+  createDwarvenCrossbow, createDwarvenGreaves, createDwarvenWarhammer, createMinersPickaxe, createDwarvenBrew, createStonebread, createWhitescaleBrew, createDwarvenScoutCard, createDwarvenCrossbowmanCard, createDwarvenBattleClericCard, createWhiteWolfCloak, createWolfFang,
   createCopperOre, createSilverOre, createGoldOre, createMithrilOre, createAdamantineOre,
   createDrowParryingDagger, createAdamantineRapier, createAdamantineChainShirt, createShieldOfLastHope, createSymbolOfLastHope,
   createDarkwoodHandCrossbow, createPiwafwi, createDrowSleepPoison, createDrowSleepPoisonEnemy,
@@ -178,7 +179,7 @@ import {
   createSummonStorm, createAvatarOfTheWild, createPlayerAncientOfWarCreature,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createUnderdarkGnollEntranceMap, createUnderdarkGnollEntrance02Map, createUnderdarkGnollEntrance03Map, createUnderdarkSouthXRoad04Map, createUnderdarkSouthPath05Map, createUnderdarkSouthPath06Map, createUnderdarkSouthPath07Map, createUnderdarkSouthPath08Map, createUnderdarkSouthPath09Map, createUnderdarkSouthPath10Map, createUnderdarkSouthPath11Map, createUnderdarkSouthPath12Map, createUnderdarkSouthPath13Map, createUnderdarkEastPath14Map, createUnderdarkEastPath15Map, createUnderdarkEastPath16Map, createUnderdarkEastPath17Map, createUnderdarkEastPath18Map, createUnderdarkEastPath19Map, createUnderdarkGnomeVillage20Map, createUnderdarkGnomeVillage21Map, createUnderdarkGnomeVillage22Map, createCornisHouseMap, createBorrowedHouseMap, createUnderdarkEastPath23Map, createUnderdarkEastPath24Map, createUnderdarkMushroomCircle25Map, createHallOfCallarduranMap, createAncientDruidCircleMap, createKarEdenPath01Map, createKarEdenPath02Map, createKarEdenPath03Map, createUnderdarkNorthPath26Map, createUnderdarkNorthPath27Map, createUnderdarkNorthPath28Map, createUnderdarkNorthPathLeft29Map, createUnderdarkNorthPathLeft30Map, createUnderdarkNorthPathLeft31Map, createUnderdarkNorthPathLeft32Map, createUnderdarkNorthPathMiddle33Map, createUnderdarkNorthPathMiddle34Map, createUnderdarkNorthPathMiddle35Map, createUnderdarkNorthPathMiddle36Map, createUnderdarkNorthPathRight37Map, createUnderdarkNorthPathRight38Map, createUnderdarkNorthPathRight39Map, createUnderdarkNorthPathRight40Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createUnderdarkGnollEntranceMap, createUnderdarkDwarvenOutpostMap, createUnderdarkGnollEntrance02Map, createUnderdarkGnollEntrance03Map, createUnderdarkSouthXRoad04Map, createUnderdarkSouthPath05Map, createUnderdarkSouthPath06Map, createUnderdarkSouthPath07Map, createUnderdarkSouthPath08Map, createUnderdarkSouthPath09Map, createUnderdarkSouthPath10Map, createUnderdarkSouthPath11Map, createUnderdarkSouthPath12Map, createUnderdarkSouthPath13Map, createUnderdarkEastPath14Map, createUnderdarkEastPath15Map, createUnderdarkEastPath16Map, createUnderdarkEastPath17Map, createUnderdarkEastPath18Map, createUnderdarkEastPath19Map, createUnderdarkGnomeVillage20Map, createUnderdarkGnomeVillage21Map, createUnderdarkGnomeVillage22Map, createCornisHouseMap, createBorrowedHouseMap, createUnderdarkEastPath23Map, createUnderdarkEastPath24Map, createUnderdarkMushroomCircle25Map, createHallOfCallarduranMap, createAncientDruidCircleMap, createKarEdenPath01Map, createKarEdenPath02Map, createKarEdenPath03Map, createUnderdarkNorthPath26Map, createUnderdarkNorthPath27Map, createUnderdarkNorthPath28Map, createUnderdarkNorthPathLeft29Map, createUnderdarkNorthPathLeft30Map, createUnderdarkNorthPathLeft31Map, createUnderdarkNorthPathLeft32Map, createUnderdarkNorthPathMiddle33Map, createUnderdarkNorthPathMiddle34Map, createUnderdarkNorthPathMiddle35Map, createUnderdarkNorthPathMiddle36Map, createUnderdarkNorthPathRight37Map, createUnderdarkNorthPathRight38Map, createUnderdarkNorthPathRight39Map, createUnderdarkNorthPathRight40Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
 import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, EncounterText, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createMushroomCircleArrivalEncounter, createMushroomCircleEncounter, createUmberHulkEncounter, createRoperEncounter, createCarrionCrawlerEncounter, createDrowWarpartyEncounter, createPsilofyrAltarEncounter, psilofyrOfferLabel, createGnomeMerchantsEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createGnollPackLordEncounter, createGnollFangOfYeenoghuEncounter, createCorruptedShrineEncounter, createCragCatEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
@@ -364,7 +365,21 @@ const UNDERDARK_NO_SPAWN_MAPS = new Set([
   // rather than luck. Arriving also wipes the accumulated climb, so leaving the
   // crossroad starts the count fresh.
   'underdark_south_xroad_4',
+  // The Dwarven Guard Outpost's interior. It is not in UNDERDARK_MAPS either, so
+  // it could never roll — listing it here is what makes arriving RESET the
+  // accumulated climb, so stepping out of the safe room starts the count fresh
+  // rather than resuming a chance that had built to 40% on the way in.
+  'underdark_dwarven_outpost',
 ]);
+// Individual nodes that never roll, even on a map that otherwise does. The
+// `!node.encounterId` guard at the roll site covers nodes with their own
+// encounter; this covers the ones without.
+//
+// ug_outpost is the outpost door on the entrance map: a pure teleporter into the
+// safe room. The roll runs EARLIER in arriveAtNode than the teleport branch, so
+// without this an ambush could land on the party in the doorway of the one place
+// in the chapter that is supposed to be safe.
+const UNDERDARK_NO_SPAWN_NODES = new Set(['ug_outpost']);
 const UNDERDARK_ENC_STEP = 0.02;
 let underdarkEncounterChance = UNDERDARK_ENC_STEP;
 // Glowstone Fountain blessing — subtracted from the per-node step until the
@@ -766,7 +781,15 @@ let _underdarkGnollUnlocked = false;
 // when the party descends onto ug_entry from the surface. Registered in
 // RUN_FLAGS with rest:true, so setWellRested re-arms it and it persists across
 // saves without a line in save.js.
-let _underdarkShortRestUsed = false;
+// Underdark Threshold — the one-shot dwarf-road dialog fired the first time the
+// party descends onto ug_entry (Thorb and Valdrisa read the stonework and reason
+// that an entry this old has a guardhouse near it). NOT a rest flag: it never
+// clears, so later descents drop straight onto the map.
+let _underdarkThresholdSeen = false;
+// Dwarven Guard Outpost — set when Thorb opens the hidden door at the Deep Fork
+// (the `underdark_deep_fork` beat). Unlocks the ug_outpost node west of the fork
+// and keeps it unlocked across a reload via hydrateMapFromGlobalState. One-shot.
+let _underdarkOutpostFound = false;
 // South Crossroad breather — one rest (Heal 8) per long rest at usx_xroad, the
 // neutral junction nothing in the Underdark can afford to hold. Same RUN_FLAGS
 // rest:true treatment as the Threshold breather above.
@@ -1162,6 +1185,10 @@ const EFFECT_DESC_PATTERNS = {
   grant_obsidian_buff: [/\+(\d+)\s+vs\s+Armor/i, /(\d+)\s+vs\s+Armor/i],
   on_discard: [/Draw\s+(\d+)/i],
   on_discard_draw: [/Draw\s+(\d+)/i],
+  // Stonebound Bandages. The shipped card wears a bare "Gain Shield" (no number)
+  // so nothing matches today; the patterns are here for any future rider that
+  // spells the amount out.
+  on_discard_shield: [/Gain\s+(\d+)\s+Shield/i, /\+(\d+)\s+Shield/i],
   // Dragon / Gnikan / dwarven weapon coverage. Patterns lean on the
   // surrounding noun so the swap targets the right number even when
   // multiple digits live in the description.
@@ -2919,9 +2946,9 @@ const RUN_FLAGS = {
   underdarkGnollUnlocked: { g: () => _underdarkGnollUnlocked, s: v => { _underdarkGnollUnlocked = v; } },
   bottomlessLakeRevealed: { g: () => _bottomlessLakeRevealed, s: v => { _bottomlessLakeRevealed = v; } },
   quietPoolUsed: { g: () => _quietPoolUsed, s: v => { _quietPoolUsed = v; } },
-  // rest:true — clearRestRunFlags re-arms the Threshold breather on a long rest,
-  // so this needs no explicit line in setWellRested.
-  underdarkShortRestUsed: { g: () => _underdarkShortRestUsed, s: v => { _underdarkShortRestUsed = v; }, rest: true },
+  // No rest:true — the Threshold dialog is a one-shot story beat, not a rest.
+  underdarkThresholdSeen: { g: () => _underdarkThresholdSeen, s: v => { _underdarkThresholdSeen = v; } },
+  underdarkOutpostFound: { g: () => _underdarkOutpostFound, s: v => { _underdarkOutpostFound = v; } },
   underdarkXroadRestUsed: { g: () => _underdarkXroadRestUsed, s: v => { _underdarkXroadRestUsed = v; }, rest: true },
   mushroomCircleUsed: { g: () => _mushroomCircleUsed, s: v => { _mushroomCircleUsed = v; } },
   karEdenRoadUnlocked: { g: () => _karEdenRoadUnlocked, s: v => { _karEdenRoadUnlocked = v; } },
@@ -4915,7 +4942,9 @@ const CARD_REGISTRY = {
   white_claw: createWhiteClaw, zhosts_buckler: createZhostsBuckler,
   // Shop cards
   travel_rations: createTravelRations, bandages: createBandages,
-  cured_bandage: createCuredBandage, rat_on_a_stick: createRatOnAStick,
+  cured_bandage: createCuredBandage, stonebound_bandages: createStoneboundBandages,
+  fungal_bandages: createFungalBandages, crystalwater_flask: createCrystalwaterFlask,
+  rat_on_a_stick: createRatOnAStick,
   travelers_clothing: createTravelersClothing, sack: createSack,
   steel_axe: createSteelAxe, steel_mace: createSteelMace,
   steel_sword: createSteelSword, steel_greataxe: createSteelGreataxe,
@@ -4925,11 +4954,13 @@ const CARD_REGISTRY = {
   scroll_of_potency: createScrollOfPotency, apprentices_spellbook: createApprenticesSpellbook,
   minor_healing_potion: createMinorHealingPotion,
   potion_of_greater_healing: createPotionOfGreaterHealing,
+  potion_of_superior_healing: createPotionOfSuperiorHealing,
   wand_of_fire: createWandOfFire,
   frost_drake_scale: createFrostDrakeScale,
   magma_rock: createMagmaRock,
   mephit_skin_sandals: createMephitSkinSandals,
   mephit_skin_gloves: createMephitSkinGloves,
+  mephit_skin_bandages: createMephitSkinBandages,
   magma_tablet: createMagmaTablet,
   greatclub: createGreatclub, quarterstaff: createQuarterstaff, ale: createAle,
   thorb_card: createThorbCard, thorb_card_2: createThorbUpgradedCard, thorb_card_3: createThorbTier3Card,
@@ -4941,6 +4972,7 @@ const CARD_REGISTRY = {
   chain_shirt: createChainShirt, ironforge_chainmail: createIronforgeChainmail,
   dwarven_throwing_axe: createDwarvenThrowingAxe,
   dwarven_greaves: createDwarvenGreaves, dwarven_brew: createDwarvenBrew, whitescale_brew: createWhitescaleBrew,
+  stonebread: createStonebread,
   dwarven_warhammer: createDwarvenWarhammer, miners_pickaxe: createMinersPickaxe,
   copper_ore: createCopperOre, silver_ore: createSilverOre, gold_ore: createGoldOre, mithril_ore: createMithrilOre,
   adamantine_ore: createAdamantineOre,
@@ -5068,18 +5100,23 @@ const LOOT_TABLES = {
     { creator: createPetSlimeCard, weight: 0.25 },
     { creator: createSlimeJar, weight: 0.5 },
   ],
-  // Abandoned Camp pool — drawn 2-distinct (without replacement). Codex shows
-  // single-pick odds; resolveSearchCamp does the without-replacement sampling.
+  // Abandoned Camp pool — the *gear* half of the camp. resolveSearchCamp hands
+  // out exactly two cards: one weighted pick from here, plus one guaranteed
+  // pick from tier1_common. Food and potions were pulled out of this table
+  // because tier1_common now covers that half outright — leaving them here
+  // would have let the camp roll supplies twice and gear zero times.
+  // Flat 1.0 across the board: with food gone the seven survivors are all
+  // tier-1 kit of about the same worth, so the house rarity weights would
+  // only add noise. An even 1-in-7 is also what a scavenged camp should
+  // feel like — you get whichever adventurer's gear you happened to reach.
   abandoned_camp_loot: [
-    { creator: createBadRations,            weight: 1.0 },
     { creator: createQuiver,                weight: 1.0 },
-    { creator: createTorch,                 weight: 0.5 },
-    { creator: createApprenticesSpellbook,  weight: 0.5 },
-    { creator: createSturdyBoots,           weight: 0.5 },
-    { creator: createScrollOfPotency,       weight: 0.5 },
-    { creator: createWandOfFire,            weight: 0.5 },
-    { creator: createSack,                  weight: 0.5 },
-    { creator: createMinorHealingPotion,    weight: 0.25 },
+    { creator: createTorch,                 weight: 1.0 },
+    { creator: createApprenticesSpellbook,  weight: 1.0 },
+    { creator: createSturdyBoots,           weight: 1.0 },
+    { creator: createScrollOfPotency,       weight: 1.0 },
+    { creator: createWandOfFire,            weight: 1.0 },
+    { creator: createSack,                  weight: 1.0 },
   ],
   // Prison warden gear barrel — matches the Python game's
   // `get_gear_barrel_loot()`: equal-weight random.choice across the three
@@ -5098,8 +5135,9 @@ const LOOT_TABLES = {
   // drops generic gear. Previously split into prison_warden_loot +
   // kobold_patrol_loot (same contents); collapsed into one table so
   // the codex Loot Tables tab shows a single entry.
+  // Gear only — the supply half now comes off tier1_common, which every
+  // kobold fight that pays out also carries.
   kobold_base_loot: [
-    { creator: createBadRations,    weight: 1.0 },
     { creator: createKoboldSpear,   weight: 1.0 },
     { creator: createKoboldShield,  weight: 1.0 },
     { creator: createChainShirt,    weight: 0.5 },
@@ -5268,20 +5306,30 @@ const LOOT_TABLES = {
     { creator: createObsidianStaff, weight: 0.5 },
     { creator: createObsidianSpear, weight: 0.5 },
   ],
-  // Magma Drake plaza mini-boss — guaranteed pick-one alongside the
-  // Molten Scale Armor loot card (which is rolled separately on the
-  // encounter's lootCards list). Mirrors PY loot.py:get_magma_drake_loot.
-  magma_drake_loot: [
-    { creator: createMagmaRock,         weight: 1.0 },
-    { creator: createMephitSkinSandals, weight: 0.5 },
-    { creator: createMephitSkinGloves,  weight: 0.5 },
-    { creator: createMoltenScaleRelic,  weight: 0.25 },
-    { creator: createMagmaTablet,       weight: 0.5 },
-    { creator: createMephitSkinQuiver,  weight: 0.5 },
+  // Magma creatures — ONE table for the Magma Drake plaza mini-boss and the
+  // Magma Mephit random encounter. It used to be two, and they were identical
+  // apart from the Molten Scale relic; the mephit copy had already drifted into
+  // a stale codex note claiming it dropped Magma Rock and nothing else.
+  //
+  // The two fights still pay out differently, but that lives on the ENCOUNTER,
+  // not in a duplicated table: magma_loot is in GATED_LOOT (50%), and the
+  // drake's LOOT phase sets guaranteedLoot so the mini-boss always pays.
+  magma_loot: [
+    { creator: createMagmaRock,          weight: 1.0 },
+    // The magma family's consumable. Common, so it carries the same 1.0 the
+    // Magma Rock does — the two of them are what the table pays out most of
+    // the time, with the wearable gear as the upside.
+    { creator: createMephitSkinBandages, weight: 1.0 },
+    { creator: createMephitSkinSandals,  weight: 0.5 },
+    { creator: createMephitSkinGloves,   weight: 0.5 },
+    { creator: createMoltenScaleRelic,   weight: 0.25 },
+    { creator: createMagmaTablet,        weight: 0.5 },
+    { creator: createMephitSkinQuiver,   weight: 0.5 },
   ],
   // Market Stalls salvage — pick-one dwarven gear. Equal weights,
   // matching PY loot.py:get_dwarven_market_loot.
   dwarven_market_loot: [
+    { creator: createStoneboundBandages, weight: 1.0 },
     { creator: createDwarvenCrossbow,    weight: 1.0 },
     { creator: createDwarvenTowerShield, weight: 1.0 },
     { creator: createDwarvenGreaves,     weight: 1.0 },
@@ -5296,6 +5344,7 @@ const LOOT_TABLES = {
   // plus the ore cards. Ores are unplayable recharge-fodder; Copper
   // / Silver / Gold sell full at a smith, Mithril / Adamantine can't be sold.
   tunnel_supply: [
+    { creator: createStoneboundBandages, weight: 1.0 },
     { creator: createDwarvenCrossbow,    weight: 1.0 },
     { creator: createDwarvenTowerShield, weight: 1.0 },
     { creator: createDwarvenGreaves,     weight: 1.0 },
@@ -5309,6 +5358,77 @@ const LOOT_TABLES = {
     { creator: createGoldOre,            weight: 0.25 },
     { creator: createMithrilOre,         weight: 0.10 },
     { creator: createAdamantineOre,      weight: 0.10 },
+  ],
+  // Tier 1 commons — the generic supply pool. NOT themed to any monster or
+  // place: bandages, plain food, a potion. Hung on tier-1 fights that don't
+  // already hand out a guaranteed second item, at a 20% chance (see CHANCE_LOOT),
+  // so the early game has a steady trickle of consumables rather than leaving
+  // sustain entirely to shops.
+  //
+  // Monster-flavoured consumables stay on their own tables (Barnacle with the
+  // sahuagin, Cave Shroom with the fungus, Harpy Egg Omelette with the harpies)
+  // — mixing them in here would make every kill feel the same.
+  tier1_common: [
+    { creator: createChickenLeg,         weight: 1.0 },
+    { creator: createBadRations,         weight: 1.0 },
+    { creator: createScraps,             weight: 1.0 },
+    { creator: createRatOnAStick,        weight: 1.0 },
+    { creator: createAle,                weight: 1.0 },
+    { creator: createBandages,           weight: 0.75 },
+    { creator: createTravelRations,      weight: 0.75 },
+    { creator: createMinorHealingPotion, weight: 0.50 },
+  ],
+  // Tier 2 commons — same idea one tier up. The weight ladder folds rarity and
+  // tier into one number, so a card that is both older and rarer sinks twice:
+  //
+  //   1.00  tier 2 common      the staple of the table
+  //   0.75  tier 2 uncommon
+  //   0.50  tier 2 rare        the capstone pull
+  //   0.50  tier 1 uncommon    carried forward, one step down from its 0.75
+  //                            on tier1_common — still useful at tier 2, just
+  //                            no longer the thing you hope for.
+  //
+  // Same exclusion rule as tier 1: monster- and story-flavoured supplies stay
+  // on their own tables. That keeps out Bear Fat Rations (dire bear), Cracked
+  // Marrow-Bone (gnolls), Troll Blood Vial (troll), Whitescale Brew and
+  // Frostbloom (both Tharnag-specific), and Olbrim's Bag of Herbs (his dropped
+  // satchel, a placed story beat).
+  tier2_common: [
+    { creator: createCuredBandage,           weight: 1.00 },
+    { creator: createDwarvenBrew,            weight: 1.00 },
+    { creator: createStonebread,             weight: 1.00 },
+    { creator: createStoneboundBandages,     weight: 0.75 },
+    { creator: createPotionOfGreaterHealing, weight: 0.50 },
+    { creator: createBandages,               weight: 0.50 },
+    { creator: createTravelRations,          weight: 0.50 },
+  ],
+  // Tier 3 commons — the Underdark's generic supply pool, same 20% CHANCE_LOOT
+  // gate and same weight ladder as tier 1 / tier 2:
+  //
+  //   1.00  tier 3 common       the staple of the table
+  //   0.75  tier 3 uncommon
+  //   0.50  tier 3 rare         the capstone pull
+  //   0.50  tier 2 uncommon / rare, carried forward one step down
+  //   0.25  tier 1 rare         two tiers back AND rare — the double penalty
+  //
+  // Same exclusion rule as tier 1 / 2: monster- and story-flavoured supplies
+  // stay on their own tables. That keeps out Carrion Satchel (the crawler's
+  // themed drop) and Rare Mushroom, which is a scarce CRAFTING material (the
+  // star-cut enchant) the gnome merchants stock exactly one of at a time —
+  // rolling it on every gnoll and Underdark kill would wreck that scarcity.
+  tier3_common: [
+    { creator: createBluecap,                 weight: 1.00 },
+    { creator: createCrystalwaterFlask,       weight: 1.00 },
+    { creator: createBarrelstalk,             weight: 0.75 },
+    { creator: createFungalBandages,          weight: 0.75 },
+    { creator: createPotionOfSuperiorHealing, weight: 0.50 },
+    { creator: createStoneboundBandages,      weight: 0.50 },
+    { creator: createPotionOfGreaterHealing,  weight: 0.50 },
+    // Minor Healing Potion takes the double penalty — a rare, and TWO tiers
+    // back — so it sits a full step under the tier-2 carry-forwards. It is
+    // still the rung below Greater on the same potion ladder, which is what
+    // makes finding one at tier 3 read as a leftover rather than a prize.
+    { creator: createMinorHealingPotion,      weight: 0.25 },
   ],
   // Ore-only pool — same five ores at the same weights as the Tunnels
   // Supply Cache (Copper common → Mithril / Adamantine rare). For mining /
@@ -5493,23 +5613,12 @@ const LOOT_TABLES = {
     { creator: createObsidianStaff,     weight: 0.5 },
     { creator: createObsidianSpear,     weight: 0.5 },
   ],
-  // Magma Mephit — chapter 7 volcano random encounter drop. Pick-one,
-  // gated at 50 % in the encounter loot loop. PY parity:
-  // - magma_rock common (weight 1.0)
-  // - mephit_skin_sandals uncommon (0.5)
-  // - mephit_skin_gloves uncommon (0.5)
-  // - magma_tablet uncommon (0.5)
-  // The if_burning + Ignite mechanics those gear pieces rely on are
-  // wired in resolveEffect now (gain_ignite / if_burning_heal_fire /
-  // if_burning_draw / if_burning_gain_ignite / grant_magma_tablet_buff)
-  // plus the player.ignite consume hook on the damage flow.
-  magma_mephit_loot: [
-    { creator: createMagmaRock,         weight: 1.0 },
-    { creator: createMephitSkinSandals, weight: 0.5 },
-    { creator: createMephitSkinGloves,  weight: 0.5 },
-    { creator: createMagmaTablet,       weight: 0.5 },
-    { creator: createMephitSkinQuiver,  weight: 0.5 },
-  ],
+  // (The Magma Mephit used to have its own near-identical table here. It now
+  // shares `magma_loot` with the Magma Drake — see that entry above. The
+  // if_burning + Ignite mechanics that pool's gear relies on are wired in
+  // resolveEffect: gain_ignite / if_burning_heal_fire / if_burning_draw /
+  // if_burning_gain_ignite / grant_magma_tablet_buff, plus the player.ignite
+  // consume hook on the damage flow.)
   // Kobold Drake Rider — every spawn path (volcano slopes random
   // encounter, post-rest city-side variant) shares this single table
   // with a uniform 50 % drop gate applied in the encounter loot loop.
@@ -5521,18 +5630,12 @@ const LOOT_TABLES = {
     { creator: createChainShirt,         weight: 0.5 },
     { creator: createKoboldSpear,        weight: 0.5 },
     { creator: createKoboldShield,       weight: 0.5 },
-    { creator: createBandages,           weight: 0.5 },
-    { creator: createMinorHealingPotion, weight: 0.5 },
-    { creator: createChickenLeg,         weight: 0.5 },
     { creator: createFrostDrakeScale,    weight: 1.0 },
   ],
   // Kobold Slyblade — chapter-7 upper-path random encounter drop.
   // Pick-one across utility consumables and the slyblade's themed
   // gear. Mirrors PY loot.py:get_kobold_slyblade_loot.
   kobold_slyblade_loot: [
-    { creator: createBandages,            weight: 0.5 },
-    { creator: createMinorHealingPotion,  weight: 0.5 },
-    { creator: createChickenLeg,          weight: 0.5 },
     { creator: createSlyBlade,            weight: 0.5 },
     { creator: createShadowCloak,         weight: 0.5 },
     { creator: createKoboldSmokeBomb,     weight: 1.0 },
@@ -5591,6 +5694,9 @@ LOOT_TABLES.underdark_merchant_stock.push(...mergeLootEntries(
 
 // Display names for loot tables (shown in the Codex tab + source lines).
 const LOOT_TABLE_LABELS = {
+  tier1_common: 'Tier 1 Commons',
+  tier2_common: 'Tier 2 Commons',
+  tier3_common: 'Tier 3 Commons',
   underdark_mushrooms: 'Underdark Mushrooms',
   bone_pile_loot:      'Bone Pile',
   slime_loot:          'Slime',
@@ -5613,7 +5719,7 @@ const LOOT_TABLE_LABELS = {
   obsidian_golem_loot:    'Obsidian Golem',
   obsidian_golem_loot_guaranteed: 'Obsidian Oracle',
   obsidian_slime_loot:    'Obsidian Slime',
-  magma_drake_loot:       'Magma Drake',
+  magma_loot:             'Magma Creatures',
   dwarven_market_loot:    'Market Stalls Salvage',
   tunnel_supply:          'Tunnels Supply Cache',
   ore_cache:              'Ore Vein',
@@ -5632,7 +5738,6 @@ const LOOT_TABLE_LABELS = {
   drow_warparty_loot:     'Drow Warparty',
   underdark_merchant_stock: 'Deep Gnome Merchants (rare stock)',
   drake_rider_loot:       'Kobold Drake Rider',
-  magma_mephit_loot:      'Magma Mephit',
   kobold_slyblade_loot:   'Kobold Slyblade',
   dwarven_specter_loot:   'Dwarven Specter',
   deep_kraken_loot:       'Deep Kraken Salvage',
@@ -5650,7 +5755,7 @@ const LOOT_TABLE_NOTES = {
   underdark_mushrooms: 'Harvested from the tended mushroom beds on the East Path 18 ring. Each bed is a 50% chance of one pick, once per rest.',
   bone_pile_loot:      'Dropped after defeating Bone Pile encounters.',
   slime_loot:          'Dropped after defeating Slime encounters.',
-  abandoned_camp_loot: 'Camp search picks 2 distinct items without replacement.',
+  abandoned_camp_loot: 'The gear half of a camp search — one pick here, one from Tier 1 Commons.',
   gear_barrel_loot:    'Snatched from the prison warden\'s barrel of confiscated gear.',
   kobold_base_loot:    'Shared loot pool for kobold encounters — Prison Warden body, mountain Kobold Patrols, etc.',
   giant_boar_loot:     'Dropped by the Giant Boar (Pinewood ambush). Pick-one, weighted: Boarhide Bracers or a consumable usually; the Epic Boar Tusk relic is the rare prize.',
@@ -5662,7 +5767,10 @@ const LOOT_TABLE_NOTES = {
   bone_amalgam_loot:   'Dropped after defeating the Bone Amalgam. Pick-one bone weapon.',
   wolf_pack_loot:      'Dropped after surviving the Wolf Blizzard (kill 10 wolves).',
   cave_shroom_loot:    'Foraged at the Cave River Landing — always drops 2 Cave Shrooms.',
-  tunnel_supply:       'A non-exit dead end in the Tharnag tunnels has a 50% chance to yield one item — Market Stall Salvage gear, or raw ore (Copper / Silver / Gold sell full at a smith, Mithril can\'t be sold).',
+  tunnel_supply:       'A non-exit dead end in the Tharnag tunnels has a 50% chance to yield one item — Market Stall Salvage gear (Stonebound Bandages included), or raw ore (Copper / Silver / Gold sell full at a smith, Mithril can\'t be sold).',
+  tier1_common:        'The generic tier-1 supply pool — plain food, bandages, a potion. Hung on tier-1 fights that do NOT already drop a guaranteed second item, at a 20% chance per fight (pick one by weight). Monster-flavoured consumables are deliberately NOT in here; they stay on their own tables.',
+  tier2_common:        'The generic tier-2 supply pool. Weights fold rarity and tier together: tier-2 commons at 1.0, tier-2 uncommons at 0.75, tier-2 rares and the tier-1 uncommons carried forward at 0.5. Like Tier 1 Commons, monster- and story-flavoured supplies are deliberately kept out.',
+  tier3_common:        'The generic tier-3 supply pool, rolled at 20% on the Crag Cat, every gnoll fight and the Underdark hunting encounters. Same ladder as the other two: tier-3 commons (Bluecap, Crystalwater Flask) at 1.0, tier-3 uncommons (Barrelstalk, Fungal Bandages) at 0.75, the tier-3 rare Potion of Superior Healing and the tier-2 carry-forwards (Stonebound Bandages, Potion of Greater Healing) at 0.5. Minor Healing Potion sits lowest at 0.25 — a rare AND two tiers back, so it reads as a leftover rather than a prize. Monster- and story-flavoured supplies stay on their own tables; Rare Mushroom is kept out because it is a scarce crafting material.',
   ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
   rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
@@ -5684,11 +5792,10 @@ const LOOT_TABLE_NOTES = {
   lucky_pebble_loot:      'Awarded by the River Crossing 25% bonus beat. Always a Lucky Pebble.',
   obsidian_golem_loot:    'Random labyrinth fight in the Obsidian Wastes. 50% chance to drop anything; if it drops, pick one — Rock common, Shard / Edge / Staff / Spear uncommon, Core rare (golem-only).',
   obsidian_golem_loot_guaranteed: 'Obsidian Oracle mini-boss drop. Same pool as the golem table, but guaranteed — always rolls one item alongside the Obsidian Candle.',
-  magma_drake_loot:       'Magma Drake plaza mini-boss drop. Guaranteed pick-one alongside the loot Molten Scale Armor — Magma Rock common, Mephit Skin gear / Magma Tablet uncommon, Molten Scale relic rare.',
-  dwarven_market_loot:    'Market Stalls (Obsidian Market) salvage. One-time pick-one search — equal weight across 8 dwarven items.',
+  magma_loot:             'Shared by every magma creature in the volcano — the Magma Drake plaza mini-boss and the Magma Mephit random encounter. Pick one: Magma Rock and Mephit Skin Bandages common, Mephit Skin Sandals / Gloves / Quiver and the Magma Tablet uncommon, Molten Scale relic rare. The Drake is guaranteed and also drops the Molten Scale Armor; the Mephit rolls it at 50%.',
+  dwarven_market_loot:    'Market Stalls (Obsidian Market) salvage. One-time pick-one search — equal weight across 9 dwarven items (Stonebound Bandages included).',
   obsidian_slime_loot:    'Random labyrinth fight in the Obsidian Wastes. 50% chance to drop anything; if it drops, pick one — Rock common, Shard / Edge / Staff / Spear uncommon, Slime card rare (slime-only).',
   drake_rider_loot:       'Kobold Drake Rider drop. 50% chance to drop anything; if it drops, pick one — Chain Shirt / Kobold Spear / Shield / sundries uncommon, Frost Drake Scale rare.',
-  magma_mephit_loot:      'Magma Mephit chapter-7 random encounter. 50% chance to drop a card (Magma Rock common); gold drops on every win.',
   kobold_slyblade_loot:   'Kobold Slyblade drop (Chapter 7 upper-path random encounter). 50% chance to drop anything; if it drops, pick one — slyblade themed gear + utility consumables; Smoke Bomb common.',
   dwarven_specter_loot:   'Dwarven Specter drop. 50% chance for the random upper-city specter; the throne-room Fallen King always drops. Pick one — ghostly weapon/armor + the rare Specter Ectoplasm relic.',
   deep_kraken_loot:       'The Bottomless Lake boss. You PICK 2 of the 6 — not a roll, so there are no odds. All tier-3 epics, one per gear slot (2H / item / clothing / allies / relic / simple) so every class finds two it can equip.',
@@ -5878,6 +5985,7 @@ async function loadAssets() {
     loadImage('map_east_mountain_crags_chasm_06', `${BASE}assets/Maps/EastMountainCragsChasm_06.jpg`),
     loadImage('map_east_mountain_crags_chasm_07', `${BASE}assets/Maps/EastMountainCragsChasm_07.jpg`),
     loadImage('map_underdark_gnoll_entrance', `${BASE}assets/Maps/UnderdarkGnollEntrance01.jpg`),
+    loadImage('map_dwarven_outpost', `${BASE}assets/Maps/UnderdarkGnollEntranceDwarvenOutpost43.jpg`),
     loadImage('map_underdark_gnoll_entrance_2', `${BASE}assets/Maps/UnderdarkGnollEntrance02.jpg`),
     loadImage('map_underdark_gnoll_entrance_3', `${BASE}assets/Maps/UnderdarkGnollEntrance03.jpg`),
     loadImage('map_underdark_south_xroad_4', `${BASE}assets/Maps/UnderdarkSouthXRoad04.jpg`),
@@ -6674,6 +6782,11 @@ Character._onSpellTurned = (char, status, stacks) => {
 // is genuinely ambiguous for them.
 Deck._onCardPlayed = (card, deck) => {
   if (!player || !deck || deck !== player.deck) return;
+  // Obsidian Forge on a damage-less weapon rides that card's own swing rather
+  // than adding one, so re-arm the once-per-play latch here. placeByCost is the
+  // funnel every completed play routes through and no payment path uses, so
+  // this fires exactly once per play.
+  if (card && card._obsidianForgeVsArmor > 0) card._obsidianForgeSpent = false;
   maybeDrownedLungsHeal(card);
 };
 
@@ -10331,7 +10444,10 @@ let _lastArrivalFrom = null;
 // unlocked nodes (no connection-lines drawn, moveToMapNode allows
 // non-adjacent hops). The Qualibaf city is intentionally a
 // city-grid where the player picks any shop/landmark directly.
-const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_hall', 'south_outpost']);
+// 'dwarven_outpost' is the Underdark guard outpost — one room, so it gets the
+// same treatment as Tharnag's Personal Quarters: no connection lines drawn, and
+// any spot clickable from any other.
+const CITY_FREE_MOVE_AREAS = new Set(['qualibaf', 'personal_quarters', 'artisan_hall', 'south_outpost', 'dwarven_outpost']);
 
 // Per-edge visual suppression. The connection still functions
 // (movement adjacency is honored, the player can walk between
@@ -11007,6 +11123,7 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   if (!skipEncounter && _underdarkEncArmed
       && UNDERDARK_MAPS.has(currentMap.id)
       && !UNDERDARK_NO_SPAWN_MAPS.has(currentMap.id)
+      && !UNDERDARK_NO_SPAWN_NODES.has(nodeId)
       && !node.encounterId) {
     if (Math.random() < underdarkEncounterChance) {
       // The blessing lasts exactly until something finds you.
@@ -12182,16 +12299,19 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     advanceEncounterPhase();
     return;
   }
-  // Underdark Threshold breather — offered when the party steps DOWN from the
-  // surface (fromNodeId 'c7_8') and only while the flag is unspent, so it is one
-  // dialog per long rest rather than one on every descent. Climbing back OUT is
-  // the branch below (fromNodeId !== 'c7_8'), which never reaches this.
+  // Underdark Threshold — the one-shot dwarf-road beat, fired the FIRST time the
+  // party steps DOWN from the surface (fromNodeId 'c7_8'). Pure dialog: Thorb and
+  // Valdrisa read the chisel work and conclude there is a guardhouse close by,
+  // which is what sends the party looking for somewhere safe to stop. Climbing
+  // back OUT is the branch below (fromNodeId !== 'c7_8'), which never reaches
+  // this, and the latch never clears — later descents land straight on the map.
   if (!skipEncounter && nodeId === 'ug_entry'
       && currentMap.id === 'underdark_gnoll_entrance'
       && fromNodeId === 'c7_8'
-      && !_underdarkShortRestUsed
-      && ENCOUNTER_REGISTRY.underdark_short_rest) {
-    currentEncounter = ENCOUNTER_REGISTRY.underdark_short_rest();
+      && !_underdarkThresholdSeen
+      && ENCOUNTER_REGISTRY.underdark_threshold) {
+    _underdarkThresholdSeen = true;
+    currentEncounter = ENCOUNTER_REGISTRY.underdark_threshold();
     encounterTextIndex = 0;
     encounterChoiceResult = null;
     _encounterHadCombat = false;
@@ -12209,6 +12329,29 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     // skipEncounter so the "Into the Dark" recognition dialog doesn't re-fire as
     // the party climbs back out.
     arriveAtNode('c7_8', 'ug_entry', true);
+    return;
+  }
+  // Dwarven Guard Outpost (ug_outpost) ↔ the outpost map's door (dgo_entry).
+  // Plain bidirectional teleporter once Thorb has opened the wall; the
+  // fromNodeId guards stop the immediate bounce-back on arrival from the pair.
+  if (!skipEncounter && nodeId === 'ug_outpost'
+      && currentMap.id === 'underdark_gnoll_entrance'
+      && fromNodeId !== 'dgo_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('underdark_dwarven_outpost', createUnderdarkDwarvenOutpostMap);
+    visitedNodes.add('dgo_entry');
+    currentMap.currentNodeId = 'dgo_entry';
+    arriveAtNode('dgo_entry', 'ug_outpost');
+    return;
+  }
+  if (!skipEncounter && nodeId === 'dgo_entry'
+      && currentMap.id === 'underdark_dwarven_outpost'
+      && fromNodeId !== 'ug_outpost') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('underdark_gnoll_entrance', createUnderdarkGnollEntranceMap);
+    visitedNodes.add('ug_outpost');
+    currentMap.currentNodeId = 'ug_outpost';
+    arriveAtNode('ug_outpost', 'dgo_entry');
     return;
   }
   // The Deepening Way (ug_8) ↔ second Underdark map threshold (ud2_entry). Plain
@@ -15733,6 +15876,11 @@ function handleMapClick(x, y) {
         // click on c7_8 fires the recognition encounter instead of teleporting.
         (r.nodeId === 'c7_8' && currentMap.id === 'east_mountain_crags_chasm_07' && _underdarkGnollUnlocked) ||
         (r.nodeId === 'ug_entry' && currentMap.id === 'underdark_gnoll_entrance') ||
+        // Dwarven Guard Outpost (ug_outpost) ↔ its map's door (dgo_entry).
+        // Gated on !isLocked rather than isDone: the node only exists once Thorb
+        // has opened the wall, and from then on it is a plain pair.
+        (r.nodeId === 'ug_outpost' && currentMap.id === 'underdark_gnoll_entrance' && !node.isLocked) ||
+        (r.nodeId === 'dgo_entry' && currentMap.id === 'underdark_dwarven_outpost') ||
         // The Deepening Way (ug_8) ↔ second Underdark map (ud2_entry) — plain pair.
         (r.nodeId === 'ug_8' && currentMap.id === 'underdark_gnoll_entrance') ||
         (r.nodeId === 'ud2_entry' && currentMap.id === 'underdark_gnoll_entrance_2') ||
@@ -16305,6 +16453,9 @@ const ENCOUNTER_BG_FILES = {
   // The Bottomless Lake — backdrop for the Deep Kraken reveal dialog.
   bg_bottomless_lake: 'TheBottomlessLake.jpg',
   bg_gnome_merchants: 'GnomeMerchants.jpg',
+  // Companions Upgraded screen — used by BOTH tier steps (the Tharnag tier-2
+  // level-up and the Underdark tier-3 descent).
+  bg_companion_upgrade: 'CompanionUpgrade.jpg',
   bg_spore_and_sprig: 'TheSporeSprig.jpg',
   bg_deep_tinker: 'TheDeepTinker.jpg',
   bg_hall_of_callarduran: 'Maps/HallOfCallarduran.jpg',
@@ -16589,6 +16740,12 @@ function hydrateMapFromGlobalState(map) {
   if (map.id === 'north_qualibaf' && _karEdenRoadUnlocked) {
     const sr = map.getNode('silverwood_road');
     if (sr) { sr.isLocked = false; sr.hiddenName = ''; sr.hiddenDescription = ''; }
+  }
+  // Underdark entrance — the Dwarven Guard Outpost has no encounter of its own,
+  // so completedEncounters can't promote it. The flag set when Thorb opened the
+  // door is what brings it back after a reload.
+  if (map.id === 'underdark_gnoll_entrance' && _underdarkOutpostFound) {
+    revealUnderdarkOutpost(map);
   }
   if (map.id === 'tharnag') {
     // North Pass opens once the throne audience is done — it has no
@@ -18595,6 +18752,19 @@ function startNodeEncounter(nodeId) {
 // Both paths now call this instead. Only PURE latches belong here: anything
 // that transitions maps, opens a shop, or returns early stays at its call site,
 // because those are not safe to fire from the choice path.
+// Unlock + un-hide the Dwarven Guard Outpost on whichever copy of the Underdark
+// entrance map is passed in. Shared by the completion latch (live map, right
+// after Thorb opens the door) and hydrateMapFromGlobalState (a freshly rebuilt
+// map after a load), so the two can't drift.
+function revealUnderdarkOutpost(map) {
+  if (!map || map.id !== 'underdark_gnoll_entrance') return;
+  const n = map.getNode && map.getNode('ug_outpost');
+  if (!n) return;
+  n.isLocked = false;
+  n.hiddenName = '';
+  n.hiddenDescription = '';
+}
+
 function applyEncounterCompletionLatches(id) {
   if (!id) return;
   if (id === 'giant_boar_ambush') giantBoarDefeated = true;
@@ -18602,6 +18772,15 @@ function applyEncounterCompletionLatches(id) {
   if (id === 'circular_ruins_combat' || id === 'circular_ruins_combat_repeat') direBearDefeated = true;
   if (id === 'passage_ambush') passageAmbushDefeated = true;
   if (id === 'last_watch_supply_cache') lastWatchSupplyTaken = true;
+  // Deep Fork — Thorb opens the hidden door, so the outpost node west of the
+  // fork becomes reachable. The flag is what survives a reload (the node itself
+  // is rebuilt locked from the map factory and re-unlocked by
+  // hydrateMapFromGlobalState); unlock the live node here so it appears without
+  // waiting for a map rebuild.
+  if (id === 'underdark_deep_fork') {
+    _underdarkOutpostFound = true;
+    revealUnderdarkOutpost(currentMap);
+  }
   if (id === 'last_watch_post_roc') lastWatchPostRocClaimed = true;
   // Stormwatcher Shrine — the reactivation beat flips both flags; the two
   // "already active" variants only mark that the intro has been seen.
@@ -19792,13 +19971,19 @@ function advanceEncounterPhase() {
       // Throne Specter is the king's-hall boss — guaranteed drop.
       const GATED_LOOT = new Set([
         'obsidian_golem_loot', 'obsidian_slime_loot',
-        'drake_rider_loot', 'magma_mephit_loot',
+        // magma_loot is gated here for the Mephit; the Magma Drake's phase
+        // sets guaranteedLoot, which bypasses this gate for the mini-boss.
+        'drake_rider_loot', 'magma_loot',
         'kobold_slyblade_loot', 'dwarven_specter_loot',
         'goblin_swarm_loot', 'rampaging_troll_loot',
         'gnoll_hunter_loot', 'gnoll_warrior_loot', 'gnoll_pack_lord_loot', 'crag_cat_loot',
         'umber_hulk_loot', 'roper_loot', 'carrion_crawler_loot',
         'drow_warparty_loot',
       ]);
+      // Tables that drop at their OWN chance rather than the flat 50% gate above.
+      // A table listed here rolls its own number; everything else is either
+      // always-drop or 50% via GATED_LOOT.
+      const CHANCE_LOOT = { tier1_common: 0.20, tier2_common: 0.20, tier3_common: 0.20 };
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
       // Phase opt-out from the 50% gate (Gate of the Deep front fights —
       // guaranteed 1 goblin drop + 1 troll drop).
@@ -19812,6 +19997,14 @@ function advanceEncounterPhase() {
         if (swapped === null) continue;
         const cardId = swapped;
         const wasCompanionSwap = (swapped !== rawCardId);
+        // Own-chance tables first (tier1_common / tier2_common at 20%).
+        // guaranteedLoot does NOT bypass this one: a phase marked guaranteed
+        // means "this fight's own drop always lands", not "the generic supply
+        // pool always lands too". Neither does the throne_specter gate bypass —
+        // that one only exempts the specter's own themed table.
+        if (CHANCE_LOOT[cardId] !== undefined && Math.random() >= CHANCE_LOOT[cardId]) {
+          continue;
+        }
         if (GATED_LOOT.has(cardId) && !isThroneSpecter && !guaranteedLoot && Math.random() >= 0.5) {
           continue;
         }
@@ -21608,8 +21801,8 @@ function setupEnemyForCombat(enemyId) {
   // The Silverwood circle — Ancients Guardians. The guardians are an
   // INVULNERABLE presence (you cannot cut down the wood itself); the fight is
   // the three Ancients of War standing between you and the trees, so the win
-  // condition is clearing the field. Each Ancient is a 2x2 Sentinel, 5 Atk over
-  // 10 HP behind 5 Armor, and bursts into 2-4 Treants when it falls. The
+  // condition is clearing the field. Each Ancient is a 2x2 body, 5 Atk over
+  // 18 HP behind 5 Armor, and bursts into 2-4 Treants when it falls. The
   // guardians hold two Regrowths and cast both every turn, healing a random
   // Ancient 4 and spilling any overheal into another Treant — so the ring
   // regrows as fast as you can cut it unless you burst something down.
@@ -22444,6 +22637,7 @@ function drawMapDebugOverlay() {
       }
     }
     if (node && node.encounterId) lines.push(`  (node has its own encounter — no roll)`);
+    if (node && UNDERDARK_NO_SPAWN_NODES.has(node.id)) lines.push(`  (node is spawn-exempt — no roll)`);
     lines.push(`current node: ${node ? node.id : '?'}`);
   }
   // Part 2 — East Mountain (trail + crags) random-encounter chance (Gnoll
@@ -22906,29 +23100,15 @@ function handleEncounterChoiceClick(x, y) {
         state = GameState.MAP;
         return;
       }
-      case 'underdark_short_rest_take': {
-        // Threshold breather — Heal 10, once per long rest. NOT a full rest: no
-        // monster respawns, no level-up, no well-rested stamp. The flag carries
-        // rest:true in RUN_FLAGS, so setWellRested re-arms it (and it persists
-        // through the flags bag, so a reload can't hand out a second one).
-        //
-        // 10 rather than 8: this is Tier 3 content, and a heal is measured in
-        // CARDS restored from the discard pile — at Tier 3 deck sizes 8 was a
-        // thinner patch than it reads. Kept level with the South Crossroad
-        // breather so neither one is the obviously better place to stop.
-        healPlayer(10);
-        _underdarkShortRestUsed = true;
-        currentEncounter = null;
-        encounterChoiceResult = null;
-        state = GameState.MAP;
-        return;
-      }
       case 'underdark_xroad_rest_take': {
-        // South Crossroad breather — Heal 10, once per long rest. Same shape as
-        // the Threshold one: NOT a full rest (no respawns, no level-up, no
-        // well-rested stamp), and the flag carries rest:true so setWellRested
-        // re-arms it and the flags bag persists it across saves. Same 10 as the
-        // Threshold, deliberately — see the note there.
+        // South Crossroad breather — Heal 10, once per long rest. NOT a full
+        // rest: no respawns, no level-up, no well-rested stamp. The flag carries
+        // rest:true in RUN_FLAGS, so setWellRested re-arms it and the flags bag
+        // persists it (a reload can't hand out a second one).
+        //
+        // 10 because this is Tier 3 content and a heal is measured in CARDS
+        // restored from the discard pile — at Tier 3 deck sizes, 8 was a thinner
+        // patch than the number reads.
         healPlayer(10);
         _underdarkXroadRestUsed = true;
         currentEncounter = null;
@@ -22939,14 +23119,6 @@ function handleEncounterChoiceClick(x, y) {
       case 'underdark_xroad_rest_skip': {
         // Declined — the breather stays available for this rest cycle, and the
         // crossroad is a hub the party will cross again.
-        currentEncounter = null;
-        encounterChoiceResult = null;
-        state = GameState.MAP;
-        return;
-      }
-      case 'underdark_short_rest_skip': {
-        // Declined — the breather stays available, so the party can come back up
-        // and take it later in this same rest cycle.
         currentEncounter = null;
         encounterChoiceResult = null;
         state = GameState.MAP;
@@ -23156,9 +23328,7 @@ function handleEncounterChoiceClick(x, y) {
         // page.
         const t3 = upgradeCompanions(2);
         if (t3 && t3.length > 0) {
-          companionUpgrades = t3;
-          _companionUpgradeThen = enterUnderdark;
-          state = GameState.COMPANION_UPGRADE;
+          enterCompanionUpgrade(t3, enterUnderdark);
           return;
         }
         enterUnderdark();
@@ -23383,6 +23553,32 @@ function handleEncounterChoiceClick(x, y) {
           const bed = currentMap.getNode('quarters_bed');
           if (bed) bed.isDone = true;
         }
+        return;
+      }
+      case 'outpost_rest': {
+        // Dwarven Guard Outpost hearth — a FULL rest, same flow as the Tharnag
+        // bed and the inn: rebalance, then drop into inventory rest mode, which
+        // finishes with setWellRested (monsters respawn, rest latches re-arm).
+        // Repeatable — the hearth is the party's standing camp in the upper
+        // Underdark, which is the whole reason Thorb went looking for the place.
+        if (player && player.deck) {
+          player.deck.rebalance(getPlayerHandSize(), MAX_HAND_SIZE);
+        }
+        restMode = true;
+        _restBonusCat = null;
+        _levelUpBonusPending = false;
+        _restErrorMsg = '';
+        previousState = state;
+        state = GameState.INVENTORY;
+        encounterChoiceResult = null;
+        currentEncounter = null;
+        return;
+      }
+      case 'outpost_hearth_leave': {
+        // Declined — the hearth stays available, so the party can come back.
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        state = GameState.MAP;
         return;
       }
       case 'short_rest':
@@ -24444,24 +24640,18 @@ function resolveSearchClearing(choice) {
 }
 
 function resolveSearchCamp(choice) {
-  // 2D6 gold + 2 distinct random items from camp loot pool (matches Python table)
+  // 2D6 gold + exactly 2 cards, one from each of two pools: the camp's own
+  // gear table and the generic tier-1 supply table. Both are guaranteed —
+  // rollLootTable doesn't consult GATED_LOOT / CHANCE_LOOT, those gates live
+  // in the LOOT-phase pipeline. Splitting the draw is what makes the camp
+  // read as "somebody's kit plus their rations" instead of two rolls on one
+  // pile that could come up all gear or all food.
   const goldAmt = (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1);
   gold += goldAmt;
-  // Draw 2 distinct entries from the shared abandoned_camp_loot table
-  // (weighted without replacement).
-  const available = LOOT_TABLES.abandoned_camp_loot.slice();
-  const loot = [];
-  for (let i = 0; i < 2 && available.length > 0; i++) {
-    const total = available.reduce((s, e) => s + e.weight, 0);
-    let roll = Math.random() * total;
-    let pickedIdx = 0;
-    for (let j = 0; j < available.length; j++) {
-      roll -= available[j].weight;
-      if (roll <= 0) { pickedIdx = j; break; }
-    }
-    loot.push(available[pickedIdx].creator());
-    available.splice(pickedIdx, 1);
-  }
+  const loot = [
+    ...rollLootTable('abandoned_camp_loot'),
+    ...rollLootTable('tier1_common'),
+  ];
   // ccgQuest+ — stamp playerTierOffset on every salvaged card.
   if (playerTierOffset > 0) {
     for (const c of loot) applyGamePlusOffsetInPlace(c, playerTierOffset);
@@ -25042,6 +25232,17 @@ function resolveForgeRest(choice) {
 }
 
 const ANTI_ARMOR_EFFECTS = new Set(['armor_bonus_damage', 'damage_vs_shield', 'draw_vs_armor']);
+// "Has the Obsidian Forge (or an equivalent anti-armor line) already been put
+// on this card?" Two shapes to check: the usual one folds the bonus into an
+// armor_bonus_damage EFFECT, but a weapon with no flat `damage` line instead
+// carries the `_obsidianForgeVsArmor` card rider (see applyObsidianForge).
+// Testing only the effects would let the forge re-offer an already-enchanted
+// Ruga's Spiked Gauntlets and burn the player's reforge on a no-op.
+function hasAntiArmorEnchant(card) {
+  if (!card) return false;
+  if (card._obsidianForgeVsArmor > 0) return true;
+  return (card.effects || []).some(e => e && ANTI_ARMOR_EFFECTS.has(e.effectType));
+}
 
 // Obsidian Forge — gather every weapon (subtype-driven) from the
 // player's master deck + backpack that is not already enchanted with
@@ -25055,8 +25256,7 @@ function collectForgeEligibleWeapons() {
   const cards = [];
   const backpackUids = new Set();
   const isWeapon = (card) => getCardFilterType(card) === 'Weapons';
-  const isEligible = (card) => isWeapon(card)
-    && !card.effects.some(e => ANTI_ARMOR_EFFECTS.has(e.effectType));
+  const isEligible = (card) => isWeapon(card) && !hasAntiArmorEnchant(card);
   if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
     for (const card of player.deck.masterDeck) {
       if (isEligible(card)) cards.push(card);
@@ -25557,7 +25757,7 @@ function propagateEnchantToActivePiles(masterCard, enchantId) {
     player.deck.rechargePile, player.deck.discardPile,
     player.deck.playPile || [],
   ];
-  const isAlreadyForged = (c) => c.effects.some(e => ANTI_ARMOR_EFFECTS.has(e.effectType));
+  const isAlreadyForged = (c) => hasAntiArmorEnchant(c);
   for (const pile of piles) {
     if (!Array.isArray(pile)) continue;
     for (const c of pile) {
@@ -25685,6 +25885,7 @@ function applyAdamantine(card) {
 // armor). Weapons with no base damage default to value=22 (2/2).
 function applyObsidianForge(card) {
   if (card.effects.some(e => e.effectType === 'armor_bonus_damage')) return;
+  if (card._obsidianForgeVsArmor > 0) return;
   const baseDamage = card.effects
     .filter(e => e.effectType === 'damage')
     .reduce((sum, e) => sum + (e.value || 0), 0);
@@ -25703,7 +25904,16 @@ function applyObsidianForge(card) {
       : (baseDamage * 10 + bonus);
     card.effects.unshift(new CardEffect('armor_bonus_damage', encoded, TargetType.SINGLE_ENEMY));
   } else {
-    card.effects.push(new CardEffect('armor_bonus_damage', 22, TargetType.SINGLE_ENEMY));
+    // No flat `damage` line to fold the bonus into — the weapon's damage comes
+    // from a scaling handler instead (Ruga's Spiked Gauntlets / Sneak Attack's
+    // X = attacks this turn, careful_strike, the multi-hit shapes). Appending
+    // an armor_bonus_damage effect here used to give the card a SECOND swing,
+    // which read as two attacks: it double-counted attacksThisTurn (inflating
+    // Sneak Attack's own X on the next card), and it fired every on-attack
+    // rider twice — Elemental Weapon's Fire, Ignite, the venom coatings. Stamp
+    // a card-level rider instead; consumeObsidianForgeRider folds it into the
+    // card's existing swing, once per play.
+    card._obsidianForgeVsArmor = 2;
   }
   // The +2-vs-Armor/Shield is surfaced by the Obsidian Forge enchant BADGE
   // (and its hover tooltip) — we intentionally do NOT append it to the card's
@@ -26234,8 +26444,7 @@ function handleEncounterLootClick() {
     if (tier >= 2) {
       const upgraded = upgradeCompanions();
       if (upgraded && upgraded.length > 0) {
-        companionUpgrades = upgraded;
-        state = GameState.COMPANION_UPGRADE;
+        enterCompanionUpgrade(upgraded);
         return;
       }
     }
@@ -26682,6 +26891,10 @@ function startCombat() {
   // single-shot on death keeps the audio from stacking too thickly).
   if (enemy && (enemy.name || '').toLowerCase() === 'harpies') {
     playHarpyBurst();
+  }
+  // Ancients Guardians — the other two branch snaps behind the startKey's first.
+  if (enemy && (enemy.name || '').toLowerCase() === 'ancients guardians') {
+    playAncientsGuardiansBurst();
   }
   // Kraken Spawn — scream + splash layered (the startKey above
   // already fired the alien scream; add the body-fall splash on top
@@ -38033,6 +38246,29 @@ function resolveEffect(eff, caster, target) {
       firePowerSurgeIfArmed(caster, 'mark');
       break;
     }
+    case 'roll_underdark_mushroom': {
+      // Fungal Bandages. eff.value is the PERCENT chance of turning up one cap
+      // off the underdark_mushrooms table (Bluecap / Barrelstalk / Cave Shroom)
+      // while you strip the wrap. Player only — an enemy copy of this would
+      // have nowhere to put the card. Placement mirrors the Staff of Fungi
+      // bloom: into masterDeck so it survives the fight, into hand when there
+      // is room and the recharge pile when there is not.
+      if (caster !== player) break;
+      if (Math.random() * 100 >= (eff.value || 0)) {
+        addLog(`  Nothing edible left in the wrap.`, Colors.GRAY);
+        break;
+      }
+      const rolled = rollLootTable('underdark_mushrooms');
+      const cap = rolled && rolled[0];
+      if (!cap) break;
+      player.deck.masterDeck.push(cap);
+      if (player.deck.hand.length < MAX_HAND_SIZE) player.deck.hand.push(cap);
+      else player.deck.addToRechargePile(cap);
+      addLog(`  Still edible: ${cap.name}`, Colors.GREEN, cap);
+      showStyledToast('+1 mushroom', 'gold', 2200);
+      playSound('gold');
+      break;
+    }
     case 'grant_poison_buff': {
       caster.poisonBuff = (caster.poisonBuff || 0) + eff.value;
       // Stacking visual badge on the character. If an existing Vial buff is already
@@ -39526,27 +39762,107 @@ function resolveEffect(eff, caster, target) {
       // Minimum 1 so the card always does something, even against an
       // invulnerable-bodied fight where nothing counts as a target.
       const sdLivesLost = Math.max(1, sdFoeCount);
-      const sdDmg = sdLivesLost;
       addLog(`  Shadow Drain draws on ${sdFoeCount} foe${sdFoeCount === 1 ? '' : 's'}.`, Colors.PURPLE);
-      if (sdDmg > 0) {
-        addLog(`  Shadow Drain lashes ${sdDmg} at all foes.`, Colors.PURPLE);
+      // Caster stack. X (the foe count) is only the BASE — the swing then takes
+      // the same buffs every other attack does: Heroism (consumed), Rage, the
+      // generic damage modifier, and the chill on the caster. It used to lash
+      // for a bare X, so a Necromancer sitting on 6 Heroism watched it evaporate
+      // for nothing. Note the HEAL stays on sdLivesLost (1 per foe) — Heroism
+      // buys damage, not lifegain.
+      let sdDmg = sdLivesLost;
+      if (caster === player) {
+        sdDmg += caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
+        if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
+        sdDmg = consumeIceForAttack(caster, Math.max(0, sdDmg));
+      }
+      const sdBaseDmg = Math.max(0, sdDmg);
+      if (sdBaseDmg > 0 || caster !== player) {
+        addLog(`  Shadow Drain lashes ${sdBaseDmg} at all foes.`, Colors.PURPLE);
+      }
+      // Player cast — full AoE rider treatment, mirroring damage_all: one
+      // snapshot of each consumable buff, re-applied per target, plus the
+      // per-target modifiers. Without these the card silently ate Slime Jar's
+      // unpreventable charge, the Sahuagin Eye, Obsidian Core, Mark, the venom
+      // coatings, Ignite and Elemental Weapon.
+      if (caster === player) {
+        const sdTargets = [];
+        if (sdFoeBoss && sdFoeBoss.isAlive && !sdFoeBoss._invulnerable) sdTargets.push(sdFoeBoss);
+        for (const c of ((sdFoeBoss && sdFoeBoss.creatures) || [])) {
+          if (c && c.isAlive && !c._invulnerable) sdTargets.push(c);
+        }
+        const sdEye = snapshotEyeBuff(caster);
+        const sdObs = snapshotObsidianBuff(caster);
+        const sdVenom = snapshotVenomBuffs(caster);
+        const sdUnpreventable = consumeUnpreventableBuff(caster);
+        const sdPerTarget = (t) => {
+          let d = sdBaseDmg + getIncomingDamageModifier(t);
+          d += applyEyeBonus(t, sdEye);
+          d += applyObsidianBonus(t, sdObs);
+          return applyMarkBonus(t, Math.max(0, d));
+        };
+        const sdSrc = (_activePlayCard && _activePlayCard._handRect) || getCharacterCardRect(true);
+        if (sdTargets.length) spawnPlayerArrowBatch(sdSrc, sdTargets, 550, Colors.PURPLE);
+        let sdAnyLanded = false;
+        let sdLastTaken = 0;
         if (sdFoeBoss && sdFoeBoss.isAlive && !sdFoeBoss._invulnerable) {
-          if (caster === player) {
-            const res = sdFoeBoss.takeDamageWithDefense(sdDmg);
-            if (res && res[1] > 0) spawnDamageOnTarget(sdFoeBoss, res[1], Colors.PURPLE);
+          const tDmg = sdPerTarget(sdFoeBoss);
+          let taken;
+          if (sdUnpreventable) {
+            taken = sdFoeBoss.takeDamageFromDeck(tDmg);
+            if (taken > 0) spawnDamageOnTarget(sdFoeBoss, taken, Colors.ORANGE);
+            addLog(`  ${taken} unpreventable dmg to ${sdFoeBoss.name}`, Colors.ORANGE);
           } else {
-            applyEnemyAoeDamage(sdFoeBoss, sdDmg);
+            const [blocked, tk] = sdFoeBoss.takeDamageWithDefense(tDmg);
+            taken = tk;
+            if (taken > 0) spawnDamageOnTarget(sdFoeBoss, taken, Colors.PURPLE);
+            addLog(`  ${taken} dmg to ${sdFoeBoss.name}${blocked > 0 ? ` (blocked ${blocked})` : ''}`, Colors.RED);
           }
+          if (taken > 0) sdAnyLanded = true;
+          sdLastTaken = taken;
+          applyVenomRiders(sdFoeBoss, sdVenom, taken);
+          triggerSplitPower(sdFoeBoss, taken);
+          onPlayerHitEnemy(taken);
+        }
+        for (const c of [...((sdFoeBoss && sdFoeBoss.creatures) || [])]) {
+          if (!c || !c.isAlive || c._invulnerable) continue;
+          const tDmg = sdPerTarget(c);
+          let actual;
+          if (sdUnpreventable) {
+            actual = c.takeUnpreventableDamage(tDmg);
+            if (actual > 0) spawnDamageOnTarget(c, actual, Colors.ORANGE);
+            addLog(`  ${actual} unpreventable dmg to ${c.name}`, Colors.ORANGE);
+          } else {
+            const sdShieldBefore = c.shield || 0;
+            actual = c.takeDamage(tDmg);
+            if (actual > 0) spawnDamageOnTarget(c, actual, Colors.PURPLE);
+            addLog(`  ${actual} dmg to ${c.name}${creatureAbsorbSuffix(tDmg, actual, sdShieldBefore, c.shield || 0)}`, Colors.RED);
+          }
+          if (actual > 0) sdAnyLanded = true;
+          applyVenomRiders(c, sdVenom, actual);
+          triggerSplitPower(c, actual);
+          if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
+        }
+        playAttackHitSfx(sdBaseDmg, sdAnyLanded ? Math.max(sdLastTaken, 1) : 0);
+        // Ignite + the standing weapon riders, once per target, same as the
+        // other AoEs.
+        const sdIgnite = consumePlayerIgnite();
+        for (const t of sdTargets) {
+          if (!t || !t.isAlive) continue;
+          if (sdIgnite > 0) applyIgniteRider(t, sdIgnite);
+          applyElementalWeaponRider(t, sdBaseDmg);
+          applyBleedWeaponRider(t, sdBaseDmg);
+        }
+        countAndRemoveDeadCreatures();
+        attacksThisTurn++;
+      } else if (sdBaseDmg > 0) {
+        // Enemy cast (the Fang's Drain) — unchanged: monsters have none of the
+        // player rider stack, so it stays a flat X to the player's whole line.
+        if (sdFoeBoss && sdFoeBoss.isAlive && !sdFoeBoss._invulnerable) {
+          applyEnemyAoeDamage(sdFoeBoss, sdBaseDmg);
         }
         for (const c of ((sdFoeBoss && sdFoeBoss.creatures) || [])) {
           if (!c || !c.isAlive || c._invulnerable) continue;
-          if (caster === player) {
-            const t = c.takeDamage(sdDmg);
-            if (t > 0) spawnDamageOnTarget(c, t, Colors.PURPLE);
-            if (!c.isAlive) { spawnDeathAnimation(c); addLog(`  ${c.name} destroyed!`, Colors.GOLD, null, null, c); }
-          } else {
-            applyEnemyAoeDamage(c, sdDmg);
-          }
+          applyEnemyAoeDamage(c, sdBaseDmg);
         }
         countAndRemoveDeadCreatures();
       }
@@ -40717,6 +41033,13 @@ function resolveEffect(eff, caster, target) {
       // Marker effect (Boar Tusk) — the Regen is applied by
       // Character.takeDamageFromDeck when the relic is discarded. Playing
       // the relic itself does nothing.
+      break;
+    }
+    case 'on_discard_shield': {
+      // Marker effect (Stonebound Bandages) — the Shield is granted by
+      // triggerOnDiscard the moment the card lands in the discard pile. For a
+      // DISCARD-cost card that IS its own play (placeByCost fires the hook), so
+      // resolving it here as well would double the Shield.
       break;
     }
     case 'apply_regen': {
@@ -44356,6 +44679,23 @@ function triggerOnDiscard(card) {
     const drawn = player.deck.draw(meal._onDiscardDraw, MAX_HAND_SIZE);
     for (const d of drawn) addLog(`  ${meal.name}: Discard → Draw ${d.name}`, Colors.PURPLE, d);
     if (drawn.length > 0 && typeof playDrawSounds === 'function') playDrawSounds(drawn.length);
+  }
+  // On Discard: Shield (Stonebound Bandages). Fires from EVERY discard path —
+  // the card's own DISCARD cost (placeByCost → onCardDiscarded), being spent as
+  // another card's Recharge-a-Card cost, a monster's forced discard, or deck
+  // damage. That "never dead weight" breadth is what the uncommon rung buys, so
+  // unlike the Regen block below there is no _inDeckDamage gate: the deck-damage
+  // path routes through this same hook exactly once per card.
+  if (card && Array.isArray(card.effects)) {
+    let shieldGained = 0;
+    for (const e of card.effects) {
+      if (e && e.effectType === 'on_discard_shield') shieldGained += Math.max(0, e.value || 0);
+    }
+    if (shieldGained > 0) {
+      player.shield = (player.shield || 0) + shieldGained;
+      addLog(`  ${card.name}: On Discard → +${shieldGained} Shield (S:${player.shield})`, Colors.ALLY_BLUE);
+      spawnTokenOnTarget(player, shieldGained, 'Shield', Colors.ALLY_BLUE);
+    }
   }
   // On Discard: Regen (Boar Tusk) on a PURE hand-discard (a discard effect or
   // cost). Deck-damage / hand-shed discards already applied it directly in
@@ -54881,7 +55221,7 @@ function snapshotPoisonBuff(caster) {
   }
   return stacks;
 }
-function applyPoisonRider(target, stacks, _damageDealt = null) {
+function applyPoisonRider(target, stacks, _damageDealt = null, source = 'Vial of Poison') {
   // Vial of Poison and every "+Poison on attack" rider now lands
   // regardless of mitigation, matching the new creature-side
   // poison/bleed/ice rule. A blocked swing still drips toxin onto
@@ -54894,7 +55234,7 @@ function applyPoisonRider(target, stacks, _damageDealt = null) {
   } else {
     return;
   }
-  addLog(`  (Vial of Poison) +${stacks} Poison on ${target.name}`, Colors.GREEN);
+  addLog(`  (${source}) +${stacks} Poison on ${target.name}`, Colors.GREEN);
 }
 // Drow Sleep Poison — the Vial-of-Poison twins for the drow venom buff.
 // Consumed by the same consumePoisonBuff choke-point so every attack
@@ -55244,7 +55584,24 @@ function consumeEyeBuff(caster, targetDamaged) {
 }
 function consumeObsidianBuff(caster, target) {
   const total = snapshotObsidianBuff(caster);
-  return applyObsidianBonus(target, total);
+  return applyObsidianBonus(target, total) + consumeObsidianForgeRider(caster, target);
+}
+// Obsidian Forge enchant on a weapon with no flat `damage` effect — see the
+// else-branch of applyObsidianForge for why it is a card rider and not an extra
+// effect. Consumed at the first damage site of the play (every player attack
+// path already calls consumeObsidianBuff), so a multi-hit weapon gets the +2
+// once rather than per hit. Separate from the Obsidian Core buff above and
+// logged under its own name, so a player carrying both can tell them apart.
+function consumeObsidianForgeRider(caster, target) {
+  if (caster !== player) return 0;
+  const card = _activePlayCard;
+  const bonus = (card && card._obsidianForgeVsArmor) || 0;
+  if (bonus <= 0 || card._obsidianForgeSpent) return 0;
+  const armor = (target && (target.armor || target.shield)) || 0;
+  if (armor <= 0) return 0;
+  card._obsidianForgeSpent = true;
+  addLog(`  Obsidian Forge! +${bonus} vs Armor/Shield on ${target.name}`, Colors.GOLD);
+  return bonus;
 }
 function consumePoisonBuff(caster, target, damageDealt = null) {
   // Single-target choke point — takes BOTH venom coatings (Vial of Poison and
@@ -55252,10 +55609,19 @@ function consumePoisonBuff(caster, target, damageDealt = null) {
   // without per-site wiring. Multi-hit handlers snapshot the same pair once and
   // re-apply per target; see snapshotVenomBuffs.
   applyVenomRiders(target, snapshotVenomBuffs(caster), damageDealt);
-  // Crawler Skullcap — a STANDING rider (not consumed), so it lands on every
-  // attack for the rest of the fight rather than just the next one.
+  // Standing "your attacks also Poison" riders — NOT consumed, so they land on
+  // every attack rather than just the next one. Two sources:
+  //   caster.poisonAttacks — the grant_poison_attacks effect (no shipped card
+  //     uses it now that the Skullcap is a hand passive; kept for future ones).
+  //   Crawler Skullcap — a passive while the helmet sits in the player's HAND,
+  //     same idiom as Boarhide Bracers' First Attack +2 in getDamageModifier.
+  //     `some` rather than a count: you only wear one helmet.
   if (caster && caster.poisonAttacks > 0) {
-    applyPoisonRider(target, caster.poisonAttacks, damageDealt);
+    applyPoisonRider(target, caster.poisonAttacks, damageDealt, 'Poison Attacks');
+  }
+  if (caster === player && player.deck && Array.isArray(player.deck.hand)
+      && player.deck.hand.some(c => c && c.id === 'crawler_skullcap')) {
+    applyPoisonRider(target, 1, damageDealt, 'Crawler Skullcap');
   }
 }
 
@@ -55667,6 +56033,11 @@ function getDeathSfxKey(c) {
   if (name === 'gnoll' || name === 'gnoll pack lord' || name === 'gnoll fang of yeenoghu') return 'monster_alien_scream_01'; // Pack Lord / Fang + their gnolls die screaming
   if (name === 'giant hyena' || name === 'pack hyena') return 'wolf_howl_distant_01'; // hyenas fall on the pack's own howl
   if (name === 'crag cat') return 'lion_roar_01'; // East Mountain — roar bookends the fight
+  // Ancient of War — the same branch snap that opens the Guardians fight, now
+  // one tree at a time. The Guardians boss body is invulnerable, so the fight is
+  // won by clearing the field: these three deaths ARE the fight's ending, which
+  // is why the bookend lives on the summon rather than on the boss.
+  if (name === 'ancient of war') return 'branch_snap';
   if (name === 'huffer' || name === 'giant boar') return 'pig_grunt';
   // Bone-family death rattle (Bone Pile boss, Bone Amalgam boss + the
   // 3/3 amalgam creatures it summons, Restless Bone summons).
@@ -55887,6 +56258,24 @@ function getFightStartSfxKey(rawName) {
   if (name === 'the assassin') return 'male_warrior_hit_01';
   if (name === 'kobold slyblade') return 'slyblade_hiss';
   if (name === 'ruga the slave master') return 'ruga_chuff';
+  // The four Chapter 3 Underdark hunting fights. One cue each, pitched apart
+  // so you can tell which ambush you walked into before the panel resolves.
+  // Carrion Crawler — the head rears and shrieks as the segments uncoil out of
+  // the dark. (The Torso segments keep their own spider_scuttle chitter on
+  // being hit; see CREATURE_HURT_SFX.)
+  if (name === 'carrion crawler') return 'crawler_scream';
+  // Umber Hulk — a breathy rumble, the lowest cue of the four.
+  if (name === 'umber hulk') return 'umber_hulk_growl';
+  // Roper — the long wet breath of the thing that was pretending to be rock.
+  if (name === 'roper') return 'roper_breath';
+  // Drow Warparty — a war cry as the ambush springs. Its Warriors open with
+  // hand-crossbows (see getWeaponSfxKeys), so the shout lands before the bolts.
+  if (name === 'drow warparty') return 'drow_warcry';
+  // Ancients Guardians — no throat in the fight, so no scream: the ring
+  // announces itself as timber taking the strain. This single key is what the
+  // codex Character panel shows; the live fight layers two more snaps on top
+  // (playAncientsGuardiansBurst) so all three Ancients are heard shifting.
+  if (name === 'ancients guardians') return 'branch_snap';
   if (name === 'dwarven specter') return 'specter_screech';
   // Forgotten Specter — Path of the Necromancer East Corridor fight.
   // Same demon-screech sting the chapter-7 Dwarven Specter uses.
@@ -58404,12 +58793,24 @@ const SHOP_INVENTORIES = {
   city_square: [
     createGoodberry,
     createChickenLeg,
+    // The cheapest food in the game, and the only place to buy it. It sits on
+    // tier1_common too, but a stall you can walk back to is what makes it a
+    // reliable floor for a class with no healing ability.
+    createRatOnAStick,
     createAle,
     createFreshFish,
   ],
+  // NOTE: this array is NOT read for the tavern — the live shop goes through
+  // buildDwarvenTavernInventory() and the codex through
+  // getCodexShopInventory('dwarven_tavern'). Only the KEY matters here, because
+  // the codex iterates Object.keys(SHOP_INVENTORIES) to decide which shops
+  // exist. Kept in sync with the other two anyway so it isn't actively
+  // misleading; edit those two to change what the game or the codex shows.
   dwarven_tavern: [
     createDwarvenBrew,
+    createStonebread,
     createDwarvenScoutCard,
+    createWhitescaleBrew,
     createDwarvenCrossbowmanCard,
     createDwarvenBattleClericCard,
   ],
@@ -58455,14 +58856,20 @@ const SHOP_LABELS = {
 // dynamically: a single copy of Mimic Tongue (until acquired or sold),
 // plus every card the player has previously sold to any shop, at the
 // price it sold for. PY parity (game.py 17263+).
-// Dwarven Tavern inventory — base stock (Dwarven Brew + Dwarven
-// Scout) plus the post-dragon Whitescale Brew the barkeep keeps
+// Dwarven Tavern inventory — base stock (Dwarven Brew + Stonebread +
+// Dwarven Scout) plus the post-dragon Whitescale Brew the barkeep keeps
 // on tap once Varimatras is dead. The freebie LOOT phase only
 // fires once via dwarvenTavernFreebieGiven; the shop slot stays
 // permanent so the player can keep buying mead.
 function buildDwarvenTavernInventory() {
+  // Stonebread is base stock, and deliberately sits next to the Brew: it fills
+  // the MEAL slot where the Brew fills BEVERAGE, so a player can walk out of
+  // here running both halves at once. Keep this list in sync with
+  // getCodexShopInventory('dwarven_tavern') — this builder is what the shop
+  // sells, that one is what the codex shows.
   const base = [
     createDwarvenBrew,
+    createStonebread,
     createDwarvenScoutCard,
   ];
   if (!dragonSlain) return base;
@@ -58586,10 +58993,18 @@ function getCodexShopInventory(shopId) {
     ];
   }
   if (shopId === 'dwarven_tavern') {
+    // Mirror of buildDwarvenTavernInventory() — base stock first, then the
+    // three slots that open once Varimatras is dead. Keep the two in step:
+    // this list is what the codex renders, that one is what the shop sells,
+    // and SHOP_INVENTORIES.dwarven_tavern is read by NEITHER (see the note
+    // on that entry).
     return [
       { creator: createDwarvenBrew },
+      { creator: createStonebread },
       { creator: createDwarvenScoutCard },
-      { creator: createWhitescaleBrew, postDragon: true },
+      { creator: createWhitescaleBrew,           postDragon: true },
+      { creator: createDwarvenCrossbowmanCard,   postDragon: true },
+      { creator: createDwarvenBattleClericCard,  postDragon: true },
     ];
   }
   if (shopId === 'arcane_emporium') {
@@ -62248,6 +62663,7 @@ function restoreFromSave(data) {
     east_mountain_crags_chasm_06: createEastMountainCragsChasm06Map,
     east_mountain_crags_chasm_07: createEastMountainCragsChasm07Map,
     underdark_gnoll_entrance: createUnderdarkGnollEntranceMap,
+    underdark_dwarven_outpost: createUnderdarkDwarvenOutpostMap,
     underdark_gnoll_entrance_2: createUnderdarkGnollEntrance02Map,
     underdark_gnoll_entrance_3: createUnderdarkGnollEntrance03Map,
     underdark_south_xroad_4: createUnderdarkSouthXRoad04Map,
@@ -63888,8 +64304,18 @@ function drawDeckTutorial() {
 // ============================================================
 
 function drawCompanionUpgrade() {
-  ctx.fillStyle = '#14101e';
-  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  // Backdrop art, with the flat fill as the fallback while it loads (and a dark
+  // scrim over it so the gold title and the card frames stay readable against
+  // whatever the art is doing). Same image for both tier steps.
+  const bgImg = getEncounterBgImage('bg_companion_upgrade');
+  if (bgImg) {
+    ctx.drawImage(bgImg, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    ctx.fillStyle = 'rgba(12, 8, 20, 0.62)';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  } else {
+    ctx.fillStyle = '#14101e';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
 
   // Title
   ctx.fillStyle = Colors.GOLD;
@@ -63898,12 +64324,32 @@ function drawCompanionUpgrade() {
   ctx.textBaseline = 'top';
   ctx.fillText('Companions Upgraded!', SCREEN_WIDTH / 2, 50);
 
-  const cardW = 220, cardH = 308;
-  const arrowGap = 90; // visual gap each side of arrow
+  // Layout scales to the row count. It used to be fixed at a 308-tall card with
+  // 348 spacing from y=130, which fits two rows and runs off a 960-tall screen
+  // at three — the third companion (Valdrisa, added for the tier-3 upgrade) was
+  // half below the fold. Cards now shrink to fit however many rows there are,
+  // capped at the original size so one or two rows look exactly as before.
   const cx = SCREEN_WIDTH / 2;
   const rows = companionUpgrades.length;
-  const rowSpacing = cardH + 40;
-  const yBase = 130;
+  const contentTop = 120;
+  const contentBot = SCREEN_HEIGHT - 80;   // clear of the "Click to continue" line
+  const available = contentBot - contentTop;
+  const rowGap = 24;
+  const CARD_ASPECT = 220 / 308;
+  const cardH = Math.max(
+    140,
+    Math.min(308, Math.floor((available - rowGap * (rows - 1)) / Math.max(1, rows))),
+  );
+  const cardW = Math.round(cardH * CARD_ASPECT);
+  const rowSpacing = cardH + rowGap;
+  // Centre the whole block in the content area rather than top-aligning it, so
+  // a single upgrade doesn't sit alone against the title.
+  const blockH = rows * cardH + (rows - 1) * rowGap;
+  const yBase = contentTop + Math.max(0, Math.floor((available - blockH) / 2));
+  // Arrow gap and glyph track the card size so the three-row view doesn't read
+  // as two cards marooned either side of a huge arrow.
+  const arrowGap = Math.round(cardH * 0.29);
+  const arrowPx = Math.max(32, Math.round(cardH * 0.18));
 
   for (let i = 0; i < rows; i++) {
     const up = companionUpgrades[i];
@@ -63915,7 +64361,7 @@ function drawCompanionUpgrade() {
 
     // "->" arrow centered between the two cards.
     ctx.fillStyle = Colors.GOLD;
-    ctx.font = 'bold 56px Georgia, serif';
+    ctx.font = `bold ${arrowPx}px Georgia, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('→', cx, rowY + cardH / 2);
@@ -63929,6 +64375,17 @@ function drawCompanionUpgrade() {
   ctx.fillText('Click to continue...', SCREEN_WIDTH / 2, SCREEN_HEIGHT - 60);
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
+}
+
+// Open the Companions Upgraded screen. Both callers (the tier-2 level-up flow
+// and the tier-3 Underdark entry) route through here so the fanfare can't be
+// wired to one and forgotten on the other. `then` is the optional continuation
+// — null means the default "advance to the ability picker".
+function enterCompanionUpgrade(upgrades, then = null) {
+  companionUpgrades = upgrades;
+  _companionUpgradeThen = then;
+  playSound('companion_upgrade', 0.85);
+  state = GameState.COMPANION_UPGRADE;
 }
 
 function handleCompanionUpgradeClick(_x, _y) {
@@ -64494,9 +64951,15 @@ const CARD_SFX_OVERRIDES = {
   // same thwack as the ranger bow line.
   raena_card:               { play: 'raena_summon', flesh: 'bow_flesh', blocked: 'bow_blocked' },
   raena_card_2:             { play: 'raena_summon', flesh: 'bow_flesh', blocked: 'bow_blocked' },
+  // Tier 3 was missing from this list, so her Called arrow (5 damage) landed
+  // silently while tiers 1 and 2 thwacked. Every rung of a companion chain
+  // needs its own entry — the override is keyed by card id, not by name.
+  raena_card_3:             { play: 'raena_summon', flesh: 'bow_flesh', blocked: 'bow_blocked' },
   valdrisa_card:            { play: 'valdrisa_summon' },
+  valdrisa_card_3:          { play: 'valdrisa_summon' },
   thorb_card:               { play: 'thorb_shout' },
   thorb_card_2:             { play: 'thorb_shout' },
+  thorb_card_3:             { play: 'thorb_shout' },
   // Brad the Fox — reuses Thorb's warrior shout on summon (play) + death
   // (via getCreaturePlaySfxKey), and the dagger family on his swings. The
   // flesh/blocked here surface the dagger under his card in the codex; the
@@ -65126,6 +65589,16 @@ function playHarpyBurst(volume = 0.7) {
   playSound('monster_alien_scream_01', volume);
   setTimeout(() => playSound('monster_alien_scream_01', volume), 220);
   setTimeout(() => playSound('monster_alien_scream_01', volume), 440);
+}
+
+// Ancients Guardians — three staggered branch snaps for the fight-start
+// reveal: one per Ancient of War already standing in the ring, so the wood
+// reads as several hulking things shifting their weight at once rather than a
+// single crack. getFightStartSfxKey plays the FIRST snap (and is what the codex
+// shows); this adds the other two, same split as playObsidianGolemBurst.
+function playAncientsGuardiansBurst(volume = 0.7) {
+  setTimeout(() => playSound('branch_snap', volume), 240);
+  setTimeout(() => playSound('branch_snap', volume), 520);
 }
 
 // Obsidian Oracle — same layered golem burst plus a dark-spell tail so

@@ -648,7 +648,24 @@ export function createUnderdarkGnollEntranceMap() {
     { id: 'ug_entry', name: 'Underdark Threshold', description: 'You step through the gnoll-gnawed mouth of the dwarf road and into the true dark. The air changes — colder, older, alive with a faint dripping echo. Behind you, the way back up.', encounterId: '', connections: ['ug_2'], position: [50, 40], mapArea: AREA, canRevisit: true, passthroughTo: 'c7_8' },
     { id: 'ug_2', name: 'The First Descent', description: 'The floor tilts away, dwarf-cut steps worn to ramps by countless clawed feet.', encounterId: '', connections: ['ug_entry', 'ug_3'], position: [130, 350], ...D },
     { id: 'ug_3', name: 'Fungal Gallery', description: 'Pale luminous fungus climbs the walls, throwing a sick blue glow across the cavern.', encounterId: '', connections: ['ug_2', 'ug_4'], position: [430, 720], ...D },
-    { id: 'ug_4', name: 'The Deep Fork', description: 'The passage splits and rejoins around a great stone pillar, gnoll-sign scratched into its base.', encounterId: '', connections: ['ug_3', 'ug_5'], position: [590, 260], ...D },
+    // canRevisit:false — the door-finding beat plays ONCE. The node stays
+    // walkable afterwards (a done node is still passable; ug_6 and ug_7 are the
+    // same shape), it just never re-narrates. With canRevisit:true the dialog
+    // re-fired every single time the party crossed the fork.
+    { id: 'ug_4', name: 'The Deep Fork', description: 'The passage splits and rejoins around a great stone pillar, gnoll-sign scratched into its base.', encounterId: 'underdark_deep_fork', canRevisit: false, connections: ['ug_3', 'ug_5', 'ug_outpost'], position: [590, 260], discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper into the Underdark.', mapArea: AREA },
+    // The Dwarven Guard Outpost — hidden in the rock west of the Deep Fork until
+    // Thorb finds the door (the `underdark_deep_fork` beat unlocks it and clears
+    // the ??? label; see the ug_outpost branch in hydrateMapFromGlobalState, which
+    // restores that across a reload).
+    //
+    // Starts isLocked so it is not drawn at all before the reveal. Position is a
+    // first pass — west and slightly above the fork, reading as "on the left" —
+    // and is expected to move once the outpost art exists.
+    //
+    // Teleports into the outpost map (dgo_entry), which teleports back here —
+    // wired both ways per the CLAUDE.md checklist: walk-onto branches in
+    // arriveAtNode AND both ids in the isCrossMapGate ladder.
+    { id: 'ug_outpost', name: 'Dwarven Guard Outpost', description: 'A dwarf-cut guardroom set into the living rock — squared walls, a cold hearth, and a barred gate that has not been opened in a very long time.', encounterId: '', connections: ['ug_4'], position: [810, 140], mapArea: AREA, canRevisit: true, isLocked: true, hiddenName: '???', hiddenDescription: 'Something in the rock.', passthroughTo: 'dgo_entry' },
     { id: 'ug_5', name: 'Whispering Dark', description: 'Something moves in the black beyond your torchlight — or the dark itself is breathing.', encounterId: '', connections: ['ug_4', 'ug_6'], position: [1070, 330], ...D },
     // The Long Deep forks in two, on into the Underdark proper.
     { id: 'ug_6', name: 'The Long Deep', description: 'The cavern opens into a vast, lightless gulf. The Underdark proper waits below — the way splits ahead.', connections: ['ug_5', 'ug_7', 'ug_8'], position: [1130, 670], ...D, encounterId: 'underdark_brad_meeting', canRevisit: false },
@@ -659,6 +676,47 @@ export function createUnderdarkGnollEntranceMap() {
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'ug_entry';
+  return map;
+}
+
+// Dwarven Guard Outpost — the sealed guardroom behind the door Thorb finds at
+// the Deep Fork (ug_outpost teleports in here). A single room, so it is laid out
+// the way the Personal Quarters in Tharnag are: every node shares one mapArea,
+// that area is listed in CITY_FREE_MOVE_AREAS, and so NO connection lines are
+// drawn and the player can click any spot directly. The background art already
+// shows one chamber — arrows between corners of the same room read as clutter.
+//
+// Three things to find, and the gate back out:
+//   hearth    — a chimney that still draws, so a fire is safe: a FULL rest
+//   storeroom — the outpost's own stock: Copper, Silver and Mithril ore
+//   remains   — the sentry who never left. The party raises a cairn over him,
+//               and what they turn up doing it is one roll of the dwarven
+//               market salvage table.
+export function createUnderdarkDwarvenOutpostMap() {
+  const map = new GameMap('underdark_dwarven_outpost', 'Dwarven Guard Outpost');
+  const AREA = 'dwarven_outpost';
+  map.mapImages = { [AREA]: 'Maps/UnderdarkGnollEntranceDwarvenOutpost43.jpg' };
+  // Free-move area: `connections` still lists everything for adjacency's sake,
+  // but moveToMapNode relaxes the check and drawMap skips the lines.
+  const R = { mapArea: AREA, canRevisit: true };
+  // Every node lists every other in `connections` — free-move ignores adjacency
+  // for movement, but the graph still has to be connected for the reachability
+  // checks (and for arrow-key navigation) to see the whole room.
+  const ALL = ['dgo_entry', 'dgo_main', 'dgo_hearth', 'dgo_storeroom', 'dgo_remains'];
+  const linksFor = (id) => ALL.filter(x => x !== id);
+  const nodes = [
+    // Gate — the pivoting slab, and the way back out to the Deep Fork.
+    { id: 'dgo_entry', name: 'The Opened Door', description: 'The pivot-slab stands open on the passage behind you, a wedge of torchlight lying across the guardroom floor. The way back out to the fork is here.', encounterId: '', connections: linksFor('dgo_entry'), position: [260, 800], ...R, passthroughTo: 'ug_outpost' },
+    // The guardroom proper — the middle of the room, and the only node with no
+    // encounter on it. It is where the watch actually sat, so it carries the
+    // scene-setting the other four hang off.
+    { id: 'dgo_main', name: 'The Guardroom', description: 'The room the door was cut for: a long stone table bolted to the floor, benches worn shiny at the seat, a rack of pegs with nothing left on them. At the far end, a barred gate stands shut on a passage that goes down. Everything is exactly where it was set down, and the dust lies flat.', encounterId: '', connections: linksFor('dgo_main'), position: [470, 570], ...R },
+    { id: 'dgo_hearth', name: 'The Hearth', description: 'A stone hearth under a flue cut straight up through the rock. Hold a hand over it and there is still a draw — whatever it vents to is open. A fire here would be safe, and warm, and hidden.', encounterId: 'outpost_hearth', connections: linksFor('dgo_hearth'), position: [180, 360], ...R },
+    { id: 'dgo_storeroom', name: 'Store Room', description: 'A low arch off the guardroom, shelved floor to ceiling. Most of it is rotted to nothing — but dwarves did not store their metal on wood.', encounterId: 'outpost_storeroom', connections: linksFor('dgo_storeroom'), position: [600, 350], ...R, canRevisit: false },
+    { id: 'dgo_remains', name: 'The Far Corner', description: 'Something is slumped against the wall where the lamplight does not reach.', encounterId: 'outpost_remains', connections: linksFor('dgo_remains'), position: [800, 540], ...R, canRevisit: false },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'dgo_entry';
   return map;
 }
 
