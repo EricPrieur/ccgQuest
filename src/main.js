@@ -17866,7 +17866,16 @@ function startNodeEncounter(nodeId) {
   // re-fire the encounter every time the party walks back onto it.
   if (node && node.encounterId === 'bottomless_lake') {
     // Kraken already killed — the fight doesn't come back. Settle on the map.
-    if (completedEncounters.has('bottomless_lake')) {
+    //
+    // DEBUG EXCEPTION: with debug on, walking back onto the lake re-fires the
+    // fight so the boss can be farmed for testing (the kit, the Sunder /
+    // Overwhelm interactions, the six-epic salvage pick). It falls through to
+    // the _bottomlessLakeRevealed branch below, which is already true by then,
+    // so it lands straight on the fight-or-flee CHOICE instead of replaying the
+    // whole reveal. Nothing is un-latched: completedEncounters still holds
+    // 'bottomless_lake', so switching debug back off restores the one-off rule
+    // immediately and a normal run can still only ever kill it once.
+    if (completedEncounters.has('bottomless_lake') && !debugMode) {
       node.isDone = true;
       state = GameState.MAP;
       return;
@@ -37726,6 +37735,12 @@ function resolveEffect(eff, caster, target) {
         playAttackHitSfx(howDmg, howTaken);
         addLog(`  ${howTarget.name}: ${howTaken} dmg${creatureAbsorbSuffix(howDmg, howTaken, shieldBefore, howTarget.shield || 0)}`, Colors.RED);
         triggerSplitPower(howTarget, howTaken);
+        // Same gap as Sunder Armor — no sweep, so a kill left the body standing.
+        if (!howTarget.isAlive) {
+          spawnDeathAnimation(howTarget);
+          addLog(`  ${howTarget.name} destroyed!`, Colors.GOLD, null, null, howTarget);
+          countAndRemoveDeadCreatures();
+        }
       }
       consumePoisonBuff(caster, howTarget, howTaken);
       maybeFireDrawOnKill(caster, howTarget);
@@ -38110,6 +38125,12 @@ function resolveEffect(eff, caster, target) {
         playAttackHitSfx(bwDmg, bwTaken);
         addLog(`  ${bwTarget.name}: ${bwTaken} dmg${creatureAbsorbSuffix(bwDmg, bwTaken, shieldBefore, bwTarget.shield || 0)}`, Colors.RED);
         triggerSplitPower(bwTarget, bwTaken);
+        // Same gap as Sunder Armor — no sweep, so a kill left the body standing.
+        if (!bwTarget.isAlive) {
+          spawnDeathAnimation(bwTarget);
+          addLog(`  ${bwTarget.name} destroyed!`, Colors.GOLD, null, null, bwTarget);
+          countAndRemoveDeadCreatures();
+        }
       }
       consumePoisonBuff(caster, bwTarget, bwTaken);
       maybeFireDrawOnKill(caster, bwTarget);
@@ -41802,6 +41823,12 @@ function resolveEffect(eff, caster, target) {
         playAttackHitSfx(saDmg, saTaken);
         addLog(`  ${saTarget.name}: ${saTaken} dmg${creatureAbsorbSuffix(saDmg, saTaken, shieldBefore, saTarget.shield || 0)}`, Colors.RED);
         triggerSplitPower(saTarget, saTaken);
+        // Sunder Armor had no death handling at all: a summon it dropped to 0 HP stayed on the field.
+        if (!saTarget.isAlive) {
+          spawnDeathAnimation(saTarget);
+          addLog(`  ${saTarget.name} destroyed!`, Colors.GOLD, null, null, saTarget);
+          countAndRemoveDeadCreatures();
+        }
       }
       consumePoisonBuff(caster, saTarget, saTaken);
       maybeFireDrawOnKill(caster, saTarget);
