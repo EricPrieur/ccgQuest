@@ -47636,23 +47636,6 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
   playSound('click');
   addLog('--- End of Your Turn ---', Colors.GRAY);
 
-  // Armored (Paladin perk) — Turn End: if no Armor card in hand, draw 1.
-  // The turn-end mirror of Arsenal / Talented (start-of-turn). Drawing
-  // now gives the player a shot at an Armor card to block with during
-  // the enemy's turn. Was previously a no-op — the effectType had only a
-  // codex label, no handler.
-  const armoredStacks = player.getPerkStacks('turn_end_no_armor_draw');
-  if (armoredStacks > 0) {
-    const hasArmor = player.deck.hand.some(c => c.subtype && ARMOR_SUBTYPES.has(c.subtype));
-    if (!hasArmor) {
-      const drawn = player.deck.draw(armoredStacks, MAX_HAND_SIZE);
-      if (drawn.length > 0) {
-        addLog(`  Armored triggers!`, Colors.GOLD, perkToCardLike(createArmoredPerk()));
-        for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
-        playDrawSounds(drawn.length);
-      }
-    }
-  }
 
   // Player allies do NOT auto-attack — the player must click them and pick a target.
   // Unused allies remain ready and will simply re-ready at the start of next turn.
@@ -47856,6 +47839,32 @@ function endPlayerTurn({ skipEnemyTurn = false } = {}) {
     const drawn = player.deck.draw(toDraw, MAX_HAND_SIZE);
     _suppressDrawIntercept = false;
     if (drawn.length > 0) { addLog(`You draw ${drawn.length} card${drawn.length > 1 ? 's' : ''}`, Colors.GREEN); playDrawSounds(drawn.length); }
+  }
+  // Armored (Paladin perk) — Turn End: if no Armor card in hand, draw 1.
+  // The turn-end mirror of Arsenal / Talented (start-of-turn).
+  //
+  // Checked AFTER the refill, not before it. The whole point of the perk is to
+  // have something to block with during the ENEMY's turn, so the hand it has to
+  // judge is the one the player will actually be holding — not the spent hand
+  // they finished the turn on. Running first made it near-unconditional: you
+  // had usually just played your armor, so "no armor in hand" was almost always
+  // true, it drew, and then the refill topped the hand up anyway (sometimes
+  // with the very armor card it was insuring against). That read as a flat
+  // "+1 card every turn" rather than insurance.
+  //
+  // Draws to MAX_HAND_SIZE rather than the class hand size on purpose: this is
+  // a bonus on top of the refill, the same way the piranha fish below is.
+  const armoredStacks = player.getPerkStacks('turn_end_no_armor_draw');
+  if (armoredStacks > 0) {
+    const hasArmor = player.deck.hand.some(c => c.subtype && ARMOR_SUBTYPES.has(c.subtype));
+    if (!hasArmor) {
+      const drawn = player.deck.draw(armoredStacks, MAX_HAND_SIZE);
+      if (drawn.length > 0) {
+        addLog(`  Armored triggers!`, Colors.GOLD, perkToCardLike(createArmoredPerk()));
+        for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
+        playDrawSounds(drawn.length);
+      }
+    }
   }
   // Piranha-fish bonus drops — appended AFTER the refill draw so the
   // fish arrives ON TOP of the normal draw rather than displacing one.

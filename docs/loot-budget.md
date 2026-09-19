@@ -98,12 +98,13 @@ A **gated** draw is different, because it does not reliably hand the card back:
 | Bleed | 1 per stack |
 | **Weak** | **2 per stack** — halves one attack (rounds down), one stack per attack |
 | **Shock** | **2 per stack** — −1 damage dealt AND +1 damage taken, decays 1/turn |
-| **Rage** | **5 per stack** — permanent +1 damage to every attack, no decay |
+| **Rage** | **7 per stack** — permanent +1 damage to every attack, no decay |
 | **Heal** | **0.5 per point** |
 | **Heal 1 Ailment** | **~0.25** — cheap enough that "Heal 4 Ailments" is about 1 point |
 | Scout | ~0.5 (weak — it filters, it doesn't draw) |
+| **Shield per enemy (1)** | **6** — Shield 2/point x the ALL multiplier |
 | Armor-while-in-hand (1) | 4 |
-| **Bleed-on-attack rider, rest of fight** | **4** |
+| **Bleed-on-attack rider, rest of fight** | **8** — see the permanent-rider table below |
 | **Draw** | **free on DEFENSE cards**; expensive everywhere else |
 
 **Healing is cheap; cleansing is nearly free.** A heal restores a card from the
@@ -156,11 +157,30 @@ effect and belongs with these prices, never with the one-shot charges:
 
 | Permanent rider | Points |
 |---|---|
-| **Rage** | **5** — +1 damage on every attack |
+| **Rage** | **7** — +1 damage on every attack |
 | **Bleed-on-attack, rest of fight** | **8** — see the tempo warning below |
-| **Elemental Weapon — Fire** | **9** — +1 Fire on every attack |
+| **Elemental Weapon — Fire** | **10** — +1 Fire on every attack |
 | **Elemental Weapon — Ice** | **5** — +1 Ice on every attack |
 
+**Why Rage is 7, not 5.** A Rage stack delivers `hits per turn × turns remaining`
+damage, so it has no single price — the same shape the Bleed note below warns
+about. Simulated over a 6-turn fight it is worth ~2.5 at 1 hit/turn, 5 at 2, 7.5
+at 3 and 10 at 4. The original 5 was fitted at 2 hits a turn; the game now
+routinely runs at 3 — Trueshot Barrage, Magic Missiles and the Dragon Bone Bow
+are all 3 shots, Blade Flurry is 2, and a multi-target sweep stamps per target.
+7 is the 3-hit value. Re-derive it, do not reuse it, for a card that pushes the
+hit count higher still.
+
+**Why the Fire rider is 10 and not 12.** Fire tracks Rage at a stable
+**1.71-1.78x** across every hit count (simulated on the shipped halving rule),
+so against a Rage of 7 the model says ~12. It is deliberately set to **10**
+instead, which is a playability call rather than a modelling one: 12 would put
+Elemental Weapon past what a Tier 2 uncommon Discard can carry (10.5) and force
+the card up a tier or strip its body to nothing, and it is a card that reads
+well and is fun where it sits. At 10 + Deal 1 it bills 11 against 10.5 — about
+5% hot, knowingly. The gap between 10 and the modelled 12 is the standing
+warning: do NOT stack a second Fire rider on top of this one, and re-derive
+rather than reuse the 10 for any card that pushes hits per turn past 3.
 **Why Fire is nearly double Rage.** Fire halves rather than ticking down by 1, so
 a stack that keeps getting topped up *converges* instead of draining — steady-state
 Fire damage per turn lands at roughly **2× the Fire stamped per turn**. It also

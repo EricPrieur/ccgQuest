@@ -3322,9 +3322,24 @@ export function createIntimidatingShout() {
 
 // Rampage — Warrior Tier 2 (7) on a Discard cost (× 1.5 = 10.5). Rage 1
 // (4-5, permanent +1 damage on every attack for the rest of the fight) plus a
-// 3-target chain for 2 (2 + 1 + 1 at the halved rate for extra targets = 4).
-// The Rage is what the card is really buying; the chain just makes the turn
-// you spend a card on it not feel empty.
+// Rampage — Warrior Tier 3 RARE on a Discard (13 x 1.5 = 19.5). Bill:
+//   Rage 1                    7   (repriced 5 -> 7, see docs/loot-budget.md §3)
+//   Gain 1 Shield per enemy   6   (Shield 2/point x the ALL multiplier — the
+//                                  same rule every other per-enemy line uses)
+//   Deal 2 to All             6   (2 damage x the ALL multiplier)
+//                            19   — 3% under the rare budget.
+//
+// The sweep went 1 -> 2 to spend the gap the rare rung opened. Note that ALL
+// THREE lines now scale with the enemy count, so the 19 is the full-board
+// reading: against a lone boss this is Rage 7 + Shield 2 + Deal 2 = 11, well
+// under a rare. That swing is the card's identity — it is the warrior's answer
+// to a crowded field — but it does mean a flat line (a heal, a draw) would be
+// the right filler if it ever needs topping up again, not more board scaling.
+//
+// Moved up from Tier 2 with the reprice. It reads as the warrior's "the board
+// is full and that is GOOD" card: the more enemies on the field, the more
+// Shield it hands back, and the sweep softens all of them for the Rage that
+// every later swing now carries.
 export function createRampage() {
   return new Card({
     // Id is `warrior_rampage`, not `rampage`: the Gnoll Fang of Yeenoghu's
@@ -3333,32 +3348,45 @@ export function createRampage() {
     // that same object literal is a duplicate key — last one wins — so the
     // card silently rendered the gnoll's bite art.
     id: 'warrior_rampage', name: 'Rampage',
-    description: 'Discard -> Gain 1 Rage.\nDeal 2 on 3 targets.',
-    shortDesc: 'D->+1 Rage\n2 Dmg x3', subtype: 'ability',
+    description: 'Discard -> Gain 1 Rage,\nGain 1 Shield per enemy,\nDeal 2 to All.',
+    shortDesc: 'D->+1 Rage\n1 Shield/enemy\n2 Dmg to All', subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [
       new CardEffect('gain_rage', 1, TargetType.SELF),
-      new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 3),
+      // Shield BEFORE the sweep on purpose: it counts the enemies that are
+      // still standing, so a kill from your own Deal 1 can't cost you Shield.
+      new CardEffect('shield_per_enemy', 1, TargetType.SELF),
+      new CardEffect('damage_all', 2, TargetType.ALL_ENEMIES),
     ],
-    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
-    gamePlusOffset: { multi_damage: 1 },
+    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    gamePlusOffset: { damage_all: 1 },
   });
 }
 
-// Whirlwind — Warrior Tier 3 (13) rare. 3 damage to every enemy (3 × 3 for the
-// ALL multiplier = 9) plus 1 Bleed to every enemy (1 × 3 = 3) = 12. The
-// warrior's board sweep, and the Bleed keeps ticking on whatever survives it.
+// Whirlwind — Warrior Tier 2 UNCOMMON on a Discard (7 x 1.5 = 10.5). Bill:
+//   Deal 3 to All   9   (3 damage x the ALL multiplier)
+//   Bleed 1 to All  3   (1 stack x the ALL multiplier)
+//                  12   — 14% OVER the uncommon budget. Both lines scale with
+//                        the enemy count, so like Rampage that 12 is the
+//                        full-board reading; against one body it is Deal 3 +
+//                        Bleed, which is 4 and cheap for the tier. If it needs
+//                        trimming, the sweep (9 of the 12) is the lever.
+//
+// Moved DOWN from Tier 3 and off Recharge. At Tier 3 on a Recharge it was a
+// 12-point card in a 13-point band that it could replay every cycle; the same
+// numbers sit correctly one tier lower once the cost is real. The warrior's
+// board sweep, and the Bleed keeps ticking on whatever survives it.
 export function createWhirlwind() {
   return new Card({
     id: 'whirlwind', name: 'Whirlwind',
-    description: 'Deal 3 + Bleed to All.',
-    shortDesc: '3 Dmg + Bleed\nto All', subtype: 'ability',
-    cardType: CardType.ATTACK, costType: CostType.RECHARGE,
+    description: 'Discard -> Deal 3 + Bleed to All.',
+    shortDesc: 'D->3 Dmg + Bleed\nto All', subtype: 'ability',
+    cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [
       new CardEffect('damage_all', 3, TargetType.ALL_ENEMIES),
       new CardEffect('apply_bleed_all', 1, TargetType.ALL_ENEMIES),
     ],
-    characterClass: ['warrior'], tier: 3, rarity: 'rare',
+    characterClass: ['warrior'], tier: 2, rarity: 'uncommon',
     gamePlusOffset: { damage_all: 2, apply_bleed_all: 1 },
   });
 }
@@ -3671,25 +3699,26 @@ export function createSummonStorm() {
 export function createAvatarOfTheWild() {
   return new Card({
     id: 'avatar_of_the_wild', name: 'Avatar of the Wild',
-    description: 'Discard -> Gain 1 Rage,\nGain 2 Shield, Heal 4 Ailments.\nYour attacks also deal Bleed\nthis fight. Deal 2.',
-    shortDesc: 'D->Rage, 2 Shield\nHeal 4 Ailments\nAttacks Bleed, 2 Dmg',
+    description: 'Discard -> Gain 1 Rage,\nGain 1 Shield, Heal 4 Ailments.\nYour attacks also deal Bleed\nthis fight. Deal 1.',
+    shortDesc: 'D->Rage, 1 Shield\nHeal 4 Ailments\nAttacks Bleed, 1 Dmg',
     subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [
       new CardEffect('gain_rage', 1, TargetType.SELF),
-      new CardEffect('gain_shield', 2, TargetType.SELF),
+      new CardEffect('gain_shield', 1, TargetType.SELF),
       new CardEffect('heal_ailments_self', 4, TargetType.SELF),
-      // Before the swing on purpose: the Deal 2 below rides its own rider.
+      // Before the swing on purpose: the Deal 1 below rides its own rider.
       new CardEffect('grant_avatar_bleed', 1, TargetType.SELF),
-      // Swing cut 4 -> 2 when the Bleed-on-attack rider was repriced from 4 to
-      // 8 (docs/loot-budget.md §3). Bill against the 19.5 budget (T3 rare x1.5
-      // Discard): Rage 5 + Shield 4 + Heal 4 Ailments ~1 + rider 8 + Deal 2 = 20.
-      // The rider was always the card; the swing was paying for a rider the
-      // budget had underpriced by half.
-      new CardEffect('damage', 2, TargetType.SINGLE_ENEMY),
+      // Shield 2 -> 1 and the swing 2 -> 1 when RAGE was repriced 5 -> 7
+      // (docs/loot-budget.md §3 — a Rage stack is worth ~7.5 at the 3 hits a
+      // turn this game actually runs at, not the 5 fitted at 2). Bill against
+      // the 19.5 budget (T3 rare x1.5 Discard):
+      //   Rage 7 + Shield 2 + Heal 4 Ailments ~1 + Bleed rider 8 + Deal 1 = 19.
+      // The Bleed rider is still the card; everything else is trim.
+      new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
     ],
     characterClass: ['druid'], tier: 3, rarity: 'rare',
-    gamePlusOffset: { damage: 2, gain_shield: 1 },
+    gamePlusOffset: { damage: 1, gain_shield: 1 },
   });
 }
 
@@ -3991,8 +4020,12 @@ export function getRogueAbilityChoices() {
 export function getWarriorAbilityChoices() {
   // Tier 1: Heroic Strike, Charge, Reckless Strike, Shield Bash.
   // Tier 2: Mortal Strike (id thunderclap), Execute, Intimidating Shout,
-  //         Rampage — Shield Wall and Battle Shout retired to legacy.
-  // Tier 3: Whirlwind, Sunder Armor, Rallying Shout, Bulwark.
+  //         Whirlwind — Shield Wall and Battle Shout retired to legacy.
+  // Tier 3: Rampage, Sunder Armor, Rallying Shout, Bulwark.
+  //
+  // Rampage and Whirlwind SWAPPED bands with the Rage reprice. The pool is a
+  // flat list and getAbilityChoices filters it on each card's own `tier`, so
+  // moving the field is the whole move — the bands stay 4/4/4.
   return [createHeroicStrike(), createCharge(), createRecklessStrike(), createShieldBash(),
           createThunderclap(), createExecute(),
           createIntimidatingShout(), createRampage(),
@@ -11465,20 +11498,27 @@ export function createCarrionSatchel() {
 // wearing you down, and its drops do the same.
 // ============================================================
 
-// Roperhide Armor — uncommon T3 (10): Block 5 (5) + 1 Shield per living enemy
-// (2 each) + the defense card's free Draw. Scales with the swarm fights the
-// Underdark keeps throwing (tentacles, crawler segments, warparties).
+// Roperhide Armor — uncommon T3 (10): Block 4 (4) + 1 Shield per living enemy
+// (6) + the defense card's free Draw = 10, exactly on budget. Scales with the
+// swarm fights the Underdark keeps throwing (tentacles, crawler segments,
+// warparties).
+//
+// Block went 5 -> 4 when "1 Shield per enemy" was repriced from 5 to 6
+// (Shield 2/point x the ALL multiplier — docs/loot-budget.md §3). This card is
+// where that rider's price was originally back-fitted FROM, so raising it put
+// the card 10% over its own budget; the Block is the flat line, so it is the
+// one that gives.
 export function createRoperhideArmor() {
   return new Card({
     id: 'roperhide_armor',
     name: 'Roperhide Armor',
-    description: 'Block 5,\nGain 1 Shield per enemy,\nDraw.',
-    shortDesc: 'Block 5\n1 Shield/enemy\nDraw',
+    description: 'Block 4,\nGain 1 Shield per enemy,\nDraw.',
+    shortDesc: 'Block 4\n1 Shield/enemy\nDraw',
     subtype: 'light_armor',
     cardType: CardType.DEFENSE,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('block', 5, TargetType.SELF),
+      new CardEffect('block', 4, TargetType.SELF),
       new CardEffect('shield_per_enemy', 1, TargetType.SELF),
       new CardEffect('draw', 1, TargetType.SELF),
     ],
