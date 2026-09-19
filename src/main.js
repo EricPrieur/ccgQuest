@@ -2952,6 +2952,14 @@ const RUN_FLAGS = {
   underdarkXroadRestUsed: { g: () => _underdarkXroadRestUsed, s: v => { _underdarkXroadRestUsed = v; }, rest: true },
   mushroomCircleUsed: { g: () => _mushroomCircleUsed, s: v => { _mushroomCircleUsed = v; } },
   karEdenRoadUnlocked: { g: () => _karEdenRoadUnlocked, s: v => { _karEdenRoadUnlocked = v; } },
+  // The deep-gnome village bed. NOT rest:true — the first sleep here is a
+  // one-shot tier-3 level-up, so re-arming it on a long rest would hand out
+  // the ability pick again. It had a top-level mirror in both save payloads
+  // but no line in save.js's whitelist, so it was assembled, dropped at the
+  // boundary and reloaded as false — which is exactly how the level-up
+  // became repeatable. The registry bag is the fix; the mirrors stay for
+  // anything still reading a save's top-level keys.
+  gnomeVillageRested: { g: () => _gnomeVillageRested, s: v => { _gnomeVillageRested = v; } },
   rareMushroomFound: { g: () => _rareMushroomFound, s: v => { _rareMushroomFound = v; } },
   mushroomFarmIntroSeen: { g: () => _mushroomFarmIntroSeen, s: v => { _mushroomFarmIntroSeen = v; } },
   psilofyrIntroSeen: { g: () => _psilofyrIntroSeen, s: v => { _psilofyrIntroSeen = v; } },
@@ -4643,6 +4651,11 @@ let barrageShotsFired = 0;        // how many shots already fired (for cancel ch
 let barrageShotsTotal = 0;        // total shots this barrage (barrage value + 1)
 let barrageCardIndex = -1;        // index of MM in hand (stays there until done)
 let barrageRechargedCard = null;  // card recharged as cost (for refund if cancelled)
+// Cards paid for a barrage whose cost is a recharge_extra taken BEFORE the
+// volley starts (Dragon Bone Bow, Trueshot Barrage, Magic Missiles). Separate
+// from barrageRechargedCard, which is the Magic Missiles mid-targeting pre-pay.
+// Both are refunded by cancelBarrage and cleared by finishBarrage.
+let barrageCostCards = [];
 let barrageShotDamage = 1;        // per-shot base damage from the MM card
 let barrageBonusPoison = 0;       // intrinsic per-shot Poison (Poisoned Daggers "1 + Poison")
 let barrageStaysInHand = false;   // card stays in hand on finish (no recharge/draw)
@@ -16798,13 +16811,28 @@ function hydrateMapFromGlobalState(map) {
       td.hiddenDescription = '';
     }
   }
-  // Chapter 2 — once Gontran has pointed the party east toward the gnoll
-  // chasms, the road east opens on the SouthOfQualibaf overland map: high_meadow
-  // reveals by name; east_mountain_trail_gate stays `discoverable` (draws as
-  // ??? until walked onto) and teleports to the East Mountain Trail map.
-  // Debug bypass: open the road east without the Gontran quest step so the
-  // gnoll area (and the Underdark entrance beyond it) can be reached for testing.
-  if (map.id === 'south_of_qualibaf' && (debugMode || completedEncounters.has('gontran_gnoll_territories'))) {
+  // PART 2, Chapter 2 — "The Gnoll Road". The road east opens only at the end
+  // of that quest chain: chapter2_lava_wall sends the party to Elarion in the
+  // Arcane Emporium (chapter2_elarion), Elarion sends them south to Gontran on
+  // the watchtower (gontran_gnoll_territories, itself gated on the Elarion step
+  // at the watchtower_check branch), and only then does high_meadow reveal by
+  // name. east_mountain_trail_gate stays `discoverable` (draws as ??? until
+  // walked onto) and teleports to the East Mountain Trail map.
+  //
+  // BOTH flags are required, not just Gontran's. The Gontran step alone was the
+  // gate before, which held in a clean run but left nothing to stop an old or
+  // hand-edited save from opening a Part 2 road during Part 1.
+  //
+  // There is deliberately NO debugMode bypass here any more. It used to read
+  // `debugMode || completedEncounters.has(...)`, which meant the road east —
+  // and the whole gnoll area plus the Underdark entrance behind it — stood open
+  // from the first visit to the outpost for anyone playing with debug on (which
+  // is everyone using the codex). Debug still reaches the area the honest way:
+  // the debug encounter jumper lists gontran_gnoll_territories under
+  // "P2 Chapter 2: The Gnoll Road", and firing it sets the flag this reads.
+  if (map.id === 'south_of_qualibaf'
+      && completedEncounters.has('chapter2_elarion')
+      && completedEncounters.has('gontran_gnoll_territories')) {
     for (const id of ['high_meadow', 'east_mountain_trail_gate']) {
       const n = map.getNode(id);
       if (n) n.isLocked = false;
@@ -20666,6 +20694,18 @@ function setupEnemyForCombat(enemyId) {
     enemy = new Character('The Deep Kraken');
     enemy.deck = new Deck();
     enemy._deepKraken = true;
+    // 2 base Armor. The boss used to have none at all, which made Sunder a hard
+    // counter rather than a tool: sunderedDefenses() shaves Armor first and
+    // SPILLS the remainder onto Block, so with 0 Armor every stack went
+    // straight through and cancelled the Block a blocking tentacle had just
+    // converted its soak into — the limb died AND the hit still landed. Two
+    // points of Armor absorb the first two Sunder before any of it can reach
+    // that Block, so stacking Sunder still beats the tentacle wall, it just has
+    // to get through the hide first.
+    //
+    // Deliberately on the BOSS only — the Deep Tentacles stay at 0 Armor, so
+    // cutting a limb down is exactly as fast as it was.
+    enemy.baseArmor = 2;
     const withPriority = (creator, prio) => {
       const c = creator();
       c.priority = prio;
@@ -20698,7 +20738,12 @@ function setupEnemyForCombat(enemyId) {
       setTimeout(() => addLog(`  ${word} vast Deep Tentacles rise from the black water!`, Colors.RED), 50);
     }
   };
-  ENEMY_HAND_SIZE.deep_kraken = 3;
+  // 4, not the surface Kraken Spawn's 3. The Deep Tentacle card lost its
+  // "block and Draw" rider when the two tentacle cards were merged, so the
+  // boss stopped refilling itself every time you swung at it. The extra hand
+  // slot gives that pressure back as a flat, readable number instead of a
+  // refill that compounded with how often the player attacked.
+  ENEMY_HAND_SIZE.deep_kraken = 4;
 
   ENEMY_DECKS.sahuagin_priest = () => {
     // Mirrors PY get_sahuagin_priest_deck: 5 Blood in the Water,
@@ -23391,9 +23436,23 @@ function handleEncounterChoiceClick(x, y) {
         return;
       }
       case 'gnome_village_rest': {
-        const firstSleepHere = !_gnomeVillageRested;
+        // Three independent records that the one-shot level-up has been taken,
+        // because the flag alone could not be trusted: it was being dropped by
+        // the save boundary (see the RUN_FLAGS entry), so a reload re-armed the
+        // tier-3 ability pick. The flag is the fix for NEW saves; the other two
+        // are the backstop for runs saved before it, per the one-shot rule in
+        // CLAUDE.md.
+        //   gnome_village_first_rest — latched below, rides completedEncounters.
+        //   cornis_feast — only reachable AFTER sleeping here (see the
+        //     `ready` gate on the Cornis node), so it proves the night happened
+        //     even in a save that never recorded either of the other two.
+        const alreadySleptHere = _gnomeVillageRested
+          || completedEncounters.has('gnome_village_first_rest')
+          || completedEncounters.has('cornis_feast');
+        const firstSleepHere = !alreadySleptHere;
         // Sleeping here opens the meal beat back at Cornis's table.
         _gnomeVillageRested = true;
+        if (firstSleepHere) completedEncounters.add('gnome_village_first_rest');
         encounterChoiceResult = null;
         if (firstSleepHere) {
           // The FIRST real night's sleep since the surface is a level-up:
@@ -24395,7 +24454,17 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, underdarkEncounterChance, underdarkEncArmed: _underdarkEncArmed, fountainStepReduction: _fountainStepReduction, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed, mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked, gnomeVillageRested: _gnomeVillageRested, mushroomFarmsHarvested: [..._mushroomFarmsHarvested], rareMushroomFound: _rareMushroomFound, mushroomFarmIntroSeen: _mushroomFarmIntroSeen, quietPoolUsed: _quietPoolUsed, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset });
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, underdarkEncounterChance, underdarkEncArmed: _underdarkEncArmed, fountainStepReduction: _fountainStepReduction, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed, mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked, gnomeVillageRested: _gnomeVillageRested, mushroomFarmsHarvested: [..._mushroomFarmsHarvested], rareMushroomFound: _rareMushroomFound, mushroomFarmIntroSeen: _mushroomFarmIntroSeen, quietPoolUsed: _quietPoolUsed, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset,
+      // Authoritative run-flag / run-SET bags. These were MISSING here — the
+      // manual save at saveGame() passed them, the autosave did not, so every
+      // flag that lives only in the RUN_FLAGS registry (underdarkThresholdSeen,
+      // underdarkOutpostFound, passageAmbushDefeated, direBearDefeated,
+      // rocRescued, gontranGnollVictoryClaimed, lastWatchSupplyTaken, …) and
+      // every RUN_SETS Set was silently dropped on an autosave and reloaded as
+      // false/empty. Anything one-shot could then be claimed a second time.
+      // Keep these in step with the saveGame() payload.
+      flags: runFlagsToObject(),
+      sets: runSetsToObject() });
     addLog('  [Auto-saved]', Colors.GRAY);
     // First autosave in a Game+ run commits the source slot — stamp
     // it consumed so the Game+ picker hides it (player has actually
@@ -33958,8 +34027,14 @@ function handleCardRechargeClick(x, y) {
         if (trueshotEff) {
           for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
           pendingRechargeNames = [];
+          // Carry the paid cost cards (and the pre-payment hand order) INTO the
+          // barrage. They used to be dropped right here — cardRechargedCards
+          // emptied and _handOrderSnapshot nulled — so once the volley started
+          // nothing remembered what had been paid, and cancelBarrage had nothing
+          // to give back: the cost card sat in the recharge pile and read to the
+          // player as simply gone. finishBarrage clears both once a shot lands.
+          barrageCostCards = cardRechargedCards.slice();
           cardRechargedCards = [];
-          _handOrderSnapshot = null;
           barrageMode = true;
           barrageDescending = false;
           barrageUnpreventable = true;
@@ -33982,11 +34057,21 @@ function handleCardRechargeClick(x, y) {
         if (descBarrageEff) {
           for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
           pendingRechargeNames = [];
+          // Carry the paid cost cards (and the pre-payment hand order) INTO the
+          // barrage. They used to be dropped right here — cardRechargedCards
+          // emptied and _handOrderSnapshot nulled — so once the volley started
+          // nothing remembered what had been paid, and cancelBarrage had nothing
+          // to give back: the cost card sat in the recharge pile and read to the
+          // player as simply gone. finishBarrage clears both once a shot lands.
+          barrageCostCards = cardRechargedCards.slice();
           cardRechargedCards = [];
-          _handOrderSnapshot = null;
           barrageMode = true;
           barrageDescending = true;
           barrageCardIndex = selectedCardIndex;
+          // The other two transitions null this; the descending branch did not,
+          // so a leftover from an earlier Magic Missiles pre-pay could survive
+          // into this volley and be "refunded" a second time on cancel.
+          barrageRechargedCard = null;
           barrageShotsTotal = 3;
           barrageShotsLeft = 3;
           barrageShotsFired = 0;
@@ -34005,8 +34090,14 @@ function handleCardRechargeClick(x, y) {
         if (mmBarrageEff) {
           for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
           pendingRechargeNames = [];
+          // Carry the paid cost cards (and the pre-payment hand order) INTO the
+          // barrage. They used to be dropped right here — cardRechargedCards
+          // emptied and _handOrderSnapshot nulled — so once the volley started
+          // nothing remembered what had been paid, and cancelBarrage had nothing
+          // to give back: the cost card sat in the recharge pile and read to the
+          // player as simply gone. finishBarrage clears both once a shot lands.
+          barrageCostCards = cardRechargedCards.slice();
           cardRechargedCards = [];
-          _handOrderSnapshot = null;
           barrageMode = true;
           barrageDescending = false;
           barrageCardIndex = selectedCardIndex;
@@ -35401,6 +35492,11 @@ function finishBarrage() {
     // flurry itself can't ready the very card that just resolved.
     if (barrageRefreshWeaponsOnFinish) refreshExhaustedWeapons();
   }
+  // The cost is spent for real now — drop the refund record AND the hand
+  // snapshot, so a later cancel of something else can't rewind to a hand that
+  // still held the paid card (that would duplicate it).
+  barrageCostCards = [];
+  _handOrderSnapshot = null;
   barrageRefreshWeaponsOnFinish = false;
   barrageBonusPoison = 0;
   barrageStaysInHand = false;
@@ -35444,6 +35540,19 @@ function cancelBarrage() {
     delete barrageRechargedCard._preRechargeExhausted;
     addLog('  Barrage cancelled, card refunded.', Colors.GRAY);
   }
+  // Same refund for a "Recharge a Card ->" cost paid before the volley began
+  // (Dragon Bone Bow / Trueshot Barrage / Magic Missiles). Identical to
+  // cancelCardRecharge: undo the on-recharge payout, pull the card back out of
+  // the recharge pile, restore the exhausted flag addToRechargePile cleared.
+  for (const c of barrageCostCards) {
+    refundOnRechargeShield(c);
+    const ci = player.deck.rechargePile.indexOf(c);
+    if (ci !== -1) player.deck.rechargePile.splice(ci, 1);
+    c.exhausted = !!c._preRechargeExhausted;
+    delete c._preRechargeExhausted;
+    addLog(`  Barrage cancelled, ${c.name} refunded.`, Colors.GRAY, c);
+  }
+  barrageCostCards = [];
   // Restore the original hand order.
   if (_handOrderSnapshot) {
     player.deck.hand = _handOrderSnapshot;

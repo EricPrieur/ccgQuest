@@ -5625,11 +5625,21 @@ export function createHarpyScreamingCharm() {
 // the tentacle creature (`_snaggedCard`). When the tentacle dies,
 // the snagged card returns to the player's discard pile. Hovering
 // the tentacle in combat surfaces the snagged card.
+// Both Kraken tentacles carry OVERWHELM, and it is worth saying why it is
+// printed on the creature rather than left implicit. The overflow handler
+// (applyDamageToAlly) reads the BOSS's powers, not the swinging body's, and
+// both Krakens run Dire Fury — which rolls Overwhelm in. So every tentacle
+// lash spills its overkill onto the player even though the tentacle itself has
+// no power of its own. That inheritance is the intended behaviour (killing a
+// companion should still hurt you), but it was invisible: nothing on the
+// tentacle said so. Writing "Overwhelm." on the description is enough to
+// surface it — the inline badge tokenizer already knows the keyword and pops
+// the full Overwhelm power card on hover.
 export function createKrakenTentacleCreature() {
   const c = new Creature({
     name: 'Tentacle', attack: 3, maxHp: 5,
     onAttackSnagCard: true,
-    description: 'On Attack: snag 1 random card from your hand.',
+    description: 'Overwhelm.\nOn Attack: snag 1 random card from your hand.',
   });
   // Tentacle is summoned by Kraken Spawn's deck cards (Tentacle Grab,
   // Tentacle Block, Tentacle). Those cards live in CARD_REGISTRY for
@@ -5813,7 +5823,9 @@ export function createDeepTentacleCreature() {
     name: 'Deep Tentacle', attack: 6, maxHp: 10,
     onAttackSnagCard: true,
     sunderAttack: 1,
-    description: 'On Attack: snag 1 random card from your hand.',
+    // Overwhelm is inherited from the boss's Dire Fury — see the note above
+    // createKrakenTentacleCreature. Printed here so the player can read it.
+    description: 'Overwhelm.\nOn Attack: snag 1 random card from your hand.',
   });
   c._codexSide = 'enemy';
   return c;
