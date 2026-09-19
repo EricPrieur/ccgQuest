@@ -664,7 +664,6 @@ export const CARD_ART_MAP = {
   severed_tentacle:          'KrakenSpawnTentacle.jpg',
   fathomless_eye:            'FathomlessEye.jpg',
   abyssal_harpoon:           'AbyssalHarpoon.jpg',
-  deep_kraken_tentacle_block:'KrakenSpawnTentacle.jpg',
   deep_kraken_whip:          'KrakenSpawnTentacle.jpg',
   // Kraken loot drops (pick-2 epics after the fight).
   bloody_eye_patch:        'BloodyEyePatch.jpg',

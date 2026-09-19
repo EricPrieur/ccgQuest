@@ -5801,11 +5801,18 @@ export function createKrakenWhip() {
 // ============================================================
 
 // Deep Tentacle — the Deep Kraken's limb. Double the surface Tentacle
-// (6 atk / 10 hp) with the same on-attack card-snag.
+// (6 atk / 10 hp) with the same on-attack card-snag, plus a Sunder rider the
+// surface tentacles don't have: the boss's whole answer to a turtling party is
+// that its limbs grind the guard down while the Bite comes for the deck.
+//
+// No "Attacks Sunder" line in the description on purpose — sunderAttack draws
+// its own rider icon beside the attack stat, so spelling it out would render
+// the pill twice (same call as the Ancient of War).
 export function createDeepTentacleCreature() {
   const c = new Creature({
     name: 'Deep Tentacle', attack: 6, maxHp: 10,
     onAttackSnagCard: true,
+    sunderAttack: 1,
     description: 'On Attack: snag 1 random card from your hand.',
   });
   c._codexSide = 'enemy';
@@ -5831,38 +5838,40 @@ export function createDeepTentacleGrab() {
   });
 }
 
-// Deep Tentacle — passive summon (no immediate swing).
+// Deep Tentacle — DUAL MODE, the Skitter Bite / Old Spectral Hand shape. One
+// card that does the obvious thing on either turn instead of two near-identical
+// cards sitting in the same deck:
+//
+//   his turn  (`effects`)  — a limb comes up out of the water and stays.
+//   your turn (`modes[0]`) — a limb comes up to take the blow.
+//
+// No Draw on the defense line: at 3 cards in hand he already re-draws into a
+// tentacle constantly, and paying him a card for blocking stacked the refill on
+// top of the body. Raise ENEMY_HAND_SIZE.deep_kraken instead if the fight needs
+// more pressure — that is one number, and it does not compound.
+//
+// cardType stays ATTACK: currentEffects ignores `modes`, so the enemy's own
+// turn plays the passive summon, while enemyAutoPlayDefenses runs modes[0]
+// reactively. That filter keys on modes[0] carrying a recognised defensive
+// effect — 'block' for the other dual-mode monsters, and
+// 'summon_kraken_tentacle_block' for this one, which blocks with a BODY
+// rather than with a number.
 export function createDeepKrakenTentacleCard() {
   return new Card({
     id: 'deep_kraken_tentacle',
     name: 'Deep Tentacle',
-    description: 'Recharge ->\nSummon a Deep Tentacle.',
-    shortDesc: 'R->Deep Tentacle',
+    description: 'Atk: Summon a Deep Tentacle.\nDef: Summon a Deep Tentacle\nwho blocks the attack.',
+    shortDesc: 'Atk: Deep Tentacle\nDef: Deep Tentacle\nBlocks',
     subtype: 'spell',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('summon_kraken_tentacle_passive', 1, TargetType.SUMMON),
     ],
-    previewCreature: createDeepTentacleCreature(),
-    rarity: 'epic',
-    noTierOffset: true,
-  });
-}
-
-// Deep Tentacle Block — DEFENSE summon: a fresh Deep Tentacle soaks the swing.
-export function createDeepKrakenTentacleBlock() {
-  return new Card({
-    id: 'deep_kraken_tentacle_block',
-    name: 'Deep Tentacle Block',
-    description: 'Recharge ->\nSummon a Deep Tentacle\nwho blocks the attack.\nDraw.',
-    shortDesc: 'R->Deep Tentacle\nBlocks, Draw',
-    subtype: 'spell',
-    cardType: CardType.DEFENSE,
-    costType: CostType.RECHARGE,
-    effects: [
-      new CardEffect('summon_kraken_tentacle_block', 1, TargetType.SUMMON),
-      new CardEffect('draw', 1, TargetType.SELF),
+    modes: [
+      new CardMode('Summon a Deep Tentacle who blocks the attack', [
+        new CardEffect('summon_kraken_tentacle_block', 1, TargetType.SUMMON),
+      ]),
     ],
     previewCreature: createDeepTentacleCreature(),
     rarity: 'epic',
@@ -5875,12 +5884,16 @@ export function createDeepSwallowingBite() {
   return new Card({
     id: 'deep_swallowing_bite',
     name: 'Deep Swallowing Bite',
-    description: 'Recharge +1 ->\nDeal 24 Damage minus cards in hand.',
-    shortDesc: 'R+1->24-hand Dmg',
+    description: 'Recharge +1 -> Sunder,\nDeal 24 Damage minus cards in hand.',
+    shortDesc: 'R+1->Sunder\n24-hand Dmg',
     subtype: 'spell',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
+    // Sunder is FIRST in the array so it lands before the bite resolves — the
+    // Armor/Block it strips is already gone when that same hit is mitigated.
+    // Same ordering rule the Umber Hulk's Rend and the Ancient of War follow.
     effects: [
+      new CardEffect('apply_sunder', 1, TargetType.SINGLE_ENEMY),
       new CardEffect('damage_minus_hand_count', 24, TargetType.SINGLE_ENEMY),
       new CardEffect('recharge_extra', 1, TargetType.SELF),
     ],
@@ -11307,6 +11320,13 @@ export function createTreantBark() {
 
 // Carapace Buckler — common T3 (7): 3 Shields (6) + Heal 1 Sunder (1), with
 // the first-shield draw riding the defense card's free cantrip.
+// Carapace Buckler — common T3. ABILITY, not DEFENSE: every other buckler in
+// the game (Buckler, Cracked, Runeforged, Barnacle Covered, Roc Eggshell) is a
+// proactive light_armor card you play on your own turn, and this one was the
+// lone exception — it sat in hand waiting to be swung at instead of being
+// something you could open with. The "First Shield: Draw" rider it already
+// carries is the family's shared payoff and only makes sense on a card you
+// choose to lead with.
 export function createCarapaceBuckler() {
   return new Card({
     id: 'carapace_buckler',
@@ -11314,7 +11334,7 @@ export function createCarapaceBuckler() {
     description: 'Gain 3 Shields,\nHeal 1 Sunder.\nFirst Shield: Draw.',
     shortDesc: '3 Shields\nHeal 1 Sunder\n1st Shield: Draw',
     subtype: 'light_armor',
-    cardType: CardType.DEFENSE,
+    cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('gain_shield', 3, TargetType.SELF),
@@ -11327,10 +11347,6 @@ export function createCarapaceBuckler() {
   });
 }
 
-// Crawler Skullcap — uncommon T3 (10): Block 5 (5) + the defense draw, plus a
-// standing rider that laces every attack you make this fight with 1 Poison.
-// The rider rides the shared consumePoisonBuff choke point, so it works on
-// every attack shape without touching the individual damage cases.
 // Crawler Skullcap — uncommon T3 heavy armor, built on the Boarhide Bracers
 // shape: line 1 is a PASSIVE while the card sits in your hand, line 2 is what
 // it does when you play it reactively as a Defense card.

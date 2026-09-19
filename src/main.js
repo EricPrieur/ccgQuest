@@ -37,7 +37,7 @@ import {
   createLuringSong, createHarpyCreature,
   createFeatherCloak, createHarpyFeather, createHarpyEggOmelette, createHarpyTalonBlade, createHarpyScreamingCharm,
   createTentacleGrab, createKrakenTentacleCreature, createKrakenTentacleCard, createKrakenTentacleBlock, createSwallowingBite, createKrakenWhip, createInkCloud,
-  createDeepTentacleCreature, createDeepTentacleGrab, createDeepKrakenTentacleCard, createDeepKrakenTentacleBlock, createDeepSwallowingBite, createDeepKrakenWhip,
+  createDeepTentacleCreature, createDeepTentacleGrab, createDeepKrakenTentacleCard, createDeepSwallowingBite, createDeepKrakenWhip,
   // Deep Kraken salvage — the tier-3 epics that replace the surface Kraken's
   // tier-1 set on the Bottomless Lake drop.
   createMawOfTheDeep, createInkbladderFlask, createDrownedLungs,
@@ -20677,8 +20677,11 @@ function setupEnemyForCombat(enemyId) {
     for (let i = 0; i < 40; i++) enemy.deck.addCard(withPriority(createDeepSwallowingBite, 35));
     for (let i = 0; i < 40; i++) enemy.deck.addCard(withPriority(createDeepKrakenWhip, 30));
     for (let i = 0; i < 40; i++) enemy.deck.addCard(createDeepTentacleGrab());
-    for (let i = 0; i < 40; i++) enemy.deck.addCard(createDeepKrakenTentacleCard());
-    for (let i = 0; i < 40; i++) enemy.deck.addCard(createDeepKrakenTentacleBlock());
+    // Deep Tentacle is now ONE dual-mode card (summon on his turn, block + draw
+    // on yours) where it used to be two. 80 copies rather than 40 so the deck
+    // stays at 200 cards — the boss's deck size IS its HP — and so the share of
+    // the deck that coils up a limb is unchanged.
+    for (let i = 0; i < 80; i++) enemy.deck.addCard(createDeepKrakenTentacleCard());
     enemy.addPower(createDireFury());
     // Start with 2 Deep Tentacles already coiled (+0.5 per monster
     // offset, floor), same shape as the Kraken Spawn opener.
@@ -33276,22 +33279,30 @@ function handleCombatClick(x, y) {
           return;
         }
       }
-      // Wolf Fang and any other on-recharge-only relic — same idea:
+      // Wolf Teeth and any other on-recharge-only relic — same idea:
       // the active card play does nothing, the bonus fires only when
       // the card lands in the recharge pile (paid as cost or rolled
       // at end-of-turn). Block the proactive play so the player
       // doesn't burn the card slot.
-      if ((card.effects || []).some(e => e && e.effectType === 'on_recharge_heroism')
-          && !(card.effects || []).some(e => e && (
-            e.effectType === 'damage' || e.effectType === 'apply_poison' ||
-            e.effectType === 'apply_fire' || e.effectType === 'apply_ice' ||
-            e.effectType === 'apply_bleed' ||
-            e.effectType === 'first_strike_attack' ||
-            e.effectType === 'heal' || e.effectType === 'gain_shield' ||
-            e.effectType === 'block' || e.effectType === 'draw'
-          ))) {
-        showToast(`${card.name} only triggers when recharged (use as a cost).`);
-        return;
+      //
+      // Decided by ELIMINATION — "is every effect an on_recharge_* rider?" —
+      // not by a whitelist of what counts as a real play effect. The old check
+      // named ten effect types and refused anything matching none of them,
+      // which quietly broke the ADAMANTINE ENCHANT: applyAdamantine appends
+      // on_recharge_heroism to a weapon, so any enchanted weapon whose swing
+      // used an effect outside that list was refused with "only triggers when
+      // recharged". The Bone Flail (damage_poison_random) was one; so were
+      // multi_damage, sneak_attack, damage_random_split and the barrage shapes.
+      // Every relic that SHOULD be blocked here also carries unplayable:true
+      // (the three Quivers, Wolf Teeth), so this is the safety net, not the gate.
+      {
+        const rechargeEffs = (card.effects || []).filter(e => e && e.effectType !== 'stays_in_hand');
+        const isRechargeRider = (e) => typeof e.effectType === 'string'
+          && e.effectType.startsWith('on_recharge_');
+        if (rechargeEffs.length > 0 && rechargeEffs.every(isRechargeRider)) {
+          showToast(`${card.name} only triggers when recharged (use as a cost).`);
+          return;
+        }
       }
       if (selectedCardIndex !== i) {
         selectedCardIndex = i;
@@ -35230,6 +35241,7 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, Math.max(taken, 1));
     addLog(`  ${enemy.name}: ${taken} true dmg`, Colors.ORANGE);
     applyVenomRiders(enemy, barrageVenom, taken);
+    applyStandingPoisonRiders(player, enemy, taken);
     if (taken > 0) applyIgniteRider(enemy, barrageIgnite);
     if (taken > 0) applyElementalWeaponRider(enemy, taken);
     if (taken > 0) applyBleedWeaponRider(enemy, taken);
@@ -35240,6 +35252,7 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, Math.max(actual, 1));
     addLog(`  ${target.name}: ${actual} true dmg`, Colors.ORANGE);
     applyVenomRiders(target, barrageVenom, actual);
+    applyStandingPoisonRiders(player, target, actual);
     if (actual > 0) applyIgniteRider(target, barrageIgnite);
     if (actual > 0) applyElementalWeaponRider(target, actual);
     if (actual > 0) applyBleedWeaponRider(target, actual);
@@ -35252,6 +35265,7 @@ function resolveBarrageShot(target) {
     const bs = blocked > 0 ? ` (blocked ${blocked})` : '';
     addLog(`  ${enemy.name}: ${taken} dmg${bs}`, Colors.RED);
     applyVenomRiders(enemy, barrageVenom, taken);
+    applyStandingPoisonRiders(player, enemy, taken);
     if (barrageBonusPoison > 0) {
       enemy.applyStatus('POISON', barrageBonusPoison);
       spawnTokenOnTarget(enemy, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -35267,6 +35281,7 @@ function resolveBarrageShot(target) {
     playAttackHitSfx(dmg, actual);
     addLog(`  ${target.name}: ${actual} dmg`, Colors.RED);
     applyVenomRiders(target, barrageVenom, actual);
+    applyStandingPoisonRiders(player, target, actual);
     if (barrageBonusPoison > 0 && target.isAlive) {
       target.poisonStacks = (target.poisonStacks || 0) + barrageBonusPoison;
       spawnTokenOnTarget(target, barrageBonusPoison, 'Poison', Colors.GREEN);
@@ -35807,14 +35822,17 @@ function enemyAutoPlayDefenses(incomingDmg = null) {
   }
 
   // Pure DEFENSE cards always count. Dual-mode ATTACK cards (Sturdy
-  // Boots, Skitter Bite, …) also qualify if their first mode carries
-  // a `block` effect — we run the mode's effects in that case so the
-  // card plays its defense line reactively while still working as an
-  // attack on the enemy's own turn.
+  // Boots, Skitter Bite, …) also qualify if their first mode carries a
+  // recognised defensive effect — we run the mode's effects in that case so the
+  // card plays its defense line reactively while still working as an attack on
+  // the enemy's own turn. 'block' covers the ones that soak with a NUMBER; the
+  // Deep Kraken's Deep Tentacle soaks with a BODY instead (it throws a fresh
+  // limb in front of the swing), so its summon counts as a defensive line too.
+  const DEFENSE_MODE_EFFECTS = new Set(['block', 'summon_kraken_tentacle_block']);
   const defenseCards = enemy.deck.hand.filter(c =>
     c.cardType === CardType.DEFENSE ||
     (Array.isArray(c.modes) && c.modes[0]
-      && (c.modes[0].effects || []).some(e => e && e.effectType === 'block'))
+      && (c.modes[0].effects || []).some(e => e && DEFENSE_MODE_EFFECTS.has(e.effectType)))
   );
   let _catFullyDodged = false; // Cat Reflexes: a successful dodge ends defense
   let _catReflexTried = false; // ...and only one dodge attempt per attack
@@ -53203,6 +53221,15 @@ function updateEnemyTurn(dt) {
           addLog(`  +${eff.value} Poison on ${cardTarget.name}`, Colors.GREEN);
         }
         if (cardTarget) spawnTokenOnTarget(cardTarget, eff.value, 'Poison', Colors.GREEN);
+      } else if (eff.effectType === 'apply_sunder') {
+        // Sunder-applying enemy CARDS (the Deep Kraken's Deep Swallowing Bite).
+        // Routed through the shared maybeApplyAttackSunder so a card and a
+        // creature's sunderAttack rider strip Armor/Block by the same rule and
+        // log identically. This branch has to exist: the enemy effect chain has
+        // no fallback else, so an effect type it does not name is silently
+        // dropped — the card would have read "Sunder" and done nothing.
+        maybeApplyAttackSunder({ sunderAttack: eff.value, name: enemy.name }, cardTarget);
+        if (cardTarget) spawnTokenOnTarget(cardTarget, eff.value, 'Sunder', '#b0763c');
       } else if (eff.effectType === 'apply_bleed') {
         // Bleed-applying enemy attacks. Same routing as apply_poison.
         if (cardTarget instanceof Creature) {
@@ -55239,6 +55266,27 @@ function applyPoisonRider(target, stacks, _damageDealt = null, source = 'Vial of
   }
   addLog(`  (${source}) +${stacks} Poison on ${target.name}`, Colors.GREEN);
 }
+// Standing "your attacks also Poison" riders. READ, never consumed, so they land
+// on every attack — and on every shot of a barrage, the same rule the Elemental
+// Weapon / Avatar Bleed riders follow (see the "ONE CONSUMPTION, ONE PAYOUT"
+// note in the barrage flow: permanent buffs are deliberately NOT cleared after
+// shot 1, one-shot charges are). Two sources:
+//   caster.poisonAttacks — the grant_poison_attacks effect. No shipped card uses
+//     it now that the Skullcap is a hand passive; kept for future ones.
+//   Crawler Skullcap — a passive while the helmet sits in the player's HAND,
+//     same idiom as Boarhide Bracers' First Attack +2 in getDamageModifier.
+//     `some` rather than a count: you only wear one helmet.
+// Each source logs under its own name so the player can tell them apart.
+function applyStandingPoisonRiders(caster, target, damageDealt = null) {
+  if (!caster || !target) return;
+  if (caster.poisonAttacks > 0) {
+    applyPoisonRider(target, caster.poisonAttacks, damageDealt, 'Poison Attacks');
+  }
+  if (caster === player && player.deck && Array.isArray(player.deck.hand)
+      && player.deck.hand.some(c => c && c.id === 'crawler_skullcap')) {
+    applyPoisonRider(target, 1, damageDealt, 'Crawler Skullcap');
+  }
+}
 // Drow Sleep Poison — the Vial-of-Poison twins for the drow venom buff.
 // Consumed by the same consumePoisonBuff choke-point so every attack
 // site (player + enemy) applies it without per-site wiring.
@@ -55619,13 +55667,7 @@ function consumePoisonBuff(caster, target, damageDealt = null) {
   //   Crawler Skullcap — a passive while the helmet sits in the player's HAND,
   //     same idiom as Boarhide Bracers' First Attack +2 in getDamageModifier.
   //     `some` rather than a count: you only wear one helmet.
-  if (caster && caster.poisonAttacks > 0) {
-    applyPoisonRider(target, caster.poisonAttacks, damageDealt, 'Poison Attacks');
-  }
-  if (caster === player && player.deck && Array.isArray(player.deck.hand)
-      && player.deck.hand.some(c => c && c.id === 'crawler_skullcap')) {
-    applyPoisonRider(target, 1, damageDealt, 'Crawler Skullcap');
-  }
+  applyStandingPoisonRiders(caster, target, damageDealt);
 }
 
 // Trigger split power: when a character with "split" power takes
@@ -64545,7 +64587,10 @@ const CARD_SFX_OVERRIDES = {
   grasping_tendrils:        { play: 'whip_flesh' },
   // Carrion Crawler drops — chitin plate for the armors, a wand cast for the
   // stinger, a 2H sweep for the glaive, glass for the satchel.
-  carapace_buckler:         { defense: 'shield_blocked', blocked: 'shield_blocked' },
+  // Carapace Buckler is an ABILITY now, not a Defense card, so the 'defense'
+  // key it used to carry would never fire — it needs a 'play' cue like the
+  // other proactive shields (see umber_shield / cracked_buckler).
+  carapace_buckler:         { play: 'shield_grab', blocked: 'shield_blocked' },
   crawler_skullcap:         { defense: 'block_heavy', blocked: 'block_heavy' },
   paralytic_stinger:        { play: 'faery_cast', flesh: 'dagger_flesh', blocked: 'dagger_blocked' },
   paralytic_glaive:         { flesh: 'spear_stab_flesh_01', blocked: 'spear_blocked' },
