@@ -3115,6 +3115,57 @@ export function createSahuaginSentinelEncounter() {
 // City Shop Encounters
 // ============================================================
 
+// Label for one row of Bandit's feeding list. Lives here beside the encounter
+// because main.js re-labels the rows live as the party feeds him — the counts
+// would otherwise go stale mid-visit. Same idiom as psilofyrOfferLabel.
+export function banditFeedLabel(name, count) {
+  return count > 0
+    ? `Offer him the ${name}.  (${count} held)`
+    : `Offer him the ${name}.  (none left)`;
+}
+
+// BANDIT — the City Square stray. He sits on the market SHELF at no price;
+// clicking him opens this instead of a Buy confirm, because he is not for sale.
+//
+// `foods` is built at click time from what the party is actually carrying —
+// [{ id, name, count, isMeat }] — so the list only offers food they have. He
+// eats anything but only MEAT wins him: non-meat rows stay repeatable (he takes
+// it, he is unimpressed, you are down a card) and the meat row ends it.
+//
+// Every exit routes through `bandit_leave` rather than completesEncounter so
+// the handler can put the player back on the market shelf they clicked from.
+export function createBanditFeedEncounter(foods = []) {
+  const texts = [
+    new EncounterText('There is no price chalked on the board beside him, because he is not the butcher\'s to sell. He is a stray, and he has been lying in the strip of shade under the stall since before anyone here can remember — thin, grey-muzzled, a coat the colour of old ash.'),
+    new EncounterText('He does not beg. He watches the stall, and then he watches your pack, and he has clearly done the arithmetic on both. Thorb snorts. "That one\'s not lost. That one\'s WORKING."', 'Thorb'),
+  ];
+  const choices = [];
+  for (const f of foods) {
+    choices.push(Object.assign(
+      new EncounterChoice(
+        banditFeedLabel(f.name, f.count),
+        '', 'bandit_feed', 0,
+        { returnToChoices: true, repeatable: true },
+      ),
+      { _foodId: f.id, _foodName: f.name, _foodIsMeat: !!f.isMeat },
+    ));
+  }
+  if (foods.length === 0) {
+    choices.push(Object.assign(
+      new EncounterChoice(
+        'Search your packs for something to give him.',
+        '', 'bandit_leave', 0, {},
+      ),
+      { _exitToast: 'Nothing you carry smells like food to him. The stall sells meat.' },
+    ));
+  }
+  choices.push(new EncounterChoice('Leave him to his shade.', '', 'bandit_leave', 0, {}));
+  return new Encounter('bandit_feed', 'The Stray', 'A dog in the shade under the butcher\'s stall.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }),
+    new EncounterPhaseData({ phaseType: EncounterPhase.CHOICE, choicePrompt: 'Feed the dog?', choices }),
+  ]);
+}
+
 export function createCitySquareEncounter() {
   return new Encounter('city_square', 'City Square', 'The heart of Qualibaf.', [
     new EncounterPhaseData({
@@ -3923,9 +3974,12 @@ export function createForestAmbushLeftEncounter() {
         new EncounterText('The last spider curls up and goes still. The path ahead is clear, the webs torn apart by the battle.'),
       ],
     }),
+    // 20% for a forest-spider drop — Poison Pouch or the Deathjump Spider ally
+    // (the gate lives in CHANCE_LOOT, the pool decides which).
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
+      lootCards: ['forest_spider_loot'],
     }),
   ]);
 }
@@ -3949,9 +4003,12 @@ export function createForestAmbushRightEncounter() {
         new EncounterText('The spiders are defeated. Their webs hang in tattered ruins, and the path through the hollow is clear once more.'),
       ],
     }),
+    // 20% for a forest-spider drop — Poison Pouch or the Deathjump Spider ally
+    // (the gate lives in CHANCE_LOOT, the pool decides which).
     new EncounterPhaseData({
       phaseType: EncounterPhase.LOOT,
       lootGoldDice: [2, 6],
+      lootCards: ['forest_spider_loot'],
     }),
   ]);
 }

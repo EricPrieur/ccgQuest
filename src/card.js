@@ -109,6 +109,11 @@ export class Card {
     arcaneHits = 0,
     sellable = false,
     heroismDamageMult = 1,
+    // Internal keyword, never printed on the card. Marks food a carnivore will
+    // actually accept — the Meal provision says "this is food", isMeat says
+    // "this is the KIND of food Bandit is holding out for". Kept as a flag on
+    // the card rather than an id list in main.js so a new meat declares itself.
+    isMeat = false,
   }) {
     this.id = id;
     this.name = name;
@@ -132,6 +137,7 @@ export class Card {
     this.previewCreature = previewCreature;
     this.previewCreatures = previewCreatures;
     this.isToken = isToken;
+    this.isMeat = isMeat;
     this.isUnique = isUnique;
     this.provision = provision;
     // Optional MULTI-slot provisions. A card that fills more than one slot in
@@ -206,6 +212,7 @@ export class Card {
       previewCreature: this.previewCreature,
       previewCreatures: [...this.previewCreatures],
       isToken: this.isToken,
+      isMeat: this.isMeat,
       isUnique: this.isUnique,
       // Deep-clone provision so card.copy() (used by codex preview,
       // hand draws, etc.) doesn't share the same object with the

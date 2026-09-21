@@ -119,6 +119,8 @@ import {
   createEnragedStrike, createDireClaws, createDireBite, createDireHide, createBearRoar,
   createSummonGiantHyena, createGiantHyenaCreature, createBoneBow, createBoneJavelin, createGnollBite,
   createGnollCreature, createGnollWarriorCreature, createGnollPackLordCreature, createBoneWhip, createBoneFlail, createAncientBones, createBluecap, createBarrelstalk, createRareMushroom,
+  createBanditCard, createBanditCreature, createGnawedBone, createChippedRock,
+  createDeathjumpSpiderCard, createDeathjumpSpiderCreature, createPoisonPouch,
   createSvirfhammer, createDeepPick, createWorkGloves, createFungalLantern, createMinersHelm,
   createMycelialCodex, createMiningGoggles,
   createUmberShield, createMandibleCleaver, createUmberEyeCharm,
@@ -180,7 +182,7 @@ import {
   createNaturesHealing,
 } from './cards.js';
 import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createUnderdarkGnollEntranceMap, createUnderdarkDwarvenOutpostMap, createUnderdarkGnollEntrance02Map, createUnderdarkGnollEntrance03Map, createUnderdarkSouthXRoad04Map, createUnderdarkSouthPath05Map, createUnderdarkSouthPath06Map, createUnderdarkSouthPath07Map, createUnderdarkSouthPath08Map, createUnderdarkSouthPath09Map, createUnderdarkSouthPath10Map, createUnderdarkSouthPath11Map, createUnderdarkSouthPath12Map, createUnderdarkSouthPath13Map, createUnderdarkEastPath14Map, createUnderdarkEastPath15Map, createUnderdarkEastPath16Map, createUnderdarkEastPath17Map, createUnderdarkEastPath18Map, createUnderdarkEastPath19Map, createUnderdarkGnomeVillage20Map, createUnderdarkGnomeVillage21Map, createUnderdarkGnomeVillage22Map, createCornisHouseMap, createBorrowedHouseMap, createUnderdarkEastPath23Map, createUnderdarkEastPath24Map, createUnderdarkMushroomCircle25Map, createHallOfCallarduranMap, createAncientDruidCircleMap, createKarEdenPath01Map, createKarEdenPath02Map, createKarEdenPath03Map, createUnderdarkNorthPath26Map, createUnderdarkNorthPath27Map, createUnderdarkNorthPath28Map, createUnderdarkNorthPathLeft29Map, createUnderdarkNorthPathLeft30Map, createUnderdarkNorthPathLeft31Map, createUnderdarkNorthPathLeft32Map, createUnderdarkNorthPathMiddle33Map, createUnderdarkNorthPathMiddle34Map, createUnderdarkNorthPathMiddle35Map, createUnderdarkNorthPathMiddle36Map, createUnderdarkNorthPathRight37Map, createUnderdarkNorthPathRight38Map, createUnderdarkNorthPathRight39Map, createUnderdarkNorthPathRight40Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, EncounterText, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createMushroomCircleArrivalEncounter, createMushroomCircleEncounter, createUmberHulkEncounter, createRoperEncounter, createCarrionCrawlerEncounter, createDrowWarpartyEncounter, createPsilofyrAltarEncounter, psilofyrOfferLabel, createGnomeMerchantsEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createGnollPackLordEncounter, createGnollFangOfYeenoghuEncounter, createCorruptedShrineEncounter, createCragCatEncounter } from './encounter.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, EncounterText, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createMushroomCircleArrivalEncounter, createMushroomCircleEncounter, createUmberHulkEncounter, createRoperEncounter, createCarrionCrawlerEncounter, createDrowWarpartyEncounter, createPsilofyrAltarEncounter, psilofyrOfferLabel, createBanditFeedEncounter, banditFeedLabel, createGnomeMerchantsEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createGnollPackLordEncounter, createGnollFangOfYeenoghuEncounter, createCorruptedShrineEncounter, createCragCatEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -657,6 +659,12 @@ let _psilofyrOffering = 0;
 // back on drops straight to the offering list — the scene doesn't need
 // re-reading every trip up the stair.
 let _psilofyrIntroSeen = false;
+// Bandit — the Obsidian Market stray. Latches the moment he is fed MEAT; the
+// Market Stalls encounter drops the whole feeding beat once it is set.
+let _banditJoined = false;
+// Where to put the player back after a dialog opened FROM a shop shelf (Bandit).
+// Session-only: it is consumed the moment the dialog closes.
+let _shopReopenAfter = null;
 const PSILOFYR_STAFF_THRESHOLD = 20;
 // What the god accepts: everything on the Underdark mushroom table. The Rare
 // Mushroom is excluded on purpose — it's crafting fuel for the Hall of
@@ -665,6 +673,52 @@ const PSILOFYR_OFFERABLE_IDS = ['bluecap', 'barrelstalk', 'cave_shroom'];
 // Everything the party is carrying that the altar will take, collapsed to one
 // row per kind with a count. masterDeck is the canonical pool (active piles are
 // rebuilt on load), plus the backpack.
+// What Bandit will accept, and what actually wins him — both read off KEYWORDS
+// on the card, not an id list here. A card is FOOD if it carries a Meal
+// provision (that is the game's own statement that you can eat it, which is why
+// Scraps — "Heal 3. Discard." — correctly does not qualify), and it is MEAT if
+// it carries the internal `isMeat` flag (see src/card.js). A new meal or a new
+// meat therefore declares itself and needs no change here.
+function isMealCard(card) {
+  if (!card) return false;
+  if (card.provision && card.provision.slot === 'meal') return true;
+  if (Array.isArray(card.provisions)) {
+    return card.provisions.some(pr => pr && pr.slot === 'meal');
+  }
+  return false;
+}
+function collectBanditFoodOfferings() {
+  const rows = new Map();
+  const consider = (card) => {
+    // Meat always qualifies even if a future one ships without a Meal line.
+    if (!card || !(isMealCard(card) || card.isMeat)) return;
+    const hit = rows.get(card.id);
+    if (hit) { hit.count += 1; return; }
+    rows.set(card.id, {
+      id: card.id, name: card.name, count: 1,
+      isMeat: !!card.isMeat,
+    });
+  };
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    for (const c of player.deck.masterDeck) consider(c);
+  }
+  for (const c of backpack) consider(c);
+  // Meat first — the row that actually matters should not be buried under
+  // whatever berries the party happens to be hoarding.
+  return [...rows.values()].sort((a, b) => (b.isMeat - a.isMeat) || a.name.localeCompare(b.name));
+}
+// Pull one copy of `cardId` out of the party's holdings and banish it. Same
+// shape as consumePsilofyrOffering — the dog eats it, it does not come back.
+function consumeBanditFood(cardId) {
+  let card = null;
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    card = player.deck.masterDeck.find(c => c && c.id === cardId);
+  }
+  if (!card) card = backpack.find(c => c && c.id === cardId);
+  if (!card) return null;
+  banishCard(card);
+  return card;
+}
 function collectPsilofyrOfferings() {
   const rows = new Map();
   const consider = (card) => {
@@ -2963,6 +3017,7 @@ const RUN_FLAGS = {
   rareMushroomFound: { g: () => _rareMushroomFound, s: v => { _rareMushroomFound = v; } },
   mushroomFarmIntroSeen: { g: () => _mushroomFarmIntroSeen, s: v => { _mushroomFarmIntroSeen = v; } },
   psilofyrIntroSeen: { g: () => _psilofyrIntroSeen, s: v => { _psilofyrIntroSeen = v; } },
+  banditJoined: { g: () => _banditJoined, s: v => { _banditJoined = v; } },
   underdarkEncArmed: { g: () => _underdarkEncArmed, s: v => { _underdarkEncArmed = v; } },
   direBearDefeated: { g: () => direBearDefeated, s: v => { direBearDefeated = v; }, rest: true },
   rocRescued: { g: () => rocRescued, s: v => { rocRescued = v; } },
@@ -4742,6 +4797,8 @@ const CARD_REGISTRY = {
   bone_bow: createBoneBow, bone_javelin: createBoneJavelin, bone_cage: createBoneCage, bone_whip: createBoneWhip,
   bone_cleaver: createBoneCleaver, cracked_marrow_bone: createCrackedMarrowBone,
   bone_flail: createBoneFlail, ancient_bones: createAncientBones,
+  bandit_card: createBanditCard, gnawed_bone: createGnawedBone, chipped_rock: createChippedRock,
+  deathjump_spider_card: createDeathjumpSpiderCard, poison_pouch: createPoisonPouch,
   // Chapter 3 — Underdark fungus.
   bluecap: createBluecap, barrelstalk: createBarrelstalk, rare_mushroom: createRareMushroom,
   // Deep gnome gear (Underdark merchant stock).
@@ -5095,6 +5152,27 @@ const LOOT_PICK_TABLES = {
 };
 
 const LOOT_TABLES = {
+  // Bandit's gifts — what the market stray drags back on a successful forage
+  // (50% per swing, see the summon_bandit stamp). Both are tier-1 tokens: found
+  // value, not built value, so they are unsellable and cost nothing to hold.
+  // Forest Spiders — a 20% chance on EITHER Forest Ambush (see CHANCE_LOOT).
+  // On a drop, ONE pick by weight: the Poison Pouch is the common find, the
+  // Deathjump Spider ally the rare one. 1.0 / 0.5 over a 20% gate works out at
+  // ~13.3% for the pouch and ~6.7% for the spider.
+  //
+  // Renamed from deathjump_spider_loot now that it is a real pool rather than
+  // a one-card table.
+  forest_spider_loot: [
+    { creator: createPoisonPouch,         weight: 1.0 },
+    { creator: createDeathjumpSpiderCard, weight: 0.5 },
+  ],
+  bandit_gifts: [
+    { creator: createGnawedBone,  weight: 1.0 },
+    { creator: createChippedRock, weight: 1.0 },
+    // The find. Ten times rarer than the junk, so it lands on roughly 1 in 21
+    // gifts — rare enough that a Lucky Pebble actually reads as lucky.
+    { creator: createLuckyPebble, weight: 0.1 },
+  ],
   // Underdark mushroom beds (East Path 18 ring) — what a harvest turns up when
   // the picking goes well. Bluecap is the staple; Barrelstalk is the find.
   underdark_mushrooms: [
@@ -5710,6 +5788,8 @@ const LOOT_TABLE_LABELS = {
   tier1_common: 'Tier 1 Commons',
   tier2_common: 'Tier 2 Commons',
   tier3_common: 'Tier 3 Commons',
+  bandit_gifts: "Bandit's Gifts",
+  forest_spider_loot: 'Forest Spiders',
   underdark_mushrooms: 'Underdark Mushrooms',
   bone_pile_loot:      'Bone Pile',
   slime_loot:          'Slime',
@@ -5784,6 +5864,8 @@ const LOOT_TABLE_NOTES = {
   tier1_common:        'The generic tier-1 supply pool — plain food, bandages, a potion. Hung on tier-1 fights that do NOT already drop a guaranteed second item, at a 20% chance per fight (pick one by weight). Monster-flavoured consumables are deliberately NOT in here; they stay on their own tables.',
   tier2_common:        'The generic tier-2 supply pool. Weights fold rarity and tier together: tier-2 commons at 1.0, tier-2 uncommons at 0.75, tier-2 rares and the tier-1 uncommons carried forward at 0.5. Like Tier 1 Commons, monster- and story-flavoured supplies are deliberately kept out.',
   tier3_common:        'The generic tier-3 supply pool, rolled at 20% on the Crag Cat, every gnoll fight and the Underdark hunting encounters. Same ladder as the other two: tier-3 commons (Bluecap, Crystalwater Flask) at 1.0, tier-3 uncommons (Barrelstalk, Fungal Bandages) at 0.75, the tier-3 rare Potion of Superior Healing and the tier-2 carry-forwards (Stonebound Bandages, Potion of Greater Healing) at 0.5. Minor Healing Potion sits lowest at 0.25 — a rare AND two tiers back, so it reads as a leftover rather than a prize. Monster- and story-flavoured supplies stay on their own tables; Rare Mushroom is kept out because it is a scarce crafting material.',
+  bandit_gifts:        'Not a drop — what Bandit drags back. Each of his attacks has a 50% chance to bring one: the Gnawed Bone and the Chipped Rock at equal weight, and a Lucky Pebble at a tenth of theirs (~1 gift in 21).',
+  forest_spider_loot: 'A 20% chance after either Forest Ambush, then ONE pick by weight: the Poison Pouch at 1.0 (~13.3% of fights) and the Deathjump Spider ally at 0.5 (~6.7%) — the hatchling that decides you are better company than the nest.',
   ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
   rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
@@ -17536,8 +17618,33 @@ function transitionToTharnag(fromNodeId) {
 
 // Tharnag → Filibaf entrance (cross-map back). Re-arms the entrance
 // node as done so the next click hops straight to Tharnag again.
+// Walking back out of Filibaf Forest without having cleared it resets the maze.
+//
+// The forest encounters are already in REPEATABLE_ENCOUNTERS, so they never
+// reach completedEncounters and hydrateMapFromGlobalState has nothing to
+// re-mark. What kept a half-run maze "done" was the MAP CACHE: _mapCache holds
+// the live forest object, isDone and all, so re-entering handed back the same
+// map with the ambush already walked and the loop mid-depth. Dropping the cache
+// entry makes the next entry rebuild from createFilibafForestMap() — every node
+// locked and ??? again, and any return node that had been transformed into the
+// Forest Clearing exit is a plain return node once more.
+//
+// Same rule the Tharnag siege already follows: bail out, lose the progress.
+function resetFilibafForest() {
+  delete _mapCache.filibaf_forest;
+  forestLoopLevel = 1;
+  forestCorrectPath = Math.random() < 0.5 ? 'left' : 'right';
+  addLog('  [Forest] The paths close behind you — the maze resets.', Colors.GRAY);
+}
+
 function transitionToFilibafEntrance(fromNodeId) {
+  // Only a bail-out resets: arriving here from tharnag_entry is the party
+  // coming back through a forest they already beat, and forestCleared means
+  // the maze is retired for the run either way.
+  const bailedOut = (fromNodeId === 'forest_edge' && !forestCleared);
   if (currentMap) _mapCache[currentMap.id] = currentMap;
+  // AFTER the cache write above, or it would just be re-stored.
+  if (bailedOut) resetFilibafForest();
   currentMap = getOrCreateMap('north_qualibaf', createNorthQualibafMap);
   visitedNodes = new Set();
   visitedNodes.add('filibaf_entrance');
@@ -20023,7 +20130,12 @@ function advanceEncounterPhase() {
       // Tables that drop at their OWN chance rather than the flat 50% gate above.
       // A table listed here rolls its own number; everything else is either
       // always-drop or 50% via GATED_LOOT.
-      const CHANCE_LOOT = { tier1_common: 0.20, tier2_common: 0.20, tier3_common: 0.20 };
+      const CHANCE_LOOT = {
+        tier1_common: 0.20, tier2_common: 0.20, tier3_common: 0.20,
+        // The forest's drop. Rolled on both Forest Ambush nodes; the pool
+        // decides which of the two items it is.
+        forest_spider_loot: 0.20,
+      };
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
       // Phase opt-out from the 50% gate (Gate of the Deep front fights —
       // guaranteed 1 goblin drop + 1 troll drop).
@@ -24095,6 +24207,120 @@ function handleEncounterChoiceClick(x, y) {
         startNodeEncounter(currentMap.currentNodeId);
         return;
       }
+      if (r.choice.effectType === 'bandit_feed') {
+        // Feed the market stray. He eats ANY food on the list; only MEAT wins
+        // him. A non-meat row stays open, so the player can keep guessing — and
+        // keep paying a card for each guess.
+        //
+        // Resolved HERE at click time, and every path RETURNS. Falling through
+        // reaches `encounterChoiceResult = r.choice`, which renders a result
+        // page — and these rows carry no result text, so that page was drawing
+        // as an empty dialog box after every feeding.
+        const feedId = r.choice._foodId;
+        const given = feedId ? consumeBanditFood(feedId) : null;
+        if (!given) {
+          showToast('You have none of those left to give.');
+          r.choice.exhausted = true;
+          return;
+        }
+        const wasMeat = !!r.choice._foodIsMeat;
+        addLog(`  Fed to the dog: ${given.name}`, Colors.GREEN, given);
+        if (!wasMeat) {
+          // No result page to put prose on (see above), so the rejection is a
+          // toast, with the fuller line kept in the log.
+          addLog(
+            `  He swallows the ${given.name} without once looking away from your pack, `
+            + 'then sits back down and waits.',
+            Colors.GRAY,
+          );
+          showToast(`He eats the ${given.name}. Still watching your pack.`, 2600);
+          playSound('eat_popcorn_01', 0.6);
+          // Re-label the rows against what is actually left, or the "(2 held)"
+          // counts sit stale until the party walks out and back in.
+          {
+            const remaining = collectBanditFoodOfferings();
+            for (const ph of (currentEncounter && currentEncounter.phases) || []) {
+              if (!Array.isArray(ph.choices)) continue;
+              for (const c of ph.choices) {
+                if (c.effectType !== 'bandit_feed') continue;
+                const row = remaining.find(o => o.id === c._foodId);
+                if (row) {
+                  c.text = banditFeedLabel(row.name, row.count);
+                } else {
+                  c.text = banditFeedLabel(c._foodName || given.name, 0);
+                  c.exhausted = true;
+                }
+              }
+            }
+          }
+          return;
+        }
+        // MEAT. He is yours. Hand him over on a proper TEXT + LOOT page rather
+        // than a toast — same presentation as any other reward card, which is
+        // what gets the card showcase and the coin sting. The LOOT phase does
+        // the granting, so nothing is pushed to the backpack here.
+        _banditJoined = true;
+        _shopReopenAfter = null;   // the beat ends on the map, not back at the stall
+        addLog('  Bandit joins the party!', Colors.GOLD);
+        currentEncounter = new Encounter(
+          'bandit_joins',
+          'The Stray',
+          'He has decided.',
+          [
+            new EncounterPhaseData({
+              phaseType: EncounterPhase.TEXT,
+              texts: [
+                new EncounterText(
+                  `The ${given.name} does not touch the ground. One snap, a swallow, and `
+                  + 'he is already pushing his head under your hand — all business '
+                  + 'concluded, as far as he is concerned. The butcher watches this happen '
+                  + 'and says nothing at all, which from a market man is as close to a '
+                  + 'blessing as you will get.'
+                ),
+                // Only the player, Thorb and Raena are guaranteed to be here —
+                // Brad is not, so nobody references him.
+                new EncounterText(
+                  'When you walk, he walks. When you stop, he sits down against your leg '
+                  + 'and faces whatever you came from. Raena watches him do it twice, then '
+                  + 'stops pretending not to approve. "He picked the job himself," she '
+                  + 'says. "That is more than most of us managed."',
+                  'Raena',
+                ),
+              ],
+            }),
+            new EncounterPhaseData({
+              phaseType: EncounterPhase.LOOT,
+              lootTitle: 'He Follows You',
+              lootCards: ['bandit_card'],
+              guaranteedLoot: true,
+            }),
+          ],
+        );
+        encounterChoiceResult = null;
+        playSound('gold');
+        setTimeout(() => playSound('perk_pick', 0.85), 220);
+        advanceEncounterPhase();
+        autosaveNow();
+        return;
+      }
+      // Bandit's exits — toast-only, no dialog page. Handled HERE, at click
+      // time, rather than in the post-result switch below: a choice with an
+      // effectType does not qualify for the bare-Leave fast path, so routing it
+      // through the result flow drew an empty dialog box before the exit. This
+      // also puts the player back on the market shelf they clicked him from.
+      if (r.choice.effectType === 'bandit_leave') {
+        if (r.choice._exitToast) showToast(r.choice._exitToast, 2600);
+        currentEncounter = null;
+        encounterChoiceResult = null;
+        if (_shopReopenAfter) {
+          const back = _shopReopenAfter;
+          _shopReopenAfter = null;
+          openShop(back.id, back.name);
+        } else {
+          state = GameState.MAP;
+        }
+        return;
+      }
       // Kitchen sneak is a toast-only path — no dialog page. Resolve the
       // effect inline and complete the encounter immediately.
       if (r.choice.effectType === 'kitchen_sneak') {
@@ -26742,6 +26968,8 @@ function getCombatMusicTrack() {
 }
 
 function startCombat() {
+  // Never let an uncommitted cost-pick leak across fights.
+  dropPendingRechargeRiders();
   // Music is scene-driven now (see updateMusicForCurrentScene). The
   // prison ambience keeps playing through prison fights; switching to
   // the sewer track happens on map-area transition, not on combat.
@@ -32350,6 +32578,9 @@ function getSidePreviewCards(card) {
 // rebuild it every frame.
 function getCreatureSidePreviewCard(creature) {
   if (!creature) return null;
+  // Foragers that roll a TABLE opt out: previewing one random member would
+  // advertise it as the only possible drop (see Bandit's summon stamp).
+  if (creature._noForagePreview) return null;
   if (creature._sidePreviewCard) return creature._sidePreviewCard;
   let creator = (typeof creature._forageCreator === 'function') ? creature._forageCreator : null;
   if (!creator) {
@@ -33670,6 +33901,50 @@ function handleCombatClick(x, y) {
 // on_recharge_shield effects it carries (Dwarven Greaves grants 1 Shield this
 // way). The granted amount is recorded on the card itself so it can be undone
 // if the player cancels the attack/power before it resolves.
+// === Deferred on-recharge riders ===============================================
+//
+// applyOnRechargeShield fires a CHAIN of payouts the moment a card lands in the
+// recharge pile: shield, heroism, poison on a random foe, Floating Skulls, team
+// buffs, Bone Wall's bolster, Arcane Explosion's AoE, the quiver riders. That is
+// correct for a card that has actually been spent — but four of the player's
+// cost-pick flows let you BACK OUT after feeding a card, and the payouts had
+// already happened. Cancel, keep the loot, repeat.
+//
+// Refunding was the old answer and it only ever went so far: you cannot un-deal
+// Arcane Explosion's damage, you cannot un-heal the Holy Steed (healing moves
+// cards out of the discard pile), and summonOrBolsterSkeleton does not report
+// which body it thickened. So the riders are now QUEUED at pick time and only
+// fire when the play actually commits.
+//
+//   queueOnRechargeRiders  — cost-pick sites (cancellable)
+//   flushPendingRechargeRiders — every real play path, keyed off the same moment
+//                            _activePlayCard is set, so the riders still land
+//                            BEFORE the payee card's own effects, exactly as
+//                            they did when they fired at pick time
+//   dropPendingRechargeRiders — every cancel path
+//
+// Committed recharges (playing a Recharge-cost card, Scout, Flash of Genius,
+// Armorer's Training, the swim recharge, end-of-turn cycling) still call
+// applyOnRechargeShield directly — there is nothing to back out of.
+//
+// The refund helpers below are kept as a belt-and-braces: with deferral there
+// are no stamps to unwind on a cancel, so they no-op, but any path that still
+// applies early stays recoverable.
+let _pendingRechargeRiders = [];
+function queueOnRechargeRiders(card, payeeCard = null) {
+  if (!card) return;
+  _pendingRechargeRiders.push({ card, payeeCard });
+}
+function flushPendingRechargeRiders() {
+  if (_pendingRechargeRiders.length === 0) return;
+  const queued = _pendingRechargeRiders;
+  _pendingRechargeRiders = [];
+  for (const { card, payeeCard } of queued) applyOnRechargeShield(card, payeeCard);
+}
+function dropPendingRechargeRiders() {
+  _pendingRechargeRiders = [];
+}
+
 function applyOnRechargeShield(card, payeeCard = null) {
   if (!card || !Array.isArray(card.currentEffects)) return;
   let granted = 0;
@@ -33788,6 +34063,7 @@ function applyOnRechargeTeamBuffs(card) {
     const gain = inHand * shieldPerCard;
     if (gain > 0) {
       player.shield = (player.shield || 0) + gain;
+      card._onRechargeHandShield = gain;
       spawnTokenOnTarget(player, gain, 'Shield', Colors.ALLY_BLUE);
       addLog(`  ${card.name}: +${gain} Shield (${inHand} card${inHand === 1 ? '' : 's'} in hand)`, Colors.ALLY_BLUE);
     } else {
@@ -33810,6 +34086,10 @@ function applyOnRechargeTeamBuffs(card) {
       pick.attack = (pick.attack || 0) + 1;
       pick.maxHp = (pick.maxHp || 0) + 1;
       pick.currentHp = (pick.currentHp || 0) + 1;
+      // Remember WHICH body grew, so a cancelled play can shrink it back. The
+      // pick is random, so without this the refund had nothing to aim at — this
+      // is the Bone Wall bug: cancel the play, keep the +1/+1.
+      (card._onRechargeBolstered || (card._onRechargeBolstered = [])).push(pick);
       spawnHealOnTarget(pick, 1);
       addLog(`  ${card.name}: ${pick.name} thickens (+1/+1).`, Colors.PURPLE);
     }
@@ -33826,6 +34106,7 @@ function applyOnRechargeTeamBuffs(card) {
   // they can't attack or be hit, so team Heroism / Shield on them is dead value.
   const allies = (player.creatures || []).filter(c => c && c.isAlive && !isTotemAlly(c));
   if (teamHeroism > 0) {
+    card._onRechargeTeamHeroism = { amount: teamHeroism, targets: [player, ...allies] };
     player.heroism = (player.heroism || 0) + teamHeroism;
     spawnTokenOnTarget(player, teamHeroism, 'Heroism', Colors.GOLD);
     for (const a of allies) {
@@ -33835,6 +34116,7 @@ function applyOnRechargeTeamBuffs(card) {
     addLog(`  ${card.name}: +${teamHeroism} Heroism to you and ${allies.length} all${allies.length === 1 ? 'y' : 'ies'}`, Colors.GOLD);
   }
   if (teamShield > 0) {
+    card._onRechargeTeamShield = { amount: teamShield, targets: [player, ...allies] };
     player.shield = (player.shield || 0) + teamShield;
     spawnTokenOnTarget(player, teamShield, 'Shield', Colors.ALLY_BLUE);
     for (const a of allies) {
@@ -33917,6 +34199,88 @@ function refundOnRechargeShield(card) {
   }
   refundOnRechargeHeroism(card);
   refundOnRechargeQuiverRiders(card);
+  refundOnRechargeTeamBuffs(card);
+  refundOnRechargeSummonSkull(card);
+  refundOnRechargePoison(card);
+}
+
+// The rest of the on-recharge family, unwound. applyOnRechargeShield fires a
+// CHAIN of riders (shield, heroism, poison, skulls, team buffs, damage-all,
+// quiver) the moment a card is fed to a cost — but only the first two and the
+// quiver were ever refunded, so cancelling the play banked everything else for
+// free. Bone Wall's +1/+1 on a random Undead was the reported case; Floating
+// Skulls, Aura of Might, Devotion Aura, Drowned Lungs and Entangling Roots all
+// had the same hole. Each applier now stamps what it did, because several of
+// them pick a RANDOM target and a refund cannot re-derive that.
+//
+// STILL NOT REFUNDED, because they cannot be cleanly reversed:
+//   on_recharge_damage_all            (arcane_explosion) — damage is dealt, and
+//                                     may already have killed something.
+//   on_recharge_heal_overheal_heroism (holy_steed) — healing MOVES cards out of
+//                                     the discard pile; un-healing is not a
+//                                     thing this engine can do.
+//   on_recharge_summon_or_bolster_skeleton (unholy_aura) — summonOrBolsterSkeleton
+//                                     does not report WHICH body it thickened.
+//   on_recharge_ink_random            (inkbladder_flask) — a decaying status on
+//                                     a random foe.
+// The real fix for those four is to DEFER the whole family until the play
+// commits, rather than firing at cost-pick time and refunding on cancel. That
+// is a larger change to every cost-pick site and wants playtesting.
+function refundOnRechargeTeamBuffs(card) {
+  if (!card) return;
+  const th = card._onRechargeTeamHeroism;
+  if (th) {
+    for (const t of th.targets) {
+      if (t) t.heroism = Math.max(0, (t.heroism || 0) - th.amount);
+    }
+    delete card._onRechargeTeamHeroism;
+    addLog(`  ${card.name}: refund ${th.amount} team Heroism`, Colors.GRAY);
+  }
+  const ts = card._onRechargeTeamShield;
+  if (ts) {
+    for (const t of ts.targets) {
+      if (t) t.shield = Math.max(0, (t.shield || 0) - ts.amount);
+    }
+    delete card._onRechargeTeamShield;
+    addLog(`  ${card.name}: refund ${ts.amount} team Shield`, Colors.GRAY);
+  }
+  if (card._onRechargeHandShield) {
+    const amt = card._onRechargeHandShield;
+    player.shield = Math.max(0, (player.shield || 0) - amt);
+    delete card._onRechargeHandShield;
+    addLog(`  ${card.name}: refund ${amt} Shield`, Colors.GRAY);
+  }
+  if (Array.isArray(card._onRechargeBolstered)) {
+    for (const c of card._onRechargeBolstered) {
+      if (!c) continue;
+      c.attack = Math.max(0, (c.attack || 0) - 1);
+      c.maxHp = Math.max(1, (c.maxHp || 1) - 1);
+      c.currentHp = Math.min(c.currentHp || 0, c.maxHp);
+    }
+    const n = card._onRechargeBolstered.length;
+    delete card._onRechargeBolstered;
+    addLog(`  ${card.name}: refund ${n} bolster${n === 1 ? '' : 's'}`, Colors.GRAY);
+  }
+}
+function refundOnRechargeSummonSkull(card) {
+  if (!card || !Array.isArray(card._onRechargeSkulls)) return;
+  const skulls = card._onRechargeSkulls;
+  delete card._onRechargeSkulls;
+  if (!player || !Array.isArray(player.creatures)) return;
+  player.creatures = player.creatures.filter(c => !skulls.includes(c));
+  addLog(`  ${card.name}: refund ${skulls.length} Floating Skull${skulls.length === 1 ? '' : 's'}`, Colors.GRAY);
+}
+function refundOnRechargePoison(card) {
+  if (!card || !card._onRechargePoison) return;
+  const { target, stacks } = card._onRechargePoison;
+  delete card._onRechargePoison;
+  if (!target || !stacks) return;
+  if (target instanceof Creature) {
+    target.poisonStacks = Math.max(0, (target.poisonStacks || 0) - stacks);
+  } else if (typeof target.removeStatus === 'function') {
+    target.removeStatus('POISON', stacks);
+  }
+  addLog(`  ${card.name}: refund ${stacks} Poison on ${target.name || 'target'}`, Colors.GRAY);
 }
 
 // Wolf Fang relic: when this card lands in the recharge pile (paid as
@@ -34011,7 +34375,8 @@ function handleCardRechargeClick(x, y) {
       card._preRechargeExhausted = !!card.exhausted;
       player.deck.hand.splice(i, 1);
       player.deck.addToRechargePile(card);
-      applyOnRechargeShield(card, payeeCard); // Dwarven Greaves, Quiver, etc.
+      // QUEUED, not applied — this pick is cancellable (cancelCardRecharge).
+      queueOnRechargeRiders(card, payeeCard); // Dwarven Greaves, Quiver, etc.
       cardRechargedCards.push(card);
       pendingRechargeNames.push(card.name);
 
@@ -34330,6 +34695,8 @@ function handleDefendingClick(x, y) {
       card._handRect = { x: dr.x, y: dr.y, w: dr.w, h: dr.h };
     }
     _activePlayCard = card;
+    // Cost-pick riders were deferred until the play actually committed.
+    flushPendingRechargeRiders();
     player.deck.playCard(card);
     addLog(`You play ${card.name}`, Colors.GREEN, card);
     // Recharge-cost defense cards self-recharge when played, so any
@@ -34757,6 +35124,10 @@ function drawArmorerTrainingOverlay() {
 }
 
 function cancelCardRecharge() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   // Refund any recharged cards back to hand (they were placed in the recharge pile)
   for (const c of cardRechargedCards) {
     refundOnRechargeShield(c); // undo Dwarven Greaves shield etc.
@@ -35012,7 +35383,8 @@ function handleTargetingClick(x, y) {
       // Same on-recharge triggers as the standard recharge-cost flow —
       // Arcane Beam was the other path that silently swallowed Wolf Fang
       // heroism and Dwarven Greaves shield.
-      applyOnRechargeShield(payCard, beamPayee);
+      // QUEUED — the beam can still be cancelled (cancelBeamMode).
+      queueOnRechargeRiders(payCard, beamPayee);
       if (i < beamCardIndex) beamCardIndex--;
       selectedCardIndex = beamCardIndex;
       beamRechargedCards.push(payCard);
@@ -35046,7 +35418,8 @@ function handleTargetingClick(x, y) {
       // Fire on-recharge triggers (Wolf Fang heroism, Dwarven Greaves
       // shield, etc.). Missing here meant paying Wolf Fang as the
       // barrage recharge cost silently swallowed the +1 Heroism.
-      applyOnRechargeShield(payCard, barragePayee);
+      // QUEUED — the barrage can still be cancelled (cancelBarrage).
+      queueOnRechargeRiders(payCard, barragePayee);
       if (i < barrageCardIndex) barrageCardIndex--;
       selectedCardIndex = barrageCardIndex;
       barrageRechargedCard = payCard;
@@ -35264,6 +35637,9 @@ function triggerSentinelFlash() {
 
 // Resolve one barrage shot on a target
 function resolveBarrageShot(target) {
+  // First shot is the commit for a barrage whose cost was a queued cost-pick.
+  // No-ops on every shot after the first.
+  flushPendingRechargeRiders();
   // Snapshot consumable on-attack buffs on the FIRST shot only — every
   // subsequent shot reuses the snapshot so a single Vial of Poison /
   // Sahuagin Eye / Obsidian Core / Ignite stack applies to the whole
@@ -35533,6 +35909,10 @@ function finishBarrage() {
 
 // Cancel barrage: only if no shots fired yet, refund the recharged card
 function cancelBarrage() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   if (barrageShotsFired > 0) {
     // Can't cancel mid-barrage — finish instead
     finishBarrage();
@@ -35621,6 +36001,7 @@ function resolveFireBarrageShot(target) {
   // apply_fire_multi / apply_ice_multi can read _activePlayCard._handRect
   // for the source.
   if (fireBarrageCardIndex >= 0 && fireBarrageCardIndex < player.deck.hand.length) {
+    flushPendingRechargeRiders();
     _activePlayCard = player.deck.hand[fireBarrageCardIndex];
   }
   addLog(`  Shot ${fireBarrageShotsFired}:`, Colors.GRAY);
@@ -35685,6 +36066,8 @@ function cancelFireBarrage() {
 // charged beam hums for the full ~8 sec sample.
 const ARCANE_BEAM_FULL_MS = 8000;
 function prepareBeamFire(card) {
+  // The beam is committed the moment it fires; its charge picks were queued.
+  flushPendingRechargeRiders();
   if (!card) return;
   const charges = beamRechargedCards.length;
   const bonus = beamBonusPerCard * charges;
@@ -35705,6 +36088,10 @@ function finishBeamMode() {
 }
 
 function cancelBeamMode() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   // Refund any cards moved to the recharge pile during charging so the
   // player isn't penalized for backing out.
   for (const c of beamRechargedCards) {
@@ -36804,6 +37191,28 @@ function resolveEffect(eff, caster, target) {
       if (heroism > 0) { addLog(`  (Heroism +${heroism})`, Colors.GOLD); caster.heroism = 0; }
       let dmg = Math.max(0, eff.value + heroism + (caster.rage || 0) + getDamageModifier(caster));
       dmg = consumeIceForAttack(caster, dmg);
+      // Bleeding bonus — the Sahuagin Eye's rider ("Next Attack: Bleeding: +1")
+      // plus any per-card bleeding_bonus_damage. This block only existed in the
+      // plain `damage` case, so a TRUE-damage attack — Drain Life, Dwarven
+      // Crossbow, Spectral Hand — consumed the Eye's charge and paid nothing
+      // for it. Same shape as the damage case, read on the live Bleed stacks.
+      {
+        const upBleedCard = (_activePlayCard && Array.isArray(_activePlayCard.currentEffects))
+          ? _activePlayCard.currentEffects
+              .filter(e => e.effectType === 'bleeding_bonus_damage')
+              .reduce((sum, e) => sum + e.value, 0)
+          : 0;
+        const upBleedTotal = upBleedCard + snapshotBleedingDamageBuff(caster);
+        if (upBleedTotal > 0) {
+          const upBleeding = (target instanceof Creature)
+            ? ((target.bleedStacks || 0) > 0)
+            : ((target && target.getStatus && (target.getStatus('BLEED') || 0)) > 0);
+          if (upBleeding) {
+            dmg += upBleedTotal;
+            addLog(`  Target Bleeding! +${upBleedTotal} damage`, Colors.RED);
+          }
+        }
+      }
       dmg += getIncomingDamageModifier(target);
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
@@ -41312,6 +41721,24 @@ function resolveEffect(eff, caster, target) {
       addLog(`  +${eff.value} Heroism`, Colors.GOLD);
       spawnTokenOnTarget(caster, eff.value, 'Heroism', Colors.GOLD);
       break;
+    case 'beast_gain_heroism': {
+      // Gnawed Bone — the Heroism goes to a BEAST, not the player: you are
+      // handing the bone back to the dog. Picks the beast with the highest
+      // Attack, so the gift lands where it converts to the most damage, and
+      // says so plainly when there is no beast to give it to.
+      const bgBeasts = (player.creatures || []).filter(isBeastCreature);
+      if (bgBeasts.length === 0) {
+        addLog(`  No beast to give it to.`, Colors.GRAY);
+        break;
+      }
+      const bgTarget = bgBeasts.reduce((best, c) =>
+        ((c.attack || 0) > (best.attack || 0) ? c : best), bgBeasts[0]);
+      const bgAmt = Math.max(1, eff.value || 1);
+      bgTarget.heroism = (bgTarget.heroism || 0) + bgAmt;
+      addLog(`  ${bgTarget.name}: +${bgAmt} Heroism`, Colors.GOLD, null, null, bgTarget);
+      spawnTokenOnTarget(bgTarget, bgAmt, 'Heroism', Colors.GOLD);
+      break;
+    }
     case 'gain_rage':
       // Rage — permanent +N damage on every attack for the rest of the fight
       // (cleared with the other combat-only statuses when combat ends). The
@@ -41611,6 +42038,65 @@ function resolveEffect(eff, caster, target) {
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(val);
       addLog(`  Valdrisa joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_deathjump_spider': {
+      // The forest hatchling. A PLAIN summon — deliberately not companion-routed
+      // (no sourceCard, no _routeToPlayPile): the card recharges as normal and
+      // the body dying costs nothing but the body. Only named companions pay
+      // their card for dying.
+      const djs = createDeathjumpSpiderCreature();
+      scaleCreatureWithOffset(djs, playerTierOffset || 0, 'player');
+      djs._sourceRarity = 'uncommon';
+      djs._sourceSubtype = 'allies';
+      player.addCreature(djs);
+      addLog(`  A Deathjump Spider drops in beside you!`, Colors.GREEN);
+      playSound('spider_scuttle', 0.6);
+      break;
+    }
+    case 'poison_random': {
+      // Player-side "Deal Poison Randomly" — one stack on a random living foe.
+      // Mirrors applyOnRechargePoison, which does the same job for the
+      // on-recharge riders; this is the on-CAST version.
+      const prAmt = Math.max(1, eff.value || 1);
+      const prTarget = pickRandomEnemyTargetForEffect();
+      if (!prTarget) { addLog(`  No target for the venom.`, Colors.GRAY); break; }
+      if (prTarget instanceof Creature) {
+        prTarget.poisonStacks = (prTarget.poisonStacks || 0) + prAmt;
+      } else if (typeof prTarget.applyStatus === 'function') {
+        prTarget.applyStatus('POISON', prAmt);
+      }
+      spawnTokenOnTarget(prTarget, prAmt, 'Poison', Colors.GREEN);
+      addLog(`  +${prAmt} Poison on ${prTarget.name || 'target'}`, Colors.GREEN);
+      break;
+    }
+    case 'summon_bandit': {
+      // The market stray. Companion-routed like Misha / Huffer: the card sits
+      // in the play pile while he is alive and drops to discard when he dies.
+      const bandit = createBanditCreature();
+      scaleCreatureWithOffset(bandit, playerTierOffset || 0, 'player');
+      bandit.sourceCard = _activePlayCard || null;
+      bandit._sourceRarity = 'rare';
+      bandit._sourceSubtype = 'allies';
+      // Forage stamp — maybeForage prefers _forageCreator over the name-keyed
+      // FORAGE_PROFILES table, so Bandit rolls the bandit_gifts TABLE instead of
+      // the single fixed card the rats get. No _forageLabel: maybeForage falls
+      // back to the rolled card's own name, which is what makes "brings back a
+      // Chipped Rock" read correctly for a two-entry table.
+      bandit._forageCreator = () => {
+        const rolled = rollLootTable('bandit_gifts');
+        return (rolled && rolled[0]) || createGnawedBone();
+      };
+      bandit._forageVerb = 'brings back';
+      // No side-preview mini card. getCreatureSidePreviewCard would otherwise
+      // pop whatever a fresh roll produced, which shows ONE of the three gifts
+      // as if it were the only one — misleading for a table. What he brings
+      // back should be a surprise.
+      bandit._noForagePreview = true;
+      if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
+      player.addCreature(bandit);
+      addLog(`  Bandit trots into the fight!`, Colors.GREEN);
+      playSound('wolf_howl_distant_01', 0.5);
       break;
     }
     case 'summon_dwarven_scout': {
@@ -44045,6 +44531,8 @@ function playCardSelf(handIndex) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   // Snapshot the card's hand rect BEFORE we lift it — AoE arrow
   // sources read this so the volley flies out of the card's place
   // in hand, matching the single-target attack flow where the arrow
@@ -44125,6 +44613,8 @@ function playCardOnAlly(handIndex, target) {
   // leaving the hand — same split the enemy-target and self-play paths use.
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   playSound('card_play');
   playCardAmbient(card);
   if (stays) card.exhausted = true;
@@ -44184,6 +44674,8 @@ function playCardOnEnemy(handIndex) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   _bleedTickedPerShot = false;
   _wasBurningAtCardStart = (player.getStatus('FIRE') || 0) > 0;
   _shieldAtCardStart = player.shield || 0;
@@ -44292,6 +44784,8 @@ function playCardOnCreature(handIndex, creature) {
   const card = player.deck.hand[handIndex];
   const stays = cardStaysInHand(card);
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   _bleedTickedPerShot = false;
   // Snapshot the card's hand rect BEFORE we lift it.
   const handRectsC = getHandCardRects(player.deck.hand);
@@ -44562,6 +45056,9 @@ function makeRegrowthTreantPreview() {
 // totems (Vortex / War Banner / Spike Trap), and every named companion. Brad
 // the Fox reads like an animal but "the Fox" is a nickname — he's a person.
 const BEAST_NAMES = new Set([
+  // Bandit is the earliest Beast the party can field — the market stray is what
+  // gives the ranger's beast line a floor before Animal Companion shows up.
+  'bandit',
   'rat', 'tamed rat', 'dire rat', 'misha', 'huffer', 'pet spider', 'giant hyena',
   'pack hyena', 'piranhas', 'shark', 'baby giant frog',
   // Polymorph's two shapes are animals by definition.
@@ -45014,7 +45511,9 @@ function handlePowerRechargeClick(x, y) {
         player.deck.discardCard(card);
       } else {
         player.deck.addToRechargePile(card); // held until end of turn
-        applyOnRechargeShield(card); // Dwarven Greaves etc. — only on Recharge cost, not Discard
+        // QUEUED — a power pick is cancellable (cancelPowerRecharge /
+        // cancelPowerChoice / cancelPowerTargeting).
+        queueOnRechargeRiders(card); // Dwarven Greaves etc. — only on Recharge cost, not Discard
       }
       powerRechargeCardsSelected.push(card);
       powerRechargeCardsNeeded--;
@@ -45045,6 +45544,10 @@ function handlePowerRechargeClick(x, y) {
 }
 
 function cancelPowerRecharge() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   // Undo recharged cards back to hand
   for (const card of powerRechargeCardsSelected) {
     refundOnRechargeShield(card); // undo Dwarven Greaves shield etc.
@@ -45094,6 +45597,10 @@ function enterPowerChoice(power) {
 }
 
 function cancelPowerChoice() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   // Refund recharged cards back to hand and un-exhaust the power
   if (selectedPower) {
     selectedPower.exhausted = false;
@@ -45341,6 +45848,10 @@ function enterPowerTargeting(power) {
 }
 
 function cancelPowerTargeting() {
+  // Nothing was applied — the cost-pick riders were queued, so backing out
+  // just throws the queue away. (refundOnRechargeShield below stays as a
+  // belt-and-braces for anything that still pays early.)
+  dropPendingRechargeRiders();
   // Refund the power so it can be used again this turn (its cost was already paid).
   // Pull recharged cards back out of their piles first, then restore the
   // original hand order from the snapshot so they end up in the same spots
@@ -45423,6 +45934,8 @@ function enterFeralSwipeTargeting(handIndex) {
   // override (bear growl on cast + per-target swing). Cleared in
   // resolveMultiTargeting once the swipe wraps up.
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   playCardAmbient(card);
   // Grant shield first (from gain_shield effects on the card)
   let shieldGain = 0;
@@ -45831,6 +46344,8 @@ function resolveMultiTargeting() {
     // Greataxe). _activePlayCard lets the weapon SFX classifier route
     // per-card (axe → axe sounds etc.).
     _activePlayCard = card;
+    // Cost-pick riders were deferred until the play actually committed.
+    flushPendingRechargeRiders();
     const SFX_STAGGER_MS = 120;
     // Feral Swipe (bleed variant) — picker resolution. Apply Bleed
     // to each picked target (per-tier-offset stacks via eff.value),
@@ -46973,6 +47488,9 @@ function resolvePowerTargeting() {
 }
 
 function executePower(power) {
+  // The power's recharge cost was queued while the pick (and any choice /
+  // targeting step after it) could still be cancelled. This is the commit.
+  flushPendingRechargeRiders();
   power.use();
   addLog(`Used power: ${power.name}`, Colors.GREEN, power);
   // Same SFX-routing pattern as resolvePowerTargeting — stamp the
@@ -48903,7 +49421,10 @@ function maybeForage(ally) {
   const card = creator();
   applyGamePlusOffsetInPlace(card, playerTierOffset || 0);
   player.deck.hand.push(card);
-  addLog(`  Forage! ${ally.name} ${verb} a ${label}.`, Colors.GREEN, card);
+  // Fall back to the card's OWN name when no fixed label was stamped. The rats
+  // always forage the same one card so a static label is fine for them; Bandit
+  // rolls a table, so the line has to name whatever actually came back.
+  addLog(`  Forage! ${ally.name} ${verb} a ${label || card.name}.`, Colors.GREEN, card);
   playSound('card_draw');
   showcasePlayerCard(card, SHOWCASE_DURATION);
 }
@@ -52305,6 +52826,8 @@ function updateEnemyTurn(dt) {
     // "Throw Rock" card → rocks_shatter) can route per-card. Cleared
     // after the effect loop.
     _activePlayCard = card;
+    // Cost-pick riders were deferred until the play actually committed.
+    flushPendingRechargeRiders();
     playCardAmbient(card);
     // Pick the target ONCE so all card effects (damage, apply_ice, etc.)
     // hit the same target. Mirrors Python's enemy card flow.
@@ -54213,6 +54736,8 @@ function updateEnemyTurn(dt) {
     // Stamp the played card so the SFX classifier sees rat-screech /
     // future enemy summon cards. Cleared at the bottom of the branch.
     _activePlayCard = card;
+    // Cost-pick riders were deferred until the play actually committed.
+    flushPendingRechargeRiders();
     // Some summon cards have an on-cast cue (rat screeches play a flesh
     // sample when the screech goes out). Reuse the flesh entry so the
     // codex Sounds row is the same one that fires here.
@@ -55697,6 +56222,8 @@ function applyOnRechargeSummonSkull(card) {
     made++;
   }
   if (made > 0) {
+    // Remember them so a cancelled play can take them back off the field.
+    card._onRechargeSkulls = player.creatures.slice(-made);
     addLog(`  ${card.name}: ${made} Floating Skull${made === 1 ? '' : 's'} drift up.`, Colors.PURPLE);
     // Same eerie twang the card's own cast uses, so feeding it as fodder still
     // sounds like Floating Skulls. Registered in CARD_SFX_HINTS so the codex
@@ -55723,6 +56250,8 @@ function applyOnRechargePoison(card) {
   if (!t) return;
   if (t instanceof Creature) t.poisonStacks = (t.poisonStacks || 0) + stacks;
   else if (typeof t.applyStatus === 'function') t.applyStatus('POISON', stacks);
+  // The target is picked at random, so the refund path has to be told who got it.
+  card._onRechargePoison = { target: t, stacks };
   spawnTokenOnTarget(t, stacks, 'Poison', Colors.GREEN);
   addLog(`  ${card.name}: +${stacks} Poison on ${t.name || 'target'}`, Colors.GREEN);
 }
@@ -57408,6 +57937,8 @@ function tryAnimalCompanionSmartCast(card, handIndex) {
   addLog(`  Mode: ${autoMode.description}`);
   const prevActiveCard = _activePlayCard;
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   for (const eff of autoMode.effects) {
     resolveEffect(eff, player, enemy);
   }
@@ -57496,6 +58027,8 @@ function handleModalSelectClick(x, y) {
       // round-trip on death.
       const prevActiveCard = _activePlayCard;
       _activePlayCard = card;
+      // Cost-pick riders were deferred until the play actually committed.
+      flushPendingRechargeRiders();
       for (const eff of chosen.effects) {
         resolveEffect(eff, player, enemy);
       }
@@ -57609,6 +58142,8 @@ function reviveAllyFromCard(card) {
   const beforeCreatures = new Set(player.creatures);
   const prev = _activePlayCard;
   _activePlayCard = card;
+  // Cost-pick riders were deferred until the play actually committed.
+  flushPendingRechargeRiders();
   // Suppress the summon's own SFX (currently only the obsidian family
   // fires inside its handler) so we can stagger the play sound after
   // the Revivify cast cue instead of layering on top of it.
@@ -58981,6 +59516,11 @@ const SHOP_INVENTORIES = {
     createMimicTongue,
   ],
   city_square: [
+    // Bandit rides the STATIC list so the codex gives him a "Shop: City Square"
+    // source line; the live shelf comes from buildCitySquareInventory(), which
+    // drops him once he is following. He is priced 0 there and is not buyable —
+    // clicking him opens his feeding dialog instead.
+    createBanditCard,
     createGoodberry,
     createChickenLeg,
     // The cheapest food in the game, and the only place to buy it. It sits on
@@ -59051,6 +59591,22 @@ const SHOP_LABELS = {
 // on tap once Varimatras is dead. The freebie LOOT phase only
 // fires once via dwarvenTavernFreebieGiven; the shop slot stays
 // permanent so the player can keep buying mead.
+// City Square — the market stall, plus BANDIT on the shelf at no price while he
+// is still a stray. He is not buyable: the shop click intercept (see
+// handleInventoryClick) opens his feeding dialog instead of a Buy confirm. He
+// leaves the shelf the moment he is following you.
+//
+// Keep in step with SHOP_INVENTORIES.city_square, which is what the codex reads.
+function buildCitySquareInventory() {
+  // Strip Bandit out of the static list FIRST. He is in there for the codex's
+  // "Shop: City Square" source line, but copying that list wholesale put him on
+  // the live shelf at his rarity price (200g) AND again at 0 from the push
+  // below — two dogs, one of them buyable. The shelf only ever gets the
+  // priceOverride:0 copy, and only while he is still a stray.
+  const base = (SHOP_INVENTORIES.city_square || []).filter(e => e !== createBanditCard);
+  if (!_banditJoined) base.push({ creator: createBanditCard, priceOverride: 0 });
+  return base;
+}
 function buildDwarvenTavernInventory() {
   // Stonebread is base stock, and deliberately sits next to the Brew: it fills
   // the MEAL slot where the Brew fills BEVERAGE, so a player can walk out of
@@ -59224,6 +59780,8 @@ function openShop(shopId, name) {
     ? buildAntiquityShopInventory()
     : shopId === 'dwarven_smithy'
     ? buildDwarvenSmithyInventory()
+    : shopId === 'city_square'
+    ? buildCitySquareInventory()
     : shopId === 'dwarven_tavern'
     ? buildDwarvenTavernInventory()
     : shopId === 'arcane_emporium'
@@ -60201,6 +60759,20 @@ function handleInventoryClick(x, y) {
       if (r.y + r.h < shopClipTop || r.y > shopClipBot) continue;
       if (hitTest(x, y, { x: r.x, y: r.y, w: r.w, h: r.h + 12 })) {
         const item = r.item;
+        // Bandit is on the shelf but is not FOR SALE — he is a stray lying under
+        // the stall. Clicking him opens the feeding dialog instead of a Buy
+        // confirm, and _shopReopenAfter puts the player back on this shelf when
+        // the dialog is done (see the bandit_leave handler).
+        if (item.card && item.card.id === 'bandit_card') {
+          _shopReopenAfter = { id: shopMode.id, name: shopName };
+          shopMode = null;
+          currentEncounter = createBanditFeedEncounter(collectBanditFoodOfferings());
+          encounterTextIndex = 0;
+          encounterChoiceResult = null;
+          _encounterHadCombat = false;
+          advanceEncounterPhase();
+          return;
+        }
         if (gold < item.price) {
           addLog(`Not enough gold! Need ${item.price}, have ${gold}.`, Colors.RED);
           return;
@@ -65366,6 +65938,21 @@ function getWeaponSfxKeys(card = null, creature = null) {
     }
     if (name === 'shadow clone') {
       return { flesh: 'dark_impact_deep_02', blocked: 'dark_impact_deep_02' };
+    }
+    // Bandit (the City Square stray) — he is a dog, so he bites. monster_bite_01
+    // on a clean hit; the heavy plate impact when the bite finds armour, which
+    // reads as teeth skidding off something they cannot get through.
+    if (name === 'bandit') {
+      return { flesh: 'monster_bite_01', blocked: 'hit_blocked' };
+    }
+    // Deathjump Spider (forest ally) — the fang strike routes through the
+    // dagger family like the Harpy / Brad summons, with the leg-rustle laid
+    // over the swing so the venom lands sounding like a spider.
+    if (name === 'deathjump spider') {
+      return {
+        flesh: 'dagger_flesh', blocked: 'dagger_blocked',
+        play: 'spider_scuttle', playVol: 0.5,
+      };
     }
     // Brad the Fox (player ally companion) — quick dagger work: gore on a
     // clean hit, a clean stab when the blow is blocked. Same dagger family

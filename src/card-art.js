@@ -579,6 +579,15 @@ export const CARD_ART_MAP = {
   cured_bandage: 'CuredBandage.jpg',
   stonebound_bandages: 'StoneboundBandages.jpg',
   fungal_bandages: 'FungalBandages.jpg',
+  // Bandit, the Obsidian Market stray, and the two gifts he drags back.
+  bandit_card: 'Bandit.jpg',
+  bandit: 'Bandit.jpg',
+  gnawed_bone: 'GnawedBone.jpg',
+  chipped_rock: 'ChippedRock.jpg',
+  // Deathjump Spider — the card and the summoned body share the art.
+  poison_pouch: 'PoisonPouch.jpg',
+  deathjump_spider_card: 'DeathjumpSpider.jpg',
+  deathjump_spider: 'DeathjumpSpider.jpg',
   // The Flask's beverage buff reuses this same art — grant_provision stamps
   // the PersistentBuff's imageId from the card id, so no buff_ entry needed.
   crystalwater_flask: 'CrystalwaterFlask.jpg',

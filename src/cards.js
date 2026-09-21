@@ -1266,6 +1266,7 @@ export function createLambasBread() {
 export function createFreshFish() {
   return new Card({
     id: 'fresh_fish',
+    isMeat: true,   // Bandit only takes meat
     name: 'Fresh Fish',
     description: 'Consume + Recharge 1 -> Heal 2.\nMeal: Heal 1.\nOn Swim: Draw. (4 turns)',
     shortDesc: 'C+R1->Heal 2\nMeal: Heal 1\nOn Swim: Draw\n(4 turns)',
@@ -2271,6 +2272,23 @@ export function createTrapCard() {
   });
 }
 
+// Bestial Wrath — Ranger Tier 2 uncommon (7) on a Recharge. It bills far past
+// that on a developed board and the overpay is DELIBERATE:
+//
+//   board                        dmg   +1/+1   bill
+//   no beasts                      0      0       0   <- dead card
+//   Misha alone                    5      2       7
+//   Misha + Huffer                10      4      14
+//   Misha + Huffer + 2 Hyenas     16      8      24
+//
+// It moved DOWN from Tier 3 for CURVE, not power. The beast enablers are Rat
+// Taming (T1) and Animal Companion (T2); leaving the payoff at T3 meant
+// committing two picks on faith before the archetype did anything, which is
+// exactly why the build was hard to evaluate. The payoff now sits one step
+// behind the enabler.
+//
+// The floor is what pays for the ceiling: on an empty field this is a blank,
+// and beasts are fragile. Do NOT read the 14 as the average.
 export function createBestialWrath() {
   return new Card({
     id: 'bestial_wrath', name: 'Bestial Wrath',
@@ -2281,7 +2299,7 @@ export function createBestialWrath() {
     effects: [
       new CardEffect('bestial_wrath', 1, TargetType.SINGLE_ENEMY),
     ],
-    characterClass: ['ranger'], tier: 3, rarity: 'rare',
+    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
     noTierOffset: true,
   });
 }
@@ -2344,13 +2362,25 @@ export function createElementalWeapon() {
   // cycled three times in one fight reached 3 stacks "just playing normally",
   // and with a barrage feeding it that was ~36 Fire damage a turn, forever.
   //
-  // Repriced: Discard cost (T2 uncommon 7 x 1.5 = 10.5 budget, no second-card
-  // cost). Discard is the gate rather than a hard stack cap — the card sits in
-  // the discard pile until you HEAL it back, so re-stacking costs real HP-equity
-  // in a deck where deck size IS hit points.
+  // Repriced AGAIN, and moved to TIER 3 RARE on the Discard (13 x 1.5 = 19.5).
+  // Discard is the gate rather than a hard stack cap — the card sits in the
+  // discard pile until you HEAL it back, so re-stacking costs real HP-equity in
+  // a deck where deck size IS hit points.
   //
-  //   Fire mode: rider 9 + Deal 1  = 10
-  //   Ice mode:  rider 5 + Deal 5  = 10
+  //   Fire mode: rider 12 + Deal 7      = 19
+  //   Ice mode:  rider  5 + Deal 5 ALL  = 20   (5 damage x the ALL multiplier)
+  //
+  // The move up is what let the FIRE RIDER finally cost what it is worth. It
+  // tracks Rage at a stable 1.71-1.78x across every hit count, so against a Rage
+  // of 7 the model says 12 — but 12 would not fit inside a Tier 2 uncommon
+  // (10.5), so it had been capped at 10 with the gap logged as a known debt.
+  // At Tier 3 the budget carries the honest 12 AND a real body.
+  //
+  // The two modes are now genuinely different CARDS rather than two sizes of the
+  // same one. Fire is a single heavy swing that lights the target on the way in;
+  // Ice is a board sweep that ices EVERYTHING it touches (damage_all stamps the
+  // rider per target), which is as much a defensive play as an offensive one —
+  // every iced body swings for less on its own turn.
   //
   // Fire is 9 and Ice is 5 because Fire compounds and Ice does not. A Fire stack
   // pays about twice its face in damage (the status halves rather than ticking
@@ -2362,22 +2392,22 @@ export function createElementalWeapon() {
   // game (1).
   //
   // The grant is ordered BEFORE the damage on purpose: this card's own hit
-  // rides its own rider, so Fire mode reads "Deal 1 + 1 Fire" and Ice mode
-  // "Deal 5 + 1 Ice" on the cast itself.
-  const fireMode = new CardMode('Attacks add Fire, Deal 1', [
+  // rides its own rider, so Fire mode reads "Deal 7 + 1 Fire" on the cast
+  // itself, and Ice mode ices every body its sweep lands on.
+  const fireMode = new CardMode('Attacks add Fire, Deal 7', [
     new CardEffect('grant_elemental_weapon_fire', 1, TargetType.SELF),
-    new CardEffect('damage', 1, TargetType.SINGLE_ENEMY),
+    new CardEffect('damage', 7, TargetType.SINGLE_ENEMY),
   ]);
   fireMode.artId = 'buff_elemental_weapon_fire';
-  const iceMode = new CardMode('Attacks add Ice, Deal 5', [
+  const iceMode = new CardMode('Attacks add Ice, Deal 5 to All', [
     new CardEffect('grant_elemental_weapon_ice', 1, TargetType.SELF),
-    new CardEffect('damage', 5, TargetType.SINGLE_ENEMY),
+    new CardEffect('damage_all', 5, TargetType.ALL_ENEMIES),
   ]);
   iceMode.artId = 'buff_elemental_weapon_ice';
   return new Card({
     id: 'elemental_weapon', name: 'Elemental Weapon',
-    description: 'Discard -> Choose:\nAttacks add Fire, Deal 1,\nOR attacks add Ice, Deal 5.',
-    shortDesc: 'D->+Fire, 1 Dmg\nOR +Ice, 5 Dmg',
+    description: 'Discard -> Choose:\nAttacks add Fire, Deal 7,\nOR attacks add Ice, Deal 5 to All.',
+    shortDesc: 'D->+Fire, 7 Dmg\nOR +Ice, 5 to All',
     subtype: 'ability',
     // ATTACK now that both modes swing — same shape as Wrath, the other modal
     // attack. The mode picker resolves first, then targeting.
@@ -2389,12 +2419,179 @@ export function createElementalWeapon() {
     cardType: CardType.ATTACK, costType: CostType.DISCARD,
     effects: [],
     modes: [fireMode, iceMode],
-    characterClass: ['ranger'], tier: 2, rarity: 'uncommon',
+    characterClass: ['ranger'], tier: 3, rarity: 'rare',
     // The RIDER doesn't scale in ccgQuest+ (the grant has no offset), so the
-    // swing is the only thing that grows. Fire gets +1 (1 → 2 → 3) rather than
-    // the flat +2 both modes used to share: on a base of 1 a +2 step would
-    // TRIPLE the mode at a single offset. Ice keeps +2 off its base of 5.
-    gamePlusOffset: { modes: [{ damage: 1 }, { damage: 2 }] },
+    // swing is the only thing that grows. Both bodies are big enough now that
+    // a flat +2 step is proportionate — the old +1 on Fire existed only because
+    // its base was 1, where +2 would have tripled the mode in one offset. Ice
+    // scales its per-target damage, which the ALL multiplier then compounds, so
+    // it stays the smaller step of the two.
+    gamePlusOffset: { modes: [{ damage: 2 }, { damage_all: 1 }] },
+  });
+}
+
+// ============================================================
+// Bandit — the market stray (Chapter 8, Obsidian Market). Won by feeding, not
+// buying: the Market Stalls encounter offers him whatever food the party is
+// carrying, he turns his nose up at everything that isn't MEAT, and the first
+// cut of meat buys his loyalty for the rest of the run.
+// ============================================================
+
+// Bandit's body. 2/3 with Haste, so he swings the turn he lands, and a 50%
+// per-attack forage off the `bandit_gifts` table — he brings back what a dog
+// brings back. Registered in BEAST_NAMES (main.js) so Bestial Wrath counts him:
+// he is the earliest Beast in the game and the reason the archetype has a floor.
+export function createBanditCreature() {
+  const c = new Creature({
+    name: 'Bandit', attack: 2, maxHp: 3, haste: true, isCompanion: true,
+    description: 'Haste.\nMight bring back some gifts.',
+  });
+  c._codexSide = 'player';
+  return c;
+}
+
+// Bandit — Tier 1 rare ally. Budget 5 x 1.5 = 7.5: a COMPANION card is a
+// Discard in everything but name, because the card drops to the discard pile
+// when the body dies (docs/loot-budget.md §2). Bill:
+//   2 Attack with Haste   4   (Haste roughly doubles the Attack line —
+//                              he swings the turn he lands)
+//   3 HP                  3
+//   50% gift forage      ~1
+//                        ~8   — a shade over 7.5, and the overage is the
+//                              fragile part: 3 HP dies to one real swing and
+//                              takes his card to the discard pile with it.
+// No second-card cost: the Recharge is the whole printed price, which is what
+// keeps him castable on the turn you meet him.
+export function createBanditCard() {
+  return new Card({
+    id: 'bandit_card', name: 'Bandit',
+    description: 'Call Bandit to the Battle!',
+    shortDesc: 'Call Bandit',
+    subtype: 'allies',
+    cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_bandit', 1, TargetType.SUMMON),
+    ],
+    tier: 1, rarity: 'rare',
+    isUnique: true,
+    previewCreature: createBanditCreature(),
+  });
+}
+
+// Gnawed Bone — one of Bandit's two gifts. The Heroism goes to a BEAST, not to
+// you: you are giving the bone back to the dog. Cheap on purpose — a gift is
+// found value, not a card you built a turn around.
+export function createGnawedBone() {
+  return new Card({
+    id: 'gnawed_bone', name: 'Gnawed Bone',
+    description: 'Consume -> Heal 1,\na beast gain Heroism.',
+    shortDesc: 'C->Heal 1\nBeast: +Heroism',
+    subtype: 'item',
+    cardType: CardType.ITEM, costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('beast_gain_heroism', 1, TargetType.SELF),
+    ],
+    tier: 1, rarity: 'common',
+    isToken: true,
+    sellable: false,
+  });
+}
+
+// Chipped Rock — Bandit's other gift. Subtype `simple` so it reads as the
+// weapon it nearly is, but it Consumes rather than Recharges: it is a rock, you
+// throw it once.
+export function createChippedRock() {
+  return new Card({
+    id: 'chipped_rock', name: 'Chipped Rock',
+    description: 'Consume -> Deal 1 Randomly.',
+    shortDesc: 'C->1 Dmg Rand',
+    subtype: 'simple',
+    cardType: CardType.ATTACK, costType: CostType.BANISH,
+    effects: [
+      new CardEffect('damage_random', 1, TargetType.RANDOM_ENEMY),
+    ],
+    tier: 1, rarity: 'common',
+    isToken: true,
+    sellable: false,
+  });
+}
+
+// ============================================================
+// Deathjump Spider — a 10% drop from either Forest Ambush. The forest fight is
+// a wall of spiders; occasionally one of the hatchlings decides you are better
+// company than the nest.
+// ============================================================
+
+// The body. 2/3 with a standing Poison rider on its swings. No description: a
+// creature's poisonAttack draws its own rider icon beside the attack stat (same
+// as Pet Spider), so spelling it out would render the pill twice.
+//
+// NOT a companion. isCompanion + the play-pile routing is the Thorb / Raena /
+// Bandit contract, where the card follows the body and lands in the DISCARD
+// pile if the body dies — a real HP cost, and what earns those cards the x1.5
+// Discard budget. A spider is a summon: it dies, it is gone, and the card
+// recharges as normal. No death penalty, so no x1.5.
+export function createDeathjumpSpiderCreature() {
+  const c = new Creature({
+    name: 'Deathjump Spider', attack: 2, maxHp: 3, poisonAttack: true,
+  });
+  c._codexSide = 'player';
+  return c;
+}
+
+// Deathjump Spider — Tier 2 uncommon summon. Budget 7 (no x1.5: see the
+// creature above — nothing is discarded when the body dies).
+//
+// Billed against its SHELF-MATES rather than per-stat, because creature bodies
+// in this game cost far less than a point per stat and a per-stat sum badly
+// over-reads them. The other T2 uncommon Recharge summons are the yardstick:
+//   Dwarven Battle Cleric   2/5 + "+2 vs Armor/Shield" + End Turn: Heal 2
+//   Dwarven Crossbowman     2/5 + its own rider
+//   Goblin Spike Trap       2/1, one or two of them
+// A 2/3 with a standing Poison rider plus one Poison on the cast sits under all
+// three: fewer hit points than the dwarves and no healing, trading durability
+// for a rider that compounds the longer it lives.
+//
+// NOT isUnique: "Deathjump Spider" is a species, not a name, so two copies off
+// the two Forest Ambush nodes is a legal (if lucky) outcome.
+export function createDeathjumpSpiderCard() {
+  return new Card({
+    id: 'deathjump_spider_card', name: 'Deathjump Spider',
+    description: 'Summon a Deathjump Spider.\nDeal Poison Randomly.',
+    shortDesc: 'Summon Spider\n+Poison Rand',
+    subtype: 'allies',
+    cardType: CardType.CREATURE, costType: CostType.RECHARGE,
+    effects: [
+      new CardEffect('summon_deathjump_spider', 1, TargetType.SUMMON),
+      new CardEffect('poison_random', 1, TargetType.RANDOM_ENEMY),
+    ],
+    tier: 2, rarity: 'uncommon',
+    previewCreature: createDeathjumpSpiderCreature(),
+  });
+}
+
+// Poison Pouch — Tier 2 common item. FREE + stays in hand, so it brews a fresh
+// Vial of Poison every turn you spend a click on it.
+//
+// Budget 5, and the stays-in-hand x3 multiplier is why the printed body is so
+// small: a Vial is worth ~2 (next attack applies 1 Poison, and Poison is 2 a
+// stack), so 2 x 3 = 6 against a 5 budget. The vials it brews are tokens that
+// go into masterDeck, which in this engine means they also pad your hit points
+// — that is upside the table does not price, so the card is deliberately kept
+// to ONE vial a turn rather than a scaling number.
+export function createPoisonPouch() {
+  return new Card({
+    id: 'poison_pouch', name: 'Poison Pouch',
+    description: 'Gain 1 Vial of Poison.\nStays in Hand.',
+    shortDesc: '+1 Vial of Poison\nStays',
+    subtype: 'item',
+    cardType: CardType.ITEM, costType: CostType.FREE,
+    effects: [
+      new CardEffect('create_vial_of_poison', 1, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+    ],
+    tier: 2, rarity: 'common',
   });
 }
 
@@ -3821,6 +4018,16 @@ export function getRangerAbilityChoices() {
   // Piercing Shot retired from the level-up / shrine pool; its creator
   // stays in CARD_REGISTRY so older saves with it still deserialize.
   // Elemental Weapon takes its slot.
+  //
+  // Tier 1: Rat Taming, Track, Aimed Shot, Trap.
+  // Tier 2: Marking Shot, Animal Companion, Rain of Arrows, Bestial Wrath.
+  // Tier 3: Killing Ground, Trueshot Barrage, Endless Quiver, Elemental Weapon.
+  //
+  // Bestial Wrath and Elemental Weapon SWAPPED bands: the beast payoff moved
+  // down to sit one step behind its enablers (Rat Taming T1 / Animal Companion
+  // T2), and Elemental Weapon moved up so its Fire rider could finally cost the
+  // 12 the model asks for. getAbilityChoices filters this flat list on each
+  // card's own `tier`, so moving the field is the whole move — bands stay 4/4/4.
   return [createTamedRat(), createTrack(), createAimedShotCard(), createTrapCard(),
           createMarkingShot(), createAnimalCompanion(), createElementalWeapon(),
           createRainOfArrows(),
@@ -5191,6 +5398,7 @@ export function createTorch() {
 export function createRatOnAStick() {
   return new Card({
     id: 'rat_on_a_stick',
+    isMeat: true,   // Bandit only takes meat
     name: 'Rat on a Stick',
     description: 'Consume + Recharge 1 -> Heal 2.\nMeal: Heal 1 for 2 turns.',
     shortDesc: 'C+R1->Heal 2\nMeal: Heal 1/2T',
@@ -5219,6 +5427,7 @@ export function createRatOnAStick() {
 export function createChickenLeg() {
   return new Card({
     id: 'chicken_leg',
+    isMeat: true,   // Bandit only takes meat
     name: 'Chicken Leg',
     description: 'Consume + Recharge 2 -> Heal 5.\nMeal: Heal 2 for 2 turns.',
     shortDesc: 'C+R2->Heal 5\nMeal: Heal 2/2T',
@@ -10986,6 +11195,7 @@ export function createBoneCleaver() {
 export function createCrackedMarrowBone() {
   return new Card({
     id: 'cracked_marrow_bone', name: 'Cracked Marrow-Bone',
+    isMeat: true,   // Bandit only takes meat
     description: 'Consume + Recharge 1 ->\nHeal all Bleed, Heal 6, discard 1.\nMeal: Heal 2 Bleed, Heal 1 for 3 turns.',
     shortDesc: 'C+R1->Heal Bleed\nHeal 6, discard 1\nMeal: 2 Bleed+1 3T',
     subtype: 'item', cardType: CardType.ITEM, costType: CostType.BANISH,
@@ -12318,6 +12528,7 @@ export function createBearHideArmor() {
 export function createBearFatRations() {
   return new Card({
     id: 'bear_fat_rations',
+    isMeat: true,   // Bandit only takes meat
     name: 'Bear Fat Rations',
     description: 'Consume + Recharge 1 -> Heal 4 Ailments, Heal 4.\nMeal: Heal 1 Ailment, Heal 1 for 3 turns.',
     shortDesc: 'C+R1->Heal 4 Ail\n+Heal 4. Meal:\n1 Ail+1 HP 3T',

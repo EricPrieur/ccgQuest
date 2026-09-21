@@ -70,6 +70,20 @@ at the bottom of the draw pile — so it buys half again as much card:
 Reckless Strike is the anchor: T1 uncommon (4) × 1.5 = 6, and it reads
 *Discard → Deal 6 Damage*.
 
+**A COMPANION card is a Discard, so it gets the x1.5.** A companion routes to
+the PLAY pile while its body is alive and drops into the DISCARD pile when the
+body dies (see `_routeToPlayPile`). Since deck size IS hit points and a
+discarded card only comes back on a heal, losing the companion costs real
+HP-equity — the same thing a Discard cost charges up front. Price the card at
+tier x rarity x 1.5 even though its printed cost is a Recharge.
+
+A companion body is then billed like any other statline, with **Haste roughly
+doubling the Attack line** (it swings the turn it lands) and HP at about 1 per
+point. Bandit is the worked example: Tier 1 rare = 5, x1.5 = **7.5**; 2 Attack
+with Haste = 4, 3 HP = 3, so the body alone is 7, and the 50% gift forage puts
+him a shade over. Close enough to ship, and the overage is the fragile part —
+a 3 HP body dies to one real swing and takes its card to the discard pile.
+
 **A Draw on the card cancels the bonus** — when the draw reliably refunds the
 card that paid for it. The net cost returns to baseline. Bone Bow (*Recharge a
 Card → Deal 8, Draw*) gets no bonus; Tunnelbreaker Pick (*Recharge a Card →
@@ -159,7 +173,7 @@ effect and belongs with these prices, never with the one-shot charges:
 |---|---|
 | **Rage** | **7** — +1 damage on every attack |
 | **Bleed-on-attack, rest of fight** | **8** — see the tempo warning below |
-| **Elemental Weapon — Fire** | **10** — +1 Fire on every attack |
+| **Elemental Weapon — Fire** | **12** — +1 Fire on every attack |
 | **Elemental Weapon — Ice** | **5** — +1 Ice on every attack |
 
 **Why Rage is 7, not 5.** A Rage stack delivers `hits per turn × turns remaining`
@@ -171,16 +185,17 @@ are all 3 shots, Blade Flurry is 2, and a multi-target sweep stamps per target.
 7 is the 3-hit value. Re-derive it, do not reuse it, for a card that pushes the
 hit count higher still.
 
-**Why the Fire rider is 10 and not 12.** Fire tracks Rage at a stable
-**1.71-1.78x** across every hit count (simulated on the shipped halving rule),
-so against a Rage of 7 the model says ~12. It is deliberately set to **10**
-instead, which is a playability call rather than a modelling one: 12 would put
-Elemental Weapon past what a Tier 2 uncommon Discard can carry (10.5) and force
-the card up a tier or strip its body to nothing, and it is a card that reads
-well and is fun where it sits. At 10 + Deal 1 it bills 11 against 10.5 — about
-5% hot, knowingly. The gap between 10 and the modelled 12 is the standing
-warning: do NOT stack a second Fire rider on top of this one, and re-derive
-rather than reuse the 10 for any card that pushes hits per turn past 3.
+**The Fire rider is 12, and getting there moved a card.** Fire tracks Rage at a
+stable **1.71-1.78x** across every hit count (simulated on the shipped halving
+rule), so against a Rage of 7 the honest number is 12. It sat at 10 for one
+release for a purely structural reason: 12 did not fit inside Elemental Weapon,
+its only carrier, at Tier 2 uncommon on a Discard (10.5). The fix was to move
+the CARD, not to keep discounting the effect — Elemental Weapon is now Tier 3
+rare (19.5), which carries the 12 and a real body on both modes.
+
+That is the general lesson: when a rider will not fit its carrier, check whether
+the carrier is at the wrong tier before you shave the rider. A discounted price
+in this table is a debt every future card inherits.
 **Why Fire is nearly double Rage.** Fire halves rather than ticking down by 1, so
 a stack that keeps getting topped up *converges* instead of draining — steady-state
 Fire damage per turn lands at roughly **2× the Fire stamped per turn**. It also
