@@ -2583,7 +2583,10 @@ export function createDeathjumpSpiderCard() {
 export function createPoisonPouch() {
   return new Card({
     id: 'poison_pouch', name: 'Poison Pouch',
-    description: 'Gain 1 Vial of Poison.\nStays in Hand.',
+    // Lower-case "hand": the inline badge tokenizer matches the phrase
+    // case-SENSITIVELY, so "Stays in Hand" rendered as plain text instead of
+    // the STAYS IN HAND pill every other such card gets.
+    description: 'Gain 1 Vial of Poison.\nStays in hand.',
     shortDesc: '+1 Vial of Poison\nStays',
     subtype: 'item',
     cardType: CardType.ITEM, costType: CostType.FREE,
@@ -2683,15 +2686,29 @@ export function createIceShatter() {
 
 // Cold Breath — Varimatras's signature card. Monster-only: the dragon
 // breathes a freezing gale over the party, stacking 3 Ice on every
-// enemy (= player + allies) and then immediately shattering it for
-// damage equal to the new total. Priority 50 so the AI fires it first
+// enemy (= player + allies), then dealing each of them damage equal
+// to the new total. Priority 50 so the AI fires it first
 // the turn it has it in hand. Used by overseer_gnikan_phase_2 when the
 // dragon takes over from the dying overseer.
+//
+// The Ice STAYS after the breath cashes it — deliberately. Gnikan's Staff and
+// the rest of the frost kit read the player's own stacks, so a breath that
+// consumed them left the combo with nothing to work on. What the breath does
+// NOT do is roll the ambient maybeIceShatter proc on the damage it just dealt:
+// that was billing the same stacks twice in one event (once as the breath,
+// then again unpreventably, plus a 1-2 damage shard per stack sprayed at
+// random survivors — and with a wiped party every shard funnels into the
+// player). An 8-Ice breath charged ~21 instead of 8. The phase is meant to
+// kill your allies, not to bill you three times for the same frost.
+//
+// Every OTHER attack in the fight still shatters normally. The exemption is
+// scoped to this one effect (see _iceShatterExempt in main.js), not to the
+// fight, so the frost the breath leaves behind stays live and dangerous.
 export function createColdBreath() {
   return new Card({
     id: 'cold_breath', name: 'Cold Breath',
-    description: 'Recharge -> Apply 3 Ice to ALL enemies, then each enemy takes damage equal to their Ice.',
-    shortDesc: 'R->3 Ice ALL\nDmg = Ice',
+    description: 'Recharge -> Apply 3 Ice to ALL.\nEach enemy takes damage equal\nto their Ice. The Ice remains.',
+    shortDesc: 'R->3 Ice ALL\nDmg = Ice\nIce remains',
     subtype: 'ability',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
@@ -4761,12 +4778,32 @@ export function createDeathCoil() {
   });
 }
 
+// Corpse Explosion — the blast needs a body, and a necromancer who has just
+// been wiped has none. Drawn on an empty board it used to be a dead card, which
+// is the whole reason to leave it out of a deck.
+//
+// The On Recharge is the half of the card that never needed a body: the rot
+// spreads whether or not anything burst. Spend it as another card's cost on an
+// empty board and the enemy side still takes Poison — so the dead draw becomes
+// fuel with a payout instead of fuel with nothing.
+//
+// It is a STRONG rider for T2 uncommon (Poison 1 to ALL is ~6 of a 7 budget on
+// its own) and that is the point: the card should read as a get, not a filler.
+// It pays what it is worth precisely when the main effect can't fire.
+//
+// The Poison lives ONLY on the rider now. The card used to carry a sibling
+// apply_poison_all as well, which meant a cast sprayed Poison twice (a
+// RECHARGE-cost card self-recharges, so the rider fires on a cast too) and the
+// two clauses read as one blurred effect. Split clean, the card asks a real
+// question every draw: detonate a body for the damage, or feed it and take the
+// Poison. And it makes genuine fodder for the Tier 3 Plague build — the swarm
+// can spread Poison without the necromancer detonating their own board to do it.
 export function createCorpseExplosion() {
   return new Card({
     id: 'corpse_explosion',
     name: 'Corpse Explosion',
-    description: 'Kill an ally.\nDeal its HP to ALL.\nDeal Poison to ALL.',
-    shortDesc: 'Kill ally ->\nHP dmg to all\n+Poison all',
+    description: 'Kill an ally.\nDeal its HP to ALL.\nOn Recharge: Poison ALL.',
+    shortDesc: 'Kill ally ->\nHP dmg to all\nR: Poison ALL',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
@@ -4774,61 +4811,76 @@ export function createCorpseExplosion() {
       // SINGLE_ALLY — the player clicks which of their own creatures to
       // sacrifice; that corpse's HP becomes the AoE damage.
       new CardEffect('corpse_explosion', 0, TargetType.SINGLE_ALLY),
-      new CardEffect('apply_poison_all', 1, TargetType.ALL_ENEMIES),
+      // Marker — paid by applyOnRechargePoison from the on-recharge hooks.
+      new CardEffect('on_recharge_poison_all', 1, TargetType.SELF),
     ],
     characterClass: ['necromancer'],
     tier: 2,
     rarity: 'uncommon',
-    gamePlusOffset: { apply_poison_all: 1 },
+    gamePlusOffset: { on_recharge_poison_all: 1 },
   });
 }
 
-// Bone Wall — Necromancer Tier 2 (7). Replaces Bone Storm in the tier-2 pool.
-// The class's only defense above Tier 1: Arcane Shield and the Bone Buckler
-// shop card were the whole defensive kit, on a cloth-armor class with the
-// smallest deck in the game.
+// Bone Wall — the Skeleton AMALGAM. Summons a 1/1 Sentinel Skeleton that eats
+// every other Skeleton you have standing and inherits what they were carrying:
+// current Attack, current HP, and their statuses — Shield, Armor, Heroism and
+// Rage, but the Poison / Bleed / Fire / Ice / Shock / Sunder they had picked up
+// as well. It consolidates a host, it does not launder one.
 //
-// The fantasy is the bones taking the hit instead of you — so nothing on this
-// card touches the necromancer. That is also why it is cheap: with Sentinel up
-// the enemy cannot reach you anyway, so shielding yourself would be paying for
-// a clause that does nothing.
+// It replaced an earlier "Undead gain 2 Shields + Sentinel" card, which asked
+// the necromancer to spend a turn not attacking and gave nothing back the board
+// could not already do.
 //
-// Budget, exactly 7 on a single-card cost:
-//   2 Shields across your Undead   4   (see the "ALL your own summons" row in
-//                                       docs/loot-budget.md — your host is
-//                                       bounded by the bodies you have, so it
-//                                       is NOT the ×3 an enemy sweep gets)
-//   Sentinel on the host, 1 turn   2
-//   On Recharge: Bolster 1 Undead  1
+// Budget 7 (T2 uncommon, Recharge). The body is small on purpose — 1/1 with
+// Sentinel, 1 Armor and 1 Shield — because every RECAST adds that body on top
+// of the wall it just ate. At 2/2 a necromancer could simply replay the card
+// at a lone wall for a flat +2/+2 a turn and the Sentinel snowballed; at 1/1
+// the recast is a top-up, not a growth engine, and the card's value comes from
+// consolidating the host rather than from being cast over and over.
 //
-// A second card cost was considered and rejected: the math allowed it, but a
-// defensive card that spends two cards to NOT attack never gets played on this
-// class. The deck-abuse ceiling is fine without it — holding the wall means
-// replaying this every turn instead of attacking, the 1/1 bodies erode as they
-// soak, and you personally gain nothing, so the moment the wall falls you are
-// fully exposed.
+// The amalgam itself is closer to sideways than upward, which is why it does
+// not price higher:
+//   Concentrating N bodies into one keeps the same total Attack but spends it
+//   in ONE swing instead of N — better into armour (absorbed once, not N times)
+//   and better behind Sentinel, worse for spreading damage or for anything that
+//   pays per hit. HP concentrates the same way: harder to chip down, but one
+//   AoE now hits one body rather than being split across the host.
 //
-// On Recharge fires when the card is played (a Recharge-cost card recharges
-// itself) AND when it is spent as another card's recharge cost — so it still
-// pays out while paying for Soul Harvest. Never a dead draw once a body is up.
+// Attack RIDERS (poisonAttack and friends) are deliberately NOT inherited, and
+// neither is ARMOR. Riders folded onto one body compound; armor absorbs on
+// EVERY incoming hit, so summing four skeletons' 1 Armor would turn a wall of
+// chip blockers into a brick small hits cannot touch. Both break the
+// "consolidate, don't create" rule the rest of the card follows. The wall
+// brings its own 1 Armor and 1 Shield instead.
+export function createBoneWallCreature() {
+  return new Creature({
+    name: 'Bone Wall', attack: 1, maxHp: 1, armor: 1, shield: 1, sentinel: true,
+    traits: ['Skeleton', 'Undead'],
+    description: 'Sentinel.',
+  });
+}
+
 export function createBoneWall() {
   return new Card({
     id: 'bone_wall',
     name: 'Bone Wall',
-    description: 'Your Undead gain 2 Shields\nand Sentinel until your next turn.\nOn Recharge: Bolster 1 Undead.',
-    shortDesc: 'Undead: +2 Shields\n+Sentinel\nR: Bolster 1',
+    description: 'Summon a Bone Wall.\nIt absorbs your other Skeletons.\nOn Recharge: Bolster 1 Undead.',
+    shortDesc: 'Summon Bone Wall\nAbsorbs Skeletons\nR: Bolster 1',
     subtype: 'ability',
     cardType: CardType.ABILITY,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('buff_all_undead_shield', 2, TargetType.SELF),
-      new CardEffect('grant_undead_sentinel', 1, TargetType.SELF),
+      new CardEffect('summon_bone_wall', 1, TargetType.SUMMON),
+      // On a normal cast the summon handler resolves this FIRST (so the
+      // thickened body is one the wall absorbs) and stamps the card so this
+      // pass skips it. Fed as another card's recharge cost, it fires here as
+      // usual — the card is never a dead payment.
       new CardEffect('on_recharge_bolster_undead', 1, TargetType.SELF),
     ],
     characterClass: ['necromancer'],
     tier: 2,
     rarity: 'uncommon',
-    gamePlusOffset: { buff_all_undead_shield: 1 },
+    previewCreature: createBoneWallCreature(),
   });
 }
 
@@ -6542,6 +6594,13 @@ export function createAdamantineOre() {
 // Old Spectral Hand: a free, stays-in-hand 3-damage poke as the attack,
 // or a reactive parry (Block 3, lash a random foe for 3, cycle a card)
 // as the defense.
+//
+// The two halves cycle DIFFERENTLY, which is what the per-mode costType is
+// for. The poke is FREE and stays in hand — you keep the dagger. The parry
+// spends it: the blade goes to the RECHARGE pile and comes back around. That
+// distinction is load-bearing for enchants — a Mithril Alloy on this dagger
+// pays its Shield when you parry (a real trip through the recharge pile) and
+// pays nothing on the poke (the dagger never left your hand).
 export function createDrowParryingDagger() {
   return new Card({
     id: 'drow_parrying_dagger', name: 'Drow Parrying Dagger',
@@ -6556,11 +6615,15 @@ export function createDrowParryingDagger() {
       new CardEffect('stays_in_hand', 0, TargetType.SELF),
     ],
     modes: [
+      // costType RECHARGE — parrying spends the dagger into the recharge pile,
+      // unlike the card's own FREE stays-in-hand poke. NOT printed on the card:
+      // spending a card you played is the default read, so "Recharge:" on the
+      // mode line is noise.
       new CardMode('Block 3, Deal 3 Randomly, Draw', [
         new CardEffect('block', 3, TargetType.SELF),
         new CardEffect('damage_random', 3, TargetType.RANDOM_ENEMY),
         new CardEffect('draw', 1, TargetType.SELF),
-      ]),
+      ], CostType.RECHARGE),
     ],
     tier: 2, rarity: 'rare',
     gamePlusOffset: { damage: 1, modes: [{ block: 1, damage_random: 1 }] },

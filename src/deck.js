@@ -223,7 +223,19 @@ export class Deck {
 
   placeByCost(card) {
     card.exhausted = false;
-    switch (card.costType) {
+    // `_playCostOverride` is a one-shot cost for THIS play, stamped by the host
+    // when the player picked a mode that cycles differently from the card (see
+    // CardMode.costType). Consumed here so it can never leak into a later play.
+    const cost = card._playCostOverride || card.costType;
+    delete card._playCostOverride;
+    // Record where the card actually LANDED. "On Recharge" riders key off this
+    // rather than off costType, so they fire when — and only when — the card
+    // really reached the recharge pile. Read-and-cleared by the host, so a play
+    // that never routes through here (a stays-in-hand swing) leaves no stamp
+    // and collects nothing.
+    card._lastPlacement = (cost === 'RECHARGE') ? 'recharge'
+      : (cost === 'BANISH') ? 'banish' : 'discard';
+    switch (cost) {
       case 'RECHARGE':
         this.addToRechargePile(card);
         break;

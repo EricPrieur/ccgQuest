@@ -119,7 +119,7 @@ import {
   createEnragedStrike, createDireClaws, createDireBite, createDireHide, createBearRoar,
   createSummonGiantHyena, createGiantHyenaCreature, createBoneBow, createBoneJavelin, createGnollBite,
   createGnollCreature, createGnollWarriorCreature, createGnollPackLordCreature, createBoneWhip, createBoneFlail, createAncientBones, createBluecap, createBarrelstalk, createRareMushroom,
-  createBanditCard, createBanditCreature, createGnawedBone, createChippedRock,
+  createBanditCard, createBanditCreature, createGnawedBone, createChippedRock, createBoneWallCreature,
   createDeathjumpSpiderCard, createDeathjumpSpiderCreature, createPoisonPouch,
   createSvirfhammer, createDeepPick, createWorkGloves, createFungalLantern, createMinersHelm,
   createMycelialCodex, createMiningGoggles,
@@ -2741,7 +2741,7 @@ let part2SiegeOver = false;
 // override). Set when the the_great_forge dialog starts. Persisted.
 let greatPourActivated = false;
 // Set when the party heads back to the tunnels to search for the King
-// (the Chapter 2 "To Be Continued" beat). Flips the Tharnag music from the
+// (the Chapter 2 "The Search" beat). Flips the Tharnag music from the
 // mournful post-Pour bed back to the tense thriller-brass siege bed.
 // Persisted.
 let chapter2Started = false;
@@ -5155,10 +5155,10 @@ const LOOT_TABLES = {
   // Bandit's gifts — what the market stray drags back on a successful forage
   // (50% per swing, see the summon_bandit stamp). Both are tier-1 tokens: found
   // value, not built value, so they are unsellable and cost nothing to hold.
-  // Forest Spiders — a 20% chance on EITHER Forest Ambush (see CHANCE_LOOT).
+  // Forest Spiders — a 10% chance on EITHER Forest Ambush (see CHANCE_LOOT).
   // On a drop, ONE pick by weight: the Poison Pouch is the common find, the
-  // Deathjump Spider ally the rare one. 1.0 / 0.5 over a 20% gate works out at
-  // ~13.3% for the pouch and ~6.7% for the spider.
+  // Deathjump Spider ally the rare one. 1.0 / 0.5 over a 10% gate works out at
+  // ~6.7% for the pouch and ~3.3% for the spider.
   //
   // Renamed from deathjump_spider_loot now that it is a real pool rather than
   // a one-card table.
@@ -5865,7 +5865,7 @@ const LOOT_TABLE_NOTES = {
   tier2_common:        'The generic tier-2 supply pool. Weights fold rarity and tier together: tier-2 commons at 1.0, tier-2 uncommons at 0.75, tier-2 rares and the tier-1 uncommons carried forward at 0.5. Like Tier 1 Commons, monster- and story-flavoured supplies are deliberately kept out.',
   tier3_common:        'The generic tier-3 supply pool, rolled at 20% on the Crag Cat, every gnoll fight and the Underdark hunting encounters. Same ladder as the other two: tier-3 commons (Bluecap, Crystalwater Flask) at 1.0, tier-3 uncommons (Barrelstalk, Fungal Bandages) at 0.75, the tier-3 rare Potion of Superior Healing and the tier-2 carry-forwards (Stonebound Bandages, Potion of Greater Healing) at 0.5. Minor Healing Potion sits lowest at 0.25 — a rare AND two tiers back, so it reads as a leftover rather than a prize. Monster- and story-flavoured supplies stay on their own tables; Rare Mushroom is kept out because it is a scarce crafting material.',
   bandit_gifts:        'Not a drop — what Bandit drags back. Each of his attacks has a 50% chance to bring one: the Gnawed Bone and the Chipped Rock at equal weight, and a Lucky Pebble at a tenth of theirs (~1 gift in 21).',
-  forest_spider_loot: 'A 20% chance after either Forest Ambush, then ONE pick by weight: the Poison Pouch at 1.0 (~13.3% of fights) and the Deathjump Spider ally at 0.5 (~6.7%) — the hatchling that decides you are better company than the nest.',
+  forest_spider_loot: 'A 10% chance after either Forest Ambush, then ONE pick by weight: the Poison Pouch at 1.0 (~6.7% of fights) and the Deathjump Spider ally at 0.5 (~3.3%) — the hatchling that decides you are better company than the nest.',
   ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
   rampaging_troll_loot: 'Dropped after killing the Rampaging Troll (50% chance). Pick-one, weighted: Troll Blood Vial common; Long Troll Teeth uncommon; Troll Skin Jacket / Severed Troll Arm rare; Ring of Regeneration epic.',
@@ -14475,45 +14475,35 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   // inside the tunnels fires the return below (it's the exit).
   // First trip back into the tunnels to search for the King — only AFTER
   // the Pour + the rest + Durgan's send-off (durgan_vault), and only ONCE.
-  // Chapter 2 isn't built yet: fade out, show the "Chapter 2: The Search /
-  // To Be Continued" title card, then drop the party INTO the tunnels.
-  // chapter2Started latches it, so every later trip uses the normal
-  // back-and-forth entry below (no title card).
+  // First trip down opens Chapter 2 with the Thorb/Valdrisa "search the front"
+  // dialog, which hands the party into the tunnels (see the chapter2_search
+  // branch in advanceEncounterPhase). chapter2Started latches it, so every later
+  // trip uses the plain back-and-forth entry below.
+  //
+  // This used to be a "Chapter 2: The Search / To Be Continued…" title card for
+  // everyone but debug builds, because the chapter didn't exist yet. It does now
+  // — the whole Underdark arc is playable past this point — so the card was
+  // telling players the game stopped somewhere it doesn't. Removed; the dialog
+  // that was debug-only is now the one path.
   if (!skipEncounter && nodeId === 'grand_hall_to_tunnels'
       && currentMap.id === 'tharnag_interior'
       && greatPourActivated && completedEncounters && completedEncounters.has('durgan_vault')
       && !chapter2Started) {
     chapter2Started = true;
     _lastMusicArea = null; // revert Tharnag + tunnels to the tense thriller-brass bed
-    if (debugMode) {
-      // Debug build: play the Thorb/Valdrisa "search the front" dialog
-      // instead of the To-Be-Continued card. Completing it drops the party
-      // into the tunnels (handled in advanceEncounterPhase's completion hook).
-      const factory = ENCOUNTER_REGISTRY['chapter2_search'];
-      if (factory) {
-        currentMap.currentNodeId = 'grand_hall_to_tunnels';
-        currentEncounter = factory();
-        encounterTextIndex = 0;
-        encounterChoiceResult = null;
-        _encounterHadCombat = false;
-        advanceEncounterPhase();
-        autosaveNow();
-        return;
-      }
+    const factory = ENCOUNTER_REGISTRY['chapter2_search'];
+    if (factory) {
+      currentMap.currentNodeId = 'grand_hall_to_tunnels';
+      currentEncounter = factory();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      autosaveNow();
+      return;
     }
-    startFade(() => {
-      showTitleCard('Chapter 2: The Search', 'To Be Continued…', () => {
-        // Land in the tunnels (same as the normal entry below).
-        if (currentMap) _mapCache[currentMap.id] = currentMap;
-        currentMap = getOrCreateMap('tharnag_tunnels_entrance', createTharnagTunnelsEntranceMap);
-        revealLandingNode('tunnels_entry');
-        currentMap.currentNodeId = 'tunnels_entry';
-        chooseTunnelExitIfNeeded();
-        state = GameState.MAP;
-        autosaveNow();
-      });
-    });
-    return;
+    // Registry miss (should never happen) — fall through to the plain entry
+    // below rather than stranding the player in the Grand Hall.
   }
   if (!skipEncounter && nodeId === 'grand_hall_to_tunnels'
       && currentMap.id === 'tharnag_interior') {
@@ -18988,8 +18978,9 @@ function advanceEncounterPhase() {
       state = GameState.MAP;
       return;
     }
-    // Chapter 2 (debug) — the Thorb/Valdrisa search dialog hands the party
-    // down into the tunnels, same landing as the To-Be-Continued card.
+    // Chapter 2 — the Thorb/Valdrisa search dialog hands the party down into
+    // the tunnels. This is the only way in on a first trip (it replaced the
+    // To-Be-Continued title card once the chapter shipped).
     if (completedEncounterId === 'chapter2_search') {
       currentEncounter = null;
       if (currentMap) _mapCache[currentMap.id] = currentMap;
@@ -20134,7 +20125,7 @@ function advanceEncounterPhase() {
         tier1_common: 0.20, tier2_common: 0.20, tier3_common: 0.20,
         // The forest's drop. Rolled on both Forest Ambush nodes; the pool
         // decides which of the two items it is.
-        forest_spider_loot: 0.20,
+        forest_spider_loot: 0.10,
       };
       const isThroneSpecter = currentEncounter && currentEncounter.id === 'throne_specter';
       // Phase opt-out from the 50% gate (Gate of the Deep front fights —
@@ -24690,6 +24681,24 @@ function autosaveNow() {
   try {
     if (!player || !currentMap) return;
     saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, underdarkEncounterChance, underdarkEncArmed: _underdarkEncArmed, fountainStepReduction: _fountainStepReduction, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed, mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked, gnomeVillageRested: _gnomeVillageRested, mushroomFarmsHarvested: [..._mushroomFarmsHarvested], rareMushroomFound: _rareMushroomFound, mushroomFarmIntroSeen: _mushroomFarmIntroSeen, quietPoolUsed: _quietPoolUsed, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset,
+      // Journal state. seenDialogs drives the ENTIRE journal — every chapter,
+      // section header and row self-hides until its id is in that Set — and
+      // journalChoices holds the decisions recorded under each entry. Both were
+      // MISSING from this payload while saveGame() passed them, so an autosave
+      // reload came back with a blank journal that then refilled one row at a
+      // time as the player re-triggered dialogs (walking into a shop making a
+      // late-chapter entry appear on its own was the reported symptom).
+      seenDialogs,
+      journalChoices,
+      // Same omission, same cause — these are NOT in the RUN_FLAGS registry, so
+      // nothing else carried them: the two mushroom-circle narration latches
+      // (the intro text replayed after an autosave reload), Psilofyr's offering
+      // COUNT, and the set of nodes that have already done their one-shot
+      // backward re-fog.
+      mushroomCircleSeen: _mushroomCircleSeen,
+      mushroomCircleCornisSeen: _mushroomCircleCornisSeen,
+      psilofyrOffering: _psilofyrOffering,
+      backwardRefoggedOnce: _backwardRefoggedOnce,
       // Authoritative run-flag / run-SET bags. These were MISSING here — the
       // manual save at saveGame() passed them, the autosave did not, so every
       // flag that lives only in the RUN_FLAGS registry (underdarkThresholdSeen,
@@ -25581,6 +25590,32 @@ function collectForgeEligibleWeapons() {
   return { cards, backpackUids };
 }
 
+// A mode can carry its own cost (CardMode.costType). Stamp it as a one-shot
+// override so the placement that follows sends the card where THIS mode says,
+// not where the card's default cost says. placeByCost consumes the stamp.
+function noteModeCost(card, mode) {
+  if (!card || !mode || !mode.costType) return;
+  card._playCostOverride = mode.costType;
+}
+
+// Fire a played card's on-recharge riders.
+//
+// The rule is the literal one the enchant text promises: these pay when the
+// card LANDS IN THE RECHARGE PILE, never on a discard, a banish, or a swing
+// that left the card in your hand. placeByCost stamps `_lastPlacement` with
+// where the card actually went — including any per-mode cost override — and
+// this reads and clears it, so a play that never routed through placeByCost
+// (a stays-in-hand poke) finds no stamp and collects nothing.
+//
+// That is what makes the Drow Parrying Dagger work the way it reads: the free
+// poke keeps the dagger in hand and pays nothing, while parrying with it
+// recharges the dagger and its Mithril Alloy pays the Shield.
+function fireOnPlayRechargeRiders(card) {
+  if (!card) return;
+  const placed = card._lastPlacement;
+  delete card._lastPlacement;
+  if (placed === 'recharge') applyOnRechargeShield(card);
+}
 // Dwarven Workbench picker — armor cards that do NOT already have an
 // `on_recharge_*` effect (would conflict with the reinforcement
 // rider). Mirrors PY game.py:6273-6294.
@@ -25618,6 +25653,14 @@ let _forgeActiveMetal = null;
 // Metal reforge — eligible gear is any Armor/Shield OR Weapon NOT already
 // carrying an on_recharge_* enchant, so a piece can't be reforged twice.
 // Both metals (Mithril Alloy, Adamantine) work on the same pool.
+//
+// The pool is deliberately WIDE, and stays that way. It is tempting to filter
+// out gear that never self-recharges on a play — a stays-in-hand dagger, a
+// FREE-cost shield — on the grounds that the rider would never fire. It would.
+// ANY card can be fed to another card's or power's recharge cost, and that is
+// a genuine use for these enchants: a weapon you were going to spend as fodder
+// anyway now pays Shield or Heroism when you spend it. Narrowing the pool would
+// take that play away. The only filter is the double-enchant guard.
 function collectMetalEligibleGear() {
   const cards = [];
   const backpackUids = new Set();
@@ -34036,6 +34079,32 @@ function applyOnRechargeDamageAll(card) {
 // in-hand aura ends. Same family as applyOnRechargeShield / Heroism, fired
 // from the same hooks, so they land whether the card was played on its own or
 // spent as another card's recharge cost.
+// Thicken N random living Undead by +1/+1. Picks at RANDOM, matching the
+// necromancer's own bolster idiom (Skeleton Mastery, Army of the Dead,
+// summonOrBolsterSkeleton) rather than the first-on-the-field pick the shop
+// cards use (Book of the Dead, Bone Buckler).
+//
+// `stampOn` records WHICH bodies grew so a cancelled play can shrink them back
+// — the pick is random, so a refund has nothing to aim at otherwise.
+function bolsterRandomUndead(label, times = 1, stampOn = null) {
+  for (let i = 0; i < times; i++) {
+    const undead = (player.creatures || []).filter(c =>
+      c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Undead'));
+    if (undead.length === 0) {
+      addLog(`  ${label}: no Undead to bolster.`, Colors.GRAY);
+      return i;
+    }
+    const pick = undead[Math.floor(Math.random() * undead.length)];
+    pick.attack = (pick.attack || 0) + 1;
+    pick.maxHp = (pick.maxHp || 0) + 1;
+    pick.currentHp = (pick.currentHp || 0) + 1;
+    if (stampOn) (stampOn._onRechargeBolstered || (stampOn._onRechargeBolstered = [])).push(pick);
+    spawnHealOnTarget(pick, 1);
+    addLog(`  ${label}: ${pick.name} thickens (+1/+1).`, Colors.PURPLE);
+  }
+  return times;
+}
+
 function applyOnRechargeTeamBuffs(card) {
   if (!card || !Array.isArray(card.currentEffects) || !player) return;
   let teamHeroism = 0, teamShield = 0, steedHeal = 0, boneSteps = 0, bolsterUndead = 0;
@@ -34075,23 +34144,14 @@ function applyOnRechargeTeamBuffs(card) {
   // Mastery, Army of the Dead, summonOrBolsterSkeleton) rather than the
   // first-on-the-field pick the shop cards use (Book of the Dead, Bone Buckler).
   if (bolsterUndead > 0) {
-    for (let i = 0; i < bolsterUndead; i++) {
-      const undead = (player.creatures || []).filter(c =>
-        c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Undead'));
-      if (undead.length === 0) {
-        addLog(`  ${card.name}: no Undead to bolster.`, Colors.GRAY);
-        break;
-      }
-      const pick = undead[Math.floor(Math.random() * undead.length)];
-      pick.attack = (pick.attack || 0) + 1;
-      pick.maxHp = (pick.maxHp || 0) + 1;
-      pick.currentHp = (pick.currentHp || 0) + 1;
-      // Remember WHICH body grew, so a cancelled play can shrink it back. The
-      // pick is random, so without this the refund had nothing to aim at — this
-      // is the Bone Wall bug: cancel the play, keep the +1/+1.
-      (card._onRechargeBolstered || (card._onRechargeBolstered = [])).push(pick);
-      spawnHealOnTarget(pick, 1);
-      addLog(`  ${card.name}: ${pick.name} thickens (+1/+1).`, Colors.PURPLE);
+    // Bone Wall does its own bolster FIRST, inside summon_bone_wall, so the
+    // thickened skeleton is one the wall then absorbs. The card's on-recharge
+    // pass runs AFTER the effects loop (see playCardSelf), so without this stamp
+    // a normal cast would bolster twice. Spent here, once.
+    if (card._boneWallBolsterSpent) {
+      delete card._boneWallBolsterSpent;
+    } else {
+      bolsterRandomUndead(card.name, bolsterUndead, card);
     }
   }
   // Unholy Aura's parting gift — the aura ends, but the host grows. Same
@@ -34271,7 +34331,18 @@ function refundOnRechargeSummonSkull(card) {
   addLog(`  ${card.name}: refund ${skulls.length} Floating Skull${skulls.length === 1 ? '' : 's'}`, Colors.GRAY);
 }
 function refundOnRechargePoison(card) {
-  if (!card || !card._onRechargePoison) return;
+  if (!card) return;
+  const pa = card._onRechargePoisonAll;
+  if (pa) {
+    delete card._onRechargePoisonAll;
+    for (const t of pa.targets) {
+      if (!t) continue;
+      if (t instanceof Creature) t.poisonStacks = Math.max(0, (t.poisonStacks || 0) - pa.stacks);
+      else if (typeof t.removeStatus === 'function') t.removeStatus('POISON', pa.stacks);
+    }
+    addLog(`  ${card.name}: refund ${pa.stacks} Poison on ${pa.targets.length} target${pa.targets.length === 1 ? '' : 's'}`, Colors.GRAY);
+  }
+  if (!card._onRechargePoison) return;
   const { target, stacks } = card._onRechargePoison;
   delete card._onRechargePoison;
   if (!target || !stacks) return;
@@ -34697,13 +34768,14 @@ function handleDefendingClick(x, y) {
     _activePlayCard = card;
     // Cost-pick riders were deferred until the play actually committed.
     flushPendingRechargeRiders();
+    // A block-mode can cycle differently from the card's own cost.
+    noteModeCost(card, blockMode);
     player.deck.playCard(card);
     addLog(`You play ${card.name}`, Colors.GREEN, card);
-    // Recharge-cost defense cards self-recharge when played, so any
-    // on_recharge_shield effects fire here too (Dwarven Greaves).
-    if (card.costType === CostType.RECHARGE) {
-      applyOnRechargeShield(card);
-    }
+    // Reactive block. Defense cards (Dwarven Greaves) and modal block-modes
+    // (Drow Parrying Dagger) both land here, and both spend the card — so both
+    // collect their on-recharge riders.
+    fireOnPlayRechargeRiders(card);
     const effectsToApply = blockMode ? blockMode.effects : card.currentEffects;
     if (blockMode) addLog(`  Mode: ${blockMode.description}`, Colors.WHITE);
     // Snapshot Fire state BEFORE the if_burning_* effects mutate it,
@@ -35870,8 +35942,8 @@ function finishBarrage() {
       const drawn = player.deck.draw(barrageDrawOnFinish, MAX_HAND_SIZE);
       for (const d of drawn) addLog(`  Draw: ${d.name}`, Colors.BLUE, d);
       player.deck.placeByCost(card);
-      // RECHARGE-cost barrage weapons fire their on_recharge enchants too.
-      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+      // Barrage weapons fire their on-recharge riders too.
+      fireOnPlayRechargeRiders(card);
     }
     // Blade Flurry's refresh fires AFTER the card has been placed, so the
     // flurry itself can't ready the very card that just resolved.
@@ -36234,6 +36306,13 @@ function needsTarget(card) {
      e.effectType === 'shadow_clone' ||
      e.effectType === 'apply_bleed' || e.effectType === 'apply_sunder' ||
      e.effectType === 'apply_weak' || e.effectType === 'apply_shock' ||
+     // Paralytic Stinger's pair. Both were missing, and because the card
+     // carries no `damage` effect either, NOTHING on it matched this list —
+     // so it never entered TARGETING and both handlers fell through to their
+     // `target || enemy` default, dumping the Poison on the boss and then
+     // reporting the boss "too big to Paralyze". The card's whole job is
+     // picking a summon off the board, which it could not do.
+     e.effectType === 'apply_poison_range' || e.effectType === 'apply_paralyze' ||
      e.effectType === 'ancients_staff_strike' ||
      e.effectType === 'crippling_venom' || e.effectType === 'assassinate_strike' ||
      e.effectType === 'sunder_armor_strike' ||
@@ -38199,6 +38278,7 @@ function resolveEffect(eff, caster, target) {
       // hooks, so it fires on a cast, on being fed to another card's Recharge
       // cost, and on an end-of-turn self-recharge alike.
       break;
+    case 'on_recharge_poison_all':
     case 'on_recharge_poison_random':
       // Marker only. The drip is paid by applyOnRechargePoison, fired from the
       // same on-recharge hooks as on_recharge_shield / on_recharge_heroism.
@@ -40202,14 +40282,48 @@ function resolveEffect(eff, caster, target) {
         endTurnHeroismAllies: scVictim.endTurnHeroismAllies || 0,
         description: scVictim.description || 'A dark shadow of the fallen.',
       };
-      // Ad-hoc riders/powers that live outside the constructor on some
-      // creatures (set post-construction). Copy the combat-relevant ones so the
-      // Shadow keeps them — e.g. Pack Hyena's pack-tactics attack bonus.
-      const copyRiposte = !!scVictim.riposte;
-      const copyRiposteAmt = scVictim.riposteAmount || 1;
-      const copyRampage = !!scVictim._rampageOnKill;
-      const copyPackTactics = !!scVictim.packTactics;
-      const copyTurnStartShield = scVictim._turnStartShieldAllies || 0;
+      // Ad-hoc riders/powers that live outside the copyParams list — either set
+      // post-construction (endTurnHealRandomAlly, _regen, the banner aura) or
+      // simply never added above. Snapshotted BEFORE the kill and re-stamped on
+      // the Shadow so the copy is the creature's real kit, not a stat line.
+      //
+      // Valdrisa was the bug that produced this table: her heal is
+      // endTurnHealRandomAlly (set after `new Creature`, NOT the
+      // endTurnHealAllies that copyParams carries) and her +3 vs Armor/Shield is
+      // armorBonusOverride, so a Shadow Valdrisa arrived with neither — a 4/6
+      // body wearing her name and none of what makes her Valdrisa.
+      //
+      // Deliberately NOT copied, and why:
+      //   _invulnerable / _untargetableAlly — scenery + boss markers. A Shadow
+      //     of a totem must not be untouchable scenery on the other side.
+      //   _grantedSentinel / _swingsLeft / _holdFirstTurn / _vortexCharges —
+      //     transient per-turn state or a spent resource, not a power.
+      //   poison/fire/ice/shock stacks — the Shadow gets its own 1 Poison below;
+      //     inheriting the original's DoTs would be a debuff, not a copy.
+      //   isCompanion / sourceCard — companion binding stays with the original,
+      //     so a dead Shadow never discards the player's companion card.
+      const SHADOW_COPY_FIELDS = [
+        'riposte', 'riposteAmount',        // Drow parry lash-back
+        '_rampageOnKill',                  // extra swing on a kill
+        'packTactics',                     // Pack Hyena's crowd bonus
+        '_turnStartShieldAllies',          // Rampart's line shield
+        'armorBonusOverride',              // Valdrisa / obsidian family +N vs Armor
+        'endTurnHealRandomAlly',           // Valdrisa's tend
+        '_allyDamageAura',                 // banner / standard damage aura
+        '_regen', '_regenMax',             // regeneration tick
+        '_iceAbsorb',                      // Ice Elemental eats Ice for +1/+1
+        'attackerGainsIce',                // frost skin — attackers take Ice
+        'randomTarget',                    // swings at a random foe, not the front
+        'onDeathSummonTreants',            // [lo, hi] burst on death
+        '_secondSwingAttack', '_attacksPerTurn', // multi-swing profiles
+        '_cantAttack',                     // carts / eggs / walls that only stand
+      ];
+      const copyExtras = {};
+      for (const k of SHADOW_COPY_FIELDS) {
+        const v = scVictim[k];
+        if (v === undefined || v === null || v === false || v === 0) continue;
+        copyExtras[k] = Array.isArray(v) ? v.slice() : v;
+      }
       // The strike: 4 True, doubled to 8 against a summon. True damage, so it
       // bypasses Block / Shield / Armor entirely — 8 still removes most summons
       // outright, which keeps the copy branch the common case when you aim at
@@ -40241,10 +40355,7 @@ function resolveEffect(eff, caster, target) {
       // Non-Haste copies keep summon sickness; Haste copies are ready.
       const shadow = scKilledSummon ? new Creature(copyParams) : createShadowCloneCreature();
       if (scKilledSummon) {
-        if (copyRiposte) { shadow.riposte = true; shadow.riposteAmount = copyRiposteAmt; }
-        if (copyRampage) shadow._rampageOnKill = true;
-        if (copyPackTactics) shadow.packTactics = true;
-        if (copyTurnStartShield) shadow._turnStartShieldAllies = copyTurnStartShield;
+        for (const [k, v] of Object.entries(copyExtras)) shadow[k] = v;
         // The tint exists to make a COPIED creature read as a corrupted shade of
         // the original, painting 62% dark over that creature's own art. The
         // generic Shadow already renders on ShadowClone.jpg — which is a shadow
@@ -42038,6 +42149,82 @@ function resolveEffect(eff, caster, target) {
       if (_activePlayCard) _activePlayCard._routeToPlayPile = true;
       player.addCreature(val);
       addLog(`  Valdrisa joins the fight!`, Colors.GREEN);
+      break;
+    }
+    case 'summon_bone_wall': {
+      // The Skeleton amalgam. A fresh 1/1 Sentinel wall that eats every OTHER
+      // living Skeleton on the player's side and inherits what they carried.
+      //
+      // CURRENT stats, not max: a wounded 3/1 contributes 3 Attack and 1 HP, and
+      // the wall's maxHp is set to the total it ends up with so it never arrives
+      // pre-damaged. Statuses come across too — Shield / Armor / Heroism / Rage,
+      // but the Poison, Bleed, Fire, Ice, Shock and Sunder as well. Amalgamating
+      // consolidates a host; it does not launder one.
+      //
+      // Attack riders are deliberately left behind (see the card comment).
+      // On Recharge: Bolster 1 Undead — resolved HERE so it lands BEFORE the
+      // amalgam and the thickened body is one the wall then absorbs. The card's
+      // own on-recharge pass runs after the effects loop, so the stamp below
+      // tells it the bolster is already spent for this cast. Fed as another
+      // card's cost, that pass fires normally and this never runs.
+      if (_activePlayCard && Array.isArray(_activePlayCard.currentEffects)
+          && _activePlayCard.currentEffects.some(e => e && e.effectType === 'on_recharge_bolster_undead')) {
+        bolsterRandomUndead('Bone Wall', 1, _activePlayCard);
+        _activePlayCard._boneWallBolsterSpent = true;
+      }
+      const wall = createBoneWallCreature();
+      scaleCreatureWithOffset(wall, playerTierOffset || 0, 'player');
+      wall._sourceRarity = 'uncommon';
+      wall._sourceSubtype = 'ability';
+      const eaten = (player.creatures || []).filter(c =>
+        c && c.isAlive && Array.isArray(c.traits) && c.traits.includes('Skeleton'));
+      // Straight numeric carry-overs. Kept as a list so a new Creature status
+      // is one line here rather than a forgotten field.
+      // ARMOR is deliberately absent. Armor absorbs on EVERY incoming hit, so
+      // summing four skeletons' 1 Armor onto one body would turn a wall of chip
+      // blockers into a 4-Armor brick that small hits cannot touch at all — the
+      // one stat where consolidating creates value rather than moving it. The
+      // wall brings its own 1 Armor and that is the whole of it.
+      const CARRY = [
+        'shield', 'heroism', 'rage',
+        'poisonStacks', 'bleedStacks', 'fireStacks', 'iceStacks',
+        'shockStacks', 'sunderStacks', 'drowSleepStacks',
+      ];
+      let gainedAtk = 0;
+      let gainedHp = 0;
+      for (const sk of eaten) {
+        gainedAtk += (sk.attack || 0);
+        gainedHp += Math.max(0, sk.currentHp || 0);
+        for (const k of CARRY) wall[k] = (wall[k] || 0) + (sk[k] || 0);
+      }
+      wall.attack = (wall.attack || 0) + gainedAtk;
+      wall.currentHp = (wall.currentHp || 0) + gainedHp;
+      // maxHp tracks the total so the amalgam is whole on arrival.
+      wall.maxHp = Math.max(wall.maxHp || 1, wall.currentHp);
+      // Clear the bodies BEFORE adding the wall so a full field still has room
+      // for it — the amalgam should never fail for lack of a slot it just made.
+      if (eaten.length > 0) {
+        player.creatures = player.creatures.filter(c => !eaten.includes(c));
+      }
+      if (!player.addCreature(wall)) {
+        addLog(`  No room for the Bone Wall.`, Colors.GRAY);
+        break;
+      }
+      if (eaten.length > 0) {
+        addLog(
+          `  ${eaten.length} Skeleton${eaten.length === 1 ? '' : 's'} fold into the Bone Wall `
+          + `(+${gainedAtk} Atk, +${gainedHp} HP).`,
+          Colors.PURPLE,
+        );
+      } else {
+        addLog(`  A Bone Wall claws up — nothing to absorb yet.`, Colors.PURPLE);
+      }
+      // Two-beat arrival. The card's cast already fired bones_clatter
+      // (CARD_SFX_OVERRIDES), so the wall itself lands on the heavier
+      // bone-crush thud — and when it actually ate something, a second
+      // rattle behind it for the bodies folding in.
+      playSound('big_bone_hit', 0.75);
+      if (eaten.length > 0) setTimeout(() => playSound('bones_clatter', 0.8), 160);
       break;
     }
     case 'summon_deathjump_spider': {
@@ -44244,8 +44431,13 @@ function resolveEffect(eff, caster, target) {
           }
         }
         countAndRemoveDeadCreatures();
-        attacksThisTurn++;
       }
+      // TWO attacks, always — counted outside the pass loop on purpose. The
+      // loop breaks early when swing 1 leaves nothing standing (a dead board,
+      // or an invulnerable boss whose last creature just fell), and the rogue
+      // still fanned the blades twice. Sneak Attack scales off what you swung,
+      // not off how many targets survived to be swung at.
+      attacksThisTurn += 2;
       break;
     }
     case 'grant_potency_buff': {
@@ -44550,6 +44742,9 @@ function playCardSelf(handIndex) {
   playSound('card_play');
   playCardAmbient(card);
   if (stays) {
+    // The card never reaches placeByCost, so drop any per-mode cost stamp
+    // rather than letting it ride into a later play of the same card.
+    delete card._playCostOverride;
     card.exhausted = true;
     addLog(`You use ${card.name} (stays in hand)`, Colors.GREEN, card);
   } else {
@@ -44581,10 +44776,10 @@ function playCardSelf(handIndex) {
     delete card._routeToPlayPile;
   } else if (!stays) {
     player.deck.placeByCost(card);
-    // RECHARGE-cost cards self-recharge into the recharge pile when played
-    // — fire their on_recharge enchants (Mithril shield / Adamantine
-    // heroism / Wolf Fang) here, mirroring the attack + defense paths.
-    if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+    // Fire the played card's on-recharge riders (Mithril shield / Adamantine
+    // heroism / Wolf Fang). The card has left the hand by here, which is the
+    // whole condition — see fireOnPlayRechargeRiders.
+    fireOnPlayRechargeRiders(card);
   }
   _activePlayCard = null;
   // Clear the modal selection here too. Leaving _chosenMode set made the
@@ -44628,6 +44823,7 @@ function playCardOnAlly(handIndex, target) {
   // rule the enemy-target and self-play paths follow. Polymorph is the first
   // ally-targeted modal, and its base effects array is empty, so without this
   // the Giant Ape mode resolved nothing at all.
+  if (modalCard && modalCard._chosenMode) noteModeCost(card, modalCard._chosenMode);
   const allyEffects = (modalCard && modalCard._chosenMode)
     ? modalCard._chosenMode.effects
     : card.currentEffects;
@@ -44652,8 +44848,8 @@ function playCardOnAlly(handIndex, target) {
       delete card._routeToPlayPile;
     } else {
       player.deck.placeByCost(card);
-      // RECHARGE-cost cards fire their on_recharge enchants on play.
-      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+      // On-recharge riders fire here — the card has left the hand.
+      fireOnPlayRechargeRiders(card);
     }
   }
   _activePlayCard = null;
@@ -44699,6 +44895,9 @@ function playCardOnEnemy(handIndex) {
   }
   playCardAmbient(card);
   if (stays) {
+    // The card never reaches placeByCost, so drop any per-mode cost stamp
+    // rather than letting it ride into a later play of the same card.
+    delete card._playCostOverride;
     card.exhausted = true;
     addLog(`You use ${card.name} (stays in hand)`, Colors.GREEN, card);
   } else {
@@ -44707,6 +44906,7 @@ function playCardOnEnemy(handIndex) {
   }
 
   // Use modal mode effects if a mode was chosen, otherwise use card's own effects
+  if (modalCard && modalCard._chosenMode) noteModeCost(card, modalCard._chosenMode);
   const effects = (modalCard && modalCard._chosenMode)
     ? modalCard._chosenMode.effects
     : card.currentEffects;
@@ -44742,11 +44942,10 @@ function playCardOnEnemy(handIndex) {
       delete card._routeToPlayPile;
     } else {
       player.deck.placeByCost(card);
-      // RECHARGE-cost cards land in the recharge pile when played — fire
-      // their on_recharge enchants (Adamantine heroism / Mithril shield /
-      // Wolf Fang) AFTER the strike so the swing doesn't eat the buff.
-      // Mirrors the enemy Rapier flow + the defense-play path.
-      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+      // On-recharge riders (Adamantine heroism / Mithril shield / Wolf Fang)
+      // fire AFTER the strike so the swing doesn't eat the buff. Mirrors the
+      // enemy Rapier flow + the defense-play path.
+      fireOnPlayRechargeRiders(card);
     }
   }
 
@@ -44804,6 +45003,9 @@ function playCardOnCreature(handIndex, creature) {
   }
   playCardAmbient(card);
   if (stays) {
+    // The card never reaches placeByCost, so drop any per-mode cost stamp
+    // rather than letting it ride into a later play of the same card.
+    delete card._playCostOverride;
     card.exhausted = true;
     addLog(`You use ${card.name} on ${creature.name} (stays in hand)`, Colors.GREEN, card);
   } else {
@@ -44811,6 +45013,7 @@ function playCardOnCreature(handIndex, creature) {
     addLog(`You play ${card.name} on ${creature.name}`, Colors.GREEN, card);
   }
 
+  if (modalCard && modalCard._chosenMode) noteModeCost(card, modalCard._chosenMode);
   const effects = (modalCard && modalCard._chosenMode)
     ? modalCard._chosenMode.effects
     : card.currentEffects;
@@ -44844,10 +45047,9 @@ function playCardOnCreature(handIndex, creature) {
       delete card._routeToPlayPile;
     } else {
       player.deck.placeByCost(card);
-      // RECHARGE-cost cards land in the recharge pile — fire their
-      // on_recharge enchants (Adamantine heroism / Mithril shield) after
+      // On-recharge riders (Adamantine heroism / Mithril shield) fire after
       // the strike. Mirrors playCardOnEnemy / playCardSelf.
-      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+      fireOnPlayRechargeRiders(card);
     }
   }
 
@@ -46385,7 +46587,7 @@ function resolveMultiTargeting() {
       _activePlayCard = null;
       countAndRemoveDeadCreatures();
       player.deck.placeByCost(card);
-      if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+      fireOnPlayRechargeRiders(card);
       for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
       pendingRechargeNames = [];
       cardRechargedCards = [];
@@ -46552,7 +46754,7 @@ function resolveMultiTargeting() {
   countAndRemoveDeadCreatures();
 
   player.deck.placeByCost(card);
-  if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+  fireOnPlayRechargeRiders(card);
 
   for (const c of cardRechargedCards) addLog(`  Recharge: ${c.name}`, Colors.GRAY, c);
   pendingRechargeNames = [];
@@ -47840,9 +48042,11 @@ function finishIncomingDamage() {
   // Ice Shatter on the player — fires if any deck/hand pay actually
   // happened this event. Skipped on fully blocked / fully shielded
   // hits since the flag never flipped.
+  const iceExempt = _suppressPlayerIceShatter;
+  _suppressPlayerIceShatter = false;
   if (_playerDamageLandedThisEvent) {
     _playerDamageLandedThisEvent = false;
-    maybeIceShatter(player);
+    if (!iceExempt) maybeIceShatter(player);
   }
   hideToast();
   state = GameState.COMBAT;
@@ -49396,6 +49600,17 @@ const FORAGE_PROFILES = {
 };
 function maybeForage(ally) {
   if (!ally) return;
+  // Nothing forages out of a fight that just ended. The gift would land in a
+  // hand that is immediately shuffled back into the deck, so a killing blow
+  // bought the player a junk card they never got to play — the rider read as a
+  // cost rather than a bonus. Checked on the LIVE board rather than on "did
+  // this target die", so it covers the _clearFieldToWin bosses too: an
+  // invulnerable shell with no creatures left is a finished fight.
+  {
+    const bossStanding = !!(enemy && enemy.isAlive && !enemy._invulnerable);
+    const minionsStanding = !!(enemy && (enemy.creatures || []).some(c => c && c.isAlive));
+    if (!bossStanding && !minionsStanding) return;
+  }
   // Resolve creator/label/verb from the stamp first, then fall back to
   // the name-based profile. Foraging IDs that don't have one are
   // silently skipped.
@@ -49528,6 +49743,22 @@ function processPlayerAllyAttacks() {
 
 // --- Enemy AI ---
 let enemyDamageAccumulator = 0; // total damage from enemy attacks this turn (cards + creatures)
+// Ice Shatter exemption. Some effects deal damage FROM the target's Ice
+// (Cold Breath: "damage equal to their Ice") and leave the stacks standing so
+// the frost kit still has something to read. Those must not also roll the
+// ambient maybeIceShatter proc, or the same stacks are billed twice in one
+// event — once preventably as the hit, then again unpreventably plus a shard
+// per stack. The exemption is scoped to the EFFECT, never to the fight: every
+// other attack that turn still shatters normally.
+//
+// Allies resolve synchronously, so a bare flag covers them. The PLAYER's share
+// is pooled into enemyDamageAccumulator and paid once at end of turn, so there
+// is no per-hit hook left by then — instead we count how much of the pool came
+// from exempt effects and skip the roll only when the pool was ENTIRELY exempt.
+// Any ordinary hit landing in the same turn puts the shatter back on the table.
+let _iceShatterExempt = false;          // synchronous guard (allies)
+let _iceShatterExemptQueued = 0;        // exempt damage queued to the player this turn
+let _suppressPlayerIceShatter = false;  // decided at flush, read in finishIncomingDamage
 // Set true when a mid-attack tick (bleed etc.) kills the enemy
 // character while damage is queued in enemyDamageAccumulator.
 // checkCombatEnd reads this flag and skips firing victory until
@@ -50380,6 +50611,8 @@ const STATUS_ATTACK_EFFECT_TYPES = new Set([
   // play (Intimidating Shout) is aggression, so it closes First-Attack
   // windows, feeds Sneak Attack, and provokes Riposte.
   'apply_weak', 'apply_weak_all',
+  // Paralytic Stinger — a damage-less Poison play, same footing as the rest.
+  'apply_poison_range',
 ]);
 
 // True when a damage-LESS card's whole point is applying a status (Plague,
@@ -51215,6 +51448,8 @@ function startEnemyTurn() {
   // the player-side reset at the top of startPlayerTurn.
   for (const c of enemy.deck.hand) c.exhausted = false;
   enemyDamageAccumulator = 0;
+  _iceShatterExemptQueued = 0;
+  _suppressPlayerIceShatter = false;
   awaitingEnemyDamage = false;
 
   // Enraged Strike pity timer — mirrors PY: from turn 11 onward,
@@ -53422,8 +53657,13 @@ function updateEnemyTurn(dt) {
           const n = ally.iceStacks || 0;
           if (n > 0) { iceMap.set(ally, n); shatterList.push(ally); }
         }
+        // Name the card that did it. Cold Breath and the Ice Shatter card
+        // share this branch, and the log used to read a bare "You shatter!"
+        // with no hint which one billed you — and Cold Breath's own line
+        // ("Cold Breath! N damage") disappeared when it moved onto this path.
+        const isLabel = (_activePlayCard && _activePlayCard.name) ? `${_activePlayCard.name}: ` : '';
         if (shatterList.length === 0) {
-          addLog(`  Nothing frozen — Ice Shatter fizzles.`, Colors.GRAY);
+          addLog(`  ${isLabel}nothing frozen — the shatter fizzles.`, Colors.GRAY);
         } else {
           if (!enemyArrowsBatch) {
             const src = getEnemyCenter();
@@ -53438,7 +53678,7 @@ function updateEnemyTurn(dt) {
             const consumed = iceMap.get(t);
             if (t === player) {
               if (t.removeStatus) t.removeStatus('ICE', consumed);
-              addLog(`  You shatter! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+              addLog(`  ${isLabel}you shatter! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
               // Mirror routeEnemyDamageToTarget's player branch (without
               // the per-target arrow stamp — the arrow batch above
               // already paints the shatter). Block → Shield → Armor
@@ -53470,7 +53710,7 @@ function updateEnemyTurn(dt) {
               }
             } else {
               t.iceStacks = 0;
-              addLog(`  ${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
+              addLog(`  ${isLabel}${t.name} shatters! -${consumed} Ice → ${consumed} damage.`, Colors.ICE_BLUE);
               applyDamageToAlly(t, consumed, enemy, /* skipOverwhelm */ true);
             }
           }
@@ -53479,12 +53719,19 @@ function updateEnemyTurn(dt) {
         }
       } else if (eff.effectType === 'damage_per_ice_all') {
         // Cold Breath payoff: deal damage equal to each target's
-        // current Ice count, but DON'T strip the Ice. Player damage
+        // current Ice count, but DON'T strip the Ice — Gnikan's Staff and the
+        // rest of the frost kit read the player's own stacks, and a breath that
+        // consumed them left that combo with nothing to work on. Player damage
         // accumulates into enemyDamageAccumulator like a normal
         // enemy attack (block/shield/armor mitigate first, leftover
         // resolves at end-of-turn defense phase); ally damage hits
         // synchronously through applyDamageToAlly (shield/armor on
         // the creature). Whiffs gracefully if nothing is frozen.
+        // The damage comes OUT of the Ice, so it must not roll the shatter proc
+        // on that same Ice. Guard is raised for the whole resolution and dropped
+        // in the finally below, so an early return can't leave it stuck on.
+        _iceShatterExempt = true;
+        try {
         const hitList = [];
         const iceMap = new Map();
         const pIce = player.getStatus ? (player.getStatus('ICE') || 0) : 0;
@@ -53537,6 +53784,9 @@ function updateEnemyTurn(dt) {
               }
               if (queued > 0) {
                 enemyDamageAccumulator += queued;
+                // Remember how much of tonight's pool is exempt — the player pays
+                // it all in one lump at end of turn, long after this guard drops.
+                _iceShatterExemptQueued += queued;
                 addLog(`  ${queued} damage incoming`, Colors.RED);
               }
             } else {
@@ -53547,6 +53797,7 @@ function updateEnemyTurn(dt) {
           playSound('ice_flesh', 0.8);
           countAndRemoveDeadCreatures();
         }
+        } finally { _iceShatterExempt = false; }
       } else if (eff.effectType === 'apply_ice_all') {
         // Arrow batch: enemy AoE → player + every alive ally.
         if (!enemyArrowsBatch) {
@@ -54980,6 +55231,11 @@ function finishEnemyTurn() {
     awaitingEnemyDamage = true;
     const total = enemyDamageAccumulator;
     enemyDamageAccumulator = 0;
+    // Skip the player's Ice Shatter roll only when EVERY point in the pool came
+    // from an exempt effect (a Cold Breath that hit nothing else). One ordinary
+    // hit in the same turn and the frost is fair game again.
+    _suppressPlayerIceShatter = (total > 0 && _iceShatterExemptQueued >= total);
+    _iceShatterExemptQueued = 0;
     startIncomingDamage(total, 'total damage to you');
     if (state === GameState.DEFENDING || state === GameState.DAMAGE_SOURCE) {
       // Player needs to resolve — completePlayerTurnTransition() runs after.
@@ -56242,8 +56498,26 @@ function applyOnRechargeSummonSkull(card) {
 function applyOnRechargePoison(card) {
   if (!card || !Array.isArray(card.currentEffects)) return;
   let stacks = 0;
+  let allStacks = 0;
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'on_recharge_poison_random') stacks += eff.value;
+    else if (eff.effectType === 'on_recharge_poison_all') allStacks += eff.value;
+  }
+  // Corpse Explosion's rider — the half of the card that never needed a body.
+  // Routed back through resolveEffect so the spray arrows, tokens, log lines
+  // and countStatusAttack bookkeeping stay identical to a real apply_poison_all
+  // cast (same trick on_recharge_ink_random uses). Targets are snapshotted
+  // first because the refund path cannot re-derive who was standing.
+  if (allStacks > 0) {
+    const hit = [];
+    if (enemy && enemy.isAlive && !enemy._invulnerable) hit.push(enemy);
+    for (const c of (enemy && enemy.creatures) || []) {
+      if (c && c.isAlive && !c._invulnerable) hit.push(c);
+    }
+    if (hit.length > 0) {
+      resolveEffect(new CardEffect('apply_poison_all', allStacks, TargetType.ALL_ENEMIES), player, null);
+      card._onRechargePoisonAll = { targets: hit, stacks: allStacks };
+    }
   }
   if (stacks <= 0) return;
   const t = pickRandomEnemyTargetForEffect();
@@ -56436,6 +56710,9 @@ function triggerSplitPower(character, damageLanded = true) {
 // shatters can't cycle through the same target on the same swing.
 function maybeIceShatter(target) {
   if (!target || target._iceShatterFiring) return;
+  // Damage drawn FROM the target's own Ice doesn't re-shatter it (see
+  // _iceShatterExempt). Everything else rolls as normal.
+  if (_iceShatterExempt) return;
   let stacks = 0;
   if (target instanceof Creature) stacks = target.iceStacks || 0;
   else if (typeof target.getStatus === 'function') stacks = target.getStatus('ICE') || 0;
@@ -56794,6 +57071,9 @@ function getDeathSfxKey(c) {
   // Apprentice's Skeleton death — bones clatter to the floor as the
   // body folds back down (mirrors Bone Pile family).
   if (name === 'skeleton') return 'bones_clatter';
+  // Bone Wall death — the amalgam comes apart all at once. Heavier than a
+  // single Skeleton's clatter because it is several of them collapsing.
+  if (name === 'bone wall') return 'big_bone_hit';
   // General Zhost (army wave + boss phase) — beefier hiss.
   if (name === "general zhost's army" || name === 'general zhost') {
     return 'zhost_hiss';
@@ -57974,6 +58254,7 @@ function handleModalSelectClick(x, y) {
          e.effectType === 'apply_bleed' ||
          e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
          e.effectType === 'sneak_attack' || e.effectType === 'charge_attack' ||
+         e.effectType === 'apply_poison_range' || e.effectType === 'apply_paralyze' ||
          e.effectType === 'polymorph_sheep')
       );
       // Polymorph is the first modal whose two halves point at OPPOSITE sides
@@ -58040,9 +58321,11 @@ function handleModalSelectClick(x, y) {
         player.deck.playPile.push(card);
         delete card._routeToPlayPile;
       } else {
+        noteModeCost(card, chosen);
         player.deck.placeByCost(card);
-        // RECHARGE-cost modal weapons/armor fire their on_recharge enchants.
-        if (card.costType === CostType.RECHARGE) applyOnRechargeShield(card);
+        // Modal weapons/armor fire their on-recharge riders — but only if the
+        // mode they picked actually recharged the card.
+        fireOnPlayRechargeRiders(card);
       }
 
       modalCard = null;
@@ -65880,6 +66163,9 @@ const CARD_SFX_HINTS = {
   drain_essence:    ['drain_essence'],
   // Rocky Appendage — layered slime burst on cast (ooze + rocks).
   rocky_appendage:  ['ooze_attack', 'rocks_impact_small'],
+  // Bone Wall — summon_bone_wall fires the arrival thud inline, plus a
+  // second bones rattle when the amalgam actually absorbed skeletons.
+  bone_wall:        ['big_bone_hit', 'bones_clatter'],
   // Kobold Smoke Bomb — vanish poof on cast (same cue as the
   // slyblade's Vanish power) so the codex Sounds tab shows the
   // card → vanish_poof wiring.
@@ -66163,6 +66449,15 @@ function getWeaponSfxKeys(card = null, creature = null) {
     if (name === 'skeleton') {
       return {
         flesh: 'blunt_1h_flesh', blocked: 'blunt_blocked',
+        layer: 'bones_clatter',
+      };
+    }
+    // Bone Wall (Necromancer amalgam) — the same bone-frame rattle as a
+    // Skeleton, but the impact is the heavy skull-crush rather than the 1H
+    // blunt: it swings a host's worth of bone, not one arm's.
+    if (name === 'bone wall') {
+      return {
+        flesh: 'big_bone_hit', blocked: 'block_heavy',
         layer: 'bones_clatter',
       };
     }

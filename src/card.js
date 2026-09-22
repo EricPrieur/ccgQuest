@@ -52,13 +52,20 @@ export class CardEffect {
  * A mode option for modal cards (choose one).
  */
 export class CardMode {
-  constructor(description, effects = []) {
+  // `costType` is an OPTIONAL per-mode override of the card's own cost. A
+  // dual-mode weapon can be free to swing with and still cycle when you spend
+  // it defensively: the Drow Parrying Dagger's poke is FREE + stays-in-hand,
+  // but parrying with it puts the dagger in the RECHARGE pile, which is what
+  // lets an "On Recharge" enchant on it mean exactly what it says. null =
+  // inherit the card's costType.
+  constructor(description, effects = [], costType = null) {
     this.description = description;
     this.effects = effects;
+    this.costType = costType;
   }
 
   copy() {
-    const m = new CardMode(this.description, this.effects.map(e => e.copy()));
+    const m = new CardMode(this.description, this.effects.map(e => e.copy()), this.costType);
     if (this.artId) m.artId = this.artId;
     return m;
   }
