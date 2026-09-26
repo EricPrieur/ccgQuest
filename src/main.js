@@ -7164,6 +7164,10 @@ function handleClick(x, y) {
       }
       break;
     case GameState.GAME_OVER:
+      // Losing a codex sandbox fight still has to hand the run's real
+      // monsterTierOffset back — combatVictory never ran.
+      restoreMonsterOffsetAfterSandbox();
+      _codexSandboxFight = false;
       state = GameState.MENU;
       break;
     case GameState.HELP_SCREEN:
@@ -57963,6 +57967,12 @@ function countAndRemoveDeadCreatures() {
 }
 
 function combatVictory() {
+  // Hand the run's real monsterTierOffset back if a codex sandbox fight
+  // borrowed it. Done here rather than in the VICTORY click handler because
+  // this is the point where no more mid-fight summons can scale off it, and
+  // it covers every victory path (kill count, clear-field, named-target).
+  // No-op on a normal fight.
+  restoreMonsterOffsetAfterSandbox();
   // If the fight ended while a scry/scout overlay was open, tear it down so the
   // blue toast + card overlay don't linger over the victory / loot screen.
   clearScryOverlay();
@@ -58069,9 +58079,35 @@ let _codexSandboxFight = false;
 // Fight button would hand setupEnemyForCombat an unknown id and silently get
 // the generic Bite/Tough-Hide fallback instead of the real fight.
 const CODEX_FIGHT_ID_ALIAS = { kobold_warden: 'prison_guards' };
+
+// The codex TOffset selector drives the monster PREVIEW; a sandbox fight should
+// obviously match what you were just looking at. monsterTierOffset is the live
+// run value that setupEnemyForCombat reads (deck duplication for HP,
+// gamePlusOffset on every card + power, creature scaling — and the wrapped
+// addCreature keeps reading it LIVE so mid-fight summons scale too). So the
+// override has to stand for the whole fight, not just setup, and be put back
+// when the fight ends.
+//
+// null when nothing is borrowed, which is what makes the restore idempotent —
+// combatVictory / combatFlee call it on every fight, sandbox or not.
+let _codexSandboxSavedMonsterOffset = null;
+function restoreMonsterOffsetAfterSandbox() {
+  if (_codexSandboxSavedMonsterOffset === null) return;
+  monsterTierOffset = _codexSandboxSavedMonsterOffset;
+  _codexSandboxSavedMonsterOffset = null;
+}
+
 function startCodexSandboxFight(codexId) {
   const enemyId = CODEX_FIGHT_ID_ALIAS[codexId] || codexId;
   if (!enemyId || !player || !currentMap) return;
+  // Defensive: if a previous sandbox fight somehow ended without restoring,
+  // put the real offset back before borrowing again — otherwise the saved
+  // value would be a borrowed one and the run's own offset would be lost.
+  restoreMonsterOffsetAfterSandbox();
+  if ((codexTierOffset || 0) > 0 && codexTierOffset !== monsterTierOffset) {
+    _codexSandboxSavedMonsterOffset = monsterTierOffset;
+    monsterTierOffset = codexTierOffset;
+  }
   // Leave the codex the same way the C key does, so music and the return
   // state don't stay stuck in codex mode.
   codexReturnState = null;
@@ -58090,13 +58126,16 @@ function startCodexSandboxFight(codexId) {
     console.error(`[codex] sandbox fight '${enemyId}' threw:`, err);
     showStyledToast(`Fight failed to start: ${msg}`, 'damage', 6000);
     _codexSandboxFight = false;
+    restoreMonsterOffsetAfterSandbox();
     state = GameState.MAP;
     return;
   }
   // Set AFTER startCombat — it resets a pile of per-fight state and there is
   // no reason to risk the flag riding through it.
   _codexSandboxFight = true;
-  addLog(`[Codex] Sandbox fight: ${enemy ? enemy.name : enemyId}`, Colors.GRAY);
+  const offNote = (_codexSandboxSavedMonsterOffset !== null)
+    ? ` (TOffset +${monsterTierOffset})` : '';
+  addLog(`[Codex] Sandbox fight: ${enemy ? enemy.name : enemyId}${offNote}`, Colors.GRAY);
 }
 
 // Crag Cat escapes — no victory, no loot. Mirrors combatVictory's per-combat
@@ -58104,6 +58143,7 @@ function startCodexSandboxFight(codexId) {
 // (arriveAtNode already ran, so it won't re-trigger).
 function combatFlee() {
   _codexSandboxFight = false;
+  restoreMonsterOffsetAfterSandbox();
   _cornisCameoGuaranteed = false;
   clearParalyzedCards();
   // Clear any open scry/scout overlay first — a Crag Cat that flees mid-scry
@@ -71487,7 +71527,12 @@ function drawCodexStatsPanel(L) {
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(onMap ? 'Fight' : 'Fight (map only)', btnX + btnW / 2, btnY + btnH / 2);
+    // Show the TOffset on the label when one is selected — the fight scales
+    // the monster to it, so the button should say what you're walking into.
+    const fightLabel = !onMap
+      ? 'Fight (map only)'
+      : ((codexTierOffset || 0) > 0 ? `Fight  +${codexTierOffset}` : 'Fight');
+    ctx.fillText(fightLabel, btnX + btnW / 2, btnY + btnH / 2);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     if (onMap) {
