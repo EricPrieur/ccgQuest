@@ -1951,11 +1951,17 @@ export function createHammerOfWrath() {
   });
 }
 
+// Holy Sword — Paladin Tier 2. `martial_2h`, not `martial`: it's a greatsword
+// in every way that matters (11 damage off a second card cost), and being the
+// ONE 1H martial card in the game that demanded fodder made it an outlier that
+// any "Heavy weapon" rider would have had to special-case. Class access is
+// unaffected — the card is paladin-gated anyway, and Paladin is proficient in
+// martial_2h.
 export function createHolySword() {
   return new Card({
     id: 'holy_sword', name: 'Holy Sword',
     description: 'Recharge a Card -> Deal 11, Heal 4.\nOverheal: Heroism.',
-    shortDesc: 'R-Card->11 Dmg\nHeal 4, Overheal', subtype: 'martial',
+    shortDesc: 'R-Card->11 Dmg\nHeal 4, Overheal', subtype: 'martial_2h',
     cardType: CardType.ATTACK, costType: CostType.RECHARGE,
     effects: [
       new CardEffect('damage', 11, TargetType.SINGLE_ENEMY),
@@ -6816,15 +6822,20 @@ export function createDrowSleepPoisonEnemy() {
 // Kraken's Eye Spyglass — item that lets you sculpt your discard pile.
 // Peek the top 3 of discard, pick 1 into hand, the unpicked cards
 // stay in the discard pile (don't move to recharge).
+//
+// DISCARD cost, not Recharge: the glass looks into the discard pile and then
+// joins it. The order is safe by construction — the effect loop pops the peeked
+// cards off the discard pile BEFORE placeByCost drops the Spyglass onto it, so
+// it can never turn up in its own Scry.
 export function createKrakensEyeSpyglass() {
   return new Card({
     id: 'krakens_eye_spyglass',
     name: "Kraken's Eye Spyglass",
-    description: 'Recharge ->\nScry 3 from your discard pile.',
-    shortDesc: 'R->Scry 3\nfrom discard',
+    description: 'Scry 3 from your discard pile.\nDiscard.',
+    shortDesc: 'Scry 3 from\ndiscard, D',
     subtype: 'item',
     cardType: CardType.ITEM,
-    costType: CostType.RECHARGE,
+    costType: CostType.DISCARD,
     effects: [new CardEffect('scry_pick_discard', 3, TargetType.SELF)],
     rarity: 'epic',
     tier: 1,
@@ -9005,27 +9016,38 @@ export function createFrostDrakeScale() {
 // ============================================================
 
 // Ruga's Spiked Gauntlets — rare martial weapon dropped by Ruga the
-// Slave Master. PY parity: X damage where X = attacks this turn,
-// plus draw 1. Reuses the player-side sneak_attack effect (same
-// scaling rule) since PY's `sneak_attack_damage` isn't ported as a
-// separate effect type.
+// Slave Master. X damage where X = attacks this turn, swung TWICE.
+// Reuses the player-side sneak_attack scaling rule (via the
+// sneak_attack_twice variant) since PY's `sneak_attack_damage` isn't
+// ported as a separate effect type.
+//
+// The two swings are NOT the same number. attacksThisTurn bumps between them,
+// so the second reads one higher — with 2 prior attacks the gauntlets hit for
+// 3, then 4. That self-escalation is the card: it wants to be the LAST thing
+// you play in a turn, and it rewards a wide turn rather than a big one.
+//
+// It replaced a "Deal X, Draw" version. The Draw was the card's real value at
+// low X (a 1-damage cantrip on turn one), which meant the X clause barely
+// mattered — dropping it and adding the second swing puts the weight back on
+// the mechanic the card is named for. It also swings as a barrage: charges
+// (Heroism, Eye, Obsidian, Ignite, the Vial) pay out on the first hit only,
+// so it can't arbitrage a single Heroism stack into double value.
 export function createRugasSpikedGauntlets() {
   return new Card({
     id: 'rugas_spiked_gauntlets',
     name: "Ruga's Spiked Gauntlets",
-    description: 'Deal X Damage, Draw.\nX = Attacks this turn.',
-    shortDesc: 'X Dmg, Draw\nX=Attacks',
+    description: 'Deal X Damage, Twice.\nX = Attacks this turn.',
+    shortDesc: 'X Dmg, Twice\nX=Attacks',
     subtype: 'martial',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
-      new CardEffect('sneak_attack', 0, TargetType.SINGLE_ENEMY),
-      new CardEffect('draw', 1, TargetType.SELF),
+      new CardEffect('sneak_attack_twice', 0, TargetType.SINGLE_ENEMY),
     ],
     rarity: 'rare',
     tier: 2,
     // +2 base dmg per offset on the sneak_attack scaling.
-    gamePlusOffset: { sneak_attack: 2 },
+    gamePlusOffset: { sneak_attack_twice: 2 },
   });
 }
 
@@ -9305,21 +9327,27 @@ export function createMinersPickaxe() {
 }
 
 export function createDwarvenThrowingAxe() {
-  // Two-target martial — Cleave-shaped: 2 damage to up to 2 enemies,
-  // draws a card only when the player picks a 2nd target. The draw
-  // rider is `draw_on_two_targets`, read by the multi_damage handler
-  // at end of swing.
+  // Two-target martial — Cleave-shaped: 2 damage to up to 2 enemies, and a
+  // draw when the axe is the turn's OPENING attack.
+  //
+  // The draw used to ride on picking a 2nd target (`draw_on_two_targets`),
+  // which paid out exactly when the card was already at its best and gave
+  // nothing in the single-target fights where a 2-damage chain is weakest.
+  // First Strike inverts that: lead with the axe and it replaces itself,
+  // whatever the board looks like. Same rider family as the Adamantine
+  // Rapier's First Strike — self-referential, so swinging anything else
+  // first loses it.
   return new Card({
     id: 'dwarven_throwing_axe',
     name: 'Dwarven Throwing Axe',
-    description: 'Deal 2 Damage to 2 targets.\n2 Targets: Draw.',
-    shortDesc: '2 Dmg x2\n2 Targets: Draw',
+    description: 'Deal 2 Damage to 2 targets.\nFirst Strike: Draw.',
+    shortDesc: '2 Dmg x2\nFirst Strike: Draw',
     subtype: 'martial',
     cardType: CardType.ATTACK,
     costType: CostType.RECHARGE,
     effects: [
       new CardEffect('multi_damage', 2, TargetType.SINGLE_ENEMY, 2),
-      new CardEffect('draw_on_two_targets', 1, TargetType.SELF),
+      new CardEffect('draw_on_first_strike', 1, TargetType.SELF),
     ],
     rarity: 'common',
     tier: 2,
@@ -12167,6 +12195,56 @@ export function createMiningGoggles() {
     tier: 3,
     rarity: 'uncommon',
     gamePlusOffset: { grant_sunder_buff: 1 },
+  });
+}
+
+// Whetstone — Tier 1 uncommon. Early loot that seeds a Bleed build rather than
+// a starter-deck item: Paladin and Warrior each carry one item slot, and their
+// openers have nothing to exploit a Bleed drip with.
+//
+// It reads two ways, and the second one is the card:
+//   HELD — re-play it each turn to coat the next swing in 1 Bleed. Works for
+//     every melee shape, one-handed included, which is the whole reason it is
+//     stays-in-hand and not a Quiver-style unplayable. Only 1 of 18 one-handed
+//     martial weapons ever asks for fodder, so a fodder-only card would have
+//     been dead in a 1H deck.
+//   FED — spent as a two-handed martial weapon's "Recharge a Card ->" cost, it
+//     adds a second Bleed to that swing. That clause exists because the 2H rack
+//     is the melee mirror of the archer's bow: 7 of 9 martial_2h cards demand a
+//     card every time you swing, so the Whetstone always has somewhere to go.
+//
+// Deliberately martial_2h, not "any 2H" — see isHeavyMartialCard. simple_2h is
+// the blunt rack and a whetstone does nothing for a club.
+//
+// Budget 4 (T1 uncommon): Bleed 1 = 1 point, x3 for stays-in-hand = 3, plus the
+// conditional one-shot Bleed on the Heavy clause. Bleed is only 1/stack because
+// its decay is flat (-1 per attack the bleeder makes, -1 at end of their turn),
+// so a lone stack is near the noise floor — the card is a build enabler that
+// wants Bleed payoffs alongside it, not a standalone.
+export function createWhetstone() {
+  return new Card({
+    id: 'whetstone',
+    name: 'Whetstone',
+    // Both triggers sit on ONE line so they tokenize into back-to-back pills
+    // (ON RECHARGE + 2H MARTIAL) reading as a single condition. drawIconTextLeft
+    // wraps on maxWidth, so the line reflows rather than overflowing the frame.
+    description: 'Your next attack deals +1 Bleed.\nStays in hand.\nOn Recharge: 2H Martial: Deal +1 Bleed.',
+    shortDesc: 'Next atk: +1 Bleed\nStays\nR + 2H: +1 Bleed',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    // FREE for the same reason as Mining Goggles / Fungal Lantern — the card
+    // never leaves hand on a play, so a recharge cost would be paid once and
+    // ridden all fight. Being FREE does not stop it being fed as ANOTHER
+    // card's recharge cost, which is exactly where the Heavy clause fires.
+    costType: CostType.FREE,
+    effects: [
+      new CardEffect('grant_bleed_buff', 1, TargetType.SELF),
+      new CardEffect('stays_in_hand', 0, TargetType.SELF),
+      new CardEffect('on_recharge_bleed_buff_heavy', 1, TargetType.SELF),
+    ],
+    tier: 1,
+    rarity: 'uncommon',
+    gamePlusOffset: { grant_bleed_buff: 1 },
   });
 }
 

@@ -122,7 +122,7 @@ import {
   createBanditCard, createBanditCreature, createGnawedBone, createChippedRock, createBoneWallCreature,
   createDeathjumpSpiderCard, createDeathjumpSpiderCreature, createPoisonPouch,
   createSvirfhammer, createDeepPick, createWorkGloves, createFungalLantern, createMinersHelm,
-  createMycelialCodex, createMiningGoggles,
+  createMycelialCodex, createMiningGoggles, createWhetstone,
   createUmberShield, createMandibleCleaver, createUmberEyeCharm,
   createBurrowersGauntlet, createTunnelbreakerPick,
   createRoperhideArmor, createRoperMandibleBlade, createStoneMimicVeil,
@@ -3884,7 +3884,7 @@ const TUTORIAL_BOXES = {
   },
   inventory_perks_buffs: {
     title: 'Perks & Buffs',
-    body: 'Perks are passive bonuses you pick on level-up — they stick around for the whole run. Common (repeatable) perks stack up to 5 copies; once you have 5 of the same perk it stops showing up in the picker. Unique perks (one-of-a-kind, gold pill) only ever land once. Buffs are temporary blessings from shrines, idols, and other relics you find along the way.',
+    body: 'Perks are passive bonuses you pick on level-up — they stick around for the whole run. Common (repeatable) perks stack up to 3 copies; once you have 3 of the same perk it stops showing up in the picker. Unique perks (one-of-a-kind, gold pill) only ever land once. Buffs are temporary blessings from shrines, idols, and other relics you find along the way.',
     arrow: () => {
       const s = (typeof getInvSections === 'function') ? getInvSections() : null;
       if (!s || !s.character) return { x: SCREEN_WIDTH - 200, y: 600 };
@@ -4723,6 +4723,13 @@ let barrageRefreshWeaponsOnFinish = false;
 // shot 1 = 4, shot 2 = 3, shot 3 = 2. Reset in finishBarrage /
 // cancelBarrage alongside the rest of the barrage state.
 let barrageDescending = false;
+// Ruga's Spiked Gauntlets variant: each shot's base damage is X = attacks this
+// turn, read AFTER that shot's attacksThisTurn bump. resolveBarrageShot bumps
+// before it computes shotBase, so shot 1 reads the count including itself and
+// shot 2 reads one higher — with 2 prior attacks, 3 then 4. The opposite shape
+// to barrageDescending, which tapers down. barrageShotDamage carries the flat
+// ccgQuest+ bonus (0 at base) and is added on top rather than replacing X.
+let barrageSneakX = false;
 // Consumable on-attack buff snapshots — taken on the FIRST shot of a barrage,
 // spent on that shot, then zeroed (see the clear at the end of
 // resolveBarrageShot). One consumption, one payout: a charge is worth the same
@@ -4805,6 +4812,7 @@ const CARD_REGISTRY = {
   svirfhammer: createSvirfhammer, deep_pick: createDeepPick, work_gloves: createWorkGloves,
   fungal_lantern: createFungalLantern, miners_helm: createMinersHelm,
   mycelial_codex: createMycelialCodex, mining_goggles: createMiningGoggles,
+  whetstone: createWhetstone,
   // Umber Hulk drops (Chapter 3).
   umber_shield: createUmberShield, mandible_cleaver: createMandibleCleaver,
   umber_eye_charm: createUmberEyeCharm, burrowers_gauntlet: createBurrowersGauntlet,
@@ -5169,9 +5177,12 @@ const LOOT_TABLES = {
   bandit_gifts: [
     { creator: createGnawedBone,  weight: 1.0 },
     { creator: createChippedRock, weight: 1.0 },
-    // The find. Ten times rarer than the junk, so it lands on roughly 1 in 21
-    // gifts — rare enough that a Lucky Pebble actually reads as lucky.
+    // The finds. Ten times rarer than the junk, so each lands on roughly 1 in
+    // 22 gifts — rare enough that a Lucky Pebble actually reads as lucky, and
+    // a Whetstone reads as the dog dragging back something genuinely useful
+    // rather than another bone.
     { creator: createLuckyPebble, weight: 0.1 },
+    { creator: createWhetstone,   weight: 0.1 },
   ],
   // Underdark mushroom beds (East Path 18 ring) — what a harvest turns up when
   // the picking goes well. Bluecap is the staple; Barrelstalk is the find.
@@ -5208,6 +5219,9 @@ const LOOT_TABLES = {
     { creator: createScrollOfPotency,       weight: 1.0 },
     { creator: createWandOfFire,            weight: 1.0 },
     { creator: createSack,                  weight: 1.0 },
+    // The melee counterpart to the Quiver sitting two lines up — a camp that
+    // outfitted an archer would have kept a stone for the sword arm too.
+    { creator: createWhetstone,             weight: 1.0 },
   ],
   // Prison warden gear barrel — matches the Python game's
   // `get_gear_barrel_loot()`: equal-weight random.choice across the three
@@ -5220,6 +5234,8 @@ const LOOT_TABLES = {
     { creator: createCrackedBuckler,       weight: 1.0 },
     { creator: createApprenticesSpellbook, weight: 1.0 },
     { creator: createQuiver,               weight: 1.0 },
+    // Confiscated off a prisoner the same way the Quiver was.
+    { creator: createWhetstone,            weight: 1.0 },
   ],
   // Kobold base loot — shared by the Prison Warden body, the
   // mountain Kobold Patrols, and every other kobold encounter that
@@ -5245,10 +5261,13 @@ const LOOT_TABLES = {
     { creator: createFrenzyBloodVial, weight: 1.0 },
     { creator: createBoarhideBandage, weight: 1.0 },
   ], { pickCount: 2, distinct: true }),
-  // Stone Giant loot — Sharp Rock with a 25 % chance of a Lucky Pebble.
-  // Mirrors Python's get_stone_giant_loot (pick one).
+  // Stone Giant loot — Sharp Rock, with rarer pulls for a Whetstone and a
+  // Lucky Pebble. Mirrors Python's get_stone_giant_loot (pick one). The giant's
+  // whole drop line is stone, so the Whetstone belongs here more naturally than
+  // anywhere else it appears.
   stone_giant_loot: [
     { creator: createSharpRock,    weight: 1.0 },
+    { creator: createWhetstone,    weight: 0.5 },
     { creator: createLuckyPebble,  weight: 0.25 },
   ],
   // General Zhost boss loot — 50/50 White Claw or Zhost's Buckler.
@@ -5852,7 +5871,7 @@ const LOOT_TABLE_NOTES = {
   gear_barrel_loot:    'Snatched from the prison warden\'s barrel of confiscated gear.',
   kobold_base_loot:    'Shared loot pool for kobold encounters — Prison Warden body, mountain Kobold Patrols, etc.',
   giant_boar_loot:     'Dropped by the Giant Boar (Pinewood ambush). Pick-one, weighted: Boarhide Bracers or a consumable usually; the Epic Boar Tusk relic is the rare prize.',
-  stone_giant_loot:    'Survived after the Stone Giant fight. Pick-one: Sharp Rock or (rarely) Lucky Pebble.',
+  stone_giant_loot:    'Survived after the Stone Giant fight. Pick-one: Sharp Rock, or more rarely a Whetstone or a Lucky Pebble.',
   giant_frog_loot:     'Dropped after defeating the Giant Frog reef ambush. Pick-one — Toxic Frog Extract common, Frog Skin Boots uncommon, Frog Nursery rare.',
   harpies_loot:        'Dropped after every Harpy fight on the wrecked cog (resets on rest). Pick TWO distinct — Egg Omelette uncommon meal, Feather Cloak/Talon Blade/Screaming Charm rare, Harpy Feather epic relic.',
   kraken_spawn_loot:   'Salvaged from the wrecked hold after killing the Kraken Spawn. Pick TWO distinct tier-1 epics — Bloody Eye Patch / Harpoon of the Deep / Tentacle Whip / Sailor\'s Lucky Compass / Kraken\'s Eye Spyglass / Barnacle-Covered Buckler.',
@@ -5864,7 +5883,7 @@ const LOOT_TABLE_NOTES = {
   tier1_common:        'The generic tier-1 supply pool — plain food, bandages, a potion. Hung on tier-1 fights that do NOT already drop a guaranteed second item, at a 20% chance per fight (pick one by weight). Monster-flavoured consumables are deliberately NOT in here; they stay on their own tables.',
   tier2_common:        'The generic tier-2 supply pool. Weights fold rarity and tier together: tier-2 commons at 1.0, tier-2 uncommons at 0.75, tier-2 rares and the tier-1 uncommons carried forward at 0.5. Like Tier 1 Commons, monster- and story-flavoured supplies are deliberately kept out.',
   tier3_common:        'The generic tier-3 supply pool, rolled at 20% on the Crag Cat, every gnoll fight and the Underdark hunting encounters. Same ladder as the other two: tier-3 commons (Bluecap, Crystalwater Flask) at 1.0, tier-3 uncommons (Barrelstalk, Fungal Bandages) at 0.75, the tier-3 rare Potion of Superior Healing and the tier-2 carry-forwards (Stonebound Bandages, Potion of Greater Healing) at 0.5. Minor Healing Potion sits lowest at 0.25 — a rare AND two tiers back, so it reads as a leftover rather than a prize. Monster- and story-flavoured supplies stay on their own tables; Rare Mushroom is kept out because it is a scarce crafting material.',
-  bandit_gifts:        'Not a drop — what Bandit drags back. Each of his attacks has a 50% chance to bring one: the Gnawed Bone and the Chipped Rock at equal weight, and a Lucky Pebble at a tenth of theirs (~1 gift in 21).',
+  bandit_gifts:        'Not a drop — what Bandit drags back. Each of his attacks has a 50% chance to bring one: the Gnawed Bone and the Chipped Rock at equal weight, and a Lucky Pebble or a Whetstone at a tenth of theirs (~1 gift in 22 each).',
   forest_spider_loot: 'A 10% chance after either Forest Ambush, then ONE pick by weight: the Poison Pouch at 1.0 (~6.7% of fights) and the Deathjump Spider ally at 0.5 (~3.3%) — the hatchling that decides you are better company than the nest.',
   ore_cache:           'Raw ore only, same weights as the Tunnels Supply Cache: Copper common, Silver / Gold less so, Mithril / Adamantine rare. (Copper / Silver / Gold sell full at a smith; Mithril / Adamantine can\'t be sold.)',
   goblin_swarm_loot:   'Dropped after clearing the Goblin Swarm (50% chance). Pick-one, weighted: Goblin Sapper Charges / Rocket Boots common; Spike Trap / War Banner / Spiked Goblin Helmet uncommon; Goblin Boss\'s Whistle rare; Bag of Stolen Teeth epic.',
@@ -7127,6 +7146,14 @@ function handleClick(x, y) {
       handleLoadClick(x, y);
       break;
     case GameState.VICTORY:
+      // Codex sandbox fight — belongs to no node, so go straight back to the
+      // map. completeCurrentNode() here would tick off whatever the party is
+      // standing on, closing an encounter they never played.
+      if (_codexSandboxFight) {
+        _codexSandboxFight = false;
+        state = GameState.MAP;
+        break;
+      }
       // Continue encounter (epilogue text, loot, etc.)
       if (currentEncounter && !currentEncounter.isComplete) {
         currentEncounter.advancePhase();
@@ -27013,6 +27040,10 @@ function getCombatMusicTrack() {
 function startCombat() {
   // Never let an uncommitted cost-pick leak across fights.
   dropPendingRechargeRiders();
+  // Clear the codex sandbox marker for the incoming fight. startCodexSandboxFight
+  // re-sets it AFTER this call, so a real encounter can never inherit a stale
+  // flag and skip its own completeCurrentNode().
+  _codexSandboxFight = false;
   // Music is scene-driven now (see updateMusicForCurrentScene). The
   // prison ambience keeps playing through prison fights; switching to
   // the sewer track happens on map-area transition, not on combat.
@@ -27708,6 +27739,44 @@ function applyPerksCombatStart() {
     addLog(`  Prepared: +${heroismStacks} Heroism!`, Colors.GOLD, perkToCardLike(createPreparedPerk()));
     spawnTokenOnTarget(player, heroismStacks, 'Heroism', Colors.GOLD);
   }
+  // Very Tough / Well Prepared — the tier-2 upgrades drip their bonus over the
+  // opening turns instead of dumping it on turn 1. Projected as a normal
+  // start-of-turn CombatBuff, so the existing tick (processCombatBuffs) does
+  // the work and the player sees it in the buff bar counting down.
+  //
+  // This runs from applyStartOfCombatBuffs, which fires BEFORE the turn-1
+  // processCombatBuffs call in startCombat (and before the phase-2 one), so a
+  // 2-turn buff ticks on turn 1 and turn 2 — not turn 2 and 3.
+  // NOTE on `icon`: the buff bar resolves its art with getCardArt(imageId),
+  // which keys on CARD_ART_MAP — so it needs the perk's CARD-ART id
+  // ('very_tough' / 'well_prepared'), NOT the perk's own `imageId`
+  // ('tough_perk' / 'prepared_perk'), which is a loadAssets images[] preload
+  // key used by the perk-card renderer. Passing the latter drew the green
+  // no-art placeholder square.
+  for (const [eType, tick, label, icon, color, token] of [
+    ['turn_start_shield', 'gain_shield', 'Very Tough', 'very_tough', Colors.ALLY_BLUE, 'Shield'],
+    ['turn_start_heroism', 'gain_heroism', 'Well Prepared', 'well_prepared', Colors.GOLD, 'Heroism'],
+  ]) {
+    const per = player.getPerkStacks(eType);
+    if (per <= 0) continue;
+    // Longest duration among the perks of this type — they all ship 2 today,
+    // but reading it off the perk keeps a future 3-turn version working.
+    const turns = Math.max(...player.perks
+      .filter(p => p.effectType === eType)
+      .map(p => p.durationTurns || 1));
+    player.addCombatBuff(new CombatBuff({
+      id: `perk_${eType}`,
+      name: label,
+      description: `Start of Turn: +${per} ${token}`,
+      imageId: icon,
+      effectType: tick,
+      effectValue: per,
+      trigger: 'start_of_turn',
+      combatsRemaining: 1,
+      turnsRemaining: turns,
+    }));
+    addLog(`  ${label}: +${per} ${token} for ${turns} turns.`, color);
+  }
   // Harvest — Druid-flavored perk that conjures a Goodberry token in
   // hand each combat start. unique perk so it tops out at 1 stack,
   // but the per-stack add still mirrors the other perks here for
@@ -28237,7 +28306,7 @@ function tokenizeKeywordText(text, opts = {}) {
   // HIT badge instead of the purple reactive ON HIT (matches the
   // PERK_TRIGGER_BADGES entry). "On Hit" = this thing is being attacked;
   // bare "Hit" = this thing's swing landed damage.
-  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Hit|On Kill|On Death|On Draw|On Discard|On Summon|Played|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets(?=:)|First Strike|First Shield|Stays in hand|In Hand|Arcane(?=:)|Defense(?=:)|Ranged(?=:)|Beverage|Meal|Was Undamaged|Target Bloodied|Bloodied|Bruised|Half-HP|Overheal|Overwhelm|Hit)\b:?\s*/g;
+  const inlineBadgeRe = /\b(On Recharge|When Recharged|On Swim|On Attack|On Hit|On Kill|On Death|On Draw|On Discard|On Summon|Played|When Attacked|When Hit|Turn End|End of Turn|Next Attack|Vs Sahuagin|If Burning|Burning|Bleeding|Poisoned|Iced|Called|2 Targets(?=:)|First Strike|First Shield|Stays in hand|In Hand|Arcane(?=:)|Defense(?=:)|Ranged(?=:)|2H Martial(?=:)|Beverage|Meal|Was Undamaged|Target Bloodied|Bloodied|Bruised|Half-HP|Overheal|Overwhelm|Hit)\b:?\s*/g;
   if (inlineBadgeRe.test(text)) {
     inlineBadgeRe.lastIndex = 0;
     let cursor = 0;
@@ -28488,6 +28557,14 @@ function tokenizeKeywordText(text, opts = {}) {
         // pill and the card's type line read as the same idea.
         badge = { type: 'badge', label: 'RANGED',
           bg: 'rgba(80,55,25,0.92)', border: '#d2a05c', fg: '#f2dcb8' };
+      } else if (phrase === '2H Martial') {
+        // Whetstone — the melee mirror of RANGED above: it marks the clause
+        // that only fires when the card being paid for is a two-handed martial
+        // weapon. Steel-red rather than the quiver's leather brown, matching
+        // SUBTYPE_COLORS.martial_2h (weapons are red), so the pill and the
+        // weapon's own type line read as the same idea.
+        badge = { type: 'badge', label: '2H MARTIAL',
+          bg: 'rgba(84,30,30,0.92)', border: '#d98080', fg: '#f6d6d6' };
       } else if (phrase === 'Defense') {
         // The card's reactive line. Slate blue, matching the 'D' phase badge
         // (#7fa8d4) drawn on the card frame, so the prefix in the rules text
@@ -33781,6 +33858,7 @@ function handleCombatClick(x, y) {
           selectedCardIndex = i;
           barrageMode = true;
           barrageDescending = false;
+          barrageSneakX = false;
           barrageCardIndex = i;
           barrageRechargedCard = null;
           barrageShotsTotal = 3;
@@ -33801,6 +33879,7 @@ function handleCombatClick(x, y) {
           selectedCardIndex = i;
           barrageMode = true;
           barrageDescending = false;
+          barrageSneakX = false;
           barrageCardIndex = i;
           barrageRechargedCard = null;
           const pdThrows = Math.max(1, poisonBarrageEff.maxTargets || 1);
@@ -33824,6 +33903,7 @@ function handleCombatClick(x, y) {
           selectedCardIndex = i;
           barrageMode = true;
           barrageDescending = false;
+          barrageSneakX = false;
           barrageCardIndex = i;
           barrageRechargedCard = null;
           barrageShotsTotal = 2;
@@ -33837,6 +33917,33 @@ function handleCombatClick(x, y) {
           _handOrderSnapshot = [...player.deck.hand];
           state = GameState.TARGETING;
           showStyledToast(`${card.name}: 2 attacks — click a target (each picks its own, Done to stop)`, 'multi');
+          return;
+        }
+        // Ruga's Spiked Gauntlets — 2 distinct attacks, each picking its own
+        // target and drawing its own arrow. It goes through the SAME barrage UI
+        // as Blade Flurry rather than resolving both swings on one click; the
+        // sneak_attack_twice effect on the card is only the enemy / non-barrage
+        // fallback (same split Blade Flurry uses).
+        const rugaBarrageEff = (card.effects || []).find(e => e.effectType === 'sneak_attack_twice');
+        if (rugaBarrageEff && needsTarget(card)) {
+          selectedCardIndex = i;
+          barrageMode = true;
+          barrageDescending = false;
+          barrageSneakX = true;
+          barrageCardIndex = i;
+          barrageRechargedCard = null;
+          barrageShotsTotal = 2;
+          barrageShotsLeft = 2;
+          barrageShotsFired = 0;
+          // Base 0 — X supplies the damage. The value carries only the
+          // ccgQuest+ flat bonus (sneak_attack_twice: 2 per offset).
+          barrageShotDamage = rugaBarrageEff.value || 0;
+          barrageBonusPoison = 0;
+          barrageStaysInHand = false;
+          barrageDrawOnFinish = 0;
+          _handOrderSnapshot = [...player.deck.hand];
+          state = GameState.TARGETING;
+          showStyledToast(`${card.name}: 2 attacks — click a target (each picks its own)`, 'multi');
           return;
         }
         // Check for Arcane Beam — click cards to charge (+N dmg each),
@@ -34207,12 +34314,24 @@ function applyOnRechargeTeamBuffs(card) {
 function applyOnRechargeQuiverRiders(card, payeeCard) {
   if (!card || !Array.isArray(card.currentEffects)) return;
   const ranged = isRangedCard(payeeCard);
+  const heavy = isHeavyMartialCard(payeeCard);
   let poison = 0;
   let ignite = 0;
+  let bleed = 0;
   for (const eff of card.currentEffects) {
     if (eff.effectType === 'on_recharge_poison_buff_ranged' && ranged) poison += eff.value;
     if (eff.effectType === 'on_recharge_ignite') ignite += eff.value;
     if (eff.effectType === 'on_recharge_ignite_ranged' && ranged) ignite += eff.value;
+    if (eff.effectType === 'on_recharge_bleed_buff_heavy' && heavy) bleed += eff.value;
+  }
+  if (bleed > 0) {
+    // Whetstone fed to a two-handed martial weapon. Set bleedBuff directly for
+    // the same reason the Bone Quiver's Poison does: the swing it paid for
+    // consumes this immediately, so pinning a buff badge would be a lie.
+    player.bleedBuff = (player.bleedBuff || 0) + bleed;
+    card._onRechargeBleedBuffGranted = bleed;
+    addLog(`  ${card.name}: your next attack applies ${bleed} more Bleed.`, Colors.RED);
+    spawnTokenOnTarget(player, bleed, 'Bleed', Colors.RED);
   }
   if (poison > 0) {
     // Set poisonBuff directly rather than going through grant_poison_buff:
@@ -34235,6 +34354,10 @@ function applyOnRechargeQuiverRiders(card, payeeCard) {
 
 function refundOnRechargeQuiverRiders(card) {
   if (!card) return;
+  if (card._onRechargeBleedBuffGranted) {
+    player.bleedBuff = Math.max(0, (player.bleedBuff || 0) - card._onRechargeBleedBuffGranted);
+    delete card._onRechargeBleedBuffGranted;
+  }
   if (card._onRechargePoisonBuffGranted) {
     player.poisonBuff = Math.max(0, (player.poisonBuff || 0) - card._onRechargePoisonBuffGranted);
     delete card._onRechargePoisonBuffGranted;
@@ -34368,6 +34491,21 @@ function isRangedCard(card) {
     || (card.subtype2 || '').toLowerCase() === 'ranged';
 }
 
+// The Whetstone's "Heavy" clause. Deliberately `martial_2h` ONLY, not every
+// two-hander: simple_2h is the blunt rack (Bone Club, Greatclub, Ogre Maul,
+// Roc Chick Leg) and a whetstone does nothing for a club. martial_2h is the one
+// subtype bucket in the game that is uniformly sharp — greatswords, greataxes,
+// spears, javelins, glaives — so the gate needs no per-card data.
+//
+// This is also why Holy Sword moved to martial_2h: it was the ONLY 1H martial
+// card that demanded fodder, so it was the one card that could otherwise have
+// fed a Whetstone off a bucket this clause is meant to exclude.
+function isHeavyMartialCard(card) {
+  if (!card) return false;
+  return (card.subtype || '').toLowerCase() === 'martial_2h'
+    || (card.subtype2 || '').toLowerCase() === 'martial_2h';
+}
+
 // Is this thing a Weapon for TRIGGER purposes? Mirrors isRangedCard: the primary
 // subtype carries it for real weapons, and the secondary slot carries it as an
 // explicit trait for things that are not classified as weapons but should behave
@@ -34482,6 +34620,7 @@ function handleCardRechargeClick(x, y) {
           cardRechargedCards = [];
           barrageMode = true;
           barrageDescending = false;
+          barrageSneakX = false;
           barrageUnpreventable = true;
           barrageCardIndex = selectedCardIndex;
           barrageShotsTotal = 3;
@@ -34545,6 +34684,7 @@ function handleCardRechargeClick(x, y) {
           cardRechargedCards = [];
           barrageMode = true;
           barrageDescending = false;
+          barrageSneakX = false;
           barrageCardIndex = selectedCardIndex;
           barrageRechargedCard = null;
           barrageShotsTotal = 3;
@@ -35762,6 +35902,12 @@ function resolveBarrageShot(target) {
   let shotBase = barrageShotDamage || 1;
   if (barrageDescending) {
     shotBase = Math.max(1, (barrageShotDamage || 1) - Math.max(0, barrageShotsFired - 1));
+  } else if (barrageSneakX) {
+    // X = attacks this turn. attacksThisTurn was bumped a few lines up, so it
+    // already counts THIS shot — which is what makes shot 2 read one higher
+    // than shot 1 without any extra bookkeeping.
+    shotBase = attacksThisTurn + (barrageShotDamage || 0);
+    addLog(`  Sneak Attack x${attacksThisTurn}`, Colors.GOLD);
   }
   // The consumable snapshots are non-zero on shot 1 only — see the clear at the
   // bottom of this function. Rage and shock-on-caster modifiers are passive (no
@@ -35961,6 +36107,7 @@ function finishBarrage() {
   barrageRechargedCard = null;
   barrageMode = false;
   barrageDescending = false;
+  barrageSneakX = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
@@ -36022,6 +36169,7 @@ function cancelBarrage() {
   barrageRechargedCard = null;
   barrageMode = false;
   barrageDescending = false;
+  barrageSneakX = false;
   barrageShotsLeft = 0;
   barrageShotsFired = 0;
   barrageShotsTotal = 0;
@@ -36294,7 +36442,8 @@ function needsTarget(card) {
     e.target === TargetType.SINGLE_ENEMY &&
     (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
      e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
-     e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
+     e.effectType === 'sneak_attack' || e.effectType === 'sneak_attack_twice' ||
+     e.effectType === 'multi_damage' ||
      e.effectType === 'shield_bash' || e.effectType === 'shield_bash_half' ||
      e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
@@ -36355,7 +36504,8 @@ function canSkipOptionalTargeting(card) {
     e.target === TargetType.SINGLE_ENEMY &&
     (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
      e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
-     e.effectType === 'sneak_attack' || e.effectType === 'multi_damage' ||
+     e.effectType === 'sneak_attack' || e.effectType === 'sneak_attack_twice' ||
+     e.effectType === 'multi_damage' ||
      e.effectType === 'shield_bash' || e.effectType === 'shield_bash_half' ||
      e.effectType === 'charge_attack' ||
      e.effectType === 'split_damage' || e.effectType === 'apply_mark' ||
@@ -37431,41 +37581,61 @@ function resolveEffect(eff, caster, target) {
       attacksThisTurn++;
       break;
     }
-    case 'sneak_attack': {
+    case 'sneak_attack':
+    case 'sneak_attack_twice': {
       // Sneak Attack / Ruga's Spiked Gauntlets — X = attacks this turn,
-      // COUNTING this swing. attacksThisTurn is incremented after the swing
-      // resolves (the bump at the bottom of this case), so we add 1 here to
+      // COUNTING this swing. attacksThisTurn is incremented after each swing
+      // resolves (the bump at the bottom of the loop), so we add 1 here to
       // include this attack: first cast reads X = 1, second X = 2, etc.
       // This guarantees a +1 minimum (X is never 0) and matches the card's
       // "(counts itself)" text.
+      //
+      // 'sneak_attack_twice' (Ruga's Gauntlets) swings TWICE off one play, and
+      // because the bump lands BETWEEN the two, the second swing reads one
+      // higher: with 2 prior attacks it hits for 3, then 4.
+      //
+      // BARRAGE SEMANTICS on the second swing — the rule documented at the
+      // bottom of resolveBarrageShot. Charges pay out ONCE: Heroism, the
+      // Sahuagin Eye, the Obsidian Core, Ignite, the Vial's Poison and the
+      // unpreventable buff are all spent on swing 1 and gone. Rage, the Shock
+      // modifier, Ice and Mark are NOT charges — read live or self-consuming —
+      // so they run per swing. Without this a single Heroism stack would buy
+      // +1 on a normal attack and +2 here, the same arbitrage that note warns
+      // about.
+      const sneakShots = eff.effectType === 'sneak_attack_twice' ? 2 : 1;
+      for (let sneakShot = 0; sneakShot < sneakShots; sneakShot++) {
+      const sneakFirst = sneakShot === 0;
+      // Nothing left standing — don't swing at a corpse.
+      if (!sneakFirst && (!target || (target instanceof Creature && !target.isAlive))) break;
       const xCount = attacksThisTurn + 1;
       // eff.value carries the flat damage bonus baked in by
       // gamePlusOffset (sneak_attack: 2 per offset point). Base
       // value is 0, so non-Game+ runs add nothing on top.
       const flatBonus = eff.value || 0;
-      let dmg = xCount + flatBonus + caster.heroism + (caster.rage || 0) + getDamageModifier(caster);
-      if (caster.heroism > 0) { addLog(`  (Heroism +${caster.heroism})`, Colors.GOLD); caster.heroism = 0; }
+      const sneakHeroism = sneakFirst ? caster.heroism : 0;
+      let dmg = xCount + flatBonus + sneakHeroism + (caster.rage || 0) + getDamageModifier(caster);
+      if (sneakHeroism > 0) { addLog(`  (Heroism +${sneakHeroism})`, Colors.GOLD); caster.heroism = 0; }
       addLog(`  Sneak Attack x${xCount}${flatBonus ? ` +${flatBonus}` : ''}!`, Colors.GOLD);
       // Sahuagin Eye buff consumes on any attack; +1 if target damaged.
       const sneakTargetDamaged = target instanceof Creature
         ? (target.currentHp || 0) < (target.maxHp || 0)
         : !!(target && target.deck && (target.deck.discardPile || []).length > 0);
-      const sneakEye = consumeEyeBuff(caster, sneakTargetDamaged);
+      const sneakEye = sneakFirst ? consumeEyeBuff(caster, sneakTargetDamaged) : 0;
       if (sneakEye > 0) dmg += sneakEye;
-      const sneakObs = consumeObsidianBuff(caster, target);
+      const sneakObs = sneakFirst ? consumeObsidianBuff(caster, target) : 0;
       if (sneakObs > 0) dmg += sneakObs;
       dmg = Math.max(0, dmg);
       dmg = consumeIceForAttack(caster, dmg);
       dmg += getIncomingDamageModifier(target);
       dmg = Math.max(0, dmg);
       dmg = applyMarkBonus(target, dmg);
-      const unpreventable = consumeUnpreventableBuff(caster);
+      const unpreventable = sneakFirst ? consumeUnpreventableBuff(caster) : false;
       if (target instanceof Creature) {
         if (unpreventable) {
           target.takeUnpreventableDamage(dmg);
           if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, dmg);
+          if (sneakFirst) consumePoisonBuff(caster, target, dmg);
         } else {
           const shieldBefore = target.shield || 0;
           const actual = target.takeDamage(dmg);
@@ -37473,7 +37643,7 @@ function resolveEffect(eff, caster, target) {
           playAttackHitSfx(dmg, actual);
           const absSuffix = creatureAbsorbSuffix(dmg, actual, shieldBefore, target.shield || 0);
           addLog(`  ${actual} dmg to ${target.name}${absSuffix}`, Colors.RED);
-          consumePoisonBuff(caster, target, actual);
+          if (sneakFirst) consumePoisonBuff(caster, target, actual);
         }
         if (!target.isAlive) { spawnDeathAnimation(target); addLog(`  ${target.name} destroyed!`, Colors.GOLD, null, null, target); countAndRemoveDeadCreatures(); }
       } else {
@@ -37481,21 +37651,23 @@ function resolveEffect(eff, caster, target) {
           target.takeDamageFromDeck(dmg);
           triggerSplitPower(target, dmg); if (dmg > 0) spawnDamageOnTarget(target, dmg, Colors.ORANGE);
           addLog(`  ${dmg} true dmg to ${target.name}`, Colors.ORANGE);
-          consumePoisonBuff(caster, target, dmg);
+          if (sneakFirst) consumePoisonBuff(caster, target, dmg);
         } else {
           const [blocked, taken] = target.takeDamageWithDefense(dmg);
           triggerSplitPower(target, taken); if (taken > 0) spawnDamageOnTarget(target, taken);
           playAttackHitSfx(dmg, taken);
           addLog(`  ${taken} dmg to ${target.name}`, Colors.RED);
-          consumePoisonBuff(caster, target, taken);
+          if (sneakFirst) consumePoisonBuff(caster, target, taken);
           if (caster === player && target === enemy) onPlayerHitEnemy(taken);
         }
       }
-      consumeIgniteOnAttack(caster, target, dmg);
-      // Bump the attack count AFTER the swing so the NEXT card's X
-      // counts this one. The "does not count itself" rule means we
-      // read attacksThisTurn at the top and bump at the bottom.
+      // Ignite is a charge too — first swing only.
+      if (sneakFirst) consumeIgniteOnAttack(caster, target, dmg);
+      // Bump the attack count AFTER the swing so the NEXT card's X counts
+      // this one. For the twice variant this is also what makes swing 2 read
+      // one higher than swing 1.
       attacksThisTurn++;
+      }
       break;
     }
     case 'shield_bash_half':
@@ -37763,10 +37935,9 @@ function resolveEffect(eff, caster, target) {
           applyBleedWeaponRider(enemy, mdBaseDmg);
         }
       }
-      // 2 Targets: Draw rider (Dwarven Throwing Axe). Reads the
-      // active card's currentEffects for a `draw_on_two_targets`
-      // entry; when the chain landed on >= 2 distinct targets, the
-      // caster draws eff.value cards. Mirrors the Cleave power's
+      // 2 Targets: Draw rider. Reads the active card's currentEffects for a
+      // `draw_on_two_targets` entry; when the chain landed on >= 2 distinct
+      // targets, the caster draws eff.value cards. Mirrors the Cleave power's
       // 2-targets bonus but for cards.
       if (caster === player && _activePlayCard && hits >= 2) {
         const mdDrawRider = (_activePlayCard.currentEffects || [])
@@ -37777,6 +37948,11 @@ function resolveEffect(eff, caster, target) {
           if (drawn.length > 0) playDrawSounds(drawn.length);
         }
       }
+      // First Strike: Draw rider (Dwarven Throwing Axe). attacksThisTurn is
+      // still 0 here — it's bumped just below — so this fires only when the
+      // card was the turn's OPENING attack, matching first_strike_attack's
+      // self-referential rule rather than the Bracers' passive one.
+      maybeFireFirstStrikeDraw(caster);
       attacksThisTurn++;
       break;
     }
@@ -38964,6 +39140,41 @@ function resolveEffect(eff, caster, target) {
       addLog(`  ${caster.name}: next attack applies +${eff.value} Sunder`, '#b0763c');
       break;
     }
+    case 'grant_bleed_buff': {
+      // Whetstone — one-shot "your next attack also Bleeds". Rides the venom
+      // snapshot/apply pair (snapshotVenomBuffs / applyVenomRiders) so it lands
+      // on every attack shape, single-target and multi, without touching the
+      // individual damage sites. FREE + stays-in-hand, so the player re-plays
+      // the stone each turn to re-arm it.
+      caster.bleedBuff = (caster.bleedBuff || 0) + eff.value;
+      const existingBB = (caster.combatBuffs || []).find(b => b.id === 'whetstone_buff');
+      if (existingBB) {
+        existingBB.stacks = (existingBB.stacks || 1) + eff.value;
+      } else {
+        caster.addCombatBuff(new CombatBuff({
+          id: 'whetstone_buff',
+          name: 'Whetstone',
+          description: `Your next attack applies +${eff.value} Bleed to the target.`,
+          // No dedicated icon — the buff bar falls back to getCardArt(imageId),
+          // so the stone's own card art stands in (same as Mining Goggles).
+          imageId: 'whetstone',
+          effectType: 'grant_bleed_buff',
+          effectValue: eff.value,
+          trigger: 'on_attack',
+          combatsRemaining: 1,
+          turnsRemaining: 0,
+        }));
+        const bbBuff = caster.combatBuffs[caster.combatBuffs.length - 1];
+        bbBuff.stacks = eff.value;
+      }
+      addLog(`  ${caster.name}: next attack applies +${eff.value} Bleed`, Colors.RED);
+      break;
+    }
+    case 'on_recharge_bleed_buff_heavy':
+      // Marker only. Paid by applyOnRechargeQuiverRiders, which reads the PAYEE
+      // card (the weapon this one was spent on) and only grants the Bleed when
+      // it's a two-handed martial weapon.
+      break;
     case 'reveal_top_card':
       // Passive marker — the reveal is read off the hand by the combat panel
       // (see the "Next:" line in drawCharacterCard). Nothing to resolve.
@@ -43869,6 +44080,11 @@ function resolveEffect(eff, caster, target) {
       // Rider read by the multi_damage case at end-of-chain — fires
       // when hits >= 2. Nothing to resolve standalone.
       break;
+    case 'draw_on_first_strike':
+      // Rider read by maybeFireFirstStrikeDraw at end-of-swing — fires only
+      // when the card was the turn's opening attack. Nothing to resolve
+      // standalone.
+      break;
     case 'enemy_gain_armor':
       // Obsidian Shard token on banish — the Oracle (or whichever
       // enemy is in front of you) gains N base armor. Mirrors PY
@@ -46618,7 +46834,7 @@ function resolveMultiTargeting() {
     // because the cost was already paid up front, before targeting began.
     const PICKER_OWNED_EFFECTS = new Set([
       'multi_damage', 'split_damage', 'feral_swipe_bleed', 'feral_swipe_damage',
-      'draw_on_two_targets', 'stays_in_hand', 'recharge_extra',
+      'draw_on_two_targets', 'draw_on_first_strike', 'stays_in_hand', 'recharge_extra',
     ]);
     const allEffs = card.currentEffects || [];
     const dmgEffIdx = allEffs.findIndex(e =>
@@ -46729,12 +46945,11 @@ function resolveMultiTargeting() {
       if (dmg > 0) applyElementalWeaponRider(t, dmg);
       if (dmg > 0) applyBleedWeaponRider(t, dmg);
     }
-    // 2 Targets: Draw rider (Dwarven Throwing Axe). The resolveEffect
-    // multi_damage case has the same check, but this picker flow runs
-    // its own damage loop and would otherwise skip the rider. Fires
-    // for any multi-target chain — enemy character + creature, two
-    // creatures, etc. — as long as the player picked >= 2 distinct
-    // targets.
+    // 2 Targets: Draw rider. The resolveEffect multi_damage case has the same
+    // check, but this picker flow runs its own damage loop and would otherwise
+    // skip the rider. Fires for any multi-target chain — enemy character +
+    // creature, two creatures, etc. — as long as the player picked >= 2
+    // distinct targets.
     if (targets.length >= 2) {
       const drawRider = (card.currentEffects || [])
         .find(e => e.effectType === 'draw_on_two_targets');
@@ -46744,6 +46959,10 @@ function resolveMultiTargeting() {
         if (drawn.length > 0) playDrawSounds(drawn.length);
       }
     }
+    // First Strike: Draw rider (Dwarven Throwing Axe). This picker flow is the
+    // path the axe actually takes, and like the rider above it needs its own
+    // call — attacksThisTurn is still 0 until the bump below.
+    maybeFireFirstStrikeDraw(player);
     // Post-swing siblings (Bone Cleaver / Jagged Chopper / Mandible Cleaver
     // status riders, Paralytic Glaive's Poison + Paralyze). Runs while
     // _activePlayCard is still set so the handlers can read the source card.
@@ -49489,6 +49708,29 @@ function maybeFireDrawOnKill(caster, target) {
   }
 }
 
+// First Strike: Draw rider — if the active card carries `draw_on_first_strike`
+// and THIS card was the turn's opening attack, the player draws eff.value
+// cards. Must be called from the swing handler BEFORE its `attacksThisTurn++`,
+// since that counter is what "opening attack" means (same rule
+// first_strike_attack uses: self-referential, so anything swung earlier in the
+// turn loses it).
+//
+// Player-only. The enemy AI has no hand economy that a draw rider would mean
+// anything to, and the counter is shared across both sides' turns.
+function maybeFireFirstStrikeDraw(caster) {
+  if (caster !== player) return;
+  if (attacksThisTurn !== 0) return;
+  const card = _activePlayCard;
+  if (!card || !Array.isArray(card.currentEffects)) return;
+  const drawCount = card.currentEffects
+    .filter(e => e.effectType === 'draw_on_first_strike')
+    .reduce((s, e) => s + (e.value || 1), 0);
+  if (drawCount <= 0) return;
+  const drawn = player.deck.draw(drawCount, MAX_HAND_SIZE);
+  for (const d of drawn) addLog(`  First Strike! Draw: ${d.name}`, Colors.BLUE, d);
+  if (drawn.length > 0) playDrawSounds(drawn.length);
+}
+
 // On Kill summon riders — Tendril Lash's Roper Tentacle and Death Coil's
 // Skeleton. Same trigger shape as maybeFireDrawOnKill: creature kills only, since
 // a dead boss ends the fight anyway. Player-side only.
@@ -50557,7 +50799,7 @@ function endRiposteSweep(ctx) {
 const DAMAGE_EFFECT_TYPES = new Set([
   'damage', 'damage_random', 'damage_random_split', 'multi_damage', 'split_damage',
   'damage_all', 'damage_split_all', 'damage_all_twice', 'damage_range', 'damage_draw_on_hit',
-  'sneak_attack', 'careful_strike', 'charge_attack', 'shield_bash', 'shield_bash_half',
+  'sneak_attack', 'sneak_attack_twice', 'careful_strike', 'charge_attack', 'shield_bash', 'shield_bash_half',
   'armor_bonus_damage', 'unpreventable_damage', 'troll_teeth_attack', 'feral_swipe',
   'first_strike_attack', 'first_strike_poison_attack', 'bone_javelin_attack',
   'dragon_bow_barrage', 'magic_missile_barrage', 'poison_dagger_barrage', 'blade_flurry_barrage',
@@ -56017,6 +56259,7 @@ function checkCombatEnd() {
       player.rage = 0;
       player.poisonBuff = 0;
       player.sunderBuff = 0;
+      player.bleedBuff = 0;
       player.poisonAttacks = 0;
       player.ignite = 0;
       player.unpreventableBuff = 0;
@@ -56239,11 +56482,42 @@ function applyDrowSleepRider(target, stacks) {
   addLog(`  (Drow Sleep Poison) +${stacks} on ${target.name}`, '#9fb8e8');
 }
 
-// === Venom buffs — ALWAYS take and apply these as a PAIR ===
-// Vial of Poison and Drow Sleep Poison are the same mechanic wearing two
-// statuses: both are one-shot coatings on the caster's next attack action, both
-// land regardless of mitigation, and both are snapshotted once and re-applied to
-// every target/hit of that action.
+// Whetstone — one-shot "your next attack also Bleeds" coating. Same shape as
+// the Poison / Drow Sleep pair below and deliberately folded into the same
+// snapshot/apply pair, because that is the ONLY way a rider reaches every
+// swing: the picker-driven multi-target flow (every greataxe, greatsword and
+// spear — i.e. exactly the 2H weapons this card is built around) runs its own
+// damage loop and never calls resolveEffect, so a Mining-Goggles-style pre-hit
+// hook at the top of resolveEffect would miss them entirely.
+function snapshotBleedBuff(caster) {
+  if (!caster || !(caster.bleedBuff > 0)) return 0;
+  const stacks = caster.bleedBuff;
+  caster.bleedBuff = 0;
+  if (Array.isArray(caster.combatBuffs)) {
+    caster.combatBuffs = caster.combatBuffs.filter(b => b.id !== 'whetstone_buff');
+  }
+  return stacks;
+}
+function applyBleedRider(target, stacks) {
+  // Lands regardless of mitigation, like the Poison / Drow Sleep riders — the
+  // edge bites even when the swing is blocked.
+  if (!stacks || stacks <= 0 || !target) return;
+  if (target instanceof Creature) {
+    target.bleedStacks = (target.bleedStacks || 0) + stacks;
+  } else if (typeof target.applyStatus === 'function') {
+    target.applyStatus('BLEED', stacks);
+  } else {
+    return;
+  }
+  addLog(`  (Whetstone) +${stacks} Bleed on ${target.name}`, Colors.RED);
+  spawnTokenOnTarget(target, stacks, 'Bleed', Colors.RED);
+}
+
+// === Venom buffs — ALWAYS take and apply these as a SET ===
+// Vial of Poison, Drow Sleep Poison and the Whetstone's edge are the same
+// mechanic wearing three statuses: each is a one-shot coating on the caster's
+// next attack action, each lands regardless of mitigation, and each is
+// snapshotted once and re-applied to every target/hit of that action.
 //
 // They kept drifting apart because each site wired them by hand and it is easy
 // to remember the Vial and forget the Drow — nine of the fifteen multi-hit
@@ -56260,10 +56534,12 @@ function snapshotVenomBuffs(caster) {
   return {
     poison: snapshotPoisonBuff(caster),
     drow: snapshotDrowSleepBuff(caster),
+    bleed: snapshotBleedBuff(caster),
   };
 }
 function applyVenomRiders(target, venom, damageDealt = null) {
   if (!venom || !target) return;
+  applyBleedRider(target, venom.bleed);
   applyPoisonRider(target, venom.poison, damageDealt);
   applyDrowSleepRider(target, venom.drow);
 }
@@ -56297,7 +56573,7 @@ function applySunderRider(target, stacks) {
 const SUNDER_RIDER_EFFECTS = new Set([
   'damage', 'unpreventable_damage', 'charge_attack', 'gore_attack',
   'first_strike_attack', 'first_strike_poison_attack', 'bone_javelin_attack',
-  'careful_strike', 'armor_bonus_damage', 'sneak_attack',
+  'careful_strike', 'armor_bonus_damage', 'sneak_attack', 'sneak_attack_twice',
   'shield_bash', 'shield_bash_half', 'multi_damage', 'damage_draw_on_hit',
   'damage_all', 'damage_split_all', 'damage_all_twice', 'split_damage',
 ]);
@@ -57749,6 +58025,7 @@ function combatVictory() {
   player.rage = 0;
   player.poisonBuff = 0;
   player.sunderBuff = 0;
+  player.bleedBuff = 0;
   player.poisonAttacks = 0;
   // Ignite stacks are per-combat — consume-on-attack or fade.
   player.ignite = 0;
@@ -57774,10 +58051,59 @@ function combatVictory() {
   state = GameState.VICTORY;
 }
 
+// Codex "Fight" button (debug). Launches a REAL combat against any monster in
+// the Heroes & Monsters tab, straight from the map — the deck, perks, allies
+// and consequences are all live, so what you learn from the fight is true.
+//
+// The only thing it changes is the exit: _codexSandboxFight tells the VICTORY
+// click handler to drop back to the map WITHOUT calling completeCurrentNode().
+// Without that, winning a test fight would silently tick off whatever node the
+// party happens to be standing on — closing an encounter they never played.
+//
+// Gated to the map by the caller (codexReturnState === MAP). Starting one on
+// top of a live fight would overwrite the enemy mid-combat.
+let _codexSandboxFight = false;
+// Codex-facing monster id → the id setupEnemyForCombat actually knows. The
+// codex catalogs the Prison Guards fight as `kobold_warden` (see
+// CODEX_EID_ALIAS in buildCodexSourceCache); without the reverse mapping the
+// Fight button would hand setupEnemyForCombat an unknown id and silently get
+// the generic Bite/Tough-Hide fallback instead of the real fight.
+const CODEX_FIGHT_ID_ALIAS = { kobold_warden: 'prison_guards' };
+function startCodexSandboxFight(codexId) {
+  const enemyId = CODEX_FIGHT_ID_ALIAS[codexId] || codexId;
+  if (!enemyId || !player || !currentMap) return;
+  // Leave the codex the same way the C key does, so music and the return
+  // state don't stay stuck in codex mode.
+  codexReturnState = null;
+  resumeMusic();
+  hideToast();
+  // No currentEncounter — this fight belongs to no node. combatVictory and
+  // combatFlee both tolerate a null encounter; the VICTORY handler is the one
+  // place that needed teaching (see above).
+  currentEncounter = null;
+  _encounterHadCombat = false;
+  try {
+    setupEnemyForCombat(enemyId);
+    startCombat();
+  } catch (err) {
+    const msg = (err && err.message) ? err.message : String(err);
+    console.error(`[codex] sandbox fight '${enemyId}' threw:`, err);
+    showStyledToast(`Fight failed to start: ${msg}`, 'damage', 6000);
+    _codexSandboxFight = false;
+    state = GameState.MAP;
+    return;
+  }
+  // Set AFTER startCombat — it resets a pile of per-fight state and there is
+  // no reason to risk the flag riding through it.
+  _codexSandboxFight = true;
+  addLog(`[Codex] Sandbox fight: ${enemy ? enemy.name : enemyId}`, Colors.GRAY);
+}
+
 // Crag Cat escapes — no victory, no loot. Mirrors combatVictory's per-combat
 // teardown, then drops straight back to the map at the node the party is on
 // (arriveAtNode already ran, so it won't re-trigger).
 function combatFlee() {
+  _codexSandboxFight = false;
   _cornisCameoGuaranteed = false;
   clearParalyzedCards();
   // Clear any open scry/scout overlay first — a Crag Cat that flees mid-scry
@@ -57797,6 +58123,7 @@ function combatFlee() {
   player.rage = 0;
   player.poisonBuff = 0;
   player.sunderBuff = 0;
+  player.bleedBuff = 0;
   player.poisonAttacks = 0;
   player.ignite = 0;
   player.unpreventableBuff = 0;
@@ -58253,7 +58580,8 @@ function handleModalSelectClick(x, y) {
         (e.effectType === 'damage' || e.effectType === 'apply_poison' ||
          e.effectType === 'apply_bleed' ||
          e.effectType === 'armor_bonus_damage' || e.effectType === 'unpreventable_damage' ||
-         e.effectType === 'sneak_attack' || e.effectType === 'charge_attack' ||
+         e.effectType === 'sneak_attack' || e.effectType === 'sneak_attack_twice' ||
+         e.effectType === 'charge_attack' ||
          e.effectType === 'apply_poison_range' || e.effectType === 'apply_paralyze' ||
          e.effectType === 'polymorph_sheep')
       );
@@ -59778,6 +60106,10 @@ const SHOP_INVENTORIES = {
     createSteelGreataxe,
     createBow,
     createQuiver,
+    // Shelved next to the Quiver on purpose — same shape of purchase (a cheap
+    // rider that only pays off once you own the weapon it's for), and Mira
+    // stocking both is what makes the pair read as a set.
+    createWhetstone,
     createGreatclub,
     createQuarterstaff,
   ],
@@ -60259,6 +60591,37 @@ function getDebugLevelUpBtnRect() {
   if (state !== GameState.INVENTORY) return null;
   const w = 110, h = 22;
   return { x: SCREEN_WIDTH - w - 14, y: 95, w, h };
+}
+
+// Debug-only Full Heal button. Third in the right-edge debug column under
+// +1000g and Level Up, on the same 28 px pitch.
+function getDebugHealBtnRect() {
+  if (!debugMode) return null;
+  if (state !== GameState.INVENTORY) return null;
+  const w = 110, h = 22;
+  return { x: SCREEN_WIDTH - w - 14, y: 123, w, h };
+}
+
+// Empty the discard pile back into the deck and scrub every Ailment — the
+// deck IS the HP bar, so "full heal" means the discard hits zero.
+//
+// The amount is computed rather than a big magic number because healPlayer
+// spends points on Ailments FIRST: a player sitting on Bleed/Poison would
+// otherwise have those stacks eat into the card heal and come back short.
+function triggerDebugFullHeal() {
+  if (!player || !player.deck) return;
+  const ailments = Character.HEAL_AILMENTS
+    .reduce((s, a) => s + (player.getStatus ? (player.getStatus(a.key) || 0) : 0), 0);
+  const cards = player.deck.discardPile.length;
+  const amount = cards + ailments;
+  if (amount <= 0) {
+    showStyledToast('Already at full health.', 'scry', 1500);
+    return;
+  }
+  healPlayer(amount);
+  playSound('heal_spell', 0.7);
+  showStyledToast(`Full heal (debug): +${cards} card${cards === 1 ? '' : 's'}`, 'scry', 2000);
+  addLog(`Full heal (debug): restored ${cards} card${cards === 1 ? '' : 's'}`, Colors.GREEN);
 }
 
 function triggerDebugLevelUp() {
@@ -60984,6 +61347,11 @@ function handleInventoryClick(x, y) {
     if (goldBtn && hitTest(x, y, goldBtn)) {
       gold += 1000;
       addLog('+1000 gold (debug)', Colors.GOLD);
+      return;
+    }
+    const healBtn = getDebugHealBtnRect();
+    if (healBtn && hitTest(x, y, healBtn)) {
+      triggerDebugFullHeal();
       return;
     }
     // Debug-only: click a perk on the character sheet to remove it (confirm).
@@ -61746,6 +62114,30 @@ function drawInventory() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Level Up (debug)', lb.x + lb.w / 2, lb.y + lb.h / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Debug-only Full Heal button — third in the right-edge debug column.
+  // Greys out at full health so the button says whether it has work to do.
+  if (debugMode) {
+    const hb = getDebugHealBtnRect();
+    if (hb) {
+      const hurt = !!(player && player.deck && player.deck.discardPile.length > 0);
+      const hov = hurt && hitTest(mouseX, mouseY, hb);
+      ctx.fillStyle = !hurt
+        ? 'rgba(40, 55, 40, 0.5)'
+        : (hov ? 'rgba(50, 115, 60, 0.95)' : 'rgba(30, 80, 40, 0.85)');
+      ctx.fillRect(hb.x, hb.y, hb.w, hb.h);
+      ctx.strokeStyle = hurt ? Colors.GREEN : '#4a5a4a';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
+      ctx.fillStyle = hurt ? '#cfe9cf' : '#6a7a6a';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Heal (debug)', hb.x + hb.w / 2, hb.y + hb.h / 2);
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'left';
     }
@@ -69185,6 +69577,8 @@ const PERK_TRIGGER_LABELS = {
   loot_bonus_gold:             'Loot',
   loot_ore_chance:             'Loot',
   turn_start_third_wind:       'Turn Start',
+  turn_start_shield:           'Turn Start',
+  turn_start_heroism:          'Turn Start',
   combat_first_unpreventable_poison: 'Combat Start',
   combat_start_volley:         'Combat Start',
   combat_debuff_spread_charges: 'Combat Start',
@@ -71069,6 +71463,42 @@ function drawCodexStatsPanel(L) {
     py += btnH + 16; // extra gap so the Sources header doesn't kiss the button
   }
 
+  // "Fight" debug button — sandbox a real combat against the selected monster.
+  // Only from the MAP: codexReturnState is the state the codex was opened
+  // FROM, so this refuses while the player is mid-combat, in a shop, in an
+  // encounter dialog, etc. Starting a second fight on top of a live one would
+  // clobber the enemy the player is actually fighting.
+  if (sel._isCharacter && sel._charEntry && sel._charEntry.kind === 'monster'
+      && player && currentMap) {
+    const onMap = codexReturnState === GameState.MAP;
+    const btnW = CODEX_RIGHT_W - CODEX_PADDING - 24;
+    const btnH = 28;
+    const btnX = L.rightX + 12;
+    const btnY = py;
+    const hov = onMap && hitTest(mouseX, mouseY, { x: btnX, y: btnY, w: btnW, h: btnH });
+    ctx.fillStyle = !onMap
+      ? 'rgba(60, 50, 50, 0.6)'
+      : (hov ? 'rgba(150, 60, 60, 0.95)' : 'rgba(110, 40, 40, 0.85)');
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeStyle = onMap ? '#e09090' : '#6a5a5a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+    ctx.fillStyle = onMap ? '#ffdcdc' : '#8a7a7a';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(onMap ? 'Fight' : 'Fight (map only)', btnX + btnW / 2, btnY + btnH / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    if (onMap) {
+      codexClickAreas.push({
+        x: btnX, y: btnY, w: btnW, h: btnH,
+        kind: 'codex-fight', enemyId: sel._charEntry.id,
+      });
+    }
+    py += btnH + 16;
+  }
+
   // Creature tier-offset rule (Rat / Restless Bone / future per-name
   // entries). Stat bumps come from the CREATURE_TIER_OFFSET table.
   if (sel && sel._isCreature && CREATURE_TIER_OFFSET[sel.name]) {
@@ -71738,6 +72168,10 @@ function handleCodexClick(x, y) {
         }
         codexScrollY = Math.max(0, scroll - 8);
       }
+      return;
+    }
+    if (a.kind === 'codex-fight') {
+      startCodexSandboxFight(a.enemyId);
       return;
     }
     if (a.kind === 'select-character') {

@@ -423,6 +423,7 @@ export const CARD_ART_MAP = {
   fungal_lantern: 'FungalLantern.jpg',
   mycelial_codex: 'MycelialCodex.jpg',
   mining_goggles: 'MiningGoggles.jpg',
+  whetstone: 'Whetstone.jpg',
   // Umber Hulk loot (Chapter 3).
   umber_shield: 'UmberShield.jpg',
   mandible_cleaver: 'MandibleCleaver.jpg',

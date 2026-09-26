@@ -93,7 +93,7 @@ export class PersistentBuff {
  * A perk chosen during character progression.
  */
 export class Perk {
-  constructor({ id, name, description, imageId, effectType, effectValue, unique = false, tier = 1, rarity = null, requires = null, replaces = null }) {
+  constructor({ id, name, description, imageId, effectType, effectValue, unique = false, tier = 1, rarity = null, requires = null, replaces = null, durationTurns = 0 }) {
     this.id = id;
     this.name = name;
     this.description = description;
@@ -110,6 +110,10 @@ export class Perk {
     // is taken. (Divine Protection requires but does not replace.)
     this.requires = requires;
     this.replaces = replaces;
+    // For perks that drip their bonus over the opening turns instead of
+    // dumping it at combat start (Very Tough, Well Prepared). 0 = instant.
+    // applyPerksCombatStart reads it to size the CombatBuff's turnsRemaining.
+    this.durationTurns = durationTurns;
   }
 }
 
@@ -1470,25 +1474,38 @@ export function createLuckyFindPerk() {
 // ----- Common, Tier 2 (repeatable) -----
 // Upgraded forms of the four common perks — same art as the base perks,
 // double the effect. Offered only from the tier-2 perk pool (wired into
-// CLASS_PERK_WEIGHTS[2] later). combat_start_shield / combat_start_heroism /
-// combat_end_heal already sum effectValue via getPerkStacks, so the bumped
-// values "just work"; loot_ore_chance is a new effect handled in main.js.
+// CLASS_PERK_WEIGHTS[2] later). combat_end_heal already sums effectValue via
+// getPerkStacks, so the bumped value "just works"; loot_ore_chance is a new
+// effect handled in main.js. Very Tough / Well Prepared no longer double the
+// tier-1 value — they spread it over two turns instead (see below).
 
+// Very Tough / Well Prepared drip their bonus over the first TWO turns
+// instead of handing it all over on turn 1. Same total, different shape: a
+// flat +2 at combat start front-loaded the whole perk into the opening hand,
+// which is where the player is already strongest (full hand, enemy hasn't
+// developed). Spread over two turns it still covers the opening but keeps
+// something for the turn the fight actually starts biting.
+//
+// They deliberately use their own `turn_start_*` effect types rather than the
+// tier-1 `combat_start_*` ones — getPerkStacks sums by effectType, so sharing
+// a type would have folded the per-turn drip back into the instant grant and
+// paid it all on turn 1 again. Owning Tough AND Very Tough now reads as
+// "+1 Shield now, +1 more at the start of each of the next two turns".
 export function createVeryToughPerk() {
   return new Perk({
     id: 'very_tough', name: 'Very Tough',
-    description: 'Combat Start: +2 Shield.',
-    imageId: 'tough_perk', effectType: 'combat_start_shield', effectValue: 2,
-    tier: 2,
+    description: '+Shield for 2 turns.',
+    imageId: 'tough_perk', effectType: 'turn_start_shield', effectValue: 1,
+    tier: 2, durationTurns: 2,
   });
 }
 
 export function createWellPreparedPerk() {
   return new Perk({
     id: 'well_prepared', name: 'Well Prepared',
-    description: 'Combat Start: +2 Heroism.',
-    imageId: 'prepared_perk', effectType: 'combat_start_heroism', effectValue: 2,
-    tier: 2,
+    description: '+Heroism for 2 turns.',
+    imageId: 'prepared_perk', effectType: 'turn_start_heroism', effectValue: 1,
+    tier: 2, durationTurns: 2,
   });
 }
 
@@ -1916,11 +1933,11 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
   // ccgQuest+ stamp — at offset > 0, the perks offered get an id +
   // name suffix so they count as distinct from the base versions in
   // the unique / stack-cap filter. Owned base perks DON'T block the
-  // stamped variants (player can stack Tough+ on top of 5x Tough).
+  // stamped variants (player can stack Tough+ on top of a maxed Tough).
   const idSuffix = tierOffset > 0 ? `_p${tierOffset}` : '';
   const ownedUniqueIds = new Set(existingPerks.filter(p => p.unique).map(p => p.id));
   // Count current stacks per perk id so non-unique (common/repeatable)
-  // perks cap at 5 — once the player has 5 copies the perk drops out
+  // perks cap out — once the player has STACK_CAP copies the perk drops out
   // of the offer pool entirely. Unique perks already filter on the
   // ownedUniqueIds rule above (cap is implicitly 1).
   const stackCount = {};
@@ -1928,7 +1945,13 @@ export function getPerkChoices(existingPerks = [], count = 2, characterClass = '
     if (!p || p.unique) continue;
     stackCount[p.id] = (stackCount[p.id] || 0) + 1;
   }
-  const STACK_CAP = 5;
+  // 3, down from 5. Five copies of one repeatable perk was most of a run's
+  // perk picks poured into a single flat bonus, and it crowded the offer pool:
+  // a perk the player had maxed still had to be rolled past. Three keeps the
+  // stacking choice meaningful and gets the maxed perk out of the pool sooner,
+  // so later offers show more variety. Note the ccgQuest+ stamp makes `Tough+`
+  // a distinct id, so a Game+ run can still stack past 3 across tiers.
+  const STACK_CAP = 3;
   // Upgrade perks (Third Wind, Poisoner's Ambush, …) only appear once the
   // player owns their `requires` prerequisite. Match on base ids so a
   // ccgQuest+ stamped prereq (second_wind_p1) still counts.
