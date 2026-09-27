@@ -44,7 +44,7 @@ import {
   createSeveredTentacle, createSeveredTentacleCreature, createFathomlessEye, createAbyssalHarpoon,
   createBloodyEyePatch, createHarpoonOfTheDeep, createTentacleWhip, createSailorsLuckyCompass,
   createKrakensEyeSpyglass, createBarnacleCoveredBuckler,
-  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish, createFrostbloom, createBagOfHerbs,
+  createSmallFaery, createRaenaCard, createRaenaCard2, createLambasBread, createFreshFish, createFrostbloom, createIronbark, createBagOfHerbs,
   createThorbCreature, createThorbUpgradedCreature, createThorbTier3Creature,
   createCornisCard, createCornisCreature, createBradCard, createBradCreature,
   createRaenaCreature, createRaenaUpgradedCreature, createRaenaTier3Creature,
@@ -295,18 +295,39 @@ const TUNNEL_SUPPLY_NODES = ['mb_tr3', 'mb_right2'];
 let _tunnelExitNode = null;          // chosen exit id this run (persisted)
 let _tunnelExitLocked = false;       // true once the gate is reached (persisted)
 let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
-// Tharnag tunnels random-encounter chance. Every walked-onto tunnel node
-// that doesn't already have a scripted encounter (not a dead-end / the
-// exit / the gate) rolls this; on a miss it climbs by TUNNEL_ENC_STEP,
-// on a hit it resets. Goblin Swarm / Rampaging Troll, 50/50.
-const TUNNEL_ENC_STEP = 0.03;
+// ── Roaming-encounter rates ────────────────────────────────────────────────
+// Every zone uses the same escalating "pity" roll: the chance starts at its
+// STEP, each eligible node rolls it, a miss adds one more step, a hit resets to
+// the floor. So the Nth node since your last fight rolls N x STEP.
+//
+// That makes the printed percentage read far gentler than it plays: the
+// escalation means a 3% step behaves like a flat ~14% per node. Measure a
+// change by the AVERAGE NODES PER FIGHT, not by the step. Current values:
+//
+//   zone                     step   nodes/fight   P(fight within 5 nodes)
+//   Tharnag tunnels          2.5%       7.6              33%
+//   East Mountain (shallow)  3.0%       6.9              38%
+//   Deep gnoll country       5.0%       5.3              56%
+//   Underdark                1.5%       9.9              21%
+//
+// The Underdark sits lowest on purpose: it is 188 rollable nodes across 35
+// maps, so even at 1.5% a full traversal is ~19 random fights on top of every
+// scripted one, and its fights are the chapter's hardest.
+//
+// Both East Mountain zones ease off once Gontran's patrol is walked home — see
+// GONTRAN_ENC_RELIEF: trail 6.9 -> 10.5 nodes/fight, deep gnoll 5.3 -> 6.4.
+//
+// Tharnag tunnels. Every walked-onto tunnel node that doesn't already have a
+// scripted encounter (not a dead-end / the exit / the gate) rolls this.
+// Goblin Swarm / Rampaging Troll, 50/50.
+const TUNNEL_ENC_STEP = 0.025;
 let tunnelEncounterChance = TUNNEL_ENC_STEP;
 // East Mountain (trail + crags) random-encounter chance. Armed once the
 // Windbreak Ledge gnoll-tracks dialog has fired (so it begins at Cairn Bend);
 // every walked-onto east-mountain node with no scripted encounter then rolls
 // this, climbing by EAST_ENC_STEP on a miss and resetting on a hit. 50/50
 // Gnoll Hunter / Crag Cat.
-const EAST_ENC_STEP = 0.04;
+const EAST_ENC_STEP = 0.03;
 let eastEncounterChance = EAST_ENC_STEP;
 // Deep gnoll country — the three deepest crags/chasm maps (past the Sealed
 // Gallery / Deepening Stairs). These use their OWN random-encounter chance,
@@ -319,11 +340,11 @@ const DEEP_GNOLL_MAPS = new Set([
   'east_mountain_crags_chasm_09',
   'east_mountain_crags_chasm_10',
 ]);
-const DEEP_GNOLL_ENC_STEP = 0.06;
+const DEEP_GNOLL_ENC_STEP = 0.05;
 let deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
 // ── Chapter 3 Underdark — the shared roaming-monster roll. ──────────────────
 // Every Underdark map is in the pool. Armed the first time the party stands on
-// the Underdark Threshold (ug_entry) and climbs a cumulative 2% per walked-onto
+// the Underdark Threshold (ug_entry) and climbs a cumulative 1.5% per walked-onto
 // node; on a hit it resets to the step and rolls the spawn table below.
 //
 // What is EXCLUDED, and how:
@@ -382,7 +403,7 @@ const UNDERDARK_NO_SPAWN_MAPS = new Set([
 // without this an ambush could land on the party in the doorway of the one place
 // in the chapter that is supposed to be safe.
 const UNDERDARK_NO_SPAWN_NODES = new Set(['ug_outpost']);
-const UNDERDARK_ENC_STEP = 0.02;
+const UNDERDARK_ENC_STEP = 0.015;
 let underdarkEncounterChance = UNDERDARK_ENC_STEP;
 // Glowstone Fountain blessing — subtracted from the per-node step until the
 // next roaming Underdark encounter fires, then cleared. Stored as a fraction
@@ -786,13 +807,24 @@ function rollUnderdarkSpawn() {
   }
   return UNDERDARK_SPAWN_TABLE[UNDERDARK_SPAWN_TABLE.length - 1].creator();
 }
-// Once the guards-cave quest is cleared (gontranGnollVictoryClaimed), the pack
-// has mostly gone to ground — the per-node random-encounter climb drops by 1%
-// in BOTH the east-mountain trail and the deep gnoll country. Floored at 1% so
-// it never stalls entirely. (gontranGnollVictoryClaimed is declared later; these
-// helpers only run at gameplay time, well after it's initialized.)
-function eastEncStep() { return Math.max(0.01, EAST_ENC_STEP - (gontranGnollVictoryClaimed ? 0.01 : 0)); }
-function deepGnollEncStep() { return Math.max(0.01, DEEP_GNOLL_ENC_STEP - (gontranGnollVictoryClaimed ? 0.01 : 0)); }
+// Once the Prisoner Hole captives are walked home to Gontran at the watchtower
+// (gontranGnollVictoryClaimed), the pack has mostly gone to ground — the
+// per-node random-encounter CLIMB drops by 2 points in BOTH the east-mountain
+// trail and the deep gnoll country. The reset floor is untouched: the chance
+// still starts at the full step after each fight, it just escalates half as
+// fast, which is what "the road has its nerve back" should feel like.
+//
+// Floored at 1% so it never stalls entirely — the east trail lands exactly on
+// that floor (3% - 2%), which takes it from a fight every 6.9 nodes to every
+// 10.5. Deep gnoll country goes 5.3 -> 6.4.
+//
+// Surfaced on the character sheet by syncGontranBuff so the player can see the
+// reward they earned; the buff object itself is display-only, these two
+// functions are the mechanism. (gontranGnollVictoryClaimed is declared later;
+// these helpers only run at gameplay time, well after it's initialized.)
+const GONTRAN_ENC_RELIEF = 0.02;
+function eastEncStep() { return Math.max(0.01, EAST_ENC_STEP - (gontranGnollVictoryClaimed ? GONTRAN_ENC_RELIEF : 0)); }
+function deepGnollEncStep() { return Math.max(0.01, DEEP_GNOLL_ENC_STEP - (gontranGnollVictoryClaimed ? GONTRAN_ENC_RELIEF : 0)); }
 // Gnoll caves — the 7 chasm cave-mouths (see caveEntrance nodes in map.js). One
 // mouth is rolled the (unique) Boss cave, one the (unique) Guard cave, the other
 // five generic single-room caves. The roll is stored here and persisted so it
@@ -5010,7 +5042,7 @@ const CARD_REGISTRY = {
   obsidian_shard: createObsidianShard, obsidian_core: createObsidianCore,
   obsidian_slime_card: createObsidianSlimeCard,
   lambas_bread: createLambasBread, fresh_fish: createFreshFish,
-  frostbloom: createFrostbloom,
+  frostbloom: createFrostbloom, ironbark: createIronbark,
   bag_of_herbs: createBagOfHerbs,
   bone_club: createBoneClub, bone_mace: createBoneMace, bone_staff: createBoneStaff, torch: createTorch,
   bad_rations: createBadRations, sturdy_boots: createSturdyBoots,
@@ -5393,6 +5425,12 @@ const LOOT_TABLES = {
   // Mirrors PY get_lucky_pebble_loot.
   lucky_pebble_loot: [
     { creator: createLuckyPebble, weight: 1.0 },
+  ],
+  // What a fallen treant leaves behind. Not an encounter drop — it's rolled
+  // mid-combat when one of YOUR Treants dies, and the bark goes straight to
+  // hand. A one-card table so the codex can show where Ironbark comes from.
+  treant_remains: [
+    { creator: createIronbark, weight: 1.0 },
   ],
   // Obsidian Golem — random labyrinth fight. Pick-one (default). The
   // Obsidian Core (relic) only drops here. Mirrors PY
@@ -5828,6 +5866,7 @@ const LOOT_TABLE_LABELS = {
   sahuagin_priest_loot:   'Sahuagin Priest',
   sahuagin_baron_loot:    'Sahuagin Baron',
   lucky_pebble_loot:      'Lucky Pebble',
+  treant_remains:         'Treant Remains',
   obsidian_golem_loot:    'Obsidian Golem',
   obsidian_golem_loot_guaranteed: 'Obsidian Oracle',
   obsidian_slime_loot:    'Obsidian Slime',
@@ -5904,6 +5943,7 @@ const LOOT_TABLE_NOTES = {
   sahuagin_priest_loot:   'Dropped after defeating the Sahuagin Priest at the Flooded Altar. Always Sahuagin Priest Staff.',
   sahuagin_baron_loot:    'Dropped after defeating the Sahuagin Baron. Always Barnacle Encrusted Plate (rolled alongside a Sahuagin Sentinel pick).',
   lucky_pebble_loot:      'Awarded by the River Crossing 25% bonus beat. Always a Lucky Pebble.',
+  treant_remains:         'Not an encounter drop — rolled mid-combat when one of YOUR Treants falls. 10% per Treant, 20% for an Ancient of War. The bark goes straight to hand.',
   obsidian_golem_loot:    'Random labyrinth fight in the Obsidian Wastes. 50% chance to drop anything; if it drops, pick one — Rock common, Shard / Edge / Staff / Spear uncommon, Core rare (golem-only).',
   obsidian_golem_loot_guaranteed: 'Obsidian Oracle mini-boss drop. Same pool as the golem table, but guaranteed — always rolls one item alongside the Obsidian Candle.',
   magma_loot:             'Shared by every magma creature in the volcano — the Magma Drake plaza mini-boss and the Magma Mephit random encounter. Pick one: Magma Rock and Mephit Skin Bandages common, Mephit Skin Sandals / Gloves / Quiver and the Magma Tablet uncommon, Molten Scale relic rare. The Drake is guaranteed and also drops the Molten Scale Armor; the Mephit rolls it at 50%.',
@@ -11287,7 +11327,7 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
   }
   // East Mountain random encounter — armed by the Windbreak Ledge gnoll-tracks
   // dialog (so it begins at Cairn Bend). Every walked-onto east-mountain node
-  // with no scripted encounter rolls a cumulative 4% chance; on a hit it resets
+  // with no scripted encounter rolls a cumulative 3% chance; on a hit it resets
   // and fires a 50/50 Gnoll Hunter / Crag Cat fight. (Teleport gates returned
   // above; landings come in with skipEncounter, so only mid-trail nodes roll.)
   if (!skipEncounter && EAST_TRAIL_FACTORIES[currentMap.id]
@@ -18487,6 +18527,10 @@ function startNodeEncounter(nodeId) {
     // only by backing out before the reward phase). Highest-priority watchtower
     // branch so it preempts the Chapter-2 / gnoll-watch check-ins.
     gontranGnollVictoryClaimed = true;
+    // Surface the standing encounter relief on the character sheet — the
+    // dialog hands out an ability + perk the player can see, but this reward
+    // was invisible until now.
+    syncGontranBuff();
     currentEncounter = ENCOUNTER_REGISTRY.gontran_gnoll_victory();
     autosaveNow();
   } else if (node.encounterId === 'watchtower_check' && gontranGnollVictoryClaimed) {
@@ -43848,7 +43892,11 @@ function resolveEffect(eff, caster, target) {
       // MAX_HAND_SIZE cap intentionally — Bag of Herbs is a one-shot
       // recharge cost, so the player has already paid for the swell.
       if (caster === player) {
-        const POOL = [createGoodberry, createCaveShroom, createFrostbloom];
+        // Four herbs, uniform. Ironbark is the no-draw entry: Cave Shroom's
+        // Scry 2 (a guaranteed SELECTED card into hand) was carrying ~89% of
+        // the bag's expected draws, so a fourth plain herb takes the bag from
+        // 0.75 expected draws to 0.5625 and halves the double-Shroom spike.
+        const POOL = [createGoodberry, createCaveShroom, createFrostbloom, createIronbark];
         const n = Math.max(1, eff.value || 1);
         for (let i = 0; i < n; i++) {
           const creator = POOL[Math.floor(Math.random() * POOL.length)];
@@ -57751,6 +57799,39 @@ function countAndRemoveDeadCreatures() {
       if (lastEntry) lastEntry.creature = fresh;
     }
   }
+  // The grove's parting gift — a fallen Treant of YOURS leaves bark behind.
+  // 10% per Treant, 20% for an Ancient of War (a bigger tree, more bark), and
+  // the Ironbark goes straight to hand so it can be eaten the same fight.
+  //
+  // `_ironbarkRolled` is consumed on the dead body so a second sweep pass — and
+  // countAndRemoveDeadCreatures runs from every damage event and every swing —
+  // can't roll the same corpse twice. Trait-based via isTreantAlly's rule, but
+  // read off the dead creature directly since isTreantAlly gates on isAlive.
+  //
+  // Hand cap respected deliberately, unlike the Bag of Herbs: this is free, so
+  // it shouldn't be able to swell the hand past the limit.
+  for (const c of (player.creatures || [])) {
+    if (c.isAlive || c._ironbarkRolled) continue;
+    const isTreant = (Array.isArray(c.traits) && c.traits.includes('Treant'))
+      || c.name === 'Treant';
+    if (!isTreant) continue;
+    c._ironbarkRolled = true;
+    const isAncient = (Array.isArray(c.traits) && c.traits.includes('Ancient'))
+      || c.name === 'Ancient of War';
+    if (Math.random() >= (isAncient ? 0.20 : 0.10)) continue;
+    // rollLootTable returns an ARRAY (tables can be multi-pick); this one is a
+    // single entry, so take the first.
+    const bark = (rollLootTable('treant_remains') || [])[0];
+    if (!bark) continue;
+    if (player.deck.hand.length >= MAX_HAND_SIZE) {
+      player.deck.addToRechargePile(bark);
+      addLog(`  ${c.name} leaves Ironbark behind (hand full — recharged).`, Colors.GREEN, bark);
+    } else {
+      player.deck.hand.push(bark);
+      addLog(`  ${c.name} leaves Ironbark behind!`, Colors.GREEN, bark);
+    }
+    playSound('leaf_fall', 0.7);
+  }
   // On-death damage triggers — Goblin Sapper et al. explode for 1..N
   // when they die, regardless of who killed them. The hit is instant
   // and reduced by shield/armor/block, but it skips the defense-card
@@ -59549,6 +59630,34 @@ function syncMapKnowledgePersistentBuff() {
   }));
 }
 
+// Surface the Gontran reward as a persistent buff on the character sheet.
+// Earned by freeing the Prisoner Hole captives and walking them home to the
+// watchtower — the victory dialog also hands out a tier-2 ability + perk, but
+// the standing encounter relief had no visible trace until now.
+//
+// Display-only, exactly like Map Knowledge above: the mechanical reduction
+// lives in eastEncStep() / deepGnollEncStep(), which read
+// gontranGnollVictoryClaimed directly. Idempotent, so it is safe to call on the
+// victory, on load, and after a new game (which clears the flag).
+function syncGontranBuff() {
+  if (!player) return;
+  if (!Array.isArray(player.persistentBuffs)) player.persistentBuffs = [];
+  player.persistentBuffs = player.persistentBuffs.filter(b => b.id !== 'gontran_patrols');
+  if (!gontranGnollVictoryClaimed) return;
+  player.persistentBuffs.push(new PersistentBuff({
+    id: 'gontran_patrols',
+    name: "Gontran's Patrols",
+    description: 'The pack has gone to ground. Fewer random encounters on the East Mountain trail and in the deep gnoll country.',
+    imageId: 'buff_gontran_patrols',
+    effectType: 'gontran_patrols',
+    effectValue: 0,
+    trigger: 'never',
+    // Unrecognized condition → matches() is false → never projects into a
+    // combat. The effect is in the encounter-step lookups, not here.
+    condition: { type: 'never' },
+  }));
+}
+
 // Surface Volcano's Blessing as a persistent buff on the character
 // sheet so the player can see what they've earned even outside of
 // combat. The buff's condition is 'never' so it does NOT auto-project
@@ -60213,6 +60322,7 @@ const SHOP_INVENTORIES = {
     createGoodberry,
     createCaveShroom,
     createFrostbloom,
+    createIronbark,
     createBandages,
     createCuredBandage,
     createMinorHealingPotion,
@@ -64090,6 +64200,9 @@ function restoreFromSave(data) {
   // Same for Map Knowledge — flag flips back through load via
   // mapTableCopied; re-add the buff if it's set.
   syncMapKnowledgePersistentBuff();
+  // ...and Gontran's Patrols, off gontranGnollVictoryClaimed. Also backfills
+  // the buff onto saves made before it existed.
+  syncGontranBuff();
   // Well Rested snapshot restore. Pre-fix saves don't have this field;
   // default to -1 (not rested) so old saves don't silently bypass the
   // gate either. Mid-run reloads after an inn rest now keep the buff.

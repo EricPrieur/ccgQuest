@@ -1309,8 +1309,8 @@ export function createBagOfHerbs() {
   const card = new Card({
     id: 'bag_of_herbs',
     name: "Olbrim's Bag of Herbs",
-    description: 'Recharge -> Gain 2 Herbs:\nGoodberry, Cave Shroom, or Frostbloom.',
-    shortDesc: 'R->2 Herbs\n(GB/CS/FB)',
+    description: 'Recharge -> Gain 2 Herbs:\nGoodberry, Cave Shroom,\nFrostbloom or Ironbark.',
+    shortDesc: 'R->2 Herbs\n(GB/CS/FB/IB)',
     subtype: 'item',
     cardType: CardType.ITEM,
     costType: CostType.RECHARGE,
@@ -1320,10 +1320,42 @@ export function createBagOfHerbs() {
     rarity: 'uncommon',
     tier: 2,
     gamePlusOffset: { gain_random_herbs: 1/3 }, // +1 herb every 3 offsets
-    // Side preview — show the three herbs it can draw from.
-    previewCards: [createGoodberry(), createCaveShroom(), createFrostbloom()],
+    // Side preview — show the four herbs it can draw from.
+    previewCards: [createGoodberry(), createCaveShroom(), createFrostbloom(), createIronbark()],
   });
   return card;
+}
+
+// Ironbark — the fourth herb in Olbrim's bag, and deliberately the plain one.
+// Bark remedies are as old as herbalism: strip it, chew it, and the skin
+// toughens. Heal 1 + a Shield, no draw, no scry.
+//
+// Its job in the bag is to be UNEXCITING. Cave Shroom's Scry 2 is a guaranteed
+// selected card into hand and was carrying ~89% of the bag's entire draw value;
+// a fourth no-draw herb drops the bag from 0.75 expected draws to 0.5625 and
+// halves the double-Shroom spike, which turns the Shroom back into the lucky
+// pull instead of the default one.
+//
+// Also the grove's parting gift — see the Treant / Ancient of War death drop in
+// countAndRemoveDeadCreatures. A dead treant leaves bark behind, which is the
+// one flavour the other three herbs can't claim.
+export function createIronbark() {
+  return new Card({
+    id: 'ironbark',
+    name: 'Ironbark',
+    description: 'Consume -> Heal 1, Gain Shield.',
+    shortDesc: 'C->Heal 1\n+Shield',
+    subtype: 'item',
+    cardType: CardType.ITEM,
+    costType: CostType.BANISH,
+    effects: [
+      new CardEffect('heal', 1, TargetType.SELF),
+      new CardEffect('gain_shield', 1, TargetType.SELF),
+    ],
+    rarity: 'common',
+    tier: 1,
+    gamePlusOffset: { heal: 1, gain_shield: 1 },
+  });
 }
 
 export function createFrostbloom() {

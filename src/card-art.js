@@ -548,6 +548,8 @@ export const CARD_ART_MAP = {
   // reach into the Maps/ folder for the same image (same relative-
   // path trick as buff_volcano_blessing above).
   buff_map_knowledge: '../Maps/DwarvenCityMapRoom.jpg',
+  // Gontran's Patrols — the watchtower the rescued guards are walked home to.
+  buff_gontran_patrols: '../Backgrounds/SouthOutpostBG.jpg',
 
   // Dwarven Workbench card-enchant badge art (on-card icon shown
   // next to the enchant name). No dedicated icon yet; pull the
@@ -614,6 +616,7 @@ export const CARD_ART_MAP = {
   lambas_bread: 'LambasBread.jpg',
   fresh_fish: 'FishFood.jpg',
   frostbloom: 'Frostbloom.jpg',
+  ironbark: 'Ironbark.jpg',
   bag_of_herbs: 'BagOfHerbs.jpg',
   dire_claws: 'DireBearClaws.jpg',
   dire_bite: 'DireBearBite.jpg',
