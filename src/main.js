@@ -181,8 +181,8 @@ import {
   createSummonStorm, createAvatarOfTheWild, createPlayerAncientOfWarCreature,
   createNaturesHealing,
 } from './cards.js';
-import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createUnderdarkGnollEntranceMap, createUnderdarkDwarvenOutpostMap, createUnderdarkGnollEntrance02Map, createUnderdarkGnollEntrance03Map, createUnderdarkSouthXRoad04Map, createUnderdarkSouthPath05Map, createUnderdarkSouthPath06Map, createUnderdarkSouthPath07Map, createUnderdarkSouthPath08Map, createUnderdarkSouthPath09Map, createUnderdarkSouthPath10Map, createUnderdarkSouthPath11Map, createUnderdarkSouthPath12Map, createUnderdarkSouthPath13Map, createUnderdarkEastPath14Map, createUnderdarkEastPath15Map, createUnderdarkEastPath16Map, createUnderdarkEastPath17Map, createUnderdarkEastPath18Map, createUnderdarkEastPath19Map, createUnderdarkGnomeVillage20Map, createUnderdarkGnomeVillage21Map, createUnderdarkGnomeVillage22Map, createCornisHouseMap, createBorrowedHouseMap, createUnderdarkEastPath23Map, createUnderdarkEastPath24Map, createUnderdarkMushroomCircle25Map, createHallOfCallarduranMap, createAncientDruidCircleMap, createKarEdenPath01Map, createKarEdenPath02Map, createKarEdenPath03Map, createUnderdarkNorthPath26Map, createUnderdarkNorthPath27Map, createUnderdarkNorthPath28Map, createUnderdarkNorthPathLeft29Map, createUnderdarkNorthPathLeft30Map, createUnderdarkNorthPathLeft31Map, createUnderdarkNorthPathLeft32Map, createUnderdarkNorthPathMiddle33Map, createUnderdarkNorthPathMiddle34Map, createUnderdarkNorthPathMiddle35Map, createUnderdarkNorthPathMiddle36Map, createUnderdarkNorthPathRight37Map, createUnderdarkNorthPathRight38Map, createUnderdarkNorthPathRight39Map, createUnderdarkNorthPathRight40Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
-import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, EncounterText, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createMushroomCircleArrivalEncounter, createMushroomCircleEncounter, createUmberHulkEncounter, createRoperEncounter, createCarrionCrawlerEncounter, createDrowWarpartyEncounter, createPsilofyrAltarEncounter, psilofyrOfferLabel, createBanditFeedEncounter, banditFeedLabel, createGnomeMerchantsEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createGnollPackLordEncounter, createGnollFangOfYeenoghuEncounter, createCorruptedShrineEncounter, createCragCatEncounter } from './encounter.js';
+import { createNecromancerHouseMap, createNecromancerStudyMap, createUndergroundTunnel1Map, createUndergroundTunnel2Map, createUndergroundTunnel3Map, createPrisonCellMap, createMountainPathMap, createPlainsMap, createCaveMap, createRuinsBasinMap, createNorthQualibafMap, createQualibafBridgeMap, createQualibafWaterfallMap, createSouthOfQualibafMap, createSouthOutpostMap, createEastMountainTrailMap, createEastMountainTrail01Map, createEastMountainTrail02Map, createEastMountainTrail03Map, createEastMountainTrail04Map, createEastMountainCragsChasm01Map, createEastMountainCragsChasm02Map, createEastMountainCragsChasm03Map, createEastMountainCragsChasm04Map, createEastMountainCragsChasm05Map, createEastMountainCragsChasm06Map, createEastMountainCragsChasm07Map, createUnderdarkGnollEntranceMap, createUnderdarkDwarvenOutpostMap, createUnderdarkGnollEntrance02Map, createUnderdarkGnollEntrance03Map, createUnderdarkSouthXRoad04Map, createUnderdarkSouthPath05Map, createUnderdarkSouthPath06Map, createUnderdarkSouthPath07Map, createUnderdarkSouthPath08Map, createUnderdarkSouthPath09Map, createUnderdarkSouthPath10Map, createUnderdarkSouthPath11Map, createUnderdarkSouthPath12Map, createUnderdarkSouthPath13Map, createUnderdarkEastPath14Map, createUnderdarkEastPath15Map, createUnderdarkEastPath16Map, createUnderdarkEastPath17Map, createUnderdarkEastPath18Map, createUnderdarkEastPath19Map, createUnderdarkGnomeVillage20Map, createUnderdarkGnomeVillage21Map, createUnderdarkGnomeVillage22Map, createCornisHouseMap, createBorrowedHouseMap, createUnderdarkEastPath23Map, createUnderdarkEastPath24Map, createUnderdarkMushroomCircle25Map, createHallOfCallarduranMap, createAncientDruidCircleMap, createKarEdenPath01Map, createKarEdenPath02Map, createKarEdenPath03Map, createUnderdarkNorthPath26Map, createUnderdarkNorthPath27Map, createUnderdarkNorthPath28Map, createUnderdarkNorthPathLeft29Map, createUnderdarkNorthPathLeft30Map, createUnderdarkNorthPathLeft31Map, createUnderdarkNorthPathLeft32Map, createQuercusEntryTunnels01Map, createQuercusEntryTunnels02Map, createQuercusForest01Map, createQuercusForest02Map, createQuercusForest03Map, createQuercusForest04Map, createQuercusForest05Map, createQuercusForest06Map, createQuercusForest07Map, createQuercusForest08Map, createQuercusForest09Map, createQuercusForest10Map, createQuercusForest11Map, createQuercusForest12Map, createQuercusForest13Map, createQuercusForest14Map, createQuercusForest15Map, createQuercusForest16Map, createQuercusForest17Map, createQuercusForest18Map, createQuercusForest19Map, createQuercusForest20Map, createUnderdarkNorthPathMiddle33Map, createUnderdarkNorthPathMiddle34Map, createUnderdarkNorthPathMiddle35Map, createUnderdarkNorthPathMiddle36Map, createUnderdarkNorthPathRight37Map, createUnderdarkNorthPathRight38Map, createUnderdarkNorthPathRight39Map, createUnderdarkNorthPathRight40Map, createEastMountainCragsChasm08Map, createEastMountainCragsChasm09Map, createEastMountainCragsChasm10Map, createGnollBossCaveMap, createGnollCaveMap, createGnollGuardsCaveMap, createRiverCaveMouthMap, createFilibafForestMap, createTharnagMap, createVolcanoMap, createObsidianWastesMap, createTharnagInteriorMap, createTharnagTunnelsEntranceMap, createTharnagTunnelsWestTop01Map, createTharnagTunnelsEastTop01Map, createTharnagTunnelsEastTop02Map, createTharnagTunnelsMiddleMap, createTharnagTunnelsMiddleBottomMap, createTharnagTunnelsLeftBottomMap, createTharnagTunnelsWestMiddleMap, createTharnagTunnelsEastMiddleMap, createTharnagTunnelsWestTop02Map, createTharnagTunnelsWestBottomMap, createTharnagTunnelsWestBottom2Map, createTharnagTunnelsWestTop03Map, createTharnagTunnelsGateOfDeepMap, createStairsToForgeMap, createTharnagTheForgeMap, createEntryCorridorMap, createGateAreaMap, createHallOfAncestorsMap, createMonumentAlleyMap, createTombOfAncestorMap, createGrandStairsMap, createDwarvenThroneRoomMap, createMapRoomMap, createDeeperTunnelsMap, createArtisanDistrictMap, createTempleOfMoradinMap, createTopOfInfiniteStairsMap, createLastWatchMap, createHighValley1Map, createHighValley2Map, createMountainCaveMap, createRocNestFromFarMap, createNestInteriorMap, createTunnelToBridgeMap, createLowerCavernsMap, createLavaChamberMap, createObsidianTunnelsMap, createObsidianForgeMap, createTempleDistrictMap, createObsidianCathedralMap, createObsidianPlazaMap, createObsidianStreetsMap, createObsidianMarketMap, createUpperBridgeMap, createVolcanoStairs1Map, createVolcanoStairs2Map, createVolcanoStairs3Map, createVolcanoSummitRidgeMap, generateLabyrinthNodes } from './map.js';
+import { ENCOUNTER_REGISTRY, EncounterPhase, EncounterPhaseData, EncounterText, EncounterChoice, Encounter, createEnteringPlainsEncounter, createPostDragonStaircaseDialogEncounter, createDiningRoomAftermathEncounter, createTunnel3DoorOpenEncounter, createTunnelGateArrivalEncounter, createTunnelDeadEndEncounter, createGoblinSwarmEncounter, createRampagingTrollEncounter, createGoblinFrontEncounter, createGreatPourReturnEncounter, createMushroomCircleArrivalEncounter, createQuercusArrivalEncounter, createQuercusClueEncounter, createQuercusNoSignEncounter, createQuercusSurvivorsEncounter, createQuercusTooSoonEncounter, createQuercusQuietSiteEncounter, createQuercusToolsAskEncounter, createQuercusToolsWorkingEncounter, createQuercusTunnelOpenEncounter, createMushroomCircleEncounter, createUmberHulkEncounter, createRoperEncounter, createCarrionCrawlerEncounter, createDrowWarpartyEncounter, createPsilofyrAltarEncounter, psilofyrOfferLabel, createBanditFeedEncounter, banditFeedLabel, createGnomeMerchantsEncounter, createGnollHunterEncounter, createGnollWarriorEncounter, createGnollPackLordEncounter, createGnollFangOfYeenoghuEncounter, createCorruptedShrineEncounter, createCragCatEncounter } from './encounter.js';
 import { getCardArt, POWER_ART_MAP, preloadAllArt, preloadCardArt } from './card-art.js';
 import {
   Power, getClassPower,
@@ -295,6 +295,222 @@ const TUNNEL_SUPPLY_NODES = ['mb_tr3', 'mb_right2'];
 let _tunnelExitNode = null;          // chosen exit id this run (persisted)
 let _tunnelExitLocked = false;       // true once the gate is reached (persisted)
 let _tunnelDeadEndsSeen = new Set(); // dead-ends searched since last rest
+// ── The Quercus search ─────────────────────────────────────────────────────
+// Six sites hold the trail of the Tharnag survivors. The Sealed Mouth (qf16_5)
+// is the guaranteed one and arms the search; these five are rolled, FOUR of
+// them holding a clue and ONE a dud. Finding THREE of the five (four counting
+// the Sealed Mouth) finds the dwarves, at whichever site completes the set —
+// so where they are is different every run.
+//
+// The roll happens the first time the party stands in the forest and is
+// autosaved on the spot, so reloading next to a site cannot reroll whether it
+// is the dud. Same trick as chooseTunnelExitIfNeeded. It is NOT cleared on
+// rest: the layout of the trail is fixed for the run.
+const QUERCUS_CLUE_NODES = {
+  qf07_4:  'quercus_clue_pale_wash',
+  qf10_r3: 'quercus_deep_stair',
+  qf12_l3: 'quercus_clue_low_lintel',
+  qf14_2:  'quercus_clue_blue_crossing',
+  qf20_8:  'quercus_clue_amber_tree',
+};
+// The guaranteed sixth, fired by its own node as the Great Pour beat.
+const QUERCUS_SEALED_MOUTH_CLUE = 'quercus_sealed_mouth';
+// How many of the five rolled sites actually hold a clue, and how many of them
+// the party needs. Needing FEWER than are out there is what keeps this a search
+// instead of a sweep — see the expected-visits table in the design notes.
+const QUERCUS_CLUES_PLACED = 4;
+const QUERCUS_CLUES_NEEDED = 4;
+let _quercusClueSites = null;        // rolled node ids holding a clue (persisted)
+let _quercusSiteRested = new Set();  // dud sites breathed at since the last long rest
+let _quercusRestNodeId = null;       // dud site currently offering its breather
+let _quercusSurvivorsPending = false; // set when the survivors scene is appended to a clue
+
+// Roll which four of the five sites hold a clue. Idempotent.
+function chooseQuercusCluesIfNeeded() {
+  if (Array.isArray(_quercusClueSites) && _quercusClueSites.length) return;
+  const pool = Object.keys(QUERCUS_CLUE_NODES);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  _quercusClueSites = pool.slice(0, QUERCUS_CLUES_PLACED);
+  autosaveNow();
+}
+
+// How many of the five ROLLED clues the party has turned up. The Sealed Mouth
+// is not counted here because it is a prerequisite rather than one of the five
+// — the dispatch refuses to run a site at all until it is done, so reaching
+// QUERCUS_CLUES_NEEDED of these always means four of the six overall. Read off
+// completedEncounters, which is persisted anyway, so the count needs no state
+// of its own.
+function quercusCluesFound() {
+  let n = 0;
+  for (const id of Object.values(QUERCUS_CLUE_NODES)) {
+    if (completedEncounters.has(id)) n++;
+  }
+  return n;
+}
+
+// True once the survivors have been met.
+function quercusSurvivorsFound() {
+  return completedEncounters.has('quercus_survivors');
+}
+
+// ── The dig-out side quest ─────────────────────────────────────────────────
+// Once the survivors have been met, The Sealed Mouth becomes Durgan's work
+// site. The party donates breaking tools — permanently, the same banish the
+// Volcano Heart uses — and after four the guard start cutting. A long rest
+// later they are through and gone, and the node becomes the way to the front.
+//
+// Eligible = anything that applies Sunder, or that keys off an enemy's
+// armour/shield. Weapons made for going through a hard thing, which is what
+// Durgan asks for. Checked against the card's own effects, so any future card
+// carrying one of these qualifies with no extra wiring.
+// Derived from the effect handlers, not from card names: an effect qualifies if
+// it APPLIES Sunder or pays a bonus against armour/shield. Note the composite
+// strikes — ancients_staff_strike and sunder_armor_strike bake the Sunder into
+// their own handler rather than carrying an apply_sunder effect, so matching on
+// 'apply_sunder' alone silently misses them (that is how the Staff of the
+// Ancients went missing). heal_sunder is deliberately absent: it REMOVES
+// Sunder from the caster, which is the opposite of a breaking tool.
+const TOOL_EFFECTS = new Set([
+  'apply_sunder', 'apply_sunder_all', 'apply_sunder_random',
+  'sunder_armor_strike', 'ancients_staff_strike', 'grant_sunder_buff',
+  'apply_poison_vs_armor', 'draw_vs_armor', 'armor_bonus_damage',
+]);
+const QUERCUS_TOOLS_NEEDED = 4;
+let _quercusToolsDonated = 0;        // how many have gone into the wall
+let _quercusDigRested = false;       // a long rest has passed since the 4th
+let _quercusDonationMode = false;    // the sacrifice picker is donating, not banishing
+// Epic+ donations ask twice. Holds the card awaiting its second click; the
+// picker draws a warning line for it. Same shape as the loot-pick
+// can't-equip warning (_lootPickWarnId).
+let _quercusDonateWarnCard = null;
+const QUERCUS_CONFIRM_RARITIES = new Set(['epic', 'legendary']);
+
+// Durgan wants TOOLS — something with a head and a handle. A spell or a class
+// ability that happens to strip armour is not a thing you can hand to a dwarf
+// and leave in a wall, so the category filter is part of the test, not a nicety.
+const TOOL_CATEGORIES = new Set(['Weapons', 'Items']);
+
+function cardIsBreakingTool(card) {
+  if (!card || !Array.isArray(card.effects)) return false;
+  if (!TOOL_CATEGORIES.has(getCardFilterType(card))) return false;
+  return card.effects.some(e => e && TOOL_EFFECTS.has(e.effectType));
+}
+
+// Same shape as collectSacrificeEligible, but by effect rather than category,
+// and it reuses that picker's state so the donation screen IS the sacrifice
+// screen with a different confirm path.
+function collectBreakingTools() {
+  const cards = [];
+  const backpackUids = new Set();
+  if (player && player.deck && Array.isArray(player.deck.masterDeck)) {
+    for (const card of player.deck.masterDeck) if (cardIsBreakingTool(card)) cards.push(card);
+  }
+  for (const card of backpack) {
+    if (cardIsBreakingTool(card)) {
+      cards.push(card);
+      if (card.uid) backpackUids.add(card.uid);
+    }
+  }
+  return { cards, backpackUids };
+}
+
+// True once Durgan's crew have the four tools.
+// Every one of the six Quercus search sites is somewhere the party can put
+// their backs against — whatever else happened there, and whether or not the
+// search has even started. The offer comes AFTER the site's own dialog, once
+// per site per long rest.
+//
+// Two shapes, because the encounter may or may not already end in a decision:
+// a TEXT-ending encounter gets a new trailing CHOICE phase, and one that
+// already ends in a CHOICE (Durgan asking for tools) gets the rest slotted in
+// as an extra option instead, so the player never sees two choice screens back
+// to back.
+const QUERCUS_REST_NODES = new Set([
+  'qf07_4', 'qf10_r3', 'qf12_l3', 'qf14_2', 'qf20_8', 'qf16_5',
+]);
+const QUERCUS_REST_HEAL = 10;
+
+function offerQuercusRest(encounter, nodeId) {
+  if (!encounter || !QUERCUS_REST_NODES.has(nodeId)) return encounter;
+  if (_quercusSiteRested.has(nodeId)) return encounter;
+  _quercusRestNodeId = nodeId;
+  const sit = new EncounterChoice(
+    'Sit a while.',
+    'You get your boots off, and for a little while nothing in this cavern wants anything from you.',
+    'quercus_rest', QUERCUS_REST_HEAL, { completesEncounter: true },
+  );
+  const last = encounter.phases[encounter.phases.length - 1];
+  if (last && last.phaseType === EncounterPhase.CHOICE) {
+    // Slot it in ahead of the trailing "leave" option so the list reads
+    // action-first, rest-second, leave-last.
+    last.choices.splice(Math.max(0, last.choices.length - 1), 0, sit);
+    return encounter;
+  }
+  encounter.phases.push(new EncounterPhaseData({
+    phaseType: EncounterPhase.CHOICE,
+    choicePrompt: 'Rest here?',
+    choices: [
+      sit,
+      new EncounterChoice(
+        'Push on.',
+        'You leave it. The light down here never changes, so there is no telling how long you have been at this.',
+        '', 0, { completesEncounter: true },
+      ),
+    ],
+  }));
+  return encounter;
+}
+
+// A site with nothing to say right now. If its breather is still available the
+// party gets the one-liner plus the offer; if it is spent, the node stays
+// silent the way it always did.
+// Backstop for the survivors latch. The scene rides along on whichever clue
+// completed the set, so it is possible for a save to hold every clue and NOT
+// hold 'quercus_survivors' — that is exactly what happened to saves written
+// while the latch sat in the phase-completion path only, since the site also
+// exits on a "Sit a while" choice. The clues themselves are one-shot, so
+// nothing can ever re-fire to fix it.
+//
+// Finding QUERCUS_CLUES_NEEDED clues is only possible by playing the scene, so
+// the clue count is sound evidence that it happened. Idempotent; safe to call
+// on load and on every arrival at the Sealed Mouth.
+function syncQuercusSurvivorsLatch() {
+  if (completedEncounters.has('quercus_survivors')) return;
+  if (quercusCluesFound() < QUERCUS_CLUES_NEEDED) return;
+  completedEncounters.add('quercus_survivors');
+  _quercusSurvivorsPending = false;
+}
+
+// Open the gap past The Sealed Mouth. qf16_6 ships locked so it is not a tease
+// for the whole chapter; the dig-out beat is what unlocks it. Called from the
+// beat itself, from hydrateMapFromGlobalState (so a reload keeps it open) and
+// from the gate-side teleport, which can land on a freshly rebuilt map.
+function unlockQuercusTunnelNode(map) {
+  if (!map || map.id !== 'quercus_forest_16') return;
+  if (!quercusTunnelOpen()) return;
+  const n = map.getNode('qf16_6');
+  if (n) n.isLocked = false;
+}
+
+function quercusQuietSite(nodeId) {
+  if (_quercusSiteRested.has(nodeId)) { state = GameState.MAP; return; }
+  currentEncounter = offerQuercusRest(createQuercusQuietSiteEncounter(), nodeId);
+  encounterTextIndex = 0;
+  encounterChoiceResult = null;
+  _encounterHadCombat = false;
+  advanceEncounterPhase();
+}
+
+function quercusDigStarted() {
+  return _quercusToolsDonated >= QUERCUS_TOOLS_NEEDED;
+}
+// True once they are through and the Sealed Mouth is a way on.
+function quercusTunnelOpen() {
+  return completedEncounters.has('quercus_tunnel_open');
+}
 // ── Roaming-encounter rates ────────────────────────────────────────────────
 // Every zone uses the same escalating "pity" roll: the chance starts at its
 // STEP, each eligible node rolls it, a miss adds one more step, a hit resets to
@@ -3347,6 +3563,33 @@ const NO_FOG_MAPS = new Set([
   'kar_eden_path_01',
   'kar_eden_path_02',
   'kar_eden_path_03',
+  // Quercus Forest — the three cavern maps past the entry tunnels. Treated as
+  // "exterior": one enormous mushroom cavern rather than a corridor, so the
+  // black overlay would just hide the thing worth looking at. Their nodes ARE
+  // still `discoverable` though (same as the gnome village above), so the route
+  // reveals a hop at a time and each next node reads '???' until it is walked
+  // on — you see the cavern, not the path through it. The two entry TUNNELS
+  // keep standard fog on top of that; they are corridors.
+  'quercus_forest_01',
+  'quercus_forest_02',
+  'quercus_forest_03',
+  'quercus_forest_04',
+  'quercus_forest_05',
+  'quercus_forest_06',
+  'quercus_forest_07',
+  'quercus_forest_08',
+  'quercus_forest_09',
+  'quercus_forest_10',
+  'quercus_forest_11',
+  'quercus_forest_12',
+  'quercus_forest_13',
+  'quercus_forest_14',
+  'quercus_forest_15',
+  'quercus_forest_16',
+  'quercus_forest_17',
+  'quercus_forest_18',
+  'quercus_forest_19',
+  'quercus_forest_20',
 ]);
 
 const HIDE_UNTIL_VISIT_MAPS = new Set([
@@ -4420,6 +4663,58 @@ const JOURNAL_MANIFEST = [
           'gnoll_hunter', 'gnoll_warrior', 'crag_cat',
         ],
       },
+      {
+        id: 'p2_chapter_3',
+        title: 'Chapter 3: The Underdark',
+        // Down through the gnoll cave into the deep: the dwarven outpost, the
+        // South Crossroad, the long east road to the deep gnome village, and
+        // then Callarduran's hall and the ring that throws the party back to
+        // the surface at Kar-Eden. Ends on the north road, which is what
+        // carries them to Quercus.
+        //
+        // callarduran_altar is deliberately NOT listed — it has no
+        // ENCOUNTER_REGISTRY entry (the node opens the shrine picker directly),
+        // so a row for it would render as a raw id.
+        encounters: [
+          'underdark_entrance', 'underdark_threshold',
+          'underdark_deep_fork', 'underdark_brad_meeting',
+          'outpost_hearth', 'outpost_storeroom', 'outpost_remains',
+          'underdark_sunless_sea',
+          // underdark_xroad_rest is omitted: it shares the name 'The South
+          // Crossroad' with the arrival beat above, so it would render as a
+          // second identical row. The arrival already represents the place.
+          'underdark_south_xroad_arrival',
+          'underdark_south_river', 'quiet_pool', 'bottomless_lake',
+          'underdark_east_gate', 'mushroom_farm',
+          'gnome_village_found', 'cornis_welcome', 'cornis_two_doors',
+          'borrowed_house_arrival', 'borrowed_house_bed',
+          'cornis_workbench', 'cornis_feast',
+          'glowstone_fountain', 'deep_tinker', 'spore_and_sprig',
+          'psilofyr_altar',
+          'mushroom_circle_arrival', 'mushroom_circle_arrival_cornis',
+          'mushroom_circle', 'mushroom_circle_cornis',
+          'hall_of_callarduran_arrival',
+          'ancient_druid_circle',
+        ],
+      },
+      {
+        id: 'p2_chapter_4',
+        title: 'Chapter 4: Quercus Forest',
+        // The lit cavern west of the north road. The party arrives looking for
+        // the far end of the Great Pour, finds it, and then works the forest
+        // for the trail of whoever walked out of that tunnel. Five clue sites
+        // are listed but only ever FOUR are rolled live in a run, so one of
+        // these rows stays hidden on any given save — that is intended, the
+        // journal hides unseen ids anyway.
+        encounters: [
+          'quercus_arrival', 'quercus_arrival_cornis',
+          'quercus_lava_sign', 'quercus_sealed_mouth',
+          'quercus_clue_pale_wash', 'quercus_deep_stair',
+          'quercus_clue_low_lintel', 'quercus_clue_blue_crossing',
+          'quercus_clue_amber_tree',
+          'quercus_survivors',
+        ],
+      },
     ],
   },
   {
@@ -4476,6 +4771,19 @@ const JOURNAL_MANIFEST = [
           'stormwatchers_shrine_active',
           'stormwatchers_shrine_active_quick',
           'post_dragon_staircase',
+        ],
+      },
+      {
+        id: 'sq_durgan_dig',
+        title: 'The Way Back to Tharnag',
+        // Opens when the surviving guard are found in Quercus: they want back
+        // through the Pour's plug to tell Tharnag the King is alive, and they
+        // cannot cut it with what they have. Donate four breaking tools and
+        // they get through — which is also how the party reaches the front.
+        encounters: [
+          'quercus_tools_ask', 'quercus_tools_working', 'quercus_tunnel_open',
+          // The Tharnag side of the same dig, seen from the tunnels.
+          'chapter2_lava_reopened',
         ],
       },
       {
@@ -6186,6 +6494,28 @@ async function loadAssets() {
     loadImage('map_underdark_north_right_38', `${BASE}assets/Maps/UnderdarkNorthPathRight38.jpg`),
     loadImage('map_underdark_north_right_39', `${BASE}assets/Maps/UnderdarkNorthPathRight39.jpg`),
     loadImage('map_underdark_north_right_40', `${BASE}assets/Maps/UnderdarkNorthPathRight40.jpg`),
+    loadImage('map_quercus_entry_tunnels_01', `${BASE}assets/Maps/QuercusEntryTunnels01.jpg`),
+    loadImage('map_quercus_entry_tunnels_02', `${BASE}assets/Maps/QuercusEntryTunnels02.jpg`),
+    loadImage('map_quercus_forest_01', `${BASE}assets/Maps/QuercusForest01.jpg`),
+    loadImage('map_quercus_forest_02', `${BASE}assets/Maps/QuercusForest02.jpg`),
+    loadImage('map_quercus_forest_03', `${BASE}assets/Maps/QuercusForest03.jpg`),
+    loadImage('map_quercus_forest_04', `${BASE}assets/Maps/QuercusForest04.jpg`),
+    loadImage('map_quercus_forest_05', `${BASE}assets/Maps/QuercusForest05.jpg`),
+    loadImage('map_quercus_forest_06', `${BASE}assets/Maps/QuercusForest06.jpg`),
+    loadImage('map_quercus_forest_07', `${BASE}assets/Maps/QuercusForest07.jpg`),
+    loadImage('map_quercus_forest_08', `${BASE}assets/Maps/QuercusForest08.jpg`),
+    loadImage('map_quercus_forest_09', `${BASE}assets/Maps/QuercusForest09.jpg`),
+    loadImage('map_quercus_forest_10', `${BASE}assets/Maps/QuercusForest10.jpg`),
+    loadImage('map_quercus_forest_11', `${BASE}assets/Maps/QuercusForest11.jpg`),
+    loadImage('map_quercus_forest_12', `${BASE}assets/Maps/QuercusForest12.jpg`),
+    loadImage('map_quercus_forest_13', `${BASE}assets/Maps/QuercusForest13.jpg`),
+    loadImage('map_quercus_forest_14', `${BASE}assets/Maps/QuercusForest14.jpg`),
+    loadImage('map_quercus_forest_15', `${BASE}assets/Maps/QuercusForest15.jpg`),
+    loadImage('map_quercus_forest_16', `${BASE}assets/Maps/QuercusForest16.jpg`),
+    loadImage('map_quercus_forest_17', `${BASE}assets/Maps/QuercusForest17.jpg`),
+    loadImage('map_quercus_forest_18', `${BASE}assets/Maps/QuercusForest18.jpg`),
+    loadImage('map_quercus_forest_19', `${BASE}assets/Maps/QuercusForest19.jpg`),
+    loadImage('map_quercus_forest_20', `${BASE}assets/Maps/QuercusForest20.jpg`),
     loadImage('map_east_mountain_crags_chasm_08', `${BASE}assets/Maps/EastMountainCragsChasm_08.jpg`),
     loadImage('map_east_mountain_crags_chasm_09', `${BASE}assets/Maps/EastMountainCragsChasm_09.jpg`),
     loadImage('map_east_mountain_crags_chasm_10', `${BASE}assets/Maps/EastMountainCragsChasm_10.jpg`),
@@ -8382,6 +8712,28 @@ const MUSIC_FOR_AREA = {
   underdark_north_right_38:   'Music/ambience_cave_dripping_01',
   underdark_north_right_39:   'Music/ambience_cave_dripping_01',
   underdark_north_right_40:   'Music/ambience_cave_dripping_01',
+  quercus_entry_tunnels_01:   'Music/ambience_cave_dripping_01',
+  quercus_entry_tunnels_02:   'Music/ambience_cave_dripping_01',
+  quercus_forest_01:          'Music/ambience_cave_dripping_01',
+  quercus_forest_02:          'Music/ambience_cave_dripping_01',
+  quercus_forest_03:          'Music/ambience_cave_dripping_01',
+  quercus_forest_04:          'Music/ambience_cave_dripping_01',
+  quercus_forest_05:          'Music/ambience_cave_dripping_01',
+  quercus_forest_06:          'Music/ambience_cave_dripping_01',
+  quercus_forest_07:          'Music/ambience_cave_dripping_01',
+  quercus_forest_08:          'Music/ambience_cave_dripping_01',
+  quercus_forest_09:          'Music/ambience_cave_dripping_01',
+  quercus_forest_10:          'Music/ambience_cave_dripping_01',
+  quercus_forest_11:          'Music/ambience_cave_dripping_01',
+  quercus_forest_12:          'Music/ambience_cave_dripping_01',
+  quercus_forest_13:          'Music/ambience_cave_dripping_01',
+  quercus_forest_14:          'Music/ambience_cave_dripping_01',
+  quercus_forest_15:          'Music/ambience_cave_dripping_01',
+  quercus_forest_16:          'Music/ambience_cave_dripping_01',
+  quercus_forest_17:          'Music/ambience_cave_dripping_01',
+  quercus_forest_18:          'Music/ambience_cave_dripping_01',
+  quercus_forest_19:          'Music/ambience_cave_dripping_01',
+  quercus_forest_20:          'Music/ambience_cave_dripping_01',
   // Back on the surface — the Silverwood clearing gets forest ambience.
   ancient_druid_circle: 'Music/ambience_forest_01',
   kar_eden_path_01: 'Music/ambience_forest_01',
@@ -9078,6 +9430,13 @@ function resetStoryFlags() {
   greatPourActivated = false;
   chapter2Started = false;
   _tunnelExitNode = null;
+  _quercusClueSites = null;
+  _quercusToolsDonated = 0;
+  _quercusDigRested = false;
+  _quercusDonationMode = false;
+  _quercusSiteRested = new Set();
+  _quercusRestNodeId = null;
+  _quercusSurvivorsPending = false;
   _tunnelExitLocked = false;
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
@@ -9232,6 +9591,13 @@ function startNewGame() {
   greatPourActivated = false;
   chapter2Started = false;
   _tunnelExitNode = null;
+  _quercusClueSites = null;
+  _quercusToolsDonated = 0;
+  _quercusDigRested = false;
+  _quercusDonationMode = false;
+  _quercusSiteRested = new Set();
+  _quercusRestNodeId = null;
+  _quercusSurvivorsPending = false;
   _tunnelExitLocked = false;
   _tunnelDeadEndsSeen = new Set();
   tunnelEncounterChance = TUNNEL_ENC_STEP;
@@ -10525,7 +10891,7 @@ function getMapNodeRects() {
     // current — match the render gate so the player can't click an
     // invisible node by accident.
     if (node.discoverable) {
-      const visibleNow = visitedNodes.has(id) || node.isDone
+      const visibleNow = visitedNodes.has(id) || node.isDone || node._revealed
         || accessibleIds.includes(id) || id === currentMap.currentNodeId;
       if (!visibleNow) continue;
     }
@@ -10776,6 +11142,12 @@ function setWellRested() {
   // re-rolls it (the path is fixed for this character).
   if (!_tunnelExitLocked) _tunnelExitNode = null;
   _tunnelDeadEndsSeen = new Set();
+  // Quercus dud sites offer their breather again after a long rest. The ROLL
+  // (_quercusClueSites) deliberately survives — the trail does not move.
+  _quercusSiteRested = new Set();
+  // Dig-out: a long rest is what passes the time for Durgan's crew, so this is
+  // where 'they are still cutting' becomes 'they are through and gone'.
+  if (_quercusToolsDonated >= QUERCUS_TOOLS_NEEDED) _quercusDigRested = true;
   tunnelEncounterChance = TUNNEL_ENC_STEP;
   eastEncounterChance = EAST_ENC_STEP;
   deepGnollEncounterChance = DEEP_GNOLL_ENC_STEP;
@@ -10916,6 +11288,13 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     visitedNodes.add(nodeId);
     if (node.hiddenName) node.hiddenName = '';
     if (node.hiddenDescription) node.hiddenDescription = '';
+    // Permanent reveal. visitedNodes is the live set and a cross-map teleport
+    // replaces it with just the landing node, so without this a node the party
+    // already walked goes back to being invisible-until-adjacent the next time
+    // they come onto the map. node.isDone covers nodes that ran an encounter;
+    // this covers the plain ones, which is most of a trail. Persisted in
+    // save.js alongside hiddenName.
+    node._revealed = true;
     // Gnoll-cave interiors carry no encounters, so the usual post-encounter
     // autosave never fires as the party explores them — persist the reveal
     // right here (currentNodeId is already set above) so a freshly-uncovered
@@ -10936,6 +11315,21 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     revealLandingNode(_tunnelExitNode);
     currentMap.currentNodeId = _tunnelExitNode;
     updateMusicForCurrentScene();
+    // Once the dig is through, THIS crossing is the hole in the lava wall, and
+    // it is the way most parties meet it: they come up from Quercus, cross the
+    // front, and head for Tharnag. Narrate on arrival (travel first, then the
+    // beat — same shape as the Gate's own first-arrival dialog) rather than
+    // waiting for them to walk back onto the tunnel-side node later.
+    if (quercusTunnelOpen() && !completedEncounters.has('chapter2_lava_reopened')
+        && ENCOUNTER_REGISTRY['chapter2_lava_reopened']) {
+      currentEncounter = ENCOUNTER_REGISTRY['chapter2_lava_reopened']();
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      autosaveNow();
+      return;
+    }
     state = GameState.MAP;
     autosaveNow();
     return;
@@ -10952,7 +11346,30 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
       // the Gate of the Deep, a wall of frozen lava blocks it. First arrival
       // plays the "find another underdark entrance" dialog (Thorb's theory +
       // Raena → Elarion / Kar-Eden); after that it's simply impassable.
-      if (chapter2Started) {
+      // Durgan's crew cut through from the Quercus side, and the Tharnag side
+      // met them in the middle. The exit is a working passage again: play the
+      // reopening beat once, then fall through to the ordinary crossing below,
+      // which is what it did before the Pour ever sealed it.
+      //
+      // This is the THARNAG-side trigger, for a party that walks down to the
+      // exit from the tunnels. The commoner route is the other way — up from
+      // Quercus and out through the gate — which fires the same beat on the
+      // gate_arrival crossing above. One-shot either way, so whichever
+      // direction the player takes first is the one that narrates it.
+      if (chapter2Started && quercusTunnelOpen()) {
+        if (!completedEncounters.has('chapter2_lava_reopened')) {
+          const roFactory = ENCOUNTER_REGISTRY['chapter2_lava_reopened'];
+          if (roFactory) {
+            currentEncounter = roFactory();
+            encounterTextIndex = 0;
+            encounterChoiceResult = null;
+            _encounterHadCombat = false;
+            advanceEncounterPhase();
+            autosaveNow();
+            return;
+          }
+        }
+      } else if (chapter2Started) {
         if (!completedEncounters.has('chapter2_lava_wall')) {
           const lwFactory = ENCOUNTER_REGISTRY['chapter2_lava_wall'];
           if (lwFactory) {
@@ -13011,11 +13428,598 @@ function arriveAtNode(nodeId, fromNodeId = null, skipEncounter = false) {
     return;
   }
 
-  // End of the built road — The Road Goes On (unl32_4) is as far as the
-  // north-left chain reaches today. No teleport and no early return: the party
-  // walks onto the node normally, they just get told there's nothing past it
-  // yet. Replace this with a teleport pair when the next map lands.
-  if ((nodeId === 'unl32_4' && currentMap.id === 'underdark_north_left_32')
+  // ── The Quercus entry tunnels: The Road Goes On → 01 → 02. ──
+  // WIP seam. The step ACROSS from the north-left chain is DEBUG-ONLY for now:
+  // with debug mode on, The Road Goes On (unl32_4) teleports through to the
+  // tunnels; with it off that node still just fires the "not in the game yet"
+  // toast below and the party stays put. The way back out is never gated, so a
+  // party that got in can always walk out (even if debug is toggled off).
+  if (!skipEncounter && debugMode && nodeId === 'unl32_4'
+      && currentMap.id === 'underdark_north_left_32'
+      && fromNodeId !== 'qet01_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_entry_tunnels_01', createQuercusEntryTunnels01Map);
+    visitedNodes = new Set(['qet01_entry']);
+    currentMap.currentNodeId = 'qet01_entry';
+    arriveAtNode('qet01_entry', 'unl32_4');
+    return;
+  }
+  if (nodeId === 'qet01_entry'
+      && currentMap.id === 'quercus_entry_tunnels_01'
+      && fromNodeId !== 'unl32_4') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('underdark_north_left_32', createUnderdarkNorthPathLeft32Map);
+    visitedNodes.add('unl32_4');
+    currentMap.currentNodeId = 'unl32_4';
+    arriveAtNode('unl32_4', 'qet01_entry', true);
+    return;
+  }
+  // Under the Great Caps (qet01_4) ↔ Quercus 02 threshold (qet02_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qet01_4'
+      && currentMap.id === 'quercus_entry_tunnels_01'
+      && fromNodeId !== 'qet02_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_entry_tunnels_02', createQuercusEntryTunnels02Map);
+    visitedNodes = new Set(['qet02_entry']);
+    currentMap.currentNodeId = 'qet02_entry';
+    arriveAtNode('qet02_entry', 'qet01_4');
+    return;
+  }
+  if (nodeId === 'qet02_entry'
+      && currentMap.id === 'quercus_entry_tunnels_02'
+      && fromNodeId !== 'qet01_4') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_entry_tunnels_01', createQuercusEntryTunnels01Map);
+    visitedNodes.add('qet01_4');
+    currentMap.currentNodeId = 'qet01_4';
+    arriveAtNode('qet01_4', 'qet02_entry', true);
+    return;
+  }
+  // The Pale Opening (qet02_5) ↔ Quercus forest 01 threshold (qf01_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qet02_5'
+      && currentMap.id === 'quercus_entry_tunnels_02'
+      && fromNodeId !== 'qf01_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_01', createQuercusForest01Map);
+    visitedNodes = new Set(['qf01_entry']);
+    currentMap.currentNodeId = 'qf01_entry';
+    arriveAtNode('qf01_entry', 'qet02_5');
+    return;
+  }
+  if (nodeId === 'qf01_entry'
+      && currentMap.id === 'quercus_forest_01'
+      && fromNodeId !== 'qet02_5') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_entry_tunnels_02', createQuercusEntryTunnels02Map);
+    visitedNodes.add('qet02_5');
+    currentMap.currentNodeId = 'qet02_5';
+    arriveAtNode('qet02_5', 'qf01_entry', true);
+    return;
+  }
+  // The High Terrace (qf01_l3) ↔ Quercus forest 02 threshold (qf02_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf01_l3'
+      && currentMap.id === 'quercus_forest_01'
+      && fromNodeId !== 'qf02_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_02', createQuercusForest02Map);
+    visitedNodes = new Set(['qf02_entry']);
+    currentMap.currentNodeId = 'qf02_entry';
+    arriveAtNode('qf02_entry', 'qf01_l3');
+    return;
+  }
+  if (nodeId === 'qf02_entry'
+      && currentMap.id === 'quercus_forest_02'
+      && fromNodeId !== 'qf01_l3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_01', createQuercusForest01Map);
+    visitedNodes.add('qf01_l3');
+    currentMap.currentNodeId = 'qf01_l3';
+    arriveAtNode('qf01_l3', 'qf02_entry', true);
+    return;
+  }
+  // The Stone Teeth (qf19_a5) ↔ Quercus forest 20 threshold (qf20_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf19_a5'
+      && currentMap.id === 'quercus_forest_19'
+      && fromNodeId !== 'qf20_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_20', createQuercusForest20Map);
+    visitedNodes = new Set(['qf20_entry']);
+    currentMap.currentNodeId = 'qf20_entry';
+    arriveAtNode('qf20_entry', 'qf19_a5');
+    return;
+  }
+  if (nodeId === 'qf20_entry'
+      && currentMap.id === 'quercus_forest_20'
+      && fromNodeId !== 'qf19_a5') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_19', createQuercusForest19Map);
+    visitedNodes.add('qf19_a5');
+    currentMap.currentNodeId = 'qf19_a5';
+    arriveAtNode('qf19_a5', 'qf20_entry', true);
+    return;
+  }
+  // ── Quercus 19: two unjoined chains, one pair each. ──
+  // The High Stand (qf18_l2) ↔ Quercus 19 chain A (qf19_a_entry).
+  if (!skipEncounter && nodeId === 'qf18_l2'
+      && currentMap.id === 'quercus_forest_18'
+      && fromNodeId !== 'qf19_a_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_19', createQuercusForest19Map);
+    visitedNodes = new Set(['qf19_a_entry']);
+    currentMap.currentNodeId = 'qf19_a_entry';
+    arriveAtNode('qf19_a_entry', 'qf18_l2');
+    return;
+  }
+  if (nodeId === 'qf19_a_entry'
+      && currentMap.id === 'quercus_forest_19'
+      && fromNodeId !== 'qf18_l2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_18', createQuercusForest18Map);
+    visitedNodes.add('qf18_l2');
+    currentMap.currentNodeId = 'qf18_l2';
+    arriveAtNode('qf18_l2', 'qf19_a_entry', true);
+    return;
+  }
+  // The Green Arch (qf17_l5) ↔ Quercus 19 chain B (qf19_b_entry). Lands on the
+  // OTHER run of map 19, which chain A has no connection to.
+  if (!skipEncounter && nodeId === 'qf17_l5'
+      && currentMap.id === 'quercus_forest_17'
+      && fromNodeId !== 'qf19_b_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_19', createQuercusForest19Map);
+    visitedNodes = new Set(['qf19_b_entry']);
+    currentMap.currentNodeId = 'qf19_b_entry';
+    arriveAtNode('qf19_b_entry', 'qf17_l5');
+    return;
+  }
+  if (nodeId === 'qf19_b_entry'
+      && currentMap.id === 'quercus_forest_19'
+      && fromNodeId !== 'qf17_l5') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_17', createQuercusForest17Map);
+    visitedNodes.add('qf17_l5');
+    currentMap.currentNodeId = 'qf17_l5';
+    arriveAtNode('qf17_l5', 'qf19_b_entry', true);
+    return;
+  }
+  // The Stacked Shelves (qf08_5) ↔ Quercus forest 18 threshold (qf18_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf08_5'
+      && currentMap.id === 'quercus_forest_08'
+      && fromNodeId !== 'qf18_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_18', createQuercusForest18Map);
+    visitedNodes = new Set(['qf18_entry']);
+    currentMap.currentNodeId = 'qf18_entry';
+    arriveAtNode('qf18_entry', 'qf08_5');
+    return;
+  }
+  if (nodeId === 'qf18_entry'
+      && currentMap.id === 'quercus_forest_18'
+      && fromNodeId !== 'qf08_5') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_08', createQuercusForest08Map);
+    visitedNodes.add('qf08_5');
+    currentMap.currentNodeId = 'qf08_5';
+    arriveAtNode('qf08_5', 'qf18_entry', true);
+    return;
+  }
+  // The Upper Terrace (qf05_a6) ↔ The Blue Pebbles (qf17_r2). Neither end is a
+  // threshold, so both halves carry the !skipEncounter guard and reset
+  // visitedNodes on arrival — same shape as the Quercus 13 loop road.
+  if (!skipEncounter && nodeId === 'qf05_a6'
+      && currentMap.id === 'quercus_forest_05'
+      && fromNodeId !== 'qf17_r2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_17', createQuercusForest17Map);
+    visitedNodes = new Set(['qf17_r2']);
+    currentMap.currentNodeId = 'qf17_r2';
+    arriveAtNode('qf17_r2', 'qf05_a6');
+    return;
+  }
+  if (!skipEncounter && nodeId === 'qf17_r2'
+      && currentMap.id === 'quercus_forest_17'
+      && fromNodeId !== 'qf05_a6') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_05', createQuercusForest05Map);
+    visitedNodes = new Set(['qf05_a6']);
+    currentMap.currentNodeId = 'qf05_a6';
+    arriveAtNode('qf05_a6', 'qf17_r2');
+    return;
+  }
+  // The Green Water (qf12_r1) ↔ Quercus forest 17 threshold (qf17_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf12_r1'
+      && currentMap.id === 'quercus_forest_12'
+      && fromNodeId !== 'qf17_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_17', createQuercusForest17Map);
+    visitedNodes = new Set(['qf17_entry']);
+    currentMap.currentNodeId = 'qf17_entry';
+    arriveAtNode('qf17_entry', 'qf12_r1');
+    return;
+  }
+  if (nodeId === 'qf17_entry'
+      && currentMap.id === 'quercus_forest_17'
+      && fromNodeId !== 'qf12_r1') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_12', createQuercusForest12Map);
+    visitedNodes.add('qf12_r1');
+    currentMap.currentNodeId = 'qf12_r1';
+    arriveAtNode('qf12_r1', 'qf17_entry', true);
+    return;
+  }
+  // Through the Gap (qf16_6) ↔ The Cut Passage (gate_cut_passage). The permanent
+  // two-way seam between Quercus and the Tharnag side, opened by Durgan's crew.
+  // qf16_6 is locked until then, so this pair cannot fire early; from the gate
+  // side the passage runs on through The Drowned Gallery to the 3rd Gate by
+  // plain connections, which is what makes the whole thing a walkable line.
+  if (!skipEncounter && nodeId === 'qf16_6'
+      && currentMap.id === 'quercus_forest_16'
+      && fromNodeId !== 'gate_cut_passage') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('tharnag_tunnels_gate_of_deep', createTharnagTunnelsGateOfDeepMap);
+    visitedNodes = new Set(['gate_cut_passage']);
+    currentMap.currentNodeId = 'gate_cut_passage';
+    arriveAtNode('gate_cut_passage', 'qf16_6');
+    return;
+  }
+  if (nodeId === 'gate_cut_passage'
+      && currentMap.id === 'tharnag_tunnels_gate_of_deep'
+      && fromNodeId !== 'qf16_6') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_16', createQuercusForest16Map);
+    unlockQuercusTunnelNode(currentMap);
+    visitedNodes.add('qf16_6');
+    currentMap.currentNodeId = 'qf16_6';
+    arriveAtNode('qf16_6', 'gate_cut_passage', true);
+    return;
+  }
+  // The Tended Terrace (qf15_4) ↔ Quercus forest 16 threshold (qf16_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf15_4'
+      && currentMap.id === 'quercus_forest_15'
+      && fromNodeId !== 'qf16_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_16', createQuercusForest16Map);
+    visitedNodes = new Set(['qf16_entry']);
+    currentMap.currentNodeId = 'qf16_entry';
+    arriveAtNode('qf16_entry', 'qf15_4');
+    return;
+  }
+  if (nodeId === 'qf16_entry'
+      && currentMap.id === 'quercus_forest_16'
+      && fromNodeId !== 'qf15_4') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_15', createQuercusForest15Map);
+    visitedNodes.add('qf15_4');
+    currentMap.currentNodeId = 'qf15_4';
+    arriveAtNode('qf15_4', 'qf16_entry', true);
+    return;
+  }
+  // The Narrow Trail (qf06_4) ↔ Quercus forest 15 threshold (qf15_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf06_4'
+      && currentMap.id === 'quercus_forest_06'
+      && fromNodeId !== 'qf15_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_15', createQuercusForest15Map);
+    visitedNodes = new Set(['qf15_entry']);
+    currentMap.currentNodeId = 'qf15_entry';
+    arriveAtNode('qf15_entry', 'qf06_4');
+    return;
+  }
+  if (nodeId === 'qf15_entry'
+      && currentMap.id === 'quercus_forest_15'
+      && fromNodeId !== 'qf06_4') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_06', createQuercusForest06Map);
+    visitedNodes.add('qf06_4');
+    currentMap.currentNodeId = 'qf06_4';
+    arriveAtNode('qf06_4', 'qf15_entry', true);
+    return;
+  }
+  // The Old Kerb (qf11_l2) ↔ Quercus forest 14 threshold (qf14_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf11_l2'
+      && currentMap.id === 'quercus_forest_11'
+      && fromNodeId !== 'qf14_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_14', createQuercusForest14Map);
+    visitedNodes = new Set(['qf14_entry']);
+    currentMap.currentNodeId = 'qf14_entry';
+    arriveAtNode('qf14_entry', 'qf11_l2');
+    return;
+  }
+  if (nodeId === 'qf14_entry'
+      && currentMap.id === 'quercus_forest_14'
+      && fromNodeId !== 'qf11_l2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_11', createQuercusForest11Map);
+    visitedNodes.add('qf11_l2');
+    currentMap.currentNodeId = 'qf11_l2';
+    arriveAtNode('qf11_l2', 'qf14_entry', true);
+    return;
+  }
+  // ── Quercus 13: the loop road. Two pairs, one at each end. ──
+  // The Quiet Hollow (qf04_rr3) ↔ Quercus 13 threshold (qf13_entry).
+  if (!skipEncounter && nodeId === 'qf04_rr3'
+      && currentMap.id === 'quercus_forest_04'
+      && fromNodeId !== 'qf13_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_13', createQuercusForest13Map);
+    visitedNodes = new Set(['qf13_entry']);
+    currentMap.currentNodeId = 'qf13_entry';
+    arriveAtNode('qf13_entry', 'qf04_rr3');
+    return;
+  }
+  if (nodeId === 'qf13_entry'
+      && currentMap.id === 'quercus_forest_13'
+      && fromNodeId !== 'qf04_rr3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_04', createQuercusForest04Map);
+    visitedNodes.add('qf04_rr3');
+    currentMap.currentNodeId = 'qf04_rr3';
+    arriveAtNode('qf04_rr3', 'qf13_entry', true);
+    return;
+  }
+  // The Back of the Blooms (qf13_7) ↔ The Bloom Wall (qf10_l2) — the far end.
+  if (!skipEncounter && nodeId === 'qf13_7'
+      && currentMap.id === 'quercus_forest_13'
+      && fromNodeId !== 'qf10_l2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_10', createQuercusForest10Map);
+    visitedNodes = new Set(['qf10_l2']);
+    currentMap.currentNodeId = 'qf10_l2';
+    arriveAtNode('qf10_l2', 'qf13_7');
+    return;
+  }
+  if (!skipEncounter && nodeId === 'qf10_l2'
+      && currentMap.id === 'quercus_forest_10'
+      && fromNodeId !== 'qf13_7') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_13', createQuercusForest13Map);
+    visitedNodes = new Set(['qf13_7']);
+    currentMap.currentNodeId = 'qf13_7';
+    arriveAtNode('qf13_7', 'qf10_l2');
+    return;
+  }
+  // The Little Steps (qf11_r2) ↔ Quercus forest 12 threshold (qf12_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf11_r2'
+      && currentMap.id === 'quercus_forest_11'
+      && fromNodeId !== 'qf12_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_12', createQuercusForest12Map);
+    visitedNodes = new Set(['qf12_entry']);
+    currentMap.currentNodeId = 'qf12_entry';
+    arriveAtNode('qf12_entry', 'qf11_r2');
+    return;
+  }
+  if (nodeId === 'qf12_entry'
+      && currentMap.id === 'quercus_forest_12'
+      && fromNodeId !== 'qf11_r2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_11', createQuercusForest11Map);
+    visitedNodes.add('qf11_r2');
+    currentMap.currentNodeId = 'qf11_r2';
+    arriveAtNode('qf11_r2', 'qf12_entry', true);
+    return;
+  }
+  // The West Landing (qf09_l2) ↔ Quercus forest 11 threshold (qf11_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf09_l2'
+      && currentMap.id === 'quercus_forest_09'
+      && fromNodeId !== 'qf11_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_11', createQuercusForest11Map);
+    visitedNodes = new Set(['qf11_entry']);
+    currentMap.currentNodeId = 'qf11_entry';
+    arriveAtNode('qf11_entry', 'qf09_l2');
+    return;
+  }
+  if (nodeId === 'qf11_entry'
+      && currentMap.id === 'quercus_forest_11'
+      && fromNodeId !== 'qf09_l2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_09', createQuercusForest09Map);
+    visitedNodes.add('qf09_l2');
+    currentMap.currentNodeId = 'qf09_l2';
+    arriveAtNode('qf09_l2', 'qf11_entry', true);
+    return;
+  }
+  // The Top of the Climb (qf09_r3) ↔ Quercus forest 10 threshold (qf10_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf09_r3'
+      && currentMap.id === 'quercus_forest_09'
+      && fromNodeId !== 'qf10_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_10', createQuercusForest10Map);
+    visitedNodes = new Set(['qf10_entry']);
+    currentMap.currentNodeId = 'qf10_entry';
+    arriveAtNode('qf10_entry', 'qf09_r3');
+    return;
+  }
+  if (nodeId === 'qf10_entry'
+      && currentMap.id === 'quercus_forest_10'
+      && fromNodeId !== 'qf09_r3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_09', createQuercusForest09Map);
+    visitedNodes.add('qf09_r3');
+    currentMap.currentNodeId = 'qf09_r3';
+    arriveAtNode('qf09_r3', 'qf10_entry', true);
+    return;
+  }
+  // The Far Stair (qf05_b5) ↔ Quercus forest 09 threshold (qf09_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf05_b5'
+      && currentMap.id === 'quercus_forest_05'
+      && fromNodeId !== 'qf09_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_09', createQuercusForest09Map);
+    visitedNodes = new Set(['qf09_entry']);
+    currentMap.currentNodeId = 'qf09_entry';
+    arriveAtNode('qf09_entry', 'qf05_b5');
+    return;
+  }
+  if (nodeId === 'qf09_entry'
+      && currentMap.id === 'quercus_forest_09'
+      && fromNodeId !== 'qf05_b5') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_05', createQuercusForest05Map);
+    visitedNodes.add('qf05_b5');
+    currentMap.currentNodeId = 'qf05_b5';
+    arriveAtNode('qf05_b5', 'qf09_entry', true);
+    return;
+  }
+  // The Fall Head (qf03_r3) ↔ Quercus forest 08 threshold (qf08_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf03_r3'
+      && currentMap.id === 'quercus_forest_03'
+      && fromNodeId !== 'qf08_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_08', createQuercusForest08Map);
+    visitedNodes = new Set(['qf08_entry']);
+    currentMap.currentNodeId = 'qf08_entry';
+    arriveAtNode('qf08_entry', 'qf03_r3');
+    return;
+  }
+  if (nodeId === 'qf08_entry'
+      && currentMap.id === 'quercus_forest_08'
+      && fromNodeId !== 'qf03_r3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_03', createQuercusForest03Map);
+    visitedNodes.add('qf03_r3');
+    currentMap.currentNodeId = 'qf03_r3';
+    arriveAtNode('qf03_r3', 'qf08_entry', true);
+    return;
+  }
+  // The Gill Shade (qf04_rl3) ↔ Quercus forest 06 threshold (qf06_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf04_rl3'
+      && currentMap.id === 'quercus_forest_04'
+      && fromNodeId !== 'qf06_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_06', createQuercusForest06Map);
+    visitedNodes = new Set(['qf06_entry']);
+    currentMap.currentNodeId = 'qf06_entry';
+    arriveAtNode('qf06_entry', 'qf04_rl3');
+    return;
+  }
+  if (nodeId === 'qf06_entry'
+      && currentMap.id === 'quercus_forest_06'
+      && fromNodeId !== 'qf04_rl3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_04', createQuercusForest04Map);
+    visitedNodes.add('qf04_rl3');
+    currentMap.currentNodeId = 'qf04_rl3';
+    arriveAtNode('qf04_rl3', 'qf06_entry', true);
+    return;
+  }
+  // The Cut Stair (qf04_l1) ↔ Quercus forest 07 threshold (qf07_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf04_l1'
+      && currentMap.id === 'quercus_forest_04'
+      && fromNodeId !== 'qf07_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_07', createQuercusForest07Map);
+    visitedNodes = new Set(['qf07_entry']);
+    currentMap.currentNodeId = 'qf07_entry';
+    arriveAtNode('qf07_entry', 'qf04_l1');
+    return;
+  }
+  if (nodeId === 'qf07_entry'
+      && currentMap.id === 'quercus_forest_07'
+      && fromNodeId !== 'qf04_l1') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_04', createQuercusForest04Map);
+    visitedNodes.add('qf04_l1');
+    currentMap.currentNodeId = 'qf04_l1';
+    arriveAtNode('qf04_l1', 'qf07_entry', true);
+    return;
+  }
+  // The Candle Stalks (qf02_r2) ↔ Quercus forest 05 chain A (qf05_a_entry).
+  if (!skipEncounter && nodeId === 'qf02_r2'
+      && currentMap.id === 'quercus_forest_02'
+      && fromNodeId !== 'qf05_a_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_05', createQuercusForest05Map);
+    visitedNodes = new Set(['qf05_a_entry']);
+    currentMap.currentNodeId = 'qf05_a_entry';
+    arriveAtNode('qf05_a_entry', 'qf02_r2');
+    return;
+  }
+  if (nodeId === 'qf05_a_entry'
+      && currentMap.id === 'quercus_forest_05'
+      && fromNodeId !== 'qf02_r2') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_02', createQuercusForest02Map);
+    visitedNodes.add('qf02_r2');
+    currentMap.currentNodeId = 'qf02_r2';
+    arriveAtNode('qf02_r2', 'qf05_a_entry', true);
+    return;
+  }
+  // The Overhang (qf03_l4) ↔ Quercus forest 05 chain B (qf05_b_entry). Lands on
+  // the OTHER run of map 05, which chain A has no connection to.
+  if (!skipEncounter && nodeId === 'qf03_l4'
+      && currentMap.id === 'quercus_forest_03'
+      && fromNodeId !== 'qf05_b_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_05', createQuercusForest05Map);
+    visitedNodes = new Set(['qf05_b_entry']);
+    currentMap.currentNodeId = 'qf05_b_entry';
+    arriveAtNode('qf05_b_entry', 'qf03_l4');
+    return;
+  }
+  if (nodeId === 'qf05_b_entry'
+      && currentMap.id === 'quercus_forest_05'
+      && fromNodeId !== 'qf03_l4') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_03', createQuercusForest03Map);
+    visitedNodes.add('qf03_l4');
+    currentMap.currentNodeId = 'qf03_l4';
+    arriveAtNode('qf03_l4', 'qf05_b_entry', true);
+    return;
+  }
+  // The Far Buttress (qf02_l3) ↔ Quercus forest 04 threshold (qf04_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf02_l3'
+      && currentMap.id === 'quercus_forest_02'
+      && fromNodeId !== 'qf04_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_04', createQuercusForest04Map);
+    visitedNodes = new Set(['qf04_entry']);
+    currentMap.currentNodeId = 'qf04_entry';
+    arriveAtNode('qf04_entry', 'qf02_l3');
+    return;
+  }
+  if (nodeId === 'qf04_entry'
+      && currentMap.id === 'quercus_forest_04'
+      && fromNodeId !== 'qf02_l3') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_02', createQuercusForest02Map);
+    visitedNodes.add('qf02_l3');
+    currentMap.currentNodeId = 'qf02_l3';
+    arriveAtNode('qf02_l3', 'qf04_entry', true);
+    return;
+  }
+  // The Low Road (qf01_r1) ↔ Quercus forest 03 threshold (qf03_entry). Plain pair.
+  if (!skipEncounter && nodeId === 'qf01_r1'
+      && currentMap.id === 'quercus_forest_01'
+      && fromNodeId !== 'qf03_entry') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_03', createQuercusForest03Map);
+    visitedNodes = new Set(['qf03_entry']);
+    currentMap.currentNodeId = 'qf03_entry';
+    arriveAtNode('qf03_entry', 'qf01_r1');
+    return;
+  }
+  if (nodeId === 'qf03_entry'
+      && currentMap.id === 'quercus_forest_03'
+      && fromNodeId !== 'qf01_r1') {
+    if (currentMap) _mapCache[currentMap.id] = currentMap;
+    currentMap = getOrCreateMap('quercus_forest_01', createQuercusForest01Map);
+    visitedNodes.add('qf01_r1');
+    currentMap.currentNodeId = 'qf01_r1';
+    arriveAtNode('qf01_r1', 'qf03_entry', true);
+    return;
+  }
+
+  // End of the built road. The notice is fired ONCE per chain, at the point the
+  // player can actually be stopped — for the north-left road that is The Road
+  // Goes On (unl32_4), the gate onto the debug-only Quercus tunnels. Nothing
+  // toasts inside the tunnels themselves; a party that got in there is already
+  // past the warning. No teleport and no early return: the party walks onto the
+  // node normally, they just get told there's nothing past it yet. Replace a
+  // line with a teleport pair when the next map lands.
+  if ((nodeId === 'unl32_4' && currentMap.id === 'underdark_north_left_32' && fromNodeId !== 'qet01_entry')
       || (nodeId === 'unm36_4' && currentMap.id === 'underdark_north_middle_36')
       || (nodeId === 'unr40_4' && currentMap.id === 'underdark_north_right_40')) {
     showToast('The road runs on into the dark — but this area is not in the game yet.');
@@ -16138,6 +17142,66 @@ function handleMapClick(x, y) {
         (r.nodeId === 'unl31_entry' && currentMap.id === 'underdark_north_left_31') ||
         (r.nodeId === 'unl31_5' && currentMap.id === 'underdark_north_left_31') ||
         (r.nodeId === 'unl32_entry' && currentMap.id === 'underdark_north_left_32') ||
+        // The Quercus entry tunnels — The Road Goes On ↔ 01 ↔ 02. The seam at
+        // The Road Goes On is debug-gated to match the walk-onto case in
+        // arriveAtNode; without debug the click does nothing and the toast
+        // stays the only answer. The tunnel side is never gated.
+        (r.nodeId === 'unl32_4' && currentMap.id === 'underdark_north_left_32' && debugMode) ||
+        (r.nodeId === 'qet01_entry' && currentMap.id === 'quercus_entry_tunnels_01') ||
+        (r.nodeId === 'qet01_4' && currentMap.id === 'quercus_entry_tunnels_01') ||
+        (r.nodeId === 'qet02_entry' && currentMap.id === 'quercus_entry_tunnels_02') ||
+        // The forest past the tunnels — The Pale Opening ↔ 01, then 01's two
+        // branch ends ↔ 02 / 03.
+        (r.nodeId === 'qet02_5' && currentMap.id === 'quercus_entry_tunnels_02') ||
+        (r.nodeId === 'qf01_entry' && currentMap.id === 'quercus_forest_01') ||
+        (r.nodeId === 'qf01_l3' && currentMap.id === 'quercus_forest_01') ||
+        (r.nodeId === 'qf02_entry' && currentMap.id === 'quercus_forest_02') ||
+        (r.nodeId === 'qf01_r1' && currentMap.id === 'quercus_forest_01') ||
+        (r.nodeId === 'qf03_entry' && currentMap.id === 'quercus_forest_03') ||
+        (r.nodeId === 'qf02_l3' && currentMap.id === 'quercus_forest_02') ||
+        (r.nodeId === 'qf04_entry' && currentMap.id === 'quercus_forest_04') ||
+        (r.nodeId === 'qf02_r2' && currentMap.id === 'quercus_forest_02') ||
+        (r.nodeId === 'qf05_a_entry' && currentMap.id === 'quercus_forest_05') ||
+        (r.nodeId === 'qf03_l4' && currentMap.id === 'quercus_forest_03') ||
+        (r.nodeId === 'qf05_b_entry' && currentMap.id === 'quercus_forest_05') ||
+        (r.nodeId === 'qf04_rl3' && currentMap.id === 'quercus_forest_04') ||
+        (r.nodeId === 'qf06_entry' && currentMap.id === 'quercus_forest_06') ||
+        (r.nodeId === 'qf04_l1' && currentMap.id === 'quercus_forest_04') ||
+        (r.nodeId === 'qf07_entry' && currentMap.id === 'quercus_forest_07') ||
+        (r.nodeId === 'qf03_r3' && currentMap.id === 'quercus_forest_03') ||
+        (r.nodeId === 'qf08_entry' && currentMap.id === 'quercus_forest_08') ||
+        (r.nodeId === 'qf05_b5' && currentMap.id === 'quercus_forest_05') ||
+        (r.nodeId === 'qf09_entry' && currentMap.id === 'quercus_forest_09') ||
+        (r.nodeId === 'qf09_r3' && currentMap.id === 'quercus_forest_09') ||
+        (r.nodeId === 'qf10_entry' && currentMap.id === 'quercus_forest_10') ||
+        (r.nodeId === 'qf09_l2' && currentMap.id === 'quercus_forest_09') ||
+        (r.nodeId === 'qf11_entry' && currentMap.id === 'quercus_forest_11') ||
+        (r.nodeId === 'qf11_r2' && currentMap.id === 'quercus_forest_11') ||
+        (r.nodeId === 'qf12_entry' && currentMap.id === 'quercus_forest_12') ||
+        (r.nodeId === 'qf11_l2' && currentMap.id === 'quercus_forest_11') ||
+        (r.nodeId === 'qf14_entry' && currentMap.id === 'quercus_forest_14') ||
+        (r.nodeId === 'qf06_4' && currentMap.id === 'quercus_forest_06') ||
+        (r.nodeId === 'qf15_entry' && currentMap.id === 'quercus_forest_15') ||
+        (r.nodeId === 'qf15_4' && currentMap.id === 'quercus_forest_15') ||
+        (r.nodeId === 'qf16_entry' && currentMap.id === 'quercus_forest_16') ||
+        (r.nodeId === 'qf16_6' && currentMap.id === 'quercus_forest_16') ||
+        (r.nodeId === 'gate_cut_passage' && currentMap.id === 'tharnag_tunnels_gate_of_deep') ||
+        (r.nodeId === 'qf12_r1' && currentMap.id === 'quercus_forest_12') ||
+        (r.nodeId === 'qf17_entry' && currentMap.id === 'quercus_forest_17') ||
+        (r.nodeId === 'qf05_a6' && currentMap.id === 'quercus_forest_05') ||
+        (r.nodeId === 'qf17_r2' && currentMap.id === 'quercus_forest_17') ||
+        (r.nodeId === 'qf08_5' && currentMap.id === 'quercus_forest_08') ||
+        (r.nodeId === 'qf18_entry' && currentMap.id === 'quercus_forest_18') ||
+        (r.nodeId === 'qf18_l2' && currentMap.id === 'quercus_forest_18') ||
+        (r.nodeId === 'qf19_a_entry' && currentMap.id === 'quercus_forest_19') ||
+        (r.nodeId === 'qf17_l5' && currentMap.id === 'quercus_forest_17') ||
+        (r.nodeId === 'qf19_b_entry' && currentMap.id === 'quercus_forest_19') ||
+        (r.nodeId === 'qf19_a5' && currentMap.id === 'quercus_forest_19') ||
+        (r.nodeId === 'qf20_entry' && currentMap.id === 'quercus_forest_20') ||
+        (r.nodeId === 'qf04_rr3' && currentMap.id === 'quercus_forest_04') ||
+        (r.nodeId === 'qf13_entry' && currentMap.id === 'quercus_forest_13') ||
+        (r.nodeId === 'qf13_7' && currentMap.id === 'quercus_forest_13') ||
+        (r.nodeId === 'qf10_l2' && currentMap.id === 'quercus_forest_10') ||
         // The north road — The Sealed Arch ↔ 26, then 26's two ends ↔ 27 / 28.
         (r.nodeId === 'usx_n2' && currentMap.id === 'underdark_south_xroad_4') ||
         (r.nodeId === 'unp26_entry' && currentMap.id === 'underdark_north_path_26') ||
@@ -16862,6 +17926,7 @@ function getOrCreateMap(mapId, factory) {
 // isolated, all-locked map.
 function hydrateMapFromGlobalState(map) {
   if (!map) return;
+  unlockQuercusTunnelNode(map);
   // First pass: any node whose encounter has been completed becomes
   // done + unlocked + un-hidden.
   for (const node of Object.values(map.nodes)) {
@@ -18115,6 +19180,136 @@ function startNodeEncounter(nodeId) {
     return;
   }
 
+  // ── The Sealed Mouth, after the Great Pour beat ──────────────────────────
+  // The node keeps its original encounterId, but once the survivors have been
+  // met it stops being a story beat and becomes Durgan's work site. Four
+  // states, in order: asking for tools → cutting → (long rest) → through.
+  if (node && nodeId === 'qf16_5' && completedEncounters.has('quercus_sealed_mouth')) {
+    // Repair a save whose survivors latch was missed before asking whether it
+    // is set — otherwise the node sits on the quiet-site branch forever.
+    syncQuercusSurvivorsLatch();
+    // Through already — the node is a plain teleporter now, handled by the
+    // cross-map pair in arriveAtNode. Nothing to play.
+    if (quercusTunnelOpen()) { quercusQuietSite(nodeId); return; }
+    // The survivors have not been found yet, so nobody is here. Quiet.
+    if (!completedEncounters.has('quercus_survivors')) { quercusQuietSite(nodeId); return; }
+    if (quercusDigStarted()) {
+      // They have the tools. Coming back before a long rest finds them still
+      // at it; coming back after finds the gap, once.
+      if (!_quercusDigRested) {
+        showToast('The four of them are still cutting. This will take as long as it takes.');
+        quercusQuietSite(nodeId);
+        return;
+      }
+      // NOTE: do NOT try to unlock the gap here. quercusTunnelOpen() reads
+      // completedEncounters, and the beat has only just STARTED — the id does
+      // not land until it finishes. The unlock lives in
+      // applyEncounterCompletionLatches, which both completion paths call.
+      currentEncounter = offerQuercusRest(createQuercusTunnelOpenEncounter(), nodeId);
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+    // Still asking. The dialog reports the running count.
+    currentEncounter = offerQuercusRest(createQuercusToolsAskEncounter(_quercusToolsDonated, QUERCUS_TOOLS_NEEDED), nodeId);
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    advanceEncounterPhase();
+    return;
+  }
+
+  // ── Quercus search sites ─────────────────────────────────────────────────
+  // Five rolled sites, four holding a clue and one a dud. The node carries the
+  // clue's encounter id, but whether it FIRES is decided here, because it
+  // depends on the roll and on how many clues are already in hand.
+  //
+  // One-shot is handled here rather than with canRevisit:false, because the
+  // dud has to stay re-enterable for its once-per-long-rest breather.
+  if (node && QUERCUS_CLUE_NODES[nodeId]) {
+    chooseQuercusCluesIfNeeded();
+    const clueId = QUERCUS_CLUE_NODES[nodeId];
+    // Not until the Sealed Mouth. Before that beat the party does not know
+    // anybody walked out of the tunnel, so there is nothing here they could
+    // read — and without this gate three rolled clues alone would reach the
+    // survivors, skipping the Great Pour scene entirely and making the
+    // "four of six" count really a three of five.
+    if (!completedEncounters.has(QUERCUS_SEALED_MOUTH_CLUE)) {
+      currentEncounter = offerQuercusRest(createQuercusTooSoonEncounter(), nodeId);
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+    // Already searched this one — the party walks over it in silence.
+    if (completedEncounters.has(clueId)) { quercusQuietSite(nodeId); return; }
+    const holdsClue = Array.isArray(_quercusClueSites) && _quercusClueSites.includes(nodeId);
+    if (!holdsClue) {
+      // The dud. Nothing to find, but somewhere to sit — once per long rest.
+      // Never lands in completedEncounters (quercus_no_sign is listed in
+      // REPEATABLE_ENCOUNTERS), so the site stays available after a rest.
+      const rested = _quercusSiteRested.has(nodeId);
+      currentEncounter = offerQuercusRest(createQuercusNoSignEncounter(rested), nodeId);
+      encounterTextIndex = 0;
+      encounterChoiceResult = null;
+      _encounterHadCombat = false;
+      advanceEncounterPhase();
+      return;
+    }
+    // A real clue. The tally line is appended by the builder so the clue text
+    // itself stays order-independent; the count includes this one.
+    const found = quercusCluesFound() + 1;
+    currentEncounter = createQuercusClueEncounter(clueId, found);
+    // The site that completes the set is where the dwarves are. Their scene is
+    // appended to this encounter's phases so the clue plays first and the
+    // meeting follows on, and it completes under the CLUE's id — the survivors
+    // beat is stamped into completedEncounters by the post-encounter hook.
+    if (found >= QUERCUS_CLUES_NEEDED) {
+      const survivors = createQuercusSurvivorsEncounter();
+      for (const phase of survivors.phases) currentEncounter.phases.push(phase);
+      _quercusSurvivorsPending = true;
+    }
+    // After the survivors' scene, not before it.
+    offerQuercusRest(currentEncounter, nodeId);
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    advanceEncounterPhase();
+    return;
+  }
+
+  // Quercus Forest arrival — the party steps out of the entry tunnels into the
+  // lit cavern. Two variants, picked on whether Cornis is actually travelling
+  // with them: he carries the "do not eat anything down here" warning when he
+  // is, and Brad carries it when he is not.
+  //
+  // One-shot, but the LATCH IS ON THE ENCOUNTER, not the node. qf01_entry is a
+  // teleport threshold and has to stay canRevisit (otherwise the way back to
+  // the tunnels stops working), so the standard `!node.isDone` gate would let
+  // this replay every time the party walked back in. A second way into the
+  // forest later only needs to check the same two ids here.
+  if (node && node.encounterId === 'quercus_arrival') {
+    if (completedEncounters.has('quercus_arrival')
+        || completedEncounters.has('quercus_arrival_cornis')) {
+      state = GameState.MAP;
+      return;
+    }
+    // Roll the search the moment the party is in the forest, and autosave on
+    // the spot — so reloading beside a site can never re-decide whether it is
+    // the dud. The sites also roll lazily on first arrival at one, in case a
+    // later entrance skips this beat.
+    chooseQuercusCluesIfNeeded();
+    currentEncounter = createQuercusArrivalEncounter(playerHasCornisCard());
+    encounterTextIndex = 0;
+    encounterChoiceResult = null;
+    _encounterHadCombat = false;
+    advanceEncounterPhase();
+    return;
+  }
+
   // Cornis's front room — once the party has slept in the borrowed house, coming
   // back across the lane starts the meal beat (one-shot; completedEncounters
   // keeps it from replaying). The node itself carries no encounterId because
@@ -18979,6 +20174,29 @@ function revealUnderdarkOutpost(map) {
 
 function applyEncounterCompletionLatches(id) {
   if (!id) return;
+  // The Quercus survivors scene rides along on whichever clue completed the
+  // set, so it finishes under that CLUE's id. Stamp its own id too, or nothing
+  // downstream can ask whether the dwarves have been found.
+  //
+  // This belongs here and not in the phase-completion path: the site also ends
+  // on a "Sit a while" choice, and a completesEncounter choice takes the other
+  // route out. Latching in only one of them is how the Sealed Mouth could stay
+  // stuck asking for nothing after the party had already met the guard.
+  if (_quercusSurvivorsPending
+      && QUERCUS_CLUE_NODES && Object.values(QUERCUS_CLUE_NODES).includes(id)) {
+    completedEncounters.add('quercus_survivors');
+    _quercusSurvivorsPending = false;
+    autosaveNow();
+  }
+  // Durgan's crew are through: open the gap past The Sealed Mouth. Here and not
+  // at the dialog's start, because quercusTunnelOpen() reads completedEncounters
+  // and the id only lands on completion. Here and not in the phase-completion
+  // path, because the beat carries a "Sit a while" choice and so exits the
+  // other way.
+  if (id === 'quercus_tunnel_open') {
+    unlockQuercusTunnelNode(currentMap);
+    autosaveNow();
+  }
   if (id === 'giant_boar_ambush') giantBoarDefeated = true;
   if (id === 'wreckage_arrival' || id === 'wreckage_harpy_revisit') harpiesDefeated = true;
   if (id === 'circular_ruins_combat' || id === 'circular_ruins_combat_repeat') direBearDefeated = true;
@@ -19024,6 +20242,9 @@ function advanceEncounterPhase() {
       // Deep Gnome Merchants roam — the trade party can be met again on a
       // later roll, so it must never land in completedEncounters.
       'gnome_merchants', 'gnome_merchants_cornis',
+      // The Quercus dud site — nothing to find, but its breather re-arms on a
+      // long rest, so the encounter must stay repeatable.
+      'quercus_no_sign', 'quercus_too_soon',
       // The village fountain is a repeatable gold sink.
       'glowstone_fountain',
     ]);
@@ -22465,7 +23686,8 @@ function drawMap() {
     // gate in getMapNodeRects already honors the same rule.
     if (node.discoverable) {
       const accessibleNow = accessible.includes(id);
-      const visibleNow = visitedNodes.has(id) || node.isDone || accessibleNow || id === currentMap.currentNodeId;
+      const visibleNow = visitedNodes.has(id) || node.isDone || node._revealed
+        || accessibleNow || id === currentMap.currentNodeId;
       if (!visibleNow) continue;
     }
     const isCurrent = id === currentMap.currentNodeId;
@@ -23834,6 +25056,7 @@ function handleEncounterChoiceClick(x, y) {
         return;
       }
       case 'short_rest':
+      case 'quercus_rest':
       case 'search_camp':
       case 'search_clearing':
       case 'leave_clearing':
@@ -24523,6 +25746,24 @@ function handleEncounterChoiceClick(x, y) {
       }
       // Heart of the Volcano — sacrifice picker. One of four categories
       // (Weapon / Armor / Item / Relic). Mirrors PY game.py:6322-6347.
+      // Quercus dig-out — donate a breaking tool to Durgan's crew. Reuses the
+      // Volcano Heart's picker wholesale; _quercusDonationMode is what tells
+      // confirmSacrifice to give the card away instead of burning it for a buff.
+      if (r.choice.effectType === 'donate_tool') {
+        const eligible = collectBreakingTools();
+        if (eligible.cards.length === 0) {
+          showStickyToast('Nothing you are carrying was made for going through armour.');
+          return;
+        }
+        sacrificePickerCards = eligible.cards;
+        sacrificePickerBackpackUids = eligible.backpackUids;
+        sacrificePickerScroll = 0;
+        sacrificePickerSubtype = 'Breaking Tool';
+        _quercusDonationMode = true;
+        previousState = state;
+        state = GameState.VOLCANO_SACRIFICE;
+        return;
+      }
       if (r.choice.effectType === 'sacrifice_weapon'
           || r.choice.effectType === 'sacrifice_armor'
           || r.choice.effectType === 'sacrifice_item'
@@ -24667,6 +25908,8 @@ function handleEncounterChoiceClick(x, y) {
       if (r.choice.effectType === 'search_clearing') resolveSearchClearing(r.choice);
       // Resolve short_rest immediately
       if (r.choice.effectType === 'short_rest') resolveShortRest(r.choice);
+      // Quercus dud site breather — heals and latches the site until a long rest.
+      if (r.choice.effectType === 'quercus_rest') resolveQuercusSiteRest(r.choice);
       // Obsidian Forge rest — one-time heal. Sets the global flag so
       // future visits gray out the choice (also auto-stamped via
       // node.exhaustedChoices, but the flag is what the revisit-encounter
@@ -24755,7 +25998,7 @@ function handleEncounterChoiceClick(x, y) {
 function autosaveNow() {
   try {
     if (!player || !currentMap) return;
-    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, underdarkEncounterChance, underdarkEncArmed: _underdarkEncArmed, fountainStepReduction: _fountainStepReduction, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed, mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked, gnomeVillageRested: _gnomeVillageRested, mushroomFarmsHarvested: [..._mushroomFarmsHarvested], rareMushroomFound: _rareMushroomFound, mushroomFarmIntroSeen: _mushroomFarmIntroSeen, quietPoolUsed: _quietPoolUsed, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset,
+    saveToAutoSlot({ selectedClass, selectedQuest, gold, player, currentMap, visitedNodes, backpack, kitchenChoiceMade, prisonBarrelLooted, shownDeckTutorial, calmGroveRaenaJoined, calmGroveBreadTaken, antiquityShopCleared, soldCardsHistory, mimicTongueAcquiredThisRun, forestCleared, forestLoopLevel, forestCorrectPath, siegeProgress, siegeComplete, throneAudienceComplete, quartersRested, dragonSlain, part2Started, part2SiegeOver, greatPourActivated, chapter2Started, tunnelExitNode: _tunnelExitNode, tunnelExitLocked: _tunnelExitLocked, staircaseTopDragonDialogSeen, mithrilRemediesVisited, dwarvenTavernFreebieGiven, dragonEggDamage, heroesOfQualibaf, volcanoChoiceCompleted, armorerSonQuestStarted, valdrisaJoined, upperStairsReturnSeen, tharnagExitSeen, studyVisited, stoneDoorOpened, necromancerMainGame: _necromancerMainGame, completedEncounters, labyrinthGenerated, labyrinthSeed, labyrinthEncounterChance, labyrinthComplete, wastesNorthRestDone, volcanoEncounterChance, undergroundEncounterChance, tunnelEncounterChance, eastEncounterChance, deepGnollEncounterChance, underdarkEncounterChance, underdarkEncArmed: _underdarkEncArmed, fountainStepReduction: _fountainStepReduction, gnollCaveTypes: _gnollCaveTypes, forceCragCatNext: _forceCragCatNext, fledCragCatReturnFrac: _fledCragCatReturnFrac, eastEncTrigger: _eastEncounterChanceAtTrigger, chapter8SlybladeSeen, forgeUsed, forgeRested, volcanoHeartSacrificed, volcanoBuffType, volcanoBuffTurns, cathedralPrayed, cathedralRested, ancestorSpiritsDefeated, ancestorRested, workbenchRested, workbenchUsed, mapTableCopied, mapTableRested, caveEntranceDoubledBack, cozySpotFishingCaught, outpostTentRested, supplyPileTaken, krakenDefeated, krakenLevelUpClaimed, harpiesDefeated, underdarkGnollUnlocked: _underdarkGnollUnlocked, bottomlessLakeRevealed: _bottomlessLakeRevealed, mushroomCircleUsed: _mushroomCircleUsed, karEdenRoadUnlocked: _karEdenRoadUnlocked, gnomeVillageRested: _gnomeVillageRested, mushroomFarmsHarvested: [..._mushroomFarmsHarvested], rareMushroomFound: _rareMushroomFound, mushroomFarmIntroSeen: _mushroomFarmIntroSeen, quietPoolUsed: _quietPoolUsed, lakeFrogRocks: _lakeFrogRocks, bridgePatrolNodes: _bridgePatrolNodes, quercusClueSites: _quercusClueSites, quercusSiteRested: _quercusSiteRested, quercusToolsDonated: _quercusToolsDonated, quercusDigRested: _quercusDigRested, mapCache: _mapCache, wellRestedDeckSize: _wellRestedDeckSize, playerTierOffset, monsterTierOffset,
       // Journal state. seenDialogs drives the ENTIRE journal — every chapter,
       // section header and row self-hides until its id is in that Set — and
       // journalChoices holds the decisions recorded under each entry. Both were
@@ -24795,6 +26038,16 @@ function autosaveNow() {
   } catch (err) {
     console.warn('Autosave failed:', err);
   }
+}
+
+// Quercus dud site — the same short-rest heal, plus a latch so this particular
+// site cannot be milked. Cleared for every site by setWellRested, so a long
+// rest re-arms all of them.
+function resolveQuercusSiteRest(choice) {
+  resolveShortRest(choice);
+  if (_quercusRestNodeId) _quercusSiteRested.add(_quercusRestNodeId);
+  _quercusRestNodeId = null;
+  autosaveNow();
 }
 
 function resolveOutpostTentRest(choice) {
@@ -59035,6 +60288,25 @@ function getActiveForgeCards() {
   }
   return forgePickerCards;
 }
+// Where a card in a picker is coming FROM. Every picker that can permanently
+// spend a card (the forge / shrine reforge, the Volcano Heart sacrifice, and
+// Durgan's tool donation) draws from the master deck AND the backpack, and
+// giving up a card you are actually running is a very different decision from
+// giving up one that has been sitting in a bag. So both sources are labelled,
+// the same way, on all of them.
+//
+// Sits BELOW the card rather than over it: these screens are the last place the
+// player sees the full art before the card goes, so nothing covers it. Drawn
+// for ore stacks too — their xN badge is up on the card and does not collide.
+function drawCardSourceTag(card, rect, backpackUids) {
+  const fromBackpack = !!(card && card.uid && backpackUids && backpackUids.has(card.uid));
+  ctx.fillStyle = fromBackpack ? Colors.GOLD : '#9fd0ff';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(fromBackpack ? 'Backpack' : 'Deck', rect.x + rect.w / 2, rect.y + rect.h + 20);
+  ctx.textAlign = 'left';
+}
+
 function layoutForgePickerRects() {
   const cardW = 200, cardH = 280, gapX = 20, gapY = 30;
   const totalW = FORGE_PICKER_COLS * cardW + (FORGE_PICKER_COLS - 1) * gapX;
@@ -59527,13 +60799,8 @@ function drawForgeWeaponOverlay() {
       ctx.textAlign = 'center';
       ctx.fillText(`x${r.card._forgeOreCount}`, bx + 12, by + 15);
       ctx.textAlign = 'left';
-    } else if (forgePickerBackpackUids.has(r.card.uid)) {
-      // Label sits BELOW the card (no dark bar over the art).
-      ctx.fillStyle = Colors.GOLD;
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Backpack', r.x + r.w / 2, r.y + r.h + 20);
     }
+    drawCardSourceTag(r.card, r, forgePickerBackpackUids);
   }
 
   const cw = 220, ch = 50;
@@ -59596,7 +60863,50 @@ function handleSacrificeClick(x, y) {
   }
 }
 
+// Quercus dig-out — hand one breaking tool to Durgan. Permanent: the card is
+// banished exactly as a Volcano sacrifice is, so it leaves the master deck, every
+// live pile and the backpack. The fourth one starts the work.
+function confirmToolDonation(card) {
+  if (!card) return;
+  // Epic or better is almost certainly something the player built a run around,
+  // and this is permanent with no undo anywhere. Make them say it twice.
+  const rarity = (card.rarity || 'common').toLowerCase();
+  if (QUERCUS_CONFIRM_RARITIES.has(rarity) && _quercusDonateWarnCard !== card) {
+    _quercusDonateWarnCard = card;
+    showStickyToast(`${card.name} is ${rarity.toUpperCase()} and will be gone for good. Click it again to hand it over.`);
+    return;
+  }
+  _quercusDonateWarnCard = null;
+  hideToast();
+  const name = card.name;
+  banishCard(card);
+  _quercusDonationMode = false;
+  _quercusToolsDonated++;
+  sacrificePickerCards = [];
+  sacrificePickerBackpackUids = new Set();
+  sacrificePickerScroll = 0;
+  sacrificePickerSubtype = '';
+  sacrificeCancelRect = null;
+  currentEncounter = null;
+  encounterChoiceResult = null;
+  if (_quercusToolsDonated >= QUERCUS_TOOLS_NEEDED) {
+    // The fourth. Straight into the crew getting to work — no map round-trip.
+    currentEncounter = createQuercusToolsWorkingEncounter();
+    encounterTextIndex = 0;
+    _encounterHadCombat = false;
+    advanceEncounterPhase();
+    autosaveNow();
+    return;
+  }
+  const left = QUERCUS_TOOLS_NEEDED - _quercusToolsDonated;
+  showToast(`${name} goes into the wall. Durgan reckons they need ${left} more.`);
+  state = GameState.MAP;
+  autosaveNow();
+}
+
 function cancelSacrifice() {
+  _quercusDonationMode = false;
+  _quercusDonateWarnCard = null;
   sacrificePickerCards = [];
   sacrificePickerBackpackUids = new Set();
   sacrificePickerScroll = 0;
@@ -59862,6 +61172,9 @@ function syncVolcanoBlessingPersistentBuff() {
 
 function confirmSacrifice(card) {
   if (!card) return;
+  // Donation branch — same banish, entirely different meaning, and none of the
+  // Volcano's buff bookkeeping.
+  if (_quercusDonationMode) { confirmToolDonation(card); return; }
   const subtype = sacrificePickerSubtype;
   const name = card.name;
   // Determine the Volcano's Blessing flavor BEFORE banishing, so we can
@@ -59933,6 +61246,21 @@ function drawSacrificeOverlay() {
   ctx.font = '16px sans-serif';
   ctx.fillText('The chosen card is permanently consumed from your run.', SCREEN_WIDTH / 2, 100);
 
+  // Epic+ donation awaiting its second click — pulse the warning so it is not
+  // something the player can click past without reading.
+  if (_quercusDonateWarnCard) {
+    const pulse = 0.75 + 0.25 * Math.abs(Math.sin(performance.now() / 260));
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#ff8080';
+    ctx.font = 'bold 18px Georgia, serif';
+    ctx.fillText(
+      `${_quercusDonateWarnCard.name} is ${(_quercusDonateWarnCard.rarity || '').toUpperCase()} — click it again to give it up for good.`,
+      SCREEN_WIDTH / 2, 124,
+    );
+    ctx.restore();
+  }
+
   if (sacrificePickerCards.length > FORGE_PICKER_COLS * FORGE_PICKER_ROWS_VISIBLE) {
     ctx.fillStyle = Colors.GRAY;
     ctx.font = '13px sans-serif';
@@ -59949,14 +61277,7 @@ function drawSacrificeOverlay() {
       ctx.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
     }
     drawCard(r.card, r.x, r.y, r.w, r.h, false, false, 'full');
-    if (sacrificePickerBackpackUids.has(r.card.uid)) {
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(r.x, r.y + r.h - 22, r.w, 22);
-      ctx.fillStyle = Colors.GOLD;
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Backpack', r.x + r.w / 2, r.y + r.h - 6);
-    }
+    drawCardSourceTag(r.card, r, sacrificePickerBackpackUids);
   }
 
   const cw = 220, ch = 50;
@@ -60752,6 +62073,26 @@ function getDebugHealBtnRect() {
   return { x: SCREEN_WIDTH - w - 14, y: 123, w, h };
 }
 
+// Debug-only Long Rest — sits directly under Heal (debug) in the same column.
+// Does what an inn does: a real setWellRested, so every rest-latched flag
+// re-arms (roaming fights respawn, breathers come back, Durgan's crew get
+// their time in) and the deck rebalances. The point is to skip the waiting
+// when testing anything that keys off "a long rest has passed".
+function getDebugLongRestBtnRect() {
+  if (!debugMode) return null;
+  if (state !== GameState.INVENTORY) return null;
+  const w = 110, h = 22;
+  return { x: SCREEN_WIDTH - w - 14, y: 123 + 22 + 6, w, h };
+}
+
+function triggerDebugLongRest() {
+  triggerDebugFullHeal();
+  setWellRested();
+  autosaveNow();
+  showStyledToast('Long rest (debug) — rest latches cleared, deck rebalanced.', 'scry', 2200);
+  addLog('Long rest (debug)', Colors.GOLD);
+}
+
 // Empty the discard pile back into the deck and scrub every Ailment — the
 // deck IS the HP bar, so "full heal" means the discard hits zero.
 //
@@ -61502,6 +62843,11 @@ function handleInventoryClick(x, y) {
     const healBtn = getDebugHealBtnRect();
     if (healBtn && hitTest(x, y, healBtn)) {
       triggerDebugFullHeal();
+      return;
+    }
+    const longRestBtn = getDebugLongRestBtnRect();
+    if (longRestBtn && hitTest(x, y, longRestBtn)) {
+      triggerDebugLongRest();
       return;
     }
     // Debug-only: click a perk on the character sheet to remove it (confirm).
@@ -62288,6 +63634,28 @@ function drawInventory() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Heal (debug)', hb.x + hb.w / 2, hb.y + hb.h / 2);
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Debug-only Long Rest button — fourth in the right-edge debug column,
+  // directly under Heal. Always enabled: a long rest does work even at full
+  // health (it clears every rest latch).
+  if (debugMode) {
+    const rb = getDebugLongRestBtnRect();
+    if (rb) {
+      const hov = hitTest(mouseX, mouseY, rb);
+      ctx.fillStyle = hov ? 'rgba(70, 95, 130, 0.95)' : 'rgba(40, 60, 95, 0.85)';
+      ctx.fillRect(rb.x, rb.y, rb.w, rb.h);
+      ctx.strokeStyle = '#8fb6e0';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(rb.x, rb.y, rb.w, rb.h);
+      ctx.fillStyle = '#d6e6f7';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Long Rest (debug)', rb.x + rb.w / 2, rb.y + rb.h / 2);
       ctx.textBaseline = 'alphabetic';
       ctx.textAlign = 'left';
     }
@@ -63284,7 +64652,7 @@ function commitSaveEditing() {
     psilofyrOffering: _psilofyrOffering, psilofyrIntroSeen: _psilofyrIntroSeen,
     quietPoolUsed: _quietPoolUsed,
     lakeFrogRocks: _lakeFrogRocks,
-    bridgePatrolNodes: _bridgePatrolNodes,
+    bridgePatrolNodes: _bridgePatrolNodes, quercusClueSites: _quercusClueSites, quercusSiteRested: _quercusSiteRested, quercusToolsDonated: _quercusToolsDonated, quercusDigRested: _quercusDigRested,
     backwardRefoggedOnce: _backwardRefoggedOnce,
     mapCache: _mapCache,
     wellRestedDeckSize: _wellRestedDeckSize,
@@ -64142,6 +65510,14 @@ function restoreFromSave(data) {
   mithrilRemediesOlbrimGreeted = !!data.mithrilRemediesOlbrimGreeted;
   _lakeFrogRocks = Array.isArray(data.lakeFrogRocks) ? data.lakeFrogRocks.slice() : null;
   _bridgePatrolNodes = Array.isArray(data.bridgePatrolNodes) ? data.bridgePatrolNodes.slice() : null;
+  _quercusClueSites = Array.isArray(data.quercusClueSites) ? data.quercusClueSites.slice() : null;
+  _quercusSiteRested = new Set(Array.isArray(data.quercusSiteRested) ? data.quercusSiteRested : []);
+  syncQuercusSurvivorsLatch();
+  _quercusToolsDonated = data.quercusToolsDonated | 0;
+  _quercusDigRested = !!data.quercusDigRested;
+  _quercusDonationMode = false;
+  _quercusRestNodeId = null;
+  _quercusSurvivorsPending = false;
   _currentBridgePatrolNode = null;
   krakenDefeated = !!data.krakenDefeated;
   krakenLevelUpClaimed = !!data.krakenLevelUpClaimed;
@@ -64300,6 +65676,28 @@ function restoreFromSave(data) {
     underdark_north_right_38: createUnderdarkNorthPathRight38Map,
     underdark_north_right_39: createUnderdarkNorthPathRight39Map,
     underdark_north_right_40: createUnderdarkNorthPathRight40Map,
+    quercus_entry_tunnels_01: createQuercusEntryTunnels01Map,
+    quercus_entry_tunnels_02: createQuercusEntryTunnels02Map,
+    quercus_forest_01: createQuercusForest01Map,
+    quercus_forest_02: createQuercusForest02Map,
+    quercus_forest_03: createQuercusForest03Map,
+    quercus_forest_04: createQuercusForest04Map,
+    quercus_forest_05: createQuercusForest05Map,
+    quercus_forest_06: createQuercusForest06Map,
+    quercus_forest_07: createQuercusForest07Map,
+    quercus_forest_08: createQuercusForest08Map,
+    quercus_forest_09: createQuercusForest09Map,
+    quercus_forest_10: createQuercusForest10Map,
+    quercus_forest_11: createQuercusForest11Map,
+    quercus_forest_12: createQuercusForest12Map,
+    quercus_forest_13: createQuercusForest13Map,
+    quercus_forest_14: createQuercusForest14Map,
+    quercus_forest_15: createQuercusForest15Map,
+    quercus_forest_16: createQuercusForest16Map,
+    quercus_forest_17: createQuercusForest17Map,
+    quercus_forest_18: createQuercusForest18Map,
+    quercus_forest_19: createQuercusForest19Map,
+    quercus_forest_20: createQuercusForest20Map,
     east_mountain_crags_chasm_08: createEastMountainCragsChasm08Map,
     east_mountain_crags_chasm_09: createEastMountainCragsChasm09Map,
     east_mountain_crags_chasm_10: createEastMountainCragsChasm10Map,
@@ -64400,7 +65798,15 @@ function restoreFromSave(data) {
       if (!node) continue;
       node.isDone = nodeState.isDone;
       node.isLocked = nodeState.isLocked;
-      if (nodeState.canRevisit === false) node.canRevisit = false;
+      // The clamp is one-way by design, but it also means a save written while a
+      // node was single-shot keeps it single-shot forever — even after the map
+      // definition changes. The six Quercus search sites MUST stay revisitable
+      // (their whole state machine lives in startNodeEncounter and only runs
+      // while canRunEncounter is true), so they are exempt. Without this, a save
+      // made before The Sealed Mouth was un-clamped could never advance
+      // Durgan's dig-out, and the player would have to restart the quest.
+      if (nodeState.canRevisit === false && !QUERCUS_REST_NODES.has(id)) node.canRevisit = false;
+      if (nodeState.revealed) node._revealed = true;
       if (typeof nodeState.hiddenName === 'string') node.hiddenName = nodeState.hiddenName;
       if (typeof nodeState.hiddenDescription === 'string') node.hiddenDescription = nodeState.hiddenDescription;
       if (Array.isArray(nodeState.exhaustedChoices)) node.exhaustedChoices = nodeState.exhaustedChoices.slice();

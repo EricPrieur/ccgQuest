@@ -1694,10 +1694,12 @@ export function createUnderdarkNorthPathLeft31Map() {
   return map;
 }
 
-// North Path Left 32 — through The Under Gate (unl31_5). 4 nodes in a line and
-// the current end of this road: walking onto the last node (unl32_4) fires a
-// "this area isn't built yet" toast (handled in arriveAtNode) and leaves the
-// party standing there. unl32_entry teleports back to unl31_5.
+// North Path Left 32 — through The Under Gate (unl31_5). 4 nodes in a line.
+// The last node (unl32_4) is the WIP seam onto the Quercus entry tunnels: with
+// debug mode ON it teleports through to qet01_entry, and with debug OFF it
+// still fires the "this area isn't built yet" toast and leaves the party
+// standing there (both handled in arriveAtNode). unl32_entry teleports back to
+// The Under Gate (unl31_5).
 export function createUnderdarkNorthPathLeft32Map() {
   const map = new GameMap('underdark_north_left_32', 'The Underdark');
   const AREA = 'underdark_north_left_32';
@@ -1708,11 +1710,717 @@ export function createUnderdarkNorthPathLeft32Map() {
     { id: 'unl32_entry', name: 'Beyond the Under Gate', description: 'Through the gate the road keeps its square, careful line, and the dark ahead has the feel of a made place rather than a dug one. The gate lies behind you.', encounterId: '', connections: ['unl32_2'], position: [980, 850], mapArea: AREA, canRevisit: true, passthroughTo: 'unl31_5' },
     { id: 'unl32_2', name: 'The Paved Way', description: 'The floor turns to fitted paving, every slab still sitting level after however many centuries this has been down here.', encounterId: '', connections: ['unl32_entry', 'unl32_3'], position: [880, 630], ...D },
     { id: 'unl32_3', name: 'The Marker Stones', description: 'Waist-high stones stand at intervals along the paving, each one carved with a mark none of you can read — and all of them pointing the same way on.', encounterId: '', connections: ['unl32_2', 'unl32_4'], position: [530, 470], ...D },
-    // End of the built road for now — see the toast case in arriveAtNode.
+    // The WIP seam onto the Quercus entry tunnels — teleports through with
+    // debug on, toasts "not built yet" with debug off. See arriveAtNode.
     { id: 'unl32_4', name: 'The Road Goes On', description: 'The paving runs on into a dark that swallows your light whole, and keeps going. Whatever is down there, it is further than you can reach today.', encounterId: '', connections: ['unl32_3'], position: [380, 300], ...D },
   ];
   for (const data of nodes) map.addNode(new MapNode(data));
   map.currentNodeId = 'unl32_entry';
+  return map;
+}
+
+// ── The Quercus entry tunnels — the road on past The Road Goes On. ──────────
+// Two maps chaining off the end of the north-LEFT chain: 01 (4 in a line) →
+// 02 (5 in a line). WIP: the step across from The Road Goes On (unl32_4) is
+// DEBUG-ONLY for now — with debug off that node still fires the old "not in the
+// game yet" toast instead of teleporting (see the arriveAtNode case). That is
+// the only gate on the whole chain: nothing past it toasts. The last node of 02
+// (The Pale Opening) carries on into the forest maps below.
+export function createQuercusEntryTunnels01Map() {
+  const map = new GameMap('quercus_entry_tunnels_01', 'Quercus Forest');
+  const AREA = 'quercus_entry_tunnels_01';
+  map.mapImages = { [AREA]: 'Maps/QuercusEntryTunnels01.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further up the spore-lit way.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Road Goes On (unl32_4). Always visible.
+    { id: 'qet01_entry', name: 'Where the Paving Ends', description: 'The last of the fitted slabs goes under a drift of pale grit, and after that the floor is the cave\'s own. Something further up is giving off its own faint light. The paved road lies behind you.', encounterId: '', connections: ['qet01_2'], position: [620, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'unl32_4' },
+    { id: 'qet01_2', name: 'The First Caps', description: 'Fungus stands along the walls in earnest here — squat, waist-high caps growing in rows too even to be an accident.', encounterId: '', connections: ['qet01_entry', 'qet01_3'], position: [270, 645], ...D },
+    { id: 'qet01_3', name: 'The Spore Drift', description: 'The way opens onto a rubbled flat where the air itself glitters, blue-green motes turning slowly in the draught and settling on everything that stands still.', encounterId: '', connections: ['qet01_2', 'qet01_4'], position: [600, 465], ...D },
+    // The last node teleports on to map 02.
+    { id: 'qet01_4', name: 'Under the Great Caps', description: 'Caps the size of cart wheels lean out over the path, and the light coming off their undersides is enough to walk by. The way runs on beneath them.', encounterId: '', connections: ['qet01_3'], position: [490, 65], ...D, passthroughTo: 'qet02_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qet01_entry';
+  return map;
+}
+
+// Quercus entry tunnels 02 — from Under the Great Caps (qet01_4). 5 nodes in a
+// line; the last (qet02_5, The Pale Opening) teleports on into the forest
+// (qf01_entry). No toast in here — the "not in the game yet" notice is fired
+// once, at the gate onto these tunnels. qet02_entry teleports back to qet01_4.
+export function createQuercusEntryTunnels02Map() {
+  const map = new GameMap('quercus_entry_tunnels_02', 'Quercus Forest');
+  const AREA = 'quercus_entry_tunnels_02';
+  map.mapImages = { [AREA]: 'Maps/QuercusEntryTunnels02.jpg' };
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Deeper up the lit tunnel.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to Under the Great Caps (qet01_4). Always visible.
+    { id: 'qet02_entry', name: 'Out from the Caps', description: 'The fungus thins and the rock closes back in, but the light does not go with it — the stone itself is seeded with it, pinprick by pinprick. The caps stand behind you.', encounterId: '', connections: ['qet02_2'], position: [510, 955], mapArea: AREA, canRevisit: true, passthroughTo: 'qet01_4' },
+    { id: 'qet02_2', name: 'The Seeded Stone', description: 'Points of cold green light sit in the rock on both sides at arm\'s reach, close enough to touch and not warm at all.', encounterId: '', connections: ['qet02_entry', 'qet02_3'], position: [830, 620], ...D },
+    { id: 'qet02_3', name: 'The Shingle Run', description: 'A long run of loose shingle climbs between the walls, every step of it announcing you to whatever is further up.', encounterId: '', connections: ['qet02_2', 'qet02_4'], position: [640, 450], ...D },
+    { id: 'qet02_4', name: 'The Narrow Shoulder', description: 'The passage pinches to a shoulder of rock you go round one at a time, and past it the draught changes — wetter, and moving.', encounterId: '', connections: ['qet02_3', 'qet02_5'], position: [760, 290], ...D },
+    // The last node teleports on to the forest (Quercus 01).
+    { id: 'qet02_5', name: 'The Pale Opening', description: 'Ahead the tunnel gives out into something far larger, lit grey-green from somewhere out of sight, and the air coming back down it is alive with spores. The way runs on.', encounterId: '', connections: ['qet02_4'], position: [640, 145], ...D, passthroughTo: 'qf01_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qet02_entry';
+  return map;
+}
+
+// ── The Quercus forest — three maps on past the entry tunnels. ─────────────
+// The Pale Opening (qet02_5) lets out into 01, which runs 2 nodes deep and then
+// forks: the LEFT way runs 3 nodes and crosses to 02, the RIGHT way runs 1 node
+// and crosses to 03. Both 02 and 03 repeat the shape — 2 nodes in, then a fork —
+// and both of their branches are dead ends for now. All of it sits behind the
+// debug-only gate at The Road Goes On, so nothing in here toasts.
+export function createQuercusForest01Map() {
+  const map = new GameMap('quercus_forest_01', 'Quercus Forest');
+  const AREA = 'quercus_forest_01';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest01.jpg' };
+  // No black overlay on these three (they are in NO_FOG_MAPS) — the cavern is
+  // the whole point, so the art shows entire from the moment the party walks
+  // in. The ROUTE is still fogged the normal way: every node past the
+  // threshold is `discoverable`, so it stays unseen until the party is one hop
+  // off it and reads as '???' until they stand on it. Same treatment as the
+  // deep gnome village — you see the place, not the path through it.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further into the fungus wood.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Pale Opening (qet02_5). Always visible.
+    // Threshold AND the arrival beat. The node has to stay canRevisit for the
+    // teleport, so the one-shot lives in the dispatch (startNodeEncounter gates
+    // on completedEncounters holding a quercus_arrival variant), not here.
+    { id: 'qf01_entry', name: 'Under the First Canopy', description: 'The tunnel gives out and the roof goes away entirely — what is over you now is caps, hundreds of them, tier on tier, lit from underneath. The way back is a black hole in the wall behind you.', encounterId: 'quercus_arrival', connections: ['qf01_2'], position: [545, 965], mapArea: AREA, canRevisit: true, passthroughTo: 'qet02_5' },
+    // The fork.
+    { id: 'qf01_2', name: 'The Stone Way', description: 'Somebody laid a road through all this once. The slabs are still here under the moss, and where they part they part deliberately — one way climbing, one way keeping low.', encounterId: '', connections: ['qf01_entry', 'qf01_l1', 'qf01_r1'], position: [685, 855], ...D },
+    // Left way — 3 nodes, on to map 02.
+    { id: 'qf01_l1', name: 'The Stepped Climb', description: 'The high road goes up in shallow stone steps, each one worn into a dish and each one slick with whatever has been dripping on it since.', encounterId: '', connections: ['qf01_2', 'qf01_l2'], position: [590, 730], ...D },
+    { id: 'qf01_l2', name: 'The Lantern Caps', description: 'A stand of caps leans right out over the steps here, burning a steady orange, and the light off them is warm enough to read a map by.', encounterId: '', connections: ['qf01_l1', 'qf01_l3'], position: [255, 545], ...D },
+    { id: 'qf01_l3', name: 'The High Terrace', description: 'The steps top out on a flat shelf of rock with the whole lit wood spread out below it, and the road carries on across. The way runs on.', encounterId: '', connections: ['qf01_l2'], position: [275, 370], ...D, passthroughTo: 'qf02_entry' },
+    // Right way — 1 node, on to map 03.
+    { id: 'qf01_r1', name: 'The Low Road', description: 'The low way keeps to the cavern floor and bends away east under the stalks, towards a break in the rock the caps have not managed to cover. The way runs on.', encounterId: '', connections: ['qf01_2'], position: [960, 610], ...D, passthroughTo: 'qf03_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf01_entry';
+  return map;
+}
+
+// Quercus forest 02 — from The High Terrace (qf01_l3). 7 nodes: a 2-node entry
+// (qf02_entry → _2) forking at _2 into a 3-node left way (qf02_l1 → l3) and a
+// 2-node right way (qf02_r1 → r2). Both ways dead-end for now.
+// qf02_entry teleports back to qf01_l3.
+export function createQuercusForest02Map() {
+  const map = new GameMap('quercus_forest_02', 'Quercus Forest');
+  const AREA = 'quercus_forest_02';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest02.jpg' };
+  // No black overlay on these three (they are in NO_FOG_MAPS) — the cavern is
+  // the whole point, so the art shows entire from the moment the party walks
+  // in. The ROUTE is still fogged the normal way: every node past the
+  // threshold is `discoverable`, so it stays unseen until the party is one hop
+  // off it and reads as '???' until they stand on it. Same treatment as the
+  // deep gnome village — you see the place, not the path through it.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The High Terrace (qf01_l3). Always visible.
+    { id: 'qf02_entry', name: 'Off the Terrace', description: 'The road comes down off the shelf into a deeper part of the wood, where the caps overhead are bigger and further apart and the light between them is nearer to dark. The terrace is behind you.', encounterId: '', connections: ['qf02_2'], position: [870, 970], mapArea: AREA, canRevisit: true, passthroughTo: 'qf01_l3' },
+    // The fork.
+    { id: 'qf02_2', name: 'The Causeway Fork', description: 'The paving gathers itself into a proper causeway here, raised a foot clear of the wet — and then thinks better of it and goes two ways at once.', encounterId: '', connections: ['qf02_entry', 'qf02_l1', 'qf02_r1'], position: [560, 855], ...D },
+    // Left way — 3 nodes, the last of them on to map 04.
+    { id: 'qf02_l1', name: 'The Raised Walk', description: 'The left causeway runs on above the ground on a wall of fitted stone, with a drop on one side your light does not find the bottom of.', encounterId: '', connections: ['qf02_2', 'qf02_l2'], position: [430, 700], ...D },
+    { id: 'qf02_l2', name: 'The Weeping Wall', description: 'Water comes through the rock face beside the walk in a hundred slow threads, and everything it has touched has gone a soft blue-green.', encounterId: '', connections: ['qf02_l1', 'qf02_l3'], position: [290, 565], ...D },
+    { id: 'qf02_l3', name: 'The Far Buttress', description: 'The causeway ends against a buttress of raw stone — and then does not quite end. One span of fitted arch still stands out from the far side of it, narrow and low and entirely whole, and the road picks up again on the other side. The way runs on.', encounterId: '', connections: ['qf02_l2'], position: [170, 450], ...D, passthroughTo: 'qf04_entry' },
+    // Right way — 2 nodes, the last of them on to map 05 (chain A).
+    { id: 'qf02_r1', name: 'The Moss Shelf', description: 'The right way leaves the paving for a shelf of deep moss that takes your boots to the ankle and gives back no sound at all.', encounterId: '', connections: ['qf02_2', 'qf02_r2'], position: [690, 750], ...D },
+    { id: 'qf02_r2', name: 'The Candle Stalks', description: 'A clutch of pale stalks stands shoulder-high here, each one lit along its length like a taper, and the heat coming off them is real. Past the last of them the ground falls away to laid stone again. The way runs on.', encounterId: '', connections: ['qf02_r1'], position: [690, 620], ...D, passthroughTo: 'qf05_a_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf02_entry';
+  return map;
+}
+
+// Quercus forest 03 — from The Low Road (qf01_r1). 9 nodes: a 2-node entry
+// (qf03_entry → _2) forking at _2 into a 4-node left way (qf03_l1 → l4) and a
+// 3-node right way (qf03_r1 → r3). Both ways dead-end for now.
+// qf03_entry teleports back to qf01_r1.
+export function createQuercusForest03Map() {
+  const map = new GameMap('quercus_forest_03', 'Quercus Forest');
+  const AREA = 'quercus_forest_03';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest03.jpg' };
+  // No black overlay on these three (they are in NO_FOG_MAPS) — the cavern is
+  // the whole point, so the art shows entire from the moment the party walks
+  // in. The ROUTE is still fogged the normal way: every node past the
+  // threshold is `discoverable`, so it stays unseen until the party is one hop
+  // off it and reads as '???' until they stand on it. Same treatment as the
+  // deep gnome village — you see the place, not the path through it.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the low road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Low Road (qf01_r1). Always visible.
+    { id: 'qf03_entry', name: 'Through the Break', description: 'The gap in the rock opens on more of the same wood, older and steeper, climbing away on your left and falling away on your right. The break is behind you.', encounterId: '', connections: ['qf03_2'], position: [480, 990], mapArea: AREA, canRevisit: true, passthroughTo: 'qf01_r1' },
+    // The fork.
+    { id: 'qf03_2', name: 'The Split Paving', description: 'The old road survives here in two strips with the ground torn open between them, and taking either one means committing to it.', encounterId: '', connections: ['qf03_entry', 'qf03_l1', 'qf03_r1'], position: [490, 910], ...D },
+    // Left way — 4 nodes, dead end for now.
+    { id: 'qf03_l1', name: 'The Long Stair', description: 'The left strip turns into a stair almost at once and keeps climbing, flagstone after flagstone, tight against the cavern wall.', encounterId: '', connections: ['qf03_2', 'qf03_l2'], position: [175, 810], ...D },
+    { id: 'qf03_l2', name: 'The Slab Walk', description: 'The stair levels onto a run of great flat slabs, every joint between them packed with small bright fungus like mortar that got away.', encounterId: '', connections: ['qf03_l1', 'qf03_l3'], position: [125, 640], ...D },
+    { id: 'qf03_l3', name: 'The Upper Landing', description: 'A landing wide enough to stop and sit on, with the whole lit wood laid out below and a cold draught coming across it from somewhere further up.', encounterId: '', connections: ['qf03_l2', 'qf03_l4'], position: [190, 500], ...D },
+    { id: 'qf03_l4', name: 'The Overhang', description: 'The climb ends under an overhang hung with caps the size of doors, and behind them a fall of stone came down a long time ago and very nearly shut the way — but not quite. There is a gap at the top of the spill wide enough to go through one at a time, and running water somewhere on the other side of it. The way runs on.', encounterId: '', connections: ['qf03_l3'], position: [305, 385], ...D, passthroughTo: 'qf05_b_entry' },
+    // Right way — 3 nodes, dead end for now.
+    { id: 'qf03_r1', name: 'The Root Bank', description: 'The right strip drops to a bank laced with stalk-roots as thick as your arm, and every step is over or under one of them.', encounterId: '', connections: ['qf03_2', 'qf03_r2'], position: [610, 940], ...D },
+    { id: 'qf03_r2', name: 'The Still Water', description: 'A sheet of water lies flat in the hollow here, so still it takes the caps overhead and hands them back exactly, and it has no smell at all.', encounterId: '', connections: ['qf03_r1', 'qf03_r3'], position: [610, 830], ...D },
+    { id: 'qf03_r3', name: 'The Fall Head', description: 'Water comes down the far wall in a broad pale curtain and goes on down past the ledge you are standing on, further than your light follows — but the ledge goes down with it, in a stair cut close against the rock and wet to the ankle. The way runs on.', encounterId: '', connections: ['qf03_r2'], position: [690, 720], ...D, passthroughTo: 'qf08_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf03_entry';
+  return map;
+}
+
+// Quercus forest 04 — from The Far Buttress (qf02_l3), over the surviving span.
+// 12 nodes and two forks. A 3-node entry (qf04_entry → _2 → _3) forks at _3
+// into a 1-node left way (qf04_l1, dead end) and a 2-node right way
+// (qf04_r1 → r2) — and r2 forks AGAIN into two 3-node ways (qf04_rl1 → rl3 and
+// qf04_rr1 → rr3). All four branch ends are dead ends for now.
+// qf04_entry teleports back to qf02_l3.
+export function createQuercusForest04Map() {
+  const map = new GameMap('quercus_forest_04', 'Quercus Forest');
+  const AREA = 'quercus_forest_04';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest04.jpg' };
+  // No black overlay on this one either (it is in NO_FOG_MAPS) — the cavern is
+  // the whole point, so the art shows entire from the moment the party walks
+  // in. The ROUTE is still fogged the normal way: every node past the
+  // threshold is `discoverable`, so it stays unseen until the party is one hop
+  // off it and reads as '???' until they stand on it. Same treatment as the
+  // deep gnome village — you see the place, not the path through it.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Far Buttress (qf02_l3). Always visible.
+    { id: 'qf04_entry', name: 'Over the Span', description: 'The arch takes your weight without a murmur and sets you down on flagstones again, and the road on this side is in better repair than anything behind you. The span is at your back.', encounterId: '', connections: ['qf04_2'], position: [630, 955], mapArea: AREA, canRevisit: true, passthroughTo: 'qf02_l3' },
+    { id: 'qf04_2', name: 'The Low Arch', description: 'The road goes out over a second span, this one low and humped and hung underneath with pale threads, and there is a long way down on either hand.', encounterId: '', connections: ['qf04_entry', 'qf04_3'], position: [490, 800], ...D },
+    // First fork.
+    { id: 'qf04_3', name: 'The Meeting of Ways', description: 'Three roads come together on a shelf of level paving — the one you walked in on, a stair going up the wall, and a causeway running away under the big stalks.', encounterId: '', connections: ['qf04_2', 'qf04_l1', 'qf04_r1'], position: [240, 840], ...D },
+    // Left way — 1 node, on to map 07 across the broken walkway.
+    { id: 'qf04_l1', name: 'The Cut Stair', description: 'Steps go up the wall here in one tight flight and stop at a walkway that has come away from its anchors — a single stride of it still juts out over nothing at all. The far side is right there. It is one step, and it is a long way down if it is not. The way runs on.', encounterId: '', connections: ['qf04_3'], position: [55, 960], ...D, passthroughTo: 'qf07_entry' },
+    // Right way — 2 nodes to the second fork.
+    { id: 'qf04_r1', name: 'The Long Causeway', description: 'The causeway runs straight and level for further than you would have thought this cavern allowed, with the drop on the right hand and the stalks closing overhead.', encounterId: '', connections: ['qf04_3', 'qf04_r2'], position: [250, 715], ...D },
+    // Second fork.
+    { id: 'qf04_r2', name: 'The Second Parting', description: 'The causeway gives out onto open ground and the way divides again — one track climbing away into the deep moss, one bending down towards a line of small burning colour.', encounterId: '', connections: ['qf04_r1', 'qf04_rl1', 'qf04_rr1'], position: [400, 645], ...D },
+    // North way — 3 nodes, dead end for now.
+    { id: 'qf04_rl1', name: 'The Mossy Rise', description: 'The ground lifts away from the paving in banks of moss deep enough to take a boot to the ankle, all of it running up toward the biggest stalk in sight.', encounterId: '', connections: ['qf04_r2', 'qf04_rl2'], position: [280, 590], ...D },
+    { id: 'qf04_rl2', name: 'Under the Great Stalk', description: 'The trunk of it is wider than a guard tower and warm to stand beside, and the light coming down through the gills overhead lays everything in stripes.', encounterId: '', connections: ['qf04_rl1', 'qf04_rl3'], position: [210, 440], ...D },
+    { id: 'qf04_rl3', name: 'The Gill Shade', description: 'Past the trunk the cap overhangs so far that the ground beneath it is dry, dusty and entirely dark — the one patch of honest night in the whole cavern. Cross it, and there is light on the far side, and cobbles underfoot. The way runs on.', encounterId: '', connections: ['qf04_rl2'], position: [280, 350], ...D, passthroughTo: 'qf06_entry' },
+    // South way — 3 nodes, dead end for now.
+    { id: 'qf04_rr1', name: 'The Ember Beds', description: 'Low orange growth runs beside the track in ragged lines, the only thing down here giving off a colour that looks anything like fire.', encounterId: '', connections: ['qf04_r2', 'qf04_rr2'], position: [670, 585], ...D },
+    { id: 'qf04_rr2', name: 'The Speckled Field', description: 'The ground opens into a field of white-spotted caps standing in ranks to knee height, packed close enough that there is no way through them, only over.', encounterId: '', connections: ['qf04_rr1', 'qf04_rr3'], position: [900, 460], ...D },
+    { id: 'qf04_rr3', name: 'The Quiet Hollow', description: 'The field falls away into a hollow where nothing grows and nothing shines, and the noise of the cavern does not come down into it. A road climbs out of the far side of it, and every one of you wants to be on that road. The way runs on.', encounterId: '', connections: ['qf04_rr2'], position: [890, 340], ...D, passthroughTo: 'qf13_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf04_entry';
+  return map;
+}
+
+// Quercus forest 05 — TWO SEPARATE CHAINS on one map, with no link between
+// them. They are different parts of the same stretch of cavern, reached from
+// different places, and you cannot get from one to the other without going all
+// the way back round:
+//   A — 6 nodes in a line, in from The Candle Stalks (qf02_r2), up the
+//       left-hand flagstones.
+//   B — 5 nodes in a line, in from The Overhang (qf03_l4), up the right-hand
+//       bank past the water.
+// Deliberate: `connections` is what gates movement, so leaving the two runs
+// unjoined is all it takes.
+//
+// BOTH THRESHOLDS ARE `discoverable`, which is unusual — a threshold is
+// normally always-visible so the way back can always be seen. On a NO_FOG map
+// a non-discoverable node draws unconditionally (see the visibility gate in
+// drawMap), so a plain threshold on the far chain showed up while the party
+// was over on this one. Discoverable hides it until its own chain is reached
+// (arriving makes it current; walking the chain puts it in visitedNodes), and
+// with no hiddenName it still shows its real name when it does appear. Both thresholds are always visible; everything
+// past them is `discoverable`, so arriving on one side never reveals the other.
+export function createQuercusForest05Map() {
+  const map = new GameMap('quercus_forest_05', 'Quercus Forest');
+  const AREA = 'quercus_forest_05';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest05.jpg' };
+  // No black overlay (it is in NO_FOG_MAPS) — the cavern shows entire. The
+  // ROUTE is still fogged the normal way: every node past a threshold is
+  // `discoverable`, unseen until the party is one hop off it and '???' until
+  // they stand on it.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // ── Chain A — 6 in a line, from The Candle Stalks (qf02_r2). ──
+    // Threshold — teleports back to The Candle Stalks. Always visible.
+    { id: 'qf05_a_entry', name: 'Past the Tapers', description: 'Beyond the last of the burning stalks the ground drops to a run of laid flagstones, and the road that has been under your feet on and off all day picks itself up again. The tapers are behind you.', encounterId: '', connections: ['qf05_a2'], position: [295, 970], mapArea: AREA, canRevisit: true, discoverable: true, passthroughTo: 'qf02_r2' },
+    { id: 'qf05_a2', name: 'The Lamp Stones', description: 'Small knots of orange growth sit along both edges of the paving at even spacing, close enough to the old kerb that somebody must once have put them there.', encounterId: '', connections: ['qf05_a_entry', 'qf05_a3'], position: [160, 850], ...D },
+    { id: 'qf05_a3', name: 'The Broken Paving', description: 'A stretch of the road has been pushed up from underneath and left in slabs at every angle, and the thing that did the pushing is still down there somewhere under it.', encounterId: '', connections: ['qf05_a2', 'qf05_a4'], position: [390, 620], ...D },
+    { id: 'qf05_a4', name: 'Under the Purple Cap', description: 'A cap the colour of a bruise leans right out over the road on a trunk ringed like a rope, and everything beneath it is stained the same shade.', encounterId: '', connections: ['qf05_a3', 'qf05_a5'], position: [580, 445], ...D },
+    { id: 'qf05_a5', name: 'The Mossy Stair', description: 'The road turns into a stair and the stair has been taken over entirely — every tread carries an inch of moss, and every step you take shows the stone of it for the first time in years.', encounterId: '', connections: ['qf05_a4', 'qf05_a6'], position: [760, 400], ...D },
+    { id: 'qf05_a6', name: 'The Upper Terrace', description: 'The stair lets out on a long shelf of level ground with the whole lit cavern falling away below it, and the road running on along the edge into country you have not seen. Or have not seen from HERE, at least — there is a spill of small blue lights along the shelf further on, and one of you has picked up a stone like that before. The way runs on.', encounterId: '', connections: ['qf05_a5'], position: [870, 205], ...D, passthroughTo: 'qf17_r2' },
+    // ── Chain B — 5 in a line, from The Overhang (qf03_l4). NOT joined to A. ──
+    // Threshold — teleports back to The Overhang. Always visible.
+    { id: 'qf05_b_entry', name: 'Out from the Overhang', description: 'You come out from under the dark of the cap into light and noise together — there is water down there, moving. The gap you squeezed through is at your back.', encounterId: '', connections: ['qf05_b2'], position: [820, 965], mapArea: AREA, canRevisit: true, discoverable: true, passthroughTo: 'qf03_l4' },
+    { id: 'qf05_b2', name: 'The River Walk', description: 'A path of set stones runs along the bank a stride above the water, and the water goes past it fast and black and without a sound worth the name.', encounterId: '', connections: ['qf05_b_entry', 'qf05_b3'], position: [735, 855], ...D },
+    { id: 'qf05_b3', name: 'The Stepping Line', description: 'Flat stones cross the channel here in a line, each one worn dished in the middle, and every one of them is wet.', encounterId: '', connections: ['qf05_b2', 'qf05_b4'], position: [875, 765], ...D },
+    { id: 'qf05_b4', name: 'The Still Pool', description: 'The water widens and stops arguing, and lies here in a black sheet that gives back every light in the cavern and none of the noise.', encounterId: '', connections: ['qf05_b3', 'qf05_b5'], position: [910, 640], ...D },
+    { id: 'qf05_b5', name: 'The Far Stair', description: 'A stair climbs away from the pool in one long unbroken flight, cut square and kept clear, and it goes up further than the light off the caps will follow it. Somebody maintains this. The way runs on.', encounterId: '', connections: ['qf05_b4'], position: [630, 570], ...D, passthroughTo: 'qf09_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf05_a_entry';
+  return map;
+}
+
+// Quercus forest 06 — from The Gill Shade (qf04_rl3), out of the dark under the
+// great cap. 4 nodes in a line; the last is a dead end for now.
+// qf06_entry teleports back to qf04_rl3.
+export function createQuercusForest06Map() {
+  const map = new GameMap('quercus_forest_06', 'Quercus Forest');
+  const AREA = 'quercus_forest_06';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest06.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Gill Shade (qf04_rl3). Always visible.
+    { id: 'qf06_entry', name: 'Out of the Shade', description: 'You come out from under the cap and the light comes back all at once, and with it a road — proper set cobbles, running away up the middle of a cleft between two terraces. The dark is behind you.', encounterId: '', connections: ['qf06_2'], position: [510, 965], mapArea: AREA, canRevisit: true, passthroughTo: 'qf04_rl3' },
+    { id: 'qf06_2', name: 'The Cobbled Rise', description: 'The cobbles climb in a long easy grade, and small blue caps have come up between every one of them without lifting a single stone out of true.', encounterId: '', connections: ['qf06_entry', 'qf06_3'], position: [460, 780], ...D },
+    { id: 'qf06_3', name: 'Between the Terraces', description: 'The walls close in to either side and go up in shelves, each one carrying its own thicket, so that you are walking along the floor of something that has been built up rather than dug out.', encounterId: '', connections: ['qf06_2', 'qf06_4'], position: [585, 640], ...D },
+    { id: 'qf06_4', name: 'The Narrow Trail', description: 'The cobbles give out and the way past them is a trodden trail one boot wide, running on up the cleft towards a cold green light that is not coming off any mushroom. Trodden means walked. The way runs on.', encounterId: '', connections: ['qf06_3'], position: [490, 520], ...D, passthroughTo: 'qf15_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf06_entry';
+  return map;
+}
+
+// Quercus forest 07 — from The Cut Stair (qf04_l1), across the broken walkway.
+// Reads as a DESCENT: the crossing lands the party high above the canopy and the
+// four nodes walk down into the stand, ending on the cavern floor. Keep that in
+// the descriptions if these get reordered — the node positions run top-to-bottom
+// (y 340 → 820) and the text is written to match.
+// 4 nodes in a line; the last is a dead end for now.
+// qf07_entry teleports back to qf04_l1.
+export function createQuercusForest07Map() {
+  const map = new GameMap('quercus_forest_07', 'Quercus Forest');
+  const AREA = 'quercus_forest_07';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest07.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Cut Stair (qf04_l1). Always visible.
+    { id: 'qf07_entry', name: 'The Far Walkway', description: 'The broken stride turns out to reach, just, and the walkway picks up on the far side as though nothing had ever fallen. It carries you out high over open air — and then it starts down. From up here you are looking at the TOPS of the caps, a whole lit country of them spread out below your boots, and the road going down into it.', encounterId: '', connections: ['qf07_2'], position: [700, 340], mapArea: AREA, canRevisit: true, passthroughTo: 'qf04_l1' },
+    { id: 'qf07_2', name: 'The Thick Stand', description: 'The walkway lets you down among the trunks, and the caps you were looking down on a hundred paces ago close over your head one by one. They do not grow spread about like the rest of the cavern — they stand in a crowd, trunk against trunk, every one of them a different colour and all of them lit.', encounterId: '', connections: ['qf07_entry', 'qf07_3'], position: [790, 550], ...D },
+    { id: 'qf07_3', name: 'The Crowded Floor', description: 'The last of the descent puts you on the floor of the stand, where the big stalks go up out of sight and the ground between them is carpeted in smaller ones to the knee — so thick that you cannot set a boot down without killing something.', encounterId: '', connections: ['qf07_2', 'qf07_4'], position: [710, 720], ...D },
+    { id: 'qf07_4', name: 'The Pale Wash', description: 'At the bottom of it all a broad shallow wash of bone-coloured grit runs through the stand, and nothing whatsoever grows in it. After the last hundred paces, that is the strangest thing you have seen down here.', encounterId: 'quercus_clue_pale_wash', connections: ['qf07_3'], position: [480, 820], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf07_entry';
+  return map;
+}
+
+// Quercus forest 08 — from The Fall Head (qf03_r3), down beside the water.
+// 5 nodes in a line; the last is a dead end for now.
+// qf08_entry teleports back to qf03_r3.
+export function createQuercusForest08Map() {
+  const map = new GameMap('quercus_forest_08', 'Quercus Forest');
+  const AREA = 'quercus_forest_08';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest08.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Fall Head (qf03_r3). Always visible.
+    { id: 'qf08_entry', name: 'The Fall Foot', description: 'The water comes down out of the dark above and lands here, and the noise of it fills everything. A stair goes up out of the spray lit blue from underneath, and the ledge you came down is somewhere above you in all that falling white.', encounterId: '', connections: ['qf08_2'], position: [400, 965], mapArea: AREA, canRevisit: true, passthroughTo: 'qf03_r3' },
+    { id: 'qf08_2', name: 'The Blue Stair', description: 'The steps are cut into the bank beside the fall and every one of them is wet through, with small blue lights growing in the joints where nothing has walked in a long time.', encounterId: '', connections: ['qf08_entry', 'qf08_3'], position: [255, 890], ...D },
+    { id: 'qf08_3', name: 'The Hanging Terraces', description: 'Shelves of rock stand out from the walls here at every height, each one carrying its own thicket, and none of them appear to be resting on anything whatsoever.', encounterId: '', connections: ['qf08_2', 'qf08_4'], position: [85, 820], ...D },
+    { id: 'qf08_4', name: 'The Root Curtain', description: 'Roots come down from the terraces overhead in ropes as thick as a mast and go into the floor without ever touching the walls, and you walk through them the way you would walk through a hanging.', encounterId: '', connections: ['qf08_3', 'qf08_5'], position: [180, 690], ...D },
+    { id: 'qf08_5', name: 'The Stacked Shelves', description: 'The far side of the chasm goes up in terrace over terrace like courses of masonry, every one of them lit and planted. There is no way up onto the first of them — until somebody thinks to look at the end of it, where a fall of rock has made a ramp and the green has half swallowed it. The way runs on.', encounterId: '', connections: ['qf08_4'], position: [90, 590], ...D, passthroughTo: 'qf18_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf08_entry';
+  return map;
+}
+
+// Quercus forest 09 — from The Far Stair (qf05_b5), at the top of the long
+// climb. 8 nodes: a 3-node entry (qf09_entry → _2 → _3) forking at _3 into a
+// 2-node left way out along the bridge (qf09_l1 → l2) and a 3-node right way up
+// the kerbed stair (qf09_r1 → r3). Both ways dead-end for now.
+// qf09_entry teleports back to qf05_b5.
+export function createQuercusForest09Map() {
+  const map = new GameMap('quercus_forest_09', 'Quercus Forest');
+  const AREA = 'quercus_forest_09';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest09.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Far Stair (qf05_b5). Always visible.
+    { id: 'qf09_entry', name: 'The Head of the Stair', description: 'The stair finally runs out of steps and puts you down on a made road, and the pool you left is so far below now that you cannot hear it at all. The climb is behind you.', encounterId: '', connections: ['qf09_2'], position: [565, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf05_b5' },
+    { id: 'qf09_2', name: 'The Streamside Road', description: 'A thread of water runs down the middle of the road in a channel cut for it, pale enough to read by, and it has been running there long enough to wear the stone into a gutter.', encounterId: '', connections: ['qf09_entry', 'qf09_3'], position: [640, 800], ...D },
+    // The fork.
+    { id: 'qf09_3', name: 'The Parting at the Water', description: 'The channel goes under the road and comes out the other side, and where it does the way divides — a plank walk going west out over the drop, and a kerbed stair climbing east up the wall.', encounterId: '', connections: ['qf09_2', 'qf09_l1', 'qf09_r1'], position: [610, 660], ...D },
+    // West way — 2 nodes, dead end for now.
+    { id: 'qf09_l1', name: 'The Plank Bridge', description: 'The walk goes out across the gap on timbers laid over old stone piers, and every one of them gives a little under you and then holds.', encounterId: '', connections: ['qf09_3', 'qf09_l2'], position: [390, 595], ...D },
+    { id: 'qf09_l2', name: 'The West Landing', description: 'The far end of the bridge lands on a shelf thick with pale stalks, and there is a doorway cut in the rock behind them that somebody has filled in very carefully with fitted stone. Whatever that was for, it is not a way through — but the shelf carries on round the corner past it. The way runs on.', encounterId: '', connections: ['qf09_l1'], position: [140, 520], ...D, passthroughTo: 'qf11_entry' },
+    // East way — 3 nodes, dead end for now.
+    { id: 'qf09_r1', name: 'The Kerbed Climb', description: 'The stair up the east wall has a kerb along its outer edge at shin height — not enough to stop a fall, just enough to tell you where the edge is in the dark.', encounterId: '', connections: ['qf09_3', 'qf09_r2'], position: [750, 540], ...D },
+    { id: 'qf09_r2', name: 'The Amber Banks', description: 'Whole banks of orange growth crowd the steps here and go up the wall beside them, and after a day of blue and violet the colour of it is almost a shock.', encounterId: '', connections: ['qf09_r1', 'qf09_r3'], position: [845, 430], ...D },
+    { id: 'qf09_r3', name: 'The Top of the Climb', description: 'The steps end on a narrow shelf with the cavern roof close overhead at last, and the road goes on along it into a dark the caps up here are not lighting. Whatever is along there, the road was built to reach it. The way runs on.', encounterId: '', connections: ['qf09_r2'], position: [930, 350], ...D, passthroughTo: 'qf10_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf09_entry';
+  return map;
+}
+
+// Quercus forest 10 — from The Top of the Climb (qf09_r3), off the high shelf
+// into stranger country. 7 nodes: a 2-node entry (qf10_entry → _2) forking at _2
+// into a 2-node left way (qf10_l1 → l2) and a 3-node right way (qf10_r1 → r3).
+// The right way ends at The Deep Stair, which carries the `quercus_deep_stair`
+// dialog — a way further down into the Underdark that is NOT the party's road.
+// That node is canRevisit:false (overriding D) so the beat plays exactly once.
+// qf10_entry teleports back to qf09_r3.
+export function createQuercusForest10Map() {
+  const map = new GameMap('quercus_forest_10', 'Quercus Forest');
+  const AREA = 'quercus_forest_10';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest10.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Top of the Climb (qf09_r3). Always visible.
+    { id: 'qf10_entry', name: 'Off the Shelf', description: 'The high shelf runs out under the roof and puts you down in country that does not look like the rest of it — the ground here is broken into great plates, and there is light coming UP between them.', encounterId: '', connections: ['qf10_2'], position: [900, 630], mapArea: AREA, canRevisit: true, passthroughTo: 'qf09_r3' },
+    // The fork.
+    { id: 'qf10_2', name: 'The Cracked Plates', description: 'You walk on slabs the size of rooms with green-lit cracks between them, and every crack goes down out of sight. The safe line across divides here, and neither half of it looks safer than the other.', encounterId: '', connections: ['qf10_entry', 'qf10_l1', 'qf10_r1'], position: [740, 610], ...D },
+    // Left way — 2 nodes, dead end for now.
+    { id: 'qf10_l1', name: 'The Lantern Hollow', description: 'A dip in the plates holds a stand of caps burning a hard orange at the core, close enough together that standing among them is like standing in a lit room.', encounterId: '', connections: ['qf10_2', 'qf10_l2'], position: [550, 690], ...D },
+    { id: 'qf10_l2', name: 'The Bloom Wall', description: 'The whole face of the wall down here is covered in growth from the floor to as high as your light goes, layer on layer of it, and none of it is the same twice. Put a hand into it and there is nothing behind it but air. The way runs on.', encounterId: '', connections: ['qf10_l1'], position: [420, 960], ...D, passthroughTo: 'qf13_7' },
+    // Right way — 3 nodes, ending on the deep-stair beat.
+    { id: 'qf10_r1', name: 'The Fissure Walk', description: 'The climbing way keeps to a spine of unbroken stone with a crack running along either side of it, and the green light out of them puts your shadow on the roof.', encounterId: '', connections: ['qf10_2', 'qf10_r2'], position: [650, 540], ...D },
+    { id: 'qf10_r2', name: 'The Eyed Caps', description: 'These ones have a ring of orange at the centre of every cap, open and wet and all of them the same size, and they are turned to face the path. You tell yourself that is how they grew.', encounterId: '', connections: ['qf10_r1', 'qf10_r3'], position: [600, 420], ...D },
+    // The deep-stair CLUE SITE. canRevisit:false AFTER the spread so the dialog
+    // is one-shot — walking back over the node later says nothing.
+    { id: 'qf10_r3', name: 'The Deep Stair', description: 'A square-cut stair goes down out of the cavern floor and keeps going, and the cold coming up it does not smell of anything that grows. The dust at the head of it has been walked on.', encounterId: 'quercus_deep_stair', connections: ['qf10_r2'], position: [460, 360], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf10_entry';
+  return map;
+}
+
+// Quercus forest 11 — from The West Landing (qf09_l2), on round the sealed
+// door. 7 nodes: a 3-node entry (qf11_entry → _2 → _3) forking at _3 into a
+// 2-node left way (qf11_l1 → l2) and a 2-node right way (qf11_r1 → r2).
+// Both ways dead-end for now. qf11_entry teleports back to qf09_l2.
+export function createQuercusForest11Map() {
+  const map = new GameMap('quercus_forest_11', 'Quercus Forest');
+  const AREA = 'quercus_forest_11';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest11.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The West Landing (qf09_l2). Always visible.
+    { id: 'qf11_entry', name: 'Past the Sealed Door', description: 'The shelf carries you round the blocked doorway and out the other side, and the stalks thin enough to walk between again. Whatever is behind that stone, you are going past it, not through it.', encounterId: '', connections: ['qf11_2'], position: [760, 955], mapArea: AREA, canRevisit: true, passthroughTo: 'qf09_l2' },
+    { id: 'qf11_2', name: 'The Dripping Caps', description: 'The caps overhead hang full of water and let it go a drop at a time, so that the whole stretch ticks quietly the way a cooling forge does, and everything under them is soaked.', encounterId: '', connections: ['qf11_entry', 'qf11_3'], position: [580, 800], ...D },
+    // The fork.
+    { id: 'qf11_3', name: 'The Stepped Neck', description: 'The road narrows to a neck barely two wide and goes up it in shallow steps, and at the top of them it opens out and immediately parts — one way onto the flats above, one way down into the thick of the growth.', encounterId: '', connections: ['qf11_2', 'qf11_l1', 'qf11_r1'], position: [390, 480], ...D },
+    // Left way — 2 nodes, dead end for now.
+    { id: 'qf11_l1', name: 'The Cracked Terrace', description: 'A wide floor of pale stone, split across in long clean lines the way ice splits, with moss taking hold in every one of them.', encounterId: '', connections: ['qf11_3', 'qf11_l2'], position: [230, 470], ...D },
+    { id: 'qf11_l2', name: 'The Old Kerb', description: 'A length of dressed kerbstone still stands along the edge of the terrace, set and jointed and going nowhere at all now — the road it belonged to has been gone a very long time. Sight along it, though, and it is pointing at something. The way runs on.', encounterId: '', connections: ['qf11_l1'], position: [95, 320], ...D, passthroughTo: 'qf14_entry' },
+    // Right way — 2 nodes, dead end for now.
+    { id: 'qf11_r1', name: 'The Amber Crowd', description: 'The growth on this side is all one colour and all one size, packed shoulder to shoulder and burning a hard orange, and walking into it is like walking into a held breath.', encounterId: '', connections: ['qf11_3', 'qf11_r2'], position: [480, 390], ...D },
+    { id: 'qf11_r2', name: 'The Little Steps', description: 'Steps go up the bank at the far side — cut square, cut carefully, and cut for legs a good deal shorter than yours. Somebody small has business up there. You can take them two at a time. The way runs on.', encounterId: '', connections: ['qf11_r1'], position: [630, 290], ...D, passthroughTo: 'qf12_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf11_entry';
+  return map;
+}
+
+// Quercus forest 12 — up The Little Steps (qf11_r2). 6 nodes: a 2-node entry
+// (qf12_entry → _2) forking at _2 into a 1-node right way (qf12_r1) and a
+// 3-node left way (qf12_l1 → l3). Both ways dead-end for now.
+// qf12_entry teleports back to qf11_r2.
+export function createQuercusForest12Map() {
+  const map = new GameMap('quercus_forest_12', 'Quercus Forest');
+  const AREA = 'quercus_forest_12';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest12.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Little Steps (qf11_r2). Always visible.
+    { id: 'qf12_entry', name: 'Above the Little Steps', description: 'The small steps top out on a causeway, and that is laid small too — narrow flags, a kerb at the height of your boot, everything built by the same short hands and none of it built for you. The steps are behind you.', encounterId: '', connections: ['qf12_2'], position: [940, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf11_r2' },
+    // The fork.
+    { id: 'qf12_2', name: 'The Flagged Crossing', description: 'The causeway carries you out over ground that your light does not reach the bottom of, and halfway across it a second way branches off it at a right angle, as deliberate as a street corner.', encounterId: '', connections: ['qf12_entry', 'qf12_r1', 'qf12_l1'], position: [760, 820], ...D },
+    // Right way — 1 node, dead end for now.
+    { id: 'qf12_r1', name: 'The Green Water', description: 'The branch ends at a channel of water running bright hard green, brighter than anything growing beside it, and giving off no heat and no smell whatsoever. It does not look the way water ought to look. It is coming from somewhere, though, and you can walk up it. The way runs on.', encounterId: '', connections: ['qf12_2'], position: [960, 690], ...D, passthroughTo: 'qf17_entry' },
+    // Left way — 3 nodes, dead end for now.
+    { id: 'qf12_l1', name: 'The Narrow Flags', description: 'The causeway thins to single file and stays that way for a long stretch, with a low kerb on either hand that would stop a short person going over and will do nothing whatsoever for you.', encounterId: '', connections: ['qf12_2', 'qf12_l2'], position: [610, 680], ...D },
+    { id: 'qf12_l2', name: 'The Gold Moss', description: 'A whole bank of moss the colour of beaten brass comes right down to the edge of the flags, warm to look at and warm to touch, and the caps standing out of it are the same shade.', encounterId: '', connections: ['qf12_l1', 'qf12_l3'], position: [400, 540], ...D },
+    { id: 'qf12_l3', name: 'The Low Lintel', description: 'The roof comes down to meet the road at the end of the bank, and the way on goes under a lintel of natural stone that the small folk would walk through without ducking. You would not.', encounterId: 'quercus_clue_low_lintel', connections: ['qf12_l2'], position: [740, 340], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf12_entry';
+  return map;
+}
+
+// Quercus forest 13 — the long road between two places the party had written
+// off. 7 nodes in a line: qf13_entry comes in from The Quiet Hollow (qf04_rr3)
+// at the end of Quercus 04's south way, and qf13_7 comes out behind The Bloom
+// Wall (qf10_l2) at the end of Quercus 10's west way. This is the first LOOP in
+// the region — both of those nodes used to be dead ends, and walking this joins
+// them, so the party can come at either from the other.
+export function createQuercusForest13Map() {
+  const map = new GameMap('quercus_forest_13', 'Quercus Forest');
+  const AREA = 'quercus_forest_13';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest13.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Quiet Hollow (qf04_rr3). Always visible.
+    { id: 'qf13_entry', name: 'Out of the Hollow', description: 'A road leaves the far side of the dead hollow and climbs out of it, and the moment you are up on it the growth comes back all at once and the noise comes with it. The hollow is behind you, and none of you are sorry.', encounterId: '', connections: ['qf13_2'], position: [710, 970], mapArea: AREA, canRevisit: true, passthroughTo: 'qf04_rr3' },
+    { id: 'qf13_2', name: 'The Cobbled Bank', description: 'The road runs up on a bank of its own making, cobbled over and rounded off, with the ground on both sides a good deal lower and a good deal wetter.', encounterId: '', connections: ['qf13_entry', 'qf13_3'], position: [530, 770], ...D },
+    { id: 'qf13_3', name: 'The Spotted Road', description: 'The stones of the road are set in a pattern here, pale against dark in long spirals, and small lights have come up in the joints between them as though somebody had meant that too.', encounterId: '', connections: ['qf13_2', 'qf13_4'], position: [440, 650], ...D },
+    { id: 'qf13_4', name: 'Under the Fire Terrace', description: 'A shelf of rock stands out over the road carrying a whole burning thicket on its back, and everything down here is lit orange from above like a street under a window.', encounterId: '', connections: ['qf13_3', 'qf13_5'], position: [330, 520], ...D },
+    { id: 'qf13_5', name: 'The Long Bend', description: 'The road swings back on itself in a slow curve to get round the root of something enormous, and takes a hundred paces to gain the ten it needed.', encounterId: '', connections: ['qf13_4', 'qf13_6'], position: [480, 380], ...D },
+    { id: 'qf13_6', name: 'The Last Rise', description: 'The climb steepens for a short stretch and then gives out, and ahead of you the way is closed off by a standing wall of growth from the floor to well above your head.', encounterId: '', connections: ['qf13_5', 'qf13_7'], position: [505, 240], ...D },
+    // The far end — comes out behind The Bloom Wall (qf10_l2) on Quercus 10.
+    { id: 'qf13_7', name: 'The Back of the Blooms', description: 'It is not a wall. It is a curtain — layer on layer of growth hung off a rock face, none of it the same twice, and there is a hand\'s breadth of clear air behind the whole of it. You can walk through. You have been on the other side of this. The way runs on.', encounterId: '', connections: ['qf13_6'], position: [480, 140], ...D, passthroughTo: 'qf10_l2' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf13_entry';
+  return map;
+}
+
+// Quercus forest 14 — from The Old Kerb (qf11_l2). 2 nodes in a line, and the
+// payoff for that node: the road the orphaned kerbstone belonged to is still
+// here, and still carrying a bridge. The second node is a dead end for now.
+// qf14_entry teleports back to qf11_l2.
+export function createQuercusForest14Map() {
+  const map = new GameMap('quercus_forest_14', 'Quercus Forest');
+  const AREA = 'quercus_forest_14';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest14.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Old Kerb (qf11_l2). Always visible.
+    { id: 'qf14_entry', name: 'The Road Picks Up', description: 'Forty paces past the orphaned kerbstone the road simply starts again — same stone, same jointing, same hand — and this stretch of it has never gone anywhere. It was there the whole time, with nothing but a gap in the middle. The terrace is behind you.', encounterId: '', connections: ['qf14_2'], position: [620, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf11_l2' },
+    { id: 'qf14_2', name: 'The Blue Crossing', description: 'The road goes over water on a low arched bridge built to the same pattern as everything else here, and the water under it is lit from the inside — a hard cold blue, moving fast, throwing light up onto the underside of the arch.', encounterId: 'quercus_clue_blue_crossing', connections: ['qf14_entry'], position: [720, 860], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf14_entry';
+  return map;
+}
+
+// Quercus forest 15 — up The Narrow Trail (qf06_4), towards the cold green
+// light that node was pointing at. 4 nodes in a line; the last is a dead end
+// for now. This is the most obviously LIVED-IN stretch of the region so far —
+// cut steps, kerbs, fencing, and growth standing in worked rows — so it is the
+// natural place to put whoever keeps all these roads, when that lands.
+// qf15_entry teleports back to qf06_4.
+export function createQuercusForest15Map() {
+  const map = new GameMap('quercus_forest_15', 'Quercus Forest');
+  const AREA = 'quercus_forest_15';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest15.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Narrow Trail (qf06_4). Always visible.
+    { id: 'qf15_entry', name: 'Into the Green', description: 'The cleft opens and the green light finally has a source: the far end of this place goes up and up into a cold green haze, high enough that it might as well be weather. Nothing is burning to make it. The trail is behind you.', encounterId: '', connections: ['qf15_2'], position: [680, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf06_4' },
+    { id: 'qf15_2', name: 'The Set Steps', description: 'The trodden trail gives way to cut steps with a kerb along the outer edge, and after a day of walking on whatever the cavern happened to leave, the evenness of them is almost rude.', encounterId: '', connections: ['qf15_entry', 'qf15_3'], position: [770, 800], ...D },
+    { id: 'qf15_3', name: 'The Low Fences', description: 'Posts stand at intervals along the lip of the drop with a rail run between them at knee height — no use for keeping anything out, and every use for keeping something small from walking off the edge in the dark.', encounterId: '', connections: ['qf15_2', 'qf15_4'], position: [710, 670], ...D },
+    { id: 'qf15_4', name: 'The Tended Terrace', description: 'The growth on the shelf above is standing in rows. Not drifts, not thickets — rows, with the ground between them clear and the weak ones pulled out and stacked at the end of each line. Somebody worked this, and not long ago. The rows run on over the shelf, and so does the path between them. The way runs on.', encounterId: '', connections: ['qf15_3'], position: [450, 590], ...D, passthroughTo: 'qf16_entry' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf15_entry';
+  return map;
+}
+
+// Quercus forest 16 — from The Tended Terrace (qf15_4). 5 nodes in a line,
+// walking UP the edge of a cooled lava flow to the tunnel mouth it came out of.
+// This is the far side of the Great Pour: the party set out at the lava wall
+// (chapter2_lava_wall) to "come up under Tharnag from the far side", and this
+// is them arriving at it from the Underdark.
+//
+// Two dialogs, both one-shot via canRevisit:false (overriding D):
+//   qf16_entry — `quercus_lava_sign`,   short: that is a pour, and it is ours.
+//   qf16_5     — `quercus_sealed_mouth`, long: the sealed mouth, the dead
+//                goblins, no dwarves among them, and axe work off the flow.
+// qf16_entry teleports back to qf15_4.
+export function createQuercusForest16Map() {
+  const map = new GameMap('quercus_forest_16', 'Quercus Forest');
+  const AREA = 'quercus_forest_16';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest16.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold AND the first beat. canRevisit:false after the spread so the
+    // dialog plays once; the teleport back works regardless.
+    { id: 'qf16_entry', name: 'Where the Green Stops', description: 'The rows and the moss and the whole lit country of it run up to a line and stop, as cleanly as a tide mark, and past that line everything is black stone.', encounterId: 'quercus_lava_sign', connections: ['qf16_2'], position: [420, 970], mapArea: AREA, canRevisit: false, passthroughTo: 'qf15_4' },
+    { id: 'qf16_2', name: 'The Cooled Flow', description: 'You walk the margin of it, where the black meets the green. The stone is ropey and folded like something poured out of a ladle, because that is exactly what it is.', encounterId: '', connections: ['qf16_entry', 'qf16_3'], position: [630, 820], ...D },
+    { id: 'qf16_3', name: 'The Living Cracks', description: 'Light comes up out of the splits in the flow — orange, steady, and warm enough at the edge to dry your boots. After all this time there is still fire under it.', encounterId: '', connections: ['qf16_2', 'qf16_4'], position: [410, 610], ...D },
+    { id: 'qf16_4', name: 'Up the Channel', description: 'The flow narrows between two shoulders of rock and runs straighter here, deeper and less spread, the way water does when it is close to where it came from.', encounterId: '', connections: ['qf16_3', 'qf16_5'], position: [450, 450], ...D },
+    // The long beat at the head of the flow, and afterwards Durgan's work site.
+    // MUST stay canRevisit — with it false, node.isDone kills canRunEncounter on
+    // every later visit and the whole Sealed Mouth state machine in
+    // startNodeEncounter becomes unreachable. The one-shot is handled there, by
+    // checking completedEncounters for the Great Pour beat.
+    { id: 'qf16_5', name: 'The Sealed Mouth', description: 'The flow comes out of a tunnel driven into the cavern wall, and the tunnel is full to the roof with the same black glass. Whatever was on the other side of that is on the other side of it still.', encounterId: 'quercus_sealed_mouth', connections: ['qf16_4', 'qf16_6'], position: [600, 200], ...D },
+    // Past the plug — the gap Durgan's crew cut. Opened by the
+    // quercus_tunnel_open beat (see unlockQuercusTunnelNode).
+    //
+    // isLocked ALONE would not hide it: this map is in NO_FOG_MAPS, and the
+    // render gate's locked skip is `node.isLocked && !noFog`, so a locked node
+    // still draws here. `discoverable` is what actually hides it — that gate
+    // runs on every map, and getAccessibleNodes() filters locked nodes out, so
+    // while it is locked it is never 'accessible' and never renders. Once the
+    // dig unlocks it, standing on The Sealed Mouth makes it accessible and it
+    // appears, under its real name (no hiddenName, so no '???' step).
+    // Teleports through to the tunnels on the Tharnag side.
+    { id: 'qf16_6', name: 'Through the Gap', description: 'You go through on your hands at the worst of it, with the cut glass gritting under you and the cold of the far side already on your face. This is Tharnag rock. You are under the mountain again.', encounterId: '', connections: ['qf16_5'], position: [700, 95], mapArea: AREA, canRevisit: true, isLocked: true, discoverable: true, passthroughTo: 'gate_cut_passage' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf16_entry';
+  return map;
+}
+
+// Quercus forest 17 — from The Green Water (qf12_r1), following that channel
+// back up towards wherever it comes out. 9 nodes: a 2-node entry
+// (qf17_entry → _2) forking at _2 into a 5-node left way along the water
+// (qf17_l1 → l5, ending at the arch it runs out of) and a 2-node right way
+// into the stalks (qf17_r1 → r2). Both ways dead-end for now.
+// qf17_entry teleports back to qf12_r1.
+export function createQuercusForest17Map() {
+  const map = new GameMap('quercus_forest_17', 'Quercus Forest');
+  const AREA = 'quercus_forest_17';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest17.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Green Water (qf12_r1). Always visible.
+    { id: 'qf17_entry', name: 'Along the Green Channel', description: 'You walk up the side of the channel with the green light of it on the underside of everything, and the ground beside it goes pale and fine and soft, like a river beach with no river worth the name.', encounterId: '', connections: ['qf17_2'], position: [480, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf12_r1' },
+    // The fork.
+    { id: 'qf17_2', name: 'The Silt Bank', description: 'The pale ground heaps up into a bank here and the way parts around it — one track staying with the water, one bearing off into the stalks on the high side.', encounterId: '', connections: ['qf17_entry', 'qf17_l1', 'qf17_r1'], position: [620, 780], ...D },
+    // Left way — 5 nodes, up the water to the arch. Dead end for now.
+    { id: 'qf17_l1', name: 'The Pale Shallows', description: 'The channel spreads and slows over a floor of white grit, shin-deep at the most, and every stone under it is lit from beneath as though the light were in the water and not the stone.', encounterId: '', connections: ['qf17_2', 'qf17_l2'], position: [510, 700], ...D },
+    { id: 'qf17_l2', name: 'The Ribbed Slope', description: 'The bank climbs in a run of close-set ridges, each one a hand high and all of them the same — the water made these, going down, a long time before it settled for the course it has now.', encounterId: '', connections: ['qf17_l1', 'qf17_l3'], position: [580, 610], ...D },
+    { id: 'qf17_l3', name: 'The Spotted Stand', description: 'Caps crowd the slope on both sides, each one marked on top with a scatter of round pale spots, and the arrangement of them is near enough the same on every single cap.', encounterId: '', connections: ['qf17_l2', 'qf17_l4'], position: [340, 560], ...D },
+    { id: 'qf17_l4', name: 'The Cold Shore', description: 'Up here the green has got into everything — the grit, the moss, the air over the water — and the cold coming off the channel is the honest cold of deep stone rather than anything the forest is doing.', encounterId: '', connections: ['qf17_l3', 'qf17_l5'], position: [430, 390], ...D },
+    { id: 'qf17_l5', name: 'The Green Arch', description: 'The water comes out of the rock under a low natural arch, and the whole opening is lit from inside it — not reflected, not thrown: the light is coming from somewhere back in there, and it is the same green all the way down. There is dry stone to walk on under the arch, if you go bent double and do not think about it. The way runs on.', encounterId: '', connections: ['qf17_l4'], position: [540, 295], ...D, passthroughTo: 'qf19_b_entry' },
+    // Right way — 2 nodes, dead end for now.
+    { id: 'qf17_r1', name: 'The Hollow Trunks', description: 'The stalks on the high side have gone hollow with age, and each one stands open down one flank like a door left ajar on a room with nothing in it.', encounterId: '', connections: ['qf17_2', 'qf17_r2'], position: [810, 840], ...D },
+    { id: 'qf17_r2', name: 'The Blue Pebbles', description: 'Small round lights lie loose all over the ground here, cold blue and about the size of a thumbnail, and picking one up tells you nothing at all — it is a stone, and it is shining. They run away along the shelf in a loose trail, and the shelf goes somewhere. The way runs on.', encounterId: '', connections: ['qf17_r1'], position: [960, 690], ...D, passthroughTo: 'qf05_a6' },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf17_entry';
+  return map;
+}
+
+// Quercus forest 18 — up onto the terraces from The Stacked Shelves (qf08_5).
+// 12 nodes and two forks. A 4-node entry (qf18_entry → _2 → _3 → _4) forks at
+// _4 into a 2-node left way (qf18_l1 → l2) and a 3-node right way across the
+// land bridge (qf18_r1 → r3) — and r3 forks AGAIN into a 1-node way
+// (qf18_rl1) and a 2-node way (qf18_rr1 → rr2). All four branch ends are dead
+// ends for now. qf18_entry teleports back to qf08_5.
+export function createQuercusForest18Map() {
+  const map = new GameMap('quercus_forest_18', 'Quercus Forest');
+  const AREA = 'quercus_forest_18';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest18.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Stacked Shelves (qf08_5). Always visible.
+    { id: 'qf18_entry', name: 'Onto the First Shelf', description: 'There is a way up after all — a ramp of fallen rock at the end of the terrace, grown over enough that you walked past it twice. From up here the shelves are not shelves at all, they are ground, and the ground goes on.', encounterId: '', connections: ['qf18_2'], position: [80, 960], mapArea: AREA, canRevisit: true, passthroughTo: 'qf08_5' },
+    { id: 'qf18_2', name: 'The Shelf Path', description: 'A path of pale packed grit runs along the terrace with the drop close on your right hand, and it has been walked flat and kept clear of everything that has tried to grow across it.', encounterId: '', connections: ['qf18_entry', 'qf18_3'], position: [160, 760], ...D },
+    { id: 'qf18_3', name: 'The Green Bank', description: 'The inner side of the path goes up in a bank of dense dark green, tight and springy and nothing like the caps — the first thing in this whole country that looks like it belongs on a hillside.', encounterId: '', connections: ['qf18_2', 'qf18_4'], position: [185, 580], ...D },
+    // First fork.
+    { id: 'qf18_4', name: 'Above the Dark Water', description: 'The terrace turns a corner and there is water below you — a great still sheet of it filling the whole floor of the cavern, black and flat and taking the drip from the roof in a thousand small rings. The path divides: up along the wall, or down and out across.', encounterId: '', connections: ['qf18_3', 'qf18_l1', 'qf18_r1'], position: [270, 480], ...D },
+    // Left way — 2 nodes, dead end for now.
+    { id: 'qf18_l1', name: 'The Red Domes', description: 'The high path runs under a cap the size of a barn floor, and standing up out of the top of it are a dozen smaller domes, hard red and polished, like something set there rather than grown.', encounterId: '', connections: ['qf18_4', 'qf18_l2'], position: [385, 380], ...D },
+    { id: 'qf18_l2', name: 'The High Stand', description: 'The path ends among the trunks at the top of the wall, where the stalks are packed too close to pass and the light between them has gone the colour of a bruise. Too close to pass abreast, at any rate. One at a time, sideways, it can be done. The way runs on.', encounterId: '', connections: ['qf18_l1'], position: [325, 265], ...D, passthroughTo: 'qf19_a_entry' },
+    // Right way — 3 nodes out across the water to the second fork.
+    { id: 'qf18_r1', name: 'The Land Bridge', description: 'A spine of rock runs right out across the water from shelf to shelf, wide enough for two and carrying its own moss and its own caps, as though nobody had told it that it was a bridge.', encounterId: '', connections: ['qf18_4', 'qf18_r2'], position: [460, 460], ...D },
+    { id: 'qf18_r2', name: 'The Midspan', description: 'Halfway over, with black water on both hands and no sound but the roof dripping into it, the whole cavern feels like it is holding still to watch you cross.', encounterId: '', connections: ['qf18_r1', 'qf18_r3'], position: [600, 495], ...D },
+    // Second fork.
+    { id: 'qf18_r3', name: 'The Far Bank', description: 'The bridge grounds itself on the far shelf among roots as thick as your waist, and the way splits again — one track climbing, one bending down to the waterline.', encounterId: '', connections: ['qf18_r2', 'qf18_rl1', 'qf18_rr1'], position: [740, 530], ...D },
+    // Upper way — 1 node, dead end for now.
+    { id: 'qf18_rl1', name: 'The Orange Crown', description: 'The climbing track stops under a single enormous cap burning a flat orange, the only one of its colour in sight, standing over the whole east side of the water like a lamp nobody lit.', encounterId: '', connections: ['qf18_r3'], position: [920, 420], ...D },
+    // Lower way — 2 nodes, dead end for now.
+    { id: 'qf18_rr1', name: 'The Shallow Margin', description: 'The lower track comes down to where the water goes thin over a floor of round stones, and the whole margin of it is crowded with small caps that have grown right to the edge and stopped dead in a line.', encounterId: '', connections: ['qf18_r3', 'qf18_rr2'], position: [850, 610], ...D },
+    { id: 'qf18_rr2', name: 'The Drowned Steps', description: 'Under the surface here, clear as anything through a foot of still water, a flight of cut steps goes down and away into the dark of it. Somebody built those. Somebody built those before there was a lake on top of them.', encounterId: '', connections: ['qf18_rr1'], position: [950, 680], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf18_entry';
+  return map;
+}
+
+// Quercus forest 19 — TWO SEPARATE CHAINS on one map, with no link between
+// them, same as Quercus 05:
+//   A — 5 nodes in a line, in from The High Stand (qf18_l2), down the western
+//       cobbles to the waterline.
+//   B — 4 nodes in a line, in from The Green Arch (qf17_l5), out along the
+//       high span above the bright water.
+// Deliberate: `connections` is what gates movement, so leaving the two runs
+// unjoined is all it takes.
+//
+// BOTH THRESHOLDS ARE `discoverable`, which is unusual — a threshold is
+// normally always-visible so the way back can always be seen. On a NO_FOG map
+// a non-discoverable node draws unconditionally (see the visibility gate in
+// drawMap), so a plain threshold on the far chain showed up while the party
+// was over on this one. Discoverable hides it until its own chain is reached
+// (arriving makes it current; walking the chain puts it in visitedNodes), and
+// with no hiddenName it still shows its real name when it does appear. Both thresholds are always visible; everything
+// past them is `discoverable`, so arriving on one side never reveals the other.
+export function createQuercusForest19Map() {
+  const map = new GameMap('quercus_forest_19', 'Quercus Forest');
+  const AREA = 'quercus_forest_19';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest19.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // ── Chain A — 5 in a line, from The High Stand (qf18_l2). ──
+    // Threshold — teleports back to The High Stand. Always visible.
+    { id: 'qf19_a_entry', name: 'Through the Stand', description: 'The trunks are packed tight enough that you go through them one at a time and sideways, and then they let go all at once and there is a road under your boots and open air in front of you. The stand closes up behind you like a curtain.', encounterId: '', connections: ['qf19_a2'], position: [380, 970], mapArea: AREA, canRevisit: true, discoverable: true, passthroughTo: 'qf18_l2' },
+    { id: 'qf19_a2', name: 'The Stepped Descent', description: 'The road goes down the west wall in long shallow flights with a landing between each, built by somebody who expected to be carrying something heavy up it.', encounterId: '', connections: ['qf19_a_entry', 'qf19_a3'], position: [200, 860], ...D },
+    { id: 'qf19_a3', name: 'The Low Wall', description: 'A wall of dry stone runs beside the road at hip height for a hundred paces and then stops, and the whole length of it is still true and still plumb.', encounterId: '', connections: ['qf19_a2', 'qf19_a4'], position: [140, 670], ...D },
+    { id: 'qf19_a4', name: 'Down to the Water', description: 'The last of the descent brings you level with the water, and it is not black like the last one — it is bright, and clear, and you can see the floor of it going away out under the light.', encounterId: '', connections: ['qf19_a3', 'qf19_a5'], position: [150, 470], ...D },
+    { id: 'qf19_a5', name: 'The Stone Teeth', description: 'Points of rock stand up out of the shallows in ones and twos, all of them the same height above the surface, and the water between them is barely over your boot. You can wade it. The line of them goes on, and so does the floor. The way runs on.', encounterId: '', connections: ['qf19_a4'], position: [230, 290], ...D, passthroughTo: 'qf20_entry' },
+    // ── Chain B — 4 in a line, from The Green Arch (qf17_l5). NOT joined to A. ──
+    // Threshold — teleports back to The Green Arch. Always visible.
+    { id: 'qf19_b_entry', name: 'Beyond the Arch', description: 'You go under the arch bent double with the green light running over you, and it lets you out high up on a made span with the water a long way below. The green is behind you. Whatever it was, it did not follow you out.', encounterId: '', connections: ['qf19_b2'], position: [380, 100], mapArea: AREA, canRevisit: true, discoverable: true, passthroughTo: 'qf17_l5' },
+    { id: 'qf19_b2', name: 'The High Span', description: 'The span runs out across the whole width of the place on piers you cannot see the feet of, dressed on top and mossed over, and wide enough that the drop is a fact rather than a problem.', encounterId: '', connections: ['qf19_b_entry', 'qf19_b3'], position: [540, 140], ...D },
+    { id: 'qf19_b3', name: 'Over the Bright Water', description: 'From the middle of the span the water below is lit clean through, pale green over pale stone, and every rock standing in it throws a shadow you can follow all the way to its foot.', encounterId: '', connections: ['qf19_b2', 'qf19_b4'], position: [710, 145], ...D },
+    { id: 'qf19_b4', name: 'The Broken Rail', description: 'The parapet has gone from the last stretch — not fallen, taken, with the sockets left clean where the balusters were pulled. Somebody wanted the stone more than they wanted the handrail.', encounterId: '', connections: ['qf19_b3'], position: [860, 110], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf19_a_entry';
+  return map;
+}
+
+// Quercus forest 20 — on from The Stone Teeth (qf19_a5), down the west side
+// and out along the bar that crosses the water. 8 nodes in a line; the last is
+// a dead end for now. qf20_entry teleports back to qf19_a5.
+export function createQuercusForest20Map() {
+  const map = new GameMap('quercus_forest_20', 'Quercus Forest');
+  const AREA = 'quercus_forest_20';
+  map.mapImages = { [AREA]: 'Maps/QuercusForest20.jpg' };
+  // No black overlay (NO_FOG_MAPS) — the cavern shows entire. The route is
+  // still fogged the normal way via `discoverable`.
+  const D = { canRevisit: true, discoverable: true, hiddenName: '???', hiddenDescription: 'Further along the high road.', mapArea: AREA };
+  const nodes = [
+    // Threshold — teleports back to The Stone Teeth (qf19_a5). Always visible.
+    { id: 'qf20_entry', name: 'Out of the Shallows', description: 'You come up out of the ankle-deep water onto dry grit, and the teeth of rock go on behind you in a line you could have walked all day. Ahead the ground rises and there is a path on it.', encounterId: '', connections: ['qf20_2'], position: [910, 760], mapArea: AREA, canRevisit: true, passthroughTo: 'qf19_a5' },
+    { id: 'qf20_2', name: 'The Gravel Walk', description: 'The path is made of the same pale grit laid a hand deep and kept between two lines of set stones, and it crunches under you loudly enough that nobody bothers talking.', encounterId: '', connections: ['qf20_entry', 'qf20_3'], position: [675, 670], ...D },
+    { id: 'qf20_3', name: 'The West Spit', description: 'A tongue of land runs out into the water with the path on top of it, narrowing the whole way, until there is barely room to stand at the end and water on three sides of you.', encounterId: '', connections: ['qf20_2', 'qf20_4'], position: [495, 780], ...D },
+    { id: 'qf20_4', name: 'The Head of the Bar', description: 'From the spit you can see how to get across: a bar of packed earth and stone stands just clear of the surface and runs the whole width of the water, and it carries its own moss like any other ground.', encounterId: '', connections: ['qf20_3', 'qf20_5'], position: [250, 810], ...D },
+    { id: 'qf20_5', name: 'The Long Bar', description: 'Out on the bar the water is a hand below you on both sides and perfectly clear, and the whole time you are crossing you can see your own shadow going along the bottom.', encounterId: '', connections: ['qf20_4', 'qf20_6'], position: [50, 730], ...D },
+    { id: 'qf20_6', name: 'The Black Stones', description: 'Round black stones sit in the shallows beside the bar, a dozen of them, each one bigger than a man curled up and every one of them smooth as an egg.', encounterId: '', connections: ['qf20_5', 'qf20_7'], position: [80, 610], ...D },
+    { id: 'qf20_7', name: 'The Floating Caps', description: 'Caps the size of cartwheels lie flat on the surface here, veined and lit from below by the water, and they rock when the bar takes your weight.', encounterId: '', connections: ['qf20_6', 'qf20_8'], position: [230, 510], ...D },
+    { id: 'qf20_8', name: 'Under the Amber Tree', description: 'The bar grounds itself on the east side under the biggest stalk you have seen yet — one trunk, going up out of sight, carrying a cap the colour of dark honey that puts a warm light over this whole end of the water.', encounterId: 'quercus_clue_amber_tree', connections: ['qf20_7'], position: [250, 370], ...D },
+  ];
+  for (const data of nodes) map.addNode(new MapNode(data));
+  map.currentNodeId = 'qf20_entry';
   return map;
 }
 
@@ -3539,7 +4247,13 @@ export function createTharnagTunnelsGateOfDeepMap() {
     { id: 'gate_arrival', name: 'The Gate of the Deep', description: 'The great gate, and the battle raging before it.', encounterId: '', connections: ['third_gate'], position: [510, 80], mapArea: 'gate_of_deep', canRevisit: true },
     // 3rd Gate — hub: links to the Gate of the Deep and the near node of
     // each front. Each front then runs deeper as a 2-node line.
-    { id: 'third_gate', name: '3rd Gate', description: 'The third gate, behind the front line.', encounterId: '', connections: ['gate_arrival', 'left_front_1', 'right_front_1'], position: [510, 260], mapArea: 'gate_of_deep', canRevisit: true },
+    { id: 'third_gate', name: '3rd Gate', description: 'The third gate, behind the front line.', encounterId: '', connections: ['gate_arrival', 'left_front_1', 'right_front_1', 'gate_lava_gallery'], position: [510, 260], mapArea: 'gate_of_deep', canRevisit: true },
+    // The way in from Quercus, opened by Durgan's crew. Two nodes: the cut
+    // passage itself (which teleports back through the gap) and the gallery
+    // the Pour drowned, which joins the 3rd Gate — so once this is open the
+    // whole run is a permanent two-way line between the two maps.
+    { id: 'gate_cut_passage', name: 'The Cut Passage', description: 'A hacked hole in a wall of black glass, with a dwarf-high gap at the top of it and the spoil still lying where it fell. On this side the tunnel is cut stone, square and familiar, and it has not had anyone in it in a long time.', encounterId: '', connections: ['gate_lava_gallery'], position: [160, 940], mapArea: 'gate_of_deep', canRevisit: true, passthroughTo: 'qf16_6' },
+    { id: 'gate_lava_gallery', name: 'The Drowned Gallery', description: 'The gallery the Pour came down. The floor of it is one long black tongue of cooled rock, risen halfway up the walls and set hard, and everything it reached is still under there. The 3rd Gate stands at the far end of it.', encounterId: '', connections: ['gate_cut_passage', 'third_gate'], position: [400, 690], mapArea: 'gate_of_deep', canRevisit: true },
     // Left front (line of 2): 3rd Gate → Left Front → Left Front Deep.
     { id: 'left_front_1', name: 'Left Front', description: 'The left flank of the line holding before the Gate.', encounterId: '', connections: ['third_gate', 'left_front_2'], position: [270, 350], mapArea: 'gate_of_deep', canRevisit: true },
     { id: 'left_front_2', name: 'Left Front — Deep', description: 'The far end of the left flank, pressed hard.', encounterId: '', connections: ['left_front_1'], position: [260, 640], mapArea: 'gate_of_deep', canRevisit: true },

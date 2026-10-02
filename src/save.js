@@ -112,6 +112,17 @@ export function saveGame(state, saveName = '') {
     // re-appear on cleared rocks). Cleared via setWellRested on rest.
     lakeFrogRocks: Array.isArray(state.lakeFrogRocks) ? state.lakeFrogRocks.slice() : null,
     bridgePatrolNodes: Array.isArray(state.bridgePatrolNodes) ? state.bridgePatrolNodes.slice() : null,
+    // The Quercus search. The ROLL must persist or reloading next to a site
+    // would re-decide whether it is the dud — same reason tunnelExitNode is
+    // here. RUN_FLAGS cannot carry either of these: it coerces to boolean.
+    quercusClueSites: Array.isArray(state.quercusClueSites) ? state.quercusClueSites.slice() : null,
+    // Dig-out side quest: how many breaking tools have gone into the wall,
+    // and whether a long rest has passed since the fourth.
+    quercusToolsDonated: state.quercusToolsDonated | 0,
+    quercusDigRested: !!state.quercusDigRested,
+    quercusSiteRested: state.quercusSiteRested instanceof Set
+      ? Array.from(state.quercusSiteRested)
+      : (Array.isArray(state.quercusSiteRested) ? state.quercusSiteRested.slice() : []),
     // Kraken Spawn one-time boss. Latches forever (never cleared on
     // rest) so a save+reload after the kraken fight remembers the
     // post-kraken level-up was awarded.
@@ -367,6 +378,10 @@ export function saveGame(state, saveName = '') {
         // (north_pass clearing "???" after the throne audience, etc.)
         // survives a load. Only carries through when the node was
         // unlocked at save time and its label was cleared.
+        // Permanent 'the party has walked this' marker for discoverable nodes.
+        // Without it a cross-map teleport (which resets visitedNodes) re-fogs
+        // every plain node on the map the next time they come back.
+        revealed: !!node._revealed,
         hiddenName: node.hiddenName || '',
         hiddenDescription: node.hiddenDescription || '',
         exhaustedChoices: Array.isArray(node.exhaustedChoices) ? node.exhaustedChoices.slice() : [],

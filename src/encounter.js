@@ -6984,6 +6984,343 @@ export function createMushroomCircleArrivalEncounter(withCornis = false) {
   ]);
 }
 
+// ── Quercus Forest arrival (qf01_entry) ────────────────────────────────────
+// The party comes out of the entry tunnels into the great lit cavern. Kept
+// short on purpose — blinded, eyes adjust, three reactions, the objective, one
+// warning. The objective line is the load-bearing one: it tells the player what
+// they are in Quercus to find (the far end of the Great Pour) and which way to
+// start (WEST), and it pays Brad's "I have been places" off instead of leaving
+// it a joke. Keep the bearing his — he is the only one who has been here
+// before. Node text on the route to the Pour is deliberately free of compass
+// words so nothing contradicts him.
+// Thorb and Valdrisa have never seen it; Brad has, twice, and is insufferable
+// about it. The mushroom warning is the foreshadow for the Myconid fights in
+// this region, carried by whoever has standing to give it: Cornis if he is
+// travelling with the party, Brad if he is not.
+//
+// One-shot by encounter id, NOT by node: qf01_entry is a teleport threshold and
+// has to stay canRevisit, so the dispatch in startNodeEncounter gates on
+// completedEncounters holding either variant id. A second entrance into the
+// forest later on only has to check the same two ids.
+export function createQuercusArrivalEncounter(withCornis = false) {
+  const opening = [
+    new EncounterText('The tunnel mouth widens and the light comes at you all at once — after days of seeing no further than the end of your own torch, it is like walking face-first into noon. By the time your eyes stop streaming and hand you back some distance, you can see that there is no far wall, there is no roof your light has any business reaching, and every scrap of the light in here is coming off the mushrooms.'),
+    new EncounterText('Thorb is staring straight up with his mouth open. "There is nothing carrying that roof," he says, barely above a whisper. "No span. No pillars, no ribs, nothing." He shakes his head slowly. "It has no right to be up there."', 'Thorb'),
+    new EncounterText('Valdrisa lays her palm flat against the nearest stalk, the way you would test a forge, and takes it away again looking faintly insulted. "Cold. All that light and not a scrap of heat in it." She wipes her hand on her thigh. "I have spent my whole life making light the honest way."', 'Valdrisa'),
+    new EncounterText('Brad walks between the three of you, sits down on a rock and puts his hands behind his head. "It is very good," he agrees. "It was very good the last two times as well."\nEvery head turns.\n"What? I have been places."', 'Brad'),
+    new EncounterText('Thorb rounds on him fast enough that Brad puts his hands up. "Then you know the ground. Listen to me. Somewhere in all this, the Pour came out — the tunnels under Tharnag have to open into this cavern somewhere, and if any of my father\'s people got out ahead of the fire, THAT is where they came out. That is what we are here to find."\nBrad lowers his hands, and for once there is nothing clever in his face. "West," he says. "The far west end, where the green gives out and it is all black rock and dead ground. You will not miss it."', 'Thorb'),
+  ];
+
+  if (withCornis) {
+    return new Encounter('quercus_arrival_cornis', 'Into the Light', 'A cavern that makes its own daylight.', [
+      new EncounterPhaseData({
+        phaseType: EncounterPhase.TEXT,
+        texts: [
+          ...opening,
+          new EncounterText('Cornis has not looked up once. He steps past the lot of you, taps a low cluster of pale caps beside the path with one mithril knuckle, and leaves the hand there. "Do not eat anything. Do not cut anything. Do not sleep anywhere soft." He straightens up. "And if one of them turns and looks at you, it is not a mushroom. Do not fight it where it is standing. Walk."', 'Cornis Metalhands'),
+        ],
+      }),
+    ]);
+  }
+
+  return new Encounter('quercus_arrival', 'Into the Light', 'A cavern that makes its own daylight.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        ...opening,
+        new EncounterText('Then he sits forward, and there is nothing funny in his face at all. "Since you are all standing there with your mouths open. Do not eat anything down here. Do not cut anything. Do not sleep anywhere soft." He nods at a low cluster of pale caps beside the path. "And if one of them turns and looks at you, it is not a mushroom, and you do not want to be standing where it can reach."', 'Brad'),
+      ],
+    }),
+  ]);
+}
+
+
+// ── The Quercus search: clue sites, the dud, and the survivors ─────────────
+// Six sites. The Sealed Mouth (qf16_5) is the guaranteed one and arms the
+// search; the other five are rolled at the forest entrance, four holding a
+// clue and one a dud. Finding THREE of those five (four counting the Sealed
+// Mouth) finds the survivors, and they are found at whichever site completes
+// the set — so where the dwarves are is genuinely different every run.
+//
+// Every clue below is written MODULAR: each states only what is at its own
+// site and never refers to how many have been found or in what order, so any
+// three of them read correctly in any sequence. The running total is spoken in
+// `quercusClueTally` (appended by the dispatch), never inside a clue.
+const QUERCUS_CLUE_NAMES = {
+  quercus_clue_pale_wash: 'Prints in the Wash',
+  quercus_deep_stair: 'The Deep Stair',
+  quercus_clue_low_lintel: 'Threads on the Lintel',
+  quercus_clue_blue_crossing: 'The Buried Fire',
+  quercus_clue_amber_tree: 'The Road Mark',
+};
+const QUERCUS_CLUES = {
+  // qf07_4 — The Pale Wash. Bare grit that holds a print like nothing else here.
+  quercus_clue_pale_wash: [
+    new EncounterText('Raena is out in the middle of the bone-coloured grit before the rest of you are off the last of the moss, walking bent over with her hands behind her back.'),
+    new EncounterText('"Here." She has not raised her voice. "Nothing grows in this, so nothing has covered it." Three prints, then a fourth, crossing the wash at an angle and pressed deep at the toe. "Short stride. Heavy. Carrying something between two of them, by the way the weight sits." She straightens. "Dwarves, and in a hurry, and not long enough ago for the drip to have filled these in."', 'Raena'),
+    new EncounterText('Thorb crouches over the nearest one without touching it, and says nothing at all for a while. "Which way," he says at last.\nRaena points across the wash, away into the stalks, and does not make a thing of it. "That way. Same as the others."', 'Thorb'),
+  ],
+  // qf10_r3 — The Deep Stair. They stood at the top of it and turned back.
+  quercus_deep_stair: [
+    new EncounterText('The way ends at a hole in the cavern floor — not a crack, not a fissure, a stair. Square cut, wide enough for three abreast, with a handrail groove worn into the wall beside it. It goes down, and the light off the caps gives up a dozen steps in.'),
+    new EncounterText('Thorb is at the edge of it before anyone can say a word, holding his lamp out over the drop as though that were going to help. "That is a made road," he says. "That is the deep. That is under everything." He does not have to say the rest of it out loud.', 'Thorb'),
+    new EncounterText('Raena crouches at the head of the steps to read the dust — and stops, with her hand still out over it. She does not say anything for a moment. Then: "Thorb. Come here."', 'Raena'),
+    new EncounterText('"Five of them. Six." She moves along the prints on her heels, reading them out as she goes. Short boots, heavy, nailed through the sole in a double row, overlapping each other across the same six feet of floor. "They came up from the flats. They stood here, all of them, at the edge, long enough to argue about it." She stops where the marks stop, at the top step. "And then they turned round and went back the way they came. Not one of them set a foot on that stair."', 'Raena'),
+    new EncounterText('Thorb has gone down on one knee beside the prints and put two fingers into one of them, very carefully, the way you would touch something asleep. "Nailed double. That is a Tharnag sole." His voice has gone rough. "They got out, Val. Six of them at least got out, and they were walking well enough to stand here and BICKER about it." He looks back the way the prints came, out into all that light. "And then they went back into the forest."', 'Thorb'),
+  ],
+  // qf12_l3 — The Low Lintel. Somebody too tall for it came through anyway.
+  quercus_clue_low_lintel: [
+    new EncounterText('Valdrisa stops under the lintel with her hand flat on the underside of it, and does not duck through. She is looking at the stone above her knuckles.', 'Valdrisa'),
+    new EncounterText('"Somebody has been through here who did not fit." She tilts the lamp and the marks come up clear — a long bright scrape along the rock, and a second one under it, and caught in the crack at the end of them a few threads of something dark and coarse. She works one loose and rolls it between finger and thumb. "Cloak. Good weight. Felted wool, the way ours is felted, and none of it rotted yet."', 'Valdrisa'),
+    new EncounterText('She holds it up to the light for Thorb, and neither of them says the obvious thing. It is Brad who does. "Small folk cut that door," he says. "Whoever scraped it was bigger than the people it was cut for. Which is most of us, and all of you."', 'Brad'),
+  ],
+  // qf14_2 — The Blue Crossing. Somebody camped on the bridge and cleaned up.
+  quercus_clue_blue_crossing: [
+    new EncounterText('It is the smell that stops you on the bridge — faint, wrong, and entirely out of place: woodsmoke, in a cavern where nothing burns.'),
+    new EncounterText('It takes a while to find, because it has been hidden properly. Under the arch on the dry side, back where the light off the water does not reach, somebody scraped out a fire pit, used it, and then filled it in and laid the stones back over the top. Raena turns the covering stones off one at a time. The ash underneath is cold, dry, and finger-deep.', 'Raena'),
+    new EncounterText('"They boiled water here." She holds up the flat stone the pot stood on, ringed and sooted. "Cap-stalk for fuel, so they know what burns down here, and they learned it recently. And then they put the floor back." She sets the stone down where it was. "That is not hiding a fire. That is a garrison policing a camp. Somebody down here is still keeping discipline."', 'Raena'),
+  ],
+  // qf20_8 — Under the Amber Tree. A mark cut for other dwarves to read.
+  quercus_clue_amber_tree: [
+    new EncounterText('The trunk of the great stalk is soft enough to cut and tough enough to hold a cut, and about level with Thorb\'s eye somebody has been cutting into it.', 'Thorb'),
+    new EncounterText('It is not a scratch and it is not an accident. Three strokes, deep and clean and made with something sharp, at an angle to each other — and it has healed at the edges, the way the caps do, so it has been there a while.', 'Thorb'),
+    new EncounterText('Thorb goes very quiet looking at it. Then he puts his thumb in the longest of the three strokes and follows it down. "That is a road mark," he says. "Tharnag road mark. You cut it at eye height where the way is not obvious, and you cut it so the next one of your own coming through knows which way the first one went." He looks along the line the strokes point. "They were not running by the time they cut this. They were MARKING. They expected somebody to come after them."', 'Thorb'),
+  ],
+};
+
+// The running total, appended by the dispatch after a clue's own text. Kept
+// OUT of the clue bodies so each one stays order-independent.
+const QUERCUS_TALLY = {
+  1: 'Nobody says it out loud, but everybody is doing the same arithmetic. That is the first sign of them since the tunnel mouth, and this cavern is enormous.',
+  2: 'That is twice now. Raena marks the direction on her hand with a thumbnail and says nothing, and the party keeps moving.',
+  3: '"Three," Valdrisa says, to nobody. "Three places, and all of them pointing the same way." She does not say the rest of it. Nobody needs her to.',
+  // There is no 4th line: the fourth clue is the one that finds them, and the
+  // survivors' scene follows straight on from it.
+
+};
+
+export function createQuercusClueEncounter(clueId, tally = 0) {
+  const texts = (QUERCUS_CLUES[clueId] || []).slice();
+  if (tally && QUERCUS_TALLY[tally]) texts.push(new EncounterText(QUERCUS_TALLY[tally]));
+  // Each site gets its own name: the journal labels a row with the encounter's
+  // name, so five clues sharing one would read as five identical entries.
+  return new Encounter(clueId, QUERCUS_CLUE_NAMES[clueId] || 'A Sign of Them', 'Somebody came through here.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }),
+  ]);
+}
+
+// The dud. One of the five rolled sites holds nothing — but it is somewhere to
+// put your back against, so it offers a short rest (Heal 10) once per long
+// rest. The party never learns it was "the wrong one"; it is just a quiet spot.
+// The dud. One of the five rolled sites holds nothing. TEXT only — the Heal 10
+// breather is appended by offerQuercusRest in main.js, which every one of the
+// six sites goes through, so it is not this encounter's business any more.
+export function createQuercusNoSignEncounter(alreadyRested = false) {
+  const texts = [
+    new EncounterText('You work the whole of it and there is nothing here — no print, no mark, no ash, nothing bent or cut or moved. Whatever else this cavern is hiding, it is not hiding it here.'),
+    new EncounterText('Valdrisa drops her pack against the rock and sits down on it. "Then we stop for a breath," she says, "and we do not sulk about it. There is ground I can see my back against, and that is more than the last three places gave us."', 'Valdrisa'),
+  ];
+  if (alreadyRested) {
+    texts.push(new EncounterText('You have already taken what this place had to give. Whatever is left in your legs, you will be carrying it on to the next one.'));
+  }
+  return new Encounter('quercus_no_sign', 'Nothing Here', 'Nothing to find, and somewhere to sit.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts }),
+  ]);
+}
+
+// A site the party has already worked, or one where there is simply nothing
+// going on yet. One line, so that walking back onto it is not dead silence —
+// and it still carries the breather, which is the actual reason to come back.
+export function createQuercusQuietSiteEncounter() {
+  return new Encounter('quercus_quiet_site', 'Quiet Ground', 'Nothing doing, and nobody about.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Nothing has changed here since the last time, and nothing is going to. It is still a good place to stop, which down here counts for something.'),
+      ],
+    }),
+  ]);
+}
+
+// The payoff, appended to whichever clue completes the set. Deliberately stops
+// at the meeting: who they are, that the King lives, and that he was TAKEN —
+// the detail of by whom and to where belongs to the survivors' own scene.
+
+// Reaching a clue site BEFORE the Sealed Mouth. The party has no reason yet to
+// think anybody walked out of that tunnel alive, so they cannot read what is in
+// front of them — and the beat must not fire, or the survivors could be found
+// before the scene that explains why anyone is looking for them.
+//
+// Repeatable on purpose (listed in REPEATABLE_ENCOUNTERS): it never latches, so
+// the site still holds its real clue once the Sealed Mouth has been seen. Kept
+// to one line — it marks the place as worth remembering and nothing else.
+
+// ── The dig-out side quest (Quercus → Tharnag) ─────────────────────────────
+// Seeded at The Sealed Mouth (somebody has already tried to break that plug
+// from this side, and gave up), explained by the survivors, and paid off by
+// donating tools. Durgan Oakenshield speaks for the guard throughout.
+//
+// The chain, in order:
+//   1. quercus_sealed_mouth  — the scratch marks. Setup, no quest yet.
+//   2. quercus_survivors     — why they stopped: no tools, and then the drow.
+//   3. quercus_tools_ask     — Durgan at the plug, asking. Donate 4.
+//   4. quercus_tools_working — the fourth tool lands; they start cutting.
+//   5. quercus_tunnel_open   — after a long rest, they are gone and it is open.
+
+// Chapter 2 — the lava wall, reopened. Fires at the Tharnag-side tunnel exit
+// once Durgan's crew have cut through from the Quercus side (quercusTunnelOpen).
+// The four of them got through alone; what the party finds here is what four
+// dwarves turn into once they can shout through a hole at their own people.
+// After this plays, the exit goes back to being the plain crossing it was
+// before the Pour, so the front is reachable from Tharnag again.
+export function createChapter2LavaReopenedEncounter() {
+  return new Encounter('chapter2_lava_reopened', 'A Way Through', 'Somebody has been busy.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('You round the last bend expecting the wall — and there is a hole in it. A proper one: shoulder-width, squared off, propped and pinned where the glass wanted to come down, with a lamp hung on a nail at the mouth of it and the black gravel swept into heaps on either side.'),
+        new EncounterText('There are a great many more than four dwarves in it. They are working in two gangs from both ends with the spoil going out in baskets hand to hand, and the noise of it is tremendous — not the four lonely strokes you left in Quercus, but a works, with somebody calling the rhythm.', 'Durgan Oakenshield'),
+        new EncounterText('"Prince." A foreman you have never seen steps out of the line, filthy to the eyebrows, and does not stop moving while he talks. "Oakenshield came through at us from the far side and we near put a pick in him before he got his name out. We have had crews on it both ends since." He jerks his chin down the passage. "This is the easy stretch. We are cutting the galleries back out one at a time after it, and we will have the whole front open before the season turns."', 'Durgan Oakenshield'),
+        new EncounterText('Thorb has his hand flat on the propped stone, looking down the length of the hole at the light coming the other way. "Four of them," he says, to nobody in particular. "Four of them and a broken axe."', 'Thorb'),
+        new EncounterText('Then he straightens up off the stone, and the prince comes back into his voice. "They do not need us for this. Four crews and a hole in the wall — that is dwarf work and it is in hand." He looks up the passage the way the lamps go, towards Tharnag. "What nobody is doing is walking my father\'s trail while it is still a trail. We go up. Gear seen to, packs filled, and back down here before that lot have the next gallery open."', 'Thorb'),
+        new EncounterText('Valdrisa does the arithmetic out loud, which is how you know she agrees. "A day up, a day in the stores, a day back. Three." She watches the baskets going hand to hand for a moment. "And by then there will be more road under us than there is now. We will not be leaving the way we came in."', 'Valdrisa'),
+      ],
+    }),
+  ]);
+}
+
+export function createQuercusToolsAskEncounter(donated = 0, needed = 4) {
+  const left = Math.max(0, needed - donated);
+  const opening = donated === 0
+    ? [
+        new EncounterText('They have beaten you back to the plug. All four of them are here, and somebody has already been at the black glass again with the spliced axe, which is now rather more spliced than it was.'),
+        new EncounterText('The one who knelt to Thorb straightens up and knuckles his back. "Durgan Oakenshield, my lord, of the Third Gate watch, and I will not waste your time." He nods at the wall of glass. "We can cut this. It is glass, not stone — it goes in flakes if you hit it right. What we cannot do is cut it with THAT." The axe. "Two more days of that haft and I will be cutting it with my hands."', 'Durgan Oakenshield'),
+        new EncounterText('"What we want is anything made to go through armour. A sunder edge, a breaker, a pick — anything shaped to split a hard thing instead of a soft one." He says the next part carefully, because he knows what he is asking. "It would not be a loan, my lord. What we put into that wall stays in it."', 'Durgan Oakenshield'),
+      ]
+    : [
+        new EncounterText(`Durgan has the donated gear laid out on a cloak at the foot of the plug, in a neat row, with the spliced axe at the end of it like a thing being retired. "${donated} so far," he says, without being asked. "It is a start."`, 'Durgan Oakenshield'),
+      ];
+  const prompt = left === 1
+    ? 'One more, and Durgan reckons they can start cutting.'
+    : `Durgan reckons they need ${left} more.`;
+  return new Encounter('quercus_tools_ask', 'What They Need', 'Tools for the wall.', [
+    new EncounterPhaseData({ phaseType: EncounterPhase.TEXT, texts: opening }),
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.CHOICE,
+      choicePrompt: prompt,
+      choices: [
+        new EncounterChoice('Hand over a tool. (Permanent)', '', 'donate_tool', 0, { completesEncounter: true }),
+        new EncounterChoice('Not yet.', 'Durgan nods as though he expected it, and goes back to the wall with what he has.', '', 0, { completesEncounter: true }),
+      ],
+    }),
+  ]);
+}
+
+// The fourth one lands. One-shot.
+export function createQuercusToolsWorkingEncounter() {
+  return new Encounter('quercus_tools_working', 'Good Steel', 'Enough to start.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Durgan turns the last of it over twice, checks the edge against his thumb, and then does something nobody has seen a dwarf of the watch do in a while: he grins.', 'Durgan Oakenshield'),
+        new EncounterText('"That will do it." He is already handing pieces down the line, and the other three are already moving. "Four of us, four good edges, and a wall that wants to flake. Give us time, my lord. Not a day — TIME, the proper kind, the kind where nobody is standing over us asking how it goes." He looks at Thorb, and something passes between them that has nothing to do with tools. "Go and sleep somewhere. Let us work."', 'Durgan Oakenshield'),
+        new EncounterText('The sound of it starts before you are out of sight — four steady strokes, offset, so that one of them is always landing. It is the first sound in this whole cavern that anybody made on purpose.'),
+      ],
+    }),
+  ]);
+}
+
+// After a long rest: they are through, and gone. One-shot. Opens the teleport.
+export function createQuercusTunnelOpenEncounter() {
+  return new Encounter('quercus_tunnel_open', 'The Way Through', 'They did it.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The sound is gone, and so are they. Where the plug was there is a hole — not a doorway, nothing so tidy: a hacked gap at shoulder height with the glass gone to gravel underfoot and a cold draught coming through it that has not been down here in months.'),
+        new EncounterText('The tools are stacked against the wall beside it, every one of them ruined. Blunted, rolled, snapped at the neck. They used them up entirely and then set them down in a row, which is its own kind of thank-you.', 'Durgan Oakenshield'),
+        new EncounterText('Thorb stands at the gap a while with his hand on the edge of it. "They have gone up," he says. "Home, or what is left of it, to tell them the King is alive." He puts his head through and the draught takes his beard sideways. "And that is the road to the front. That is OUR road now."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+export function createQuercusTooSoonEncounter() {
+  return new Encounter('quercus_too_soon', 'Something Here', 'Worth another look, later.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('Raena slows without meaning to, looks at the ground for a moment longer than walking over it needs, and then carries on. "Something," she says, when Thorb raises an eyebrow at her. "Not enough of it to be worth the word. Ask me again when we know what we are looking for."', 'Raena'),
+      ],
+    }),
+  ]);
+}
+
+export function createQuercusSurvivorsEncounter() {
+  return new Encounter('quercus_survivors', 'The Last of the Guard', 'Somebody has been watching you walk.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The sound is very small and very close — a boot on grit, one step, deliberately made. Somebody who did not want to startle you and did not want to be rushed at either.'),
+        new EncounterText('There are four of them standing out of the stalks with their hands open and away from their belts, and they are in a state. Mail gone green, one arm strapped across a chest, beards burned back to stubble on two of them. The one in front has a Tharnag axe on his shoulder with the haft spliced and whipped where it broke.', ''),
+        new EncounterText('He looks at Thorb for a long moment without saying anything at all. Then his face comes apart and he goes down on one knee so fast it is nearly a fall. "PRINCE." The word cracks in the middle of it. "Thorbadin. They said the whole hall went. They said everyone."', ''),
+        new EncounterText('Thorb has him up off the floor by the shoulders before he has finished. "My father," he says. "Say it."', 'Thorb'),
+        new EncounterText('"Alive." The dwarf says it fast, to get it out. "Alive when we saw him last, and that is the truth, my lord." And then, because the rest has to come too: "But he is not down here. He never was. They took him, Prince. Out of the tunnel with the rest of us and then away from us, and there was nothing the six of us could do about it but live."', ''),
+        new EncounterText('Nobody moves. Somewhere back in the cavern a cap lets go of its water, one drop, into all that quiet.', ''),
+    new EncounterText('"We tried to go back." He says it like a man laying down something he has carried a long way. "First thing. We put down the goblins that came out behind us — that was easy, they were burned and they were finished — and then we went straight back at that wall with what we had. Two days." He opens his hands. "You have seen what we did to it. A morning\'s worth, and then we were cutting glass with a war-axe and getting nothing for it but a ruined axe."', 'Durgan Oakenshield'),
+    new EncounterText('"So we came down. Had to — no water up there, no food, nothing but that wall." His jaw sets. "And that is when they took him. Down in the green, while we were looking for something to EAT." The word comes out with some heat behind it. "Drow, my lord. A dozen of them, and they knew exactly which one of us was worth the taking. They went through the four of us like we were a hedge, and they were away with him before we got turned round."', 'Durgan Oakenshield'),
+    new EncounterText('Thorb does not say anything for a while. When he does it is flat and quiet and entirely a prince. "You are four. You were six."\n"Aye, my lord."\n"And you are still trying to get back through that wall."\nDurgan looks at him as though the question makes no sense at all. "Somebody has to go up and TELL them," he says. "They think he is dead. They think we are all of us dead."', 'Durgan Oakenshield'),
+    new EncounterText('He squares up then, and it is almost formal. "We will go back to it and keep at it, my lord, and one of these years we will get through. Unless —" and here he looks, briefly and without much hope, at the gear the party is carrying "— unless you have anything on you that was made for going through armour. Bring it up to the tunnel and we will put it to work. But it would not be coming back to you, and I will not pretend otherwise."', 'Durgan Oakenshield'),
+      ],
+    }),
+  ]);
+}
+
+// ── The far side of the Great Pour (Quercus 16) ────────────────────────────
+// Two beats on the same map. The party set out from the lava wall
+// (chapter2_lava_wall) to find another way into the deep and "come up under
+// Tharnag from the far side" — this is them arriving. Both are one-shot via
+// canRevisit:false on their nodes.
+
+// qf16_entry — short. The forest stops at a line of black stone, and Valdrisa
+// (the smith; the one who said "we DROWNED those tunnels") names it for what it
+// is before Thorb works out what that means about where they are standing.
+export function createQuercusLavaSignEncounter() {
+  return new Encounter('quercus_lava_sign', 'Black Ground', 'The forest stops at a line.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The green ends. Not thins, not fails — ends, along a line you could lay a rule against, and past it the ground is black and folded and bare. Whatever came through here came through all at once and killed everything it touched.'),
+        new EncounterText('Valdrisa is down on one knee at the edge of it before the rest of you have stopped walking, with her palm flat on the black and her head on one side. "This is not a cave doing this," she says. "This is a POUR. It came out of somewhere under pressure, it ran, and it set." She looks up the length of it, away into the dark. "One go. No second flow over the top of it. Whoever did this did it once and did it properly."', 'Valdrisa'),
+        new EncounterText('Thorb has gone very still. He is not looking at the stone. He is looking at where it comes from. "Val," he says. "WE did this." And then, because she has already got there and gone white: "That is ours. That is the Pour. Which means the front is up the other end of it — and we have come round underneath the whole mountain to stand behind our own wall."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
+// qf16_5 — the long one. The sealed tunnel mouth, and the search of the ground
+// around it. The finding is deliberately partial: goblin dead and no dwarf
+// dead (good), plus goblins killed well off the flow by something with an
+// edge (better). It stops short of saying anyone survived, let alone the King.
+export function createQuercusSealedMouthEncounter() {
+  return new Encounter('quercus_sealed_mouth', 'The Sealed Mouth', 'The other end of the wall.', [
+    new EncounterPhaseData({
+      phaseType: EncounterPhase.TEXT,
+      texts: [
+        new EncounterText('The flow comes out of a tunnel mouth cut square into the cavern wall, and the mouth is full — black glass from floor to roof, cooled in a great sagging curtain that has run and set and run again. Thorb puts both hands on it. Somewhere beyond that, weeks of walking the wrong way round the world away, is the other face of the same plug, and the party standing at it saying there was no breaking it.'),
+    new EncounterText('It is Valdrisa who finds the first thing, and she finds it on the plug itself. Down at the bottom, where a short person would swing, the black glass is chipped — not weathered, struck. A patch of it about the size of a door, gone to shallow flakes and scratches, with a scatter of glass gravel in the dust underneath. "Somebody has been at this," she says slowly. "From THIS side. Somebody stood here and tried to cut their way back in."', 'Valdrisa'),
+    new EncounterText('She puts her palm flat on the chipped patch and measures it with her eye, and her face does not get any happier. "And then they stopped. There is no more than a morning\'s work here." She steps back and looks at the whole sagging black height of it. "You would want proper tools for this. Breaking tools. Whatever they had, it was not enough, and they will have known it before the day was out."', 'Valdrisa'),
+        new EncounterText('"Spread out," Thorb says, and his voice is not steady. "Both sides of the flow. Anything. Anything at all."', 'Thorb'),
+        new EncounterText('It does not take long to find the first of them. They are at the margins, where the flow lost its heat and stopped — goblins, a lot of goblins, caught in the open and taken by it. Some are barely more than a shape in the crust. They were running when it caught them, and they were running this way, away from the front.'),
+        new EncounterText('Valdrisa works the whole of one side and comes back wiping her hands on her thighs, and there is something careful in her face. "Forty, near enough, and I will tell you what is not among them, Thorbadin. Not one of ours. Not a beard, not a boot, not a scrap of Tharnag plate in the whole length of it." She lets that sit. "If our people came out this way, the fire did not have them."', 'Valdrisa'),
+        new EncounterText('Raena has been quartering the ground the whole time and has almost nothing to show for it. "I cannot read this," she says flatly. "Stone that has been liquid does not hold a track, and what is not stone is ash a foot deep. I could walk over the King\'s own trail out here and never know it."', 'Raena'),
+        new EncounterText('It is Raena who finds the other thing, though — well off the flow, out in the moss where the fire never reached. More goblins. Four of them, then another two, then a scatter more further on. None of them burned at all.', 'Raena'),
+        new EncounterText('She turns one of them over with her boot and crouches. "This one was killed. Opened front to back, one stroke, through mail." She looks up. "That is not fire and it is not a fall. That is an axe, swung by somebody who knew the work."', 'Raena'),
+        new EncounterText('Nobody says anything for a moment. Then Thorb, quietly, with his hand still flat on the black glass: "Then some of them got out ahead of it. Out of the tunnel, into this — and the goblins that came out with them did not let them walk away." He turns and looks at the whole vast lit cavern behind you, all of it, going on further than any of you have walked. "They fought here. And then they went somewhere. They are still down here, Val. Somewhere in all that, they are still down here."', 'Thorb'),
+      ],
+    }),
+  ]);
+}
+
 // The Mushroom Circle — the ring itself (umc25_2). The party gets the tingle, and
 // the CHOICE forks into stepping into the ring ('mushroom_circle_enter') or
 // stepping back ('mushroom_circle_leave'). Neither completes the node, so the
@@ -8779,6 +9116,28 @@ export const ENCOUNTER_REGISTRY = {
   underdark_xroad_rest: createUnderdarkXroadRestEncounter,
   mushroom_circle_arrival: () => createMushroomCircleArrivalEncounter(false),
   mushroom_circle_arrival_cornis: () => createMushroomCircleArrivalEncounter(true),
+  // Quercus Forest arrival — the dispatch in startNodeEncounter picks the
+  // variant from playerHasCornisCard(); these keys exist so a save can look
+  // either one up by id.
+  quercus_arrival: () => createQuercusArrivalEncounter(false),
+  quercus_arrival_cornis: () => createQuercusArrivalEncounter(true),
+  // The Quercus search. Clue sites go through createQuercusClueEncounter with
+  // the site id; these registry keys exist so a save can resolve one by id.
+  quercus_clue_pale_wash: () => createQuercusClueEncounter('quercus_clue_pale_wash'),
+  quercus_deep_stair: () => createQuercusClueEncounter('quercus_deep_stair'),
+  quercus_clue_low_lintel: () => createQuercusClueEncounter('quercus_clue_low_lintel'),
+  quercus_clue_blue_crossing: () => createQuercusClueEncounter('quercus_clue_blue_crossing'),
+  quercus_clue_amber_tree: () => createQuercusClueEncounter('quercus_clue_amber_tree'),
+  quercus_no_sign: () => createQuercusNoSignEncounter(false),
+  quercus_quiet_site: createQuercusQuietSiteEncounter,
+  quercus_too_soon: createQuercusTooSoonEncounter,
+  quercus_tools_ask: () => createQuercusToolsAskEncounter(0),
+  quercus_tools_working: createQuercusToolsWorkingEncounter,
+  quercus_tunnel_open: createQuercusTunnelOpenEncounter,
+  chapter2_lava_reopened: createChapter2LavaReopenedEncounter,
+  quercus_survivors: createQuercusSurvivorsEncounter,
+  quercus_lava_sign: createQuercusLavaSignEncounter,
+  quercus_sealed_mouth: createQuercusSealedMouthEncounter,
   mushroom_circle: () => createMushroomCircleEncounter(false),
   mushroom_circle_cornis: () => createMushroomCircleEncounter(true),
   ancient_druid_circle: createAncientDruidCircleEncounter,
